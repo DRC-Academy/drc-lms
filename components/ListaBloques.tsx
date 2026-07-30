@@ -1,70 +1,118 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Fragment } from "react";
 import type { Bloque } from "@/lib/data";
-import { leerProgresoAlumno } from "@/lib/progreso";
+
+export type ProgresoBloques = Record<string, { aciertos: number; total: number }>;
+
+const FASES = ["Reconocer", "Transformar", "Producir"];
 
 export default function ListaBloques({
   bloques,
   alumnoId,
+  progreso,
+  indiceBloqueado,
 }: {
   bloques: Bloque[];
   alumnoId: string;
+  progreso: ProgresoBloques;
+  /** Posición del bloque que aún no se ha desbloqueado, o -1 si no hay ninguno. */
+  indiceBloqueado: number;
 }) {
-  const [progreso, setProgreso] = useState<Record<string, { aciertos: number; total: number }>>({});
-
-  useEffect(() => {
-    setProgreso(leerProgresoAlumno(alumnoId));
-  }, [alumnoId]);
-
   return (
-    <div className="space-y-3">
-      {bloques.map((b) => {
-        const p = progreso[b.id];
-        const pct = p ? Math.round((p.aciertos / p.total) * 100) : null;
-        const dominado = pct !== null && pct >= 80;
+    <ol className="mt-5 flex flex-col gap-3">
+      {bloques.map((bloque, i) => {
+        const bloqueado = i === indiceBloqueado;
+        const hecho = Boolean(progreso[bloque.id]);
+        // El progreso solo se guarda al terminar el bloque: o no hay fase
+        // alcanzada, o están las tres.
+        const fasesAlcanzadas = hecho ? FASES.length : 0;
+        const primario = i === 0;
+
         return (
-          <Link
-            key={b.id}
-            href={`/alumno/${alumnoId}/${b.id}`}
-            className="block bg-white rounded-2xl p-5 shadow-sm border-2 border-transparent hover:border-marca-borde transition"
+          <li
+            key={bloque.id}
+            className={
+              bloqueado
+                ? "grid grid-cols-1 gap-5 rounded-[20px] border border-dashed border-drc-discontinuo bg-white/50 px-[26px] py-6 wide:grid-cols-[1fr_auto] wide:items-center"
+                : "tarjeta tarjeta-activa grid grid-cols-1 gap-5 wide:grid-cols-[1fr_auto] wide:items-center"
+            }
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] uppercase tracking-widest text-marca-verde font-medium">
-                    {b.area}
-                  </span>
-                  {dominado && (
-                    <span className="text-[10px] uppercase tracking-widest bg-marca-amarillo text-marca-tinta rounded-full px-2 py-0.5 font-medium">
-                      Dominado
-                    </span>
-                  )}
-                </div>
-                <p className="font-display font-semibold text-lg leading-tight">{b.titulo}</p>
-                <p className="text-sm text-slate-500 mt-1 leading-relaxed">{b.intro}</p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-xs text-slate-400">{b.minutos} min</p>
-                {pct !== null && (
-                  <p className="font-display font-bold text-lg mt-1">{pct}%</p>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-1 mt-4">
-              {["Reconocer", "Transformar", "Producir"].map((f) => (
+            <div className="min-w-0">
+              <p
+                className={`eyebrow flex items-center gap-2 ${
+                  bloqueado ? "text-drc-cuerpo" : "text-drc-verde-texto"
+                }`}
+              >
+                <span>{bloque.area}</span>
                 <span
-                  key={f}
-                  className="text-[10px] text-slate-500 bg-marca-niebla rounded-full px-2.5 py-1"
-                >
-                  {f}
+                  aria-hidden
+                  className="h-[3px] w-[3px] shrink-0 rounded-full bg-drc-flecha"
+                />
+                <span className={`tabular-nums ${bloqueado ? "" : "text-drc-cuerpo"}`}>
+                  {bloque.minutos} min
                 </span>
-              ))}
+              </p>
+
+              <h3
+                className={`mt-2.5 font-display text-[21px] font-semibold leading-[1.15] tracking-[-0.005em] ${
+                  bloqueado ? "text-drc-cuerpo" : "text-drc-titular"
+                }`}
+              >
+                {bloque.titulo}
+              </h3>
+
+              <p
+                className="mt-2 text-pretty text-[15px] leading-[1.55] text-drc-cuerpo"
+              >
+                {bloque.intro}
+              </p>
+
+              <div className="mt-4 flex flex-wrap items-center gap-1.5">
+                {FASES.map((fase, k) => (
+                  <Fragment key={fase}>
+                    {k > 0 && (
+                      <span aria-hidden className="text-[13px] text-drc-flecha">
+                        →
+                      </span>
+                    )}
+                    <span
+                      className={`chip ${k < fasesAlcanzadas ? "chip-verde" : "chip-neutro"}`}
+                    >
+                      {fase}
+                    </span>
+                  </Fragment>
+                ))}
+              </div>
+
+              {bloqueado && (
+                <p className="mt-4 text-[13px] leading-[1.5] text-drc-cuerpo">
+                  Se desbloquea después de tu próxima clase.
+                </p>
+              )}
             </div>
-          </Link>
+
+            <div className="flex items-center gap-4 wide:flex-col wide:items-end">
+              <span
+                aria-hidden
+                className="font-display text-[26px] font-semibold leading-none tabular-nums text-drc-numeral"
+              >
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              {!bloqueado && (
+                <Link
+                  href={`/alumno/${alumnoId}/${bloque.id}`}
+                  className={`btn min-h-[44px] flex-1 wide:min-h-0 wide:flex-none ${
+                    primario ? "btn-primario" : "btn-secundario"
+                  }`}
+                >
+                  {hecho ? "Repasar" : "Empezar"}
+                  <span className="sr-only"> {bloque.titulo}</span>
+                </Link>
+              )}
+            </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }

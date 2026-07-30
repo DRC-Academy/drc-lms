@@ -1,10 +1,91 @@
-@import url('https://fonts.googleapis.com/css2?family=Radio+Canada+Big:wght@400;600;700&family=Radio+Canada:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Radio+Canada:ital,wght@0,300..700;1,300..700&family=Radio+Canada+Big:ital,wght@0,400..700;1,400..700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background: #F4F7F4;
-  color: #12211A;
+@layer base {
+  body {
+    background: #F4F3EF;
+    color: #1F2A24;
+    font-weight: 400;
+  }
+
+  ::selection {
+    background: #F9BE00;
+    color: #0E2A19;
+  }
+
+  :focus-visible {
+    outline: 2px solid #04A749;
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Un único valor de tracking para todas las etiquetas de la pantalla. */
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase leading-none;
+    letter-spacing: 0.12em;
+  }
+
+  .tarjeta {
+    @apply rounded-[20px] border border-drc-borde bg-drc-superficie px-[26px] py-6;
+    transition: transform 0.18s ease, border-color 0.18s ease;
+  }
+
+  /* Solo las tarjetas con acción reaccionan al hover. */
+  .tarjeta-activa:hover {
+    @apply border-drc-verde;
+    transform: translateY(-2px);
+  }
+
+  .chip {
+    @apply rounded-full px-3 py-1 text-[12px] font-medium leading-none;
+  }
+
+  .chip-verde {
+    @apply bg-drc-chip-verde text-drc-verde-texto;
+  }
+
+  .chip-neutro {
+    @apply bg-drc-suave text-drc-chip-texto;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-full border border-transparent px-5 py-2.5 text-[14px] font-semibold;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  }
+
+  .btn-primario {
+    @apply bg-drc-verde-solido text-white hover:bg-drc-verde-solido-hover;
+  }
+
+  .btn-secundario {
+    @apply border-drc-hairline text-drc-verde-texto hover:border-drc-verde-solido hover:bg-drc-fantasma-hover;
+  }
+
+  .btn-amarillo {
+    @apply bg-drc-amarillo text-drc-titular hover:bg-drc-amarillo-hover;
+  }
+
+  /* Disuelve el contenido por detrás de la barra fija. */
+  .fondo-fundido {
+    background: linear-gradient(
+      to top,
+      #F4F3EF 0%,
+      #F4F3EF 60%,
+      rgba(244, 243, 239, 0.9) 78%,
+      rgba(244, 243, 239, 0) 100%
+    );
+  }
 }
