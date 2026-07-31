@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Bloque, Ejercicio } from "@/lib/data";
-import { guardarProgreso } from "@/lib/progreso";
+import { borrarAvance, guardarAvance, guardarProgreso, UMBRAL_DOMINADO } from "@/lib/progreso";
 
 const ETAPAS = {
   reconocer: { nombre: "Reconocer", desc: "Identifica la forma correcta." },
@@ -14,7 +14,7 @@ const ETAPAS = {
 function normalizar(s: string) {
   return s
     .toLowerCase()
-    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[‘’]/g, "'")
     .replace(/[.,;!?]/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -54,9 +54,12 @@ export default function Practica({ bloque, alumnoId }: { bloque: Bloque; alumnoI
     const ultimo = i === ejercicios.length - 1;
     if (ultimo) {
       guardarProgreso(alumnoId, bloque.id, aciertos, ejercicios.length);
+      borrarAvance(alumnoId, bloque.id);
       setTerminado(true);
       return;
     }
+    // Deja constancia de por dónde iba: el bloque queda "en progreso".
+    guardarAvance(alumnoId, bloque.id, i + 1, ejercicios.length);
     setI(i + 1);
     setResuelto(false);
     setCorrecto(false);
@@ -68,23 +71,32 @@ export default function Practica({ bloque, alumnoId }: { bloque: Bloque; alumnoI
 
   if (terminado) {
     const pct = Math.round((aciertos / ejercicios.length) * 100);
+    const dominado = pct >= UMBRAL_DOMINADO;
     return (
-      <div className="max-w-md mx-auto pt-16 px-6 text-center">
-        <div className="bg-white rounded-3xl p-8 shadow-sm">
-          <div className="w-16 h-16 rounded-full grid place-items-center mx-auto mb-5 bg-marca-amarillo text-marca-tinta font-display text-xl font-bold">
+      <div className="mx-auto max-w-md px-6 pt-14 text-center">
+        <div className="tarjeta px-7 py-9">
+          <div
+            className={`celebra mx-auto mb-5 grid h-[72px] w-[72px] place-items-center rounded-full font-display text-[20px] font-bold tabular-nums ${
+              dominado ? "bg-drc-amarillo text-drc-titular" : "bg-drc-chip-verde text-drc-verde-texto"
+            }`}
+          >
             {pct}%
           </div>
-          <h2 className="font-display text-2xl font-bold mb-2">{bloque.titulo}</h2>
-          <p className="text-slate-600 mb-8">
+          <h2 className="font-display text-[26px] font-semibold leading-tight text-drc-titular">
+            {bloque.titulo}
+          </h2>
+          <p className="mt-3 text-[15px] leading-[1.55] text-drc-cuerpo">
             {pct === 100
               ? "Bloque impecable. Esto ya lo tienes dominado."
+              : dominado
+              ? "Muy bien. Lo tienes cogido; un repaso en unos días y queda fijado."
               : pct >= 60
               ? "Buen avance. Lo que se resistió hoy vuelve la semana que viene."
               : "Bloque exigente. Repítelo en un par de días y verás el salto."}
           </p>
           <Link
             href={`/alumno/${alumnoId}`}
-            className="block w-full rounded-2xl py-3.5 font-display font-semibold text-white bg-marca-verde hover:bg-marca-verdeOsc transition"
+            className="btn btn-primario mt-8 min-h-[50px] w-full text-[15px]"
           >
             Volver a mis bloques
           </Link>
@@ -93,64 +105,70 @@ export default function Practica({ bloque, alumnoId }: { bloque: Bloque; alumnoI
     );
   }
 
+  const ultimo = i === ejercicios.length - 1;
+
   return (
-    <div className="max-w-2xl mx-auto px-6 py-8 sm:py-12">
-      <div className="flex items-center justify-between mb-6">
-        <Link href={`/alumno/${alumnoId}`} className="text-sm text-slate-500 hover:text-marca-tinta">
+    <div className="mx-auto max-w-2xl px-6 py-7 sm:py-10">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <Link
+          href={`/alumno/${alumnoId}`}
+          className="text-[14px] text-drc-cuerpo transition-colors hover:text-drc-verde-texto"
+        >
           ← Salir
         </Link>
-        <span className="text-xs text-slate-400">
+        <span className="text-[13px] tabular-nums text-drc-cuerpo">
           {i + 1} de {ejercicios.length}
         </span>
       </div>
 
-      <div className="flex gap-1.5 mb-8">
+      <div className="mb-8 flex gap-1.5">
         {ejercicios.map((_, k) => (
           <div
             key={k}
-            className={`h-1.5 flex-1 rounded-full ${
-              k < i ? "bg-marca-verde" : k === i ? "bg-marca-tinta" : "bg-marca-borde"
+            className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
+              k < i ? "bg-drc-verde" : k === i ? "bg-drc-verde-solido" : "bg-drc-discontinuo"
             }`}
           />
         ))}
       </div>
 
       {etapaCambia && (
-        <div className="mb-6 rounded-2xl bg-marca-tinta px-5 py-4">
+        <div key={ej.tipo} className="aparece mb-6 rounded-[18px] bg-drc-banner px-5 py-4">
           <p className="font-display font-semibold text-white">
             Fase {ej.tipo === "reconocer" ? "1" : ej.tipo === "transformar" ? "2" : "3"} ·{" "}
             {ETAPAS[ej.tipo].nombre}
           </p>
-          <p className="text-sm text-white/60 mt-0.5">{ETAPAS[ej.tipo].desc}</p>
+          <p className="mt-0.5 text-[14px] text-white/60">{ETAPAS[ej.tipo].desc}</p>
         </div>
       )}
 
       {/* ---------------- RECONOCER ---------------- */}
       {ej.tipo === "reconocer" && (
         <>
-          <h2 className="font-display text-xl sm:text-2xl font-semibold leading-snug mb-7">
+          <h2 className="mb-7 font-display text-[21px] font-semibold leading-snug text-drc-titular sm:text-[24px]">
             {ej.enunciado}
           </h2>
-          <div className="space-y-2.5">
+          <div className="flex flex-col gap-2.5">
             {ej.opciones.map((op, k) => {
               const esCorrecta = k === ej.correcta;
               const esElegida = k === elegida;
-              let cls = "bg-white border-transparent hover:border-slate-300";
+              let cls = "bg-drc-superficie border-drc-borde hover:border-drc-hairline";
               if (resuelto) {
-                if (esCorrecta) cls = "bg-white border-marca-verde";
-                else if (esElegida) cls = "bg-red-50 border-red-400";
-                else cls = "bg-white/50 border-transparent opacity-50";
+                if (esCorrecta) cls = "bg-drc-chip-verde border-drc-verde";
+                else if (esElegida) cls = "bg-[#FDECEC] border-[#D98282]";
+                else cls = "bg-drc-superficie/60 border-transparent opacity-50";
               }
               return (
                 <button
                   key={k}
+                  type="button"
                   disabled={resuelto}
                   onClick={() => {
                     if (resuelto) return;
                     setElegida(k);
                     registrar(esCorrecta);
                   }}
-                  className={`w-full text-left rounded-xl px-5 py-4 border-2 transition ${cls}`}
+                  className={`w-full rounded-xl border-2 px-5 py-4 text-left text-[16px] leading-snug text-drc-texto transition-all duration-150 ${cls}`}
                 >
                   {op}
                 </button>
@@ -163,8 +181,8 @@ export default function Practica({ bloque, alumnoId }: { bloque: Bloque; alumnoI
       {/* ---------------- TRANSFORMAR ---------------- */}
       {ej.tipo === "transformar" && (
         <>
-          <p className="text-sm text-slate-600 mb-3">{ej.instruccion}</p>
-          <p className="font-display text-lg sm:text-xl font-semibold leading-snug mb-5 bg-white rounded-xl px-5 py-4">
+          <p className="mb-3 text-[15px] leading-[1.5] text-drc-cuerpo">{ej.instruccion}</p>
+          <p className="mb-5 rounded-xl bg-drc-superficie px-5 py-4 font-display text-[18px] font-semibold leading-snug text-drc-titular sm:text-[20px]">
             {ej.frase}
           </p>
           <textarea
@@ -177,28 +195,32 @@ export default function Practica({ bloque, alumnoId }: { bloque: Bloque; alumnoI
               }
             }}
             disabled={resuelto}
-            rows={2}
+            rows={3}
             placeholder="Escribe tu versión…"
-            className="w-full rounded-xl border-2 border-marca-borde px-5 py-4 outline-none focus:border-marca-verde resize-none disabled:opacity-60"
+            className="w-full resize-none rounded-xl border-2 border-drc-borde bg-drc-superficie px-5 py-4 text-[16px] leading-[1.5] text-drc-texto outline-none transition-colors focus:border-drc-verde-solido disabled:opacity-60"
           />
           {!resuelto && (
-            <div className="flex items-center gap-4 mt-3">
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
               <button
+                type="button"
                 onClick={comprobarTexto}
                 disabled={!texto.trim()}
-                className="rounded-xl px-6 py-3 font-display font-semibold text-white bg-marca-verde hover:bg-marca-verdeOsc disabled:opacity-40 transition"
+                className="btn btn-primario min-h-[48px] w-full sm:w-auto"
               >
                 Comprobar
               </button>
-              <details className="text-sm text-slate-500">
-                <summary className="cursor-pointer hover:text-marca-tinta">Ver pista</summary>
-                <p className="mt-2">{ej.pista}</p>
+              <details className="text-[14px] text-drc-cuerpo">
+                <summary className="cursor-pointer py-1 transition-colors hover:text-drc-verde-texto">
+                  Ver pista
+                </summary>
+                <p className="aparece mt-2 leading-[1.5]">{ej.pista}</p>
               </details>
             </div>
           )}
           {resuelto && !correcto && (
-            <p className="mt-4 text-sm text-slate-700">
-              Una versión correcta: <span className="font-medium">{ej.respuestas[0]}</span>
+            <p className="aparece mt-4 text-[14px] leading-[1.5] text-drc-cuerpo">
+              Una versión correcta:{" "}
+              <span className="font-medium text-drc-titular">{ej.respuestas[0]}</span>
             </p>
           )}
         </>
@@ -207,67 +229,70 @@ export default function Practica({ bloque, alumnoId }: { bloque: Bloque; alumnoI
       {/* ---------------- PRODUCIR ---------------- */}
       {ej.tipo === "producir" && (
         <>
-          <h2 className="font-display text-xl sm:text-2xl font-semibold leading-snug mb-2">
+          <h2 className="mb-2 font-display text-[21px] font-semibold leading-snug text-drc-titular sm:text-[24px]">
             {ej.instruccion}
           </h2>
-          <p className="text-slate-600 mb-5">{ej.contexto}</p>
+          <p className="mb-5 text-[15px] leading-[1.55] text-drc-cuerpo">{ej.contexto}</p>
           <textarea
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            rows={5}
+            rows={6}
             placeholder="Escribe aquí…"
-            className="w-full rounded-xl border-2 border-marca-borde px-5 py-4 outline-none focus:border-marca-verde resize-none"
+            className="w-full resize-none rounded-xl border-2 border-drc-borde bg-drc-superficie px-5 py-4 text-[16px] leading-[1.55] text-drc-texto outline-none transition-colors focus:border-drc-verde-solido"
           />
 
           {!verModelo ? (
             <button
+              type="button"
               onClick={() => setVerModelo(true)}
               disabled={!texto.trim()}
-              className="mt-4 rounded-xl px-6 py-3 font-display font-semibold text-white bg-marca-verde hover:bg-marca-verdeOsc disabled:opacity-40 transition"
+              className="btn btn-primario mt-4 min-h-[48px] w-full sm:w-auto"
             >
               Comparar con el modelo
             </button>
           ) : (
-            <div className="mt-5 rounded-2xl bg-white p-5">
-              <p className="font-display font-semibold mb-3">Revisa tu respuesta</p>
-              <div className="space-y-2 mb-5">
+            <div className="aparece tarjeta mt-5">
+              <p className="font-display text-[17px] font-semibold text-drc-titular">
+                Revisa tu respuesta
+              </p>
+              <div className="mb-5 mt-4 flex flex-col gap-1">
                 {ej.criterios.map((c, k) => {
                   const on = marcados.includes(k);
                   return (
                     <button
                       key={k}
-                      onClick={() =>
-                        setMarcados((m) => (on ? m.filter((x) => x !== k) : [...m, k]))
-                      }
-                      className="flex items-start gap-3 text-left w-full"
+                      type="button"
+                      onClick={() => setMarcados((m) => (on ? m.filter((x) => x !== k) : [...m, k]))}
+                      className="flex w-full items-start gap-3 rounded-lg py-2 text-left transition-colors hover:bg-drc-fantasma-hover"
                     >
                       <span
-                        className={`mt-0.5 w-5 h-5 rounded-md border-2 shrink-0 grid place-items-center text-xs text-white ${
-                          on ? "bg-marca-verde border-marca-verde" : "border-marca-borde"
+                        className={`mt-[1px] grid h-5 w-5 shrink-0 place-items-center rounded-md border-2 text-[11px] text-white transition-colors ${
+                          on ? "border-drc-verde-solido bg-drc-verde-solido" : "border-drc-hairline"
                         }`}
                       >
                         {on ? "✓" : ""}
                       </span>
-                      <span className="text-sm text-slate-700">{c}</span>
+                      <span className="text-[14px] leading-[1.5] text-drc-texto">{c}</span>
                     </button>
                   );
                 })}
               </div>
-              <div className="rounded-xl bg-marca-niebla p-4">
-                <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Un ejemplo válido</p>
-                <p className="text-sm text-slate-700 leading-relaxed">{ej.modelo}</p>
+              <div className="rounded-xl bg-drc-suave p-4">
+                <p className="eyebrow mb-2 text-drc-cuerpo">Un ejemplo válido</p>
+                <p className="text-[14px] leading-relaxed text-drc-texto">{ej.modelo}</p>
               </div>
-              <p className="text-xs text-slate-400 mt-4">
+              <p className="mt-4 text-[13px] text-drc-cuerpo">
                 Tu profesor verá esta respuesta antes de la próxima clase.
               </p>
               <button
+                type="button"
                 onClick={() => {
                   registrar(marcados.length === ej.criterios.length);
                   setTimeout(siguiente, 0);
                 }}
-                className="mt-4 rounded-xl px-6 py-3 font-display font-semibold text-white bg-marca-verde hover:bg-marca-verdeOsc transition"
+                className="btn btn-primario mt-4 min-h-[48px] w-full sm:w-auto"
               >
-                {i === ejercicios.length - 1 ? "Terminar bloque" : "Siguiente"}
+                {ultimo ? "Terminar bloque" : "Siguiente"}
               </button>
             </div>
           )}
@@ -276,16 +301,21 @@ export default function Practica({ bloque, alumnoId }: { bloque: Bloque; alumnoI
 
       {/* ---------------- FEEDBACK ---------------- */}
       {resuelto && ej.tipo !== "producir" && (
-        <div className={`mt-6 rounded-2xl p-5 ${correcto ? "bg-[#EAF6EC]" : "bg-[#FFF8E1]"}`}>
-          <p className="font-display font-semibold mb-1.5">
+        <div
+          className={`aparece mt-6 rounded-[18px] p-5 ${
+            correcto ? "bg-drc-chip-verde" : "bg-[#FFF7E0]"
+          }`}
+        >
+          <p className="font-display text-[16px] font-semibold text-drc-titular">
             {correcto ? "Exacto." : "Casi. Mira esto:"}
           </p>
-          <p className="text-sm text-slate-700 leading-relaxed">{ej.explicacion}</p>
+          <p className="mt-1.5 text-[14px] leading-relaxed text-drc-texto">{ej.explicacion}</p>
           <button
+            type="button"
             onClick={siguiente}
-            className="mt-5 rounded-xl px-6 py-3 font-display font-semibold text-white bg-marca-verde hover:bg-marca-verdeOsc transition"
+            className="btn btn-primario mt-5 min-h-[48px] w-full sm:w-auto"
           >
-            {i === ejercicios.length - 1 ? "Terminar bloque" : "Siguiente"}
+            {ultimo ? "Terminar bloque" : "Siguiente"}
           </button>
         </div>
       )}

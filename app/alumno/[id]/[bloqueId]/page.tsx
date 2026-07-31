@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ALUMNOS, getAlumno, getBloque } from "@/lib/data";
-import Practica from "@/components/Practica";
+import PracticaCargador from "@/components/PracticaCargador";
 
 export function generateStaticParams() {
   return ALUMNOS.flatMap((a) => a.bloques.map((b) => ({ id: a.id, bloqueId: b })));
@@ -12,8 +12,18 @@ export default function PaginaBloque({
   params: { id: string; bloqueId: string };
 }) {
   const alumno = getAlumno(params.id);
-  const bloque = getBloque(params.bloqueId);
-  if (!alumno || !bloque) notFound();
+  if (!alumno) notFound();
 
-  return <Practica bloque={bloque} alumnoId={alumno.id} />;
+  // Si el bloque no está en `lib/data.ts` puede ser uno generado:
+  // esos solo se pueden resolver en el cliente.
+  const bloque = getBloque(params.bloqueId) ?? null;
+
+  return (
+    <PracticaCargador
+      alumnoId={alumno.id}
+      nombre={alumno.nombre}
+      bloqueId={params.bloqueId}
+      bloqueEstatico={bloque}
+    />
+  );
 }

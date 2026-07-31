@@ -1,42 +1,51 @@
 import Link from "next/link";
 import { ALUMNOS } from "@/lib/data";
+import Cabecera from "@/components/Cabecera";
 
 export default function Home() {
   return (
-    <main className="max-w-2xl mx-auto px-6 py-12 sm:py-16">
-      <p className="text-xs tracking-widest uppercase text-marca-verde mb-2">
-        DRC Academy · prototipo
-      </p>
-      <h1 className="font-display text-3xl sm:text-4xl font-bold leading-tight mb-2">
-        Tu práctica, hecha con tus clases
-      </h1>
-      <p className="text-slate-600 mb-10">
-        Elige un alumno de prueba. Los bloques están generados a partir de lo que trabajó en sus
-        últimas clases.
-      </p>
+    <>
+      <Cabecera />
 
-      <div className="space-y-3">
-        {ALUMNOS.map((a) => (
-          <Link
-            key={a.id}
-            href={`/alumno/${a.id}`}
-            className="flex items-center gap-4 bg-white rounded-2xl p-5 shadow-sm border-2 border-transparent hover:border-marca-borde transition"
-          >
-            <span className="w-11 h-11 rounded-full grid place-items-center font-display font-bold text-white bg-marca-verde shrink-0">
-              {a.nombre[0]}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-display font-semibold">
-                {a.nombre} · {a.nivel}
-              </span>
-              <span className="block text-sm text-slate-500 truncate">
-                Última clase: {a.clases[0].tema}
-              </span>
-            </span>
-            <span className="text-slate-400">→</span>
-          </Link>
-        ))}
-      </div>
-    </main>
+      <main className="mx-auto max-w-columna px-6 py-12 sm:py-16">
+        <p className="eyebrow text-drc-verde-texto">DRC Academy · prototipo</p>
+        <h1 className="mt-3.5 font-display text-[34px] font-semibold leading-[1.08] tracking-[-0.02em] text-drc-titular sm:text-[44px]">
+          Tu práctica, hecha con tus clases
+        </h1>
+        <p className="mt-3.5 max-w-[52ch] text-pretty text-[16px] leading-[1.55] text-drc-cuerpo">
+          Elige un alumno de prueba. Los bloques están generados a partir de lo que trabajó en sus
+          últimas clases.
+        </p>
+
+        <ul className="mt-10 flex flex-col gap-3">
+          {ALUMNOS.map((a) => (
+            <li key={a.id}>
+              <Link
+                href={`/alumno/${a.id}`}
+                className="tarjeta tarjeta-activa flex items-center gap-4"
+              >
+                <span
+                  aria-hidden
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-drc-verde-solido font-display text-[16px] font-semibold text-white"
+                >
+                  {a.nombre[0]}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-[17px] font-semibold text-drc-titular">
+                    {a.nombre} · {a.nivel}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[14px] text-drc-cuerpo">
+                    Última clase: {a.clases[0].tema}
+                  </span>
+                </span>
+                <span aria-hidden className="text-[18px] text-drc-flecha">
+                  →
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </main>
+    </>
   );
 }
