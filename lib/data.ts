@@ -42,6 +42,12 @@ export type Bloque = {
   intro: string;
   minutos: number;
   ejercicios: Ejercicio[];
+  /**
+   * Clase de la que sale el bloque. Sirve para recordarle al alumno que
+   * esto no es material genérico: lo vio con su profesor tal día.
+   * Es opcional porque los bloques generados por la IA no la tienen.
+   */
+  claseOrigen?: { fecha: string; profesor: string };
 };
 
 export const BLOQUES: Bloque[] = [
@@ -52,6 +58,7 @@ export const BLOQUES: Bloque[] = [
     area: "Gramática",
     nivel: "B2",
     minutos: 6,
+    claseOrigen: { fecha: "24 jul", profesor: "Aoife" },
     intro:
       "La diferencia está en el tiempo: el segundo habla de un presente que no es real, el tercero de un pasado que ya no se puede cambiar.",
     ejercicios: [
@@ -125,6 +132,7 @@ export const BLOQUES: Bloque[] = [
     area: "Léxico",
     nivel: "B2",
     minutos: 5,
+    claseOrigen: { fecha: "17 jul", profesor: "Aoife" },
     intro:
       "Los que más se confunden entre sí: superar algo, atravesar algo y llevarse bien con alguien.",
     ejercicios: [
@@ -190,6 +198,7 @@ export const BLOQUES: Bloque[] = [
     area: "Gramática",
     nivel: "B2",
     minutos: 5,
+    claseOrigen: { fecha: "10 jul", profesor: "Aoife" },
     intro:
       "Sirve para marcar qué pasó antes de qué. Sin él, todo suena como si hubiera ocurrido a la vez.",
     ejercicios: [
@@ -263,6 +272,7 @@ export const BLOQUES: Bloque[] = [
     area: "Gramática",
     nivel: "B1",
     minutos: 6,
+    claseOrigen: { fecha: "25 jul", profesor: "Liam" },
     intro:
       "La regla corta: si el momento está terminado y se sabe cuándo, past simple. Si el momento sigue abierto o no importa cuándo, present perfect.",
     ejercicios: [
@@ -325,6 +335,7 @@ export const BLOQUES: Bloque[] = [
     area: "Gramática",
     nivel: "B1",
     minutos: 4,
+    claseOrigen: { fecha: "11 jul", profesor: "Liam" },
     intro: "In para lo grande, on para el día, at para el punto exacto. De mayor a menor.",
     ejercicios: [
       {
@@ -379,6 +390,7 @@ export const BLOQUES: Bloque[] = [
     area: "Léxico",
     nivel: "B1",
     minutos: 5,
+    claseOrigen: { fecha: "18 jul", profesor: "Liam" },
     intro: "Las cuatro o cinco expresiones que aparecen en toda reunión y que te sacan de cualquier apuro.",
     ejercicios: [
       {
@@ -444,6 +456,7 @@ export const BLOQUES: Bloque[] = [
     area: "Léxico",
     nivel: "C1",
     minutos: 5,
+    claseOrigen: { fecha: "23 jul", profesor: "Sinead" },
     intro:
       "El punto donde el español se filtra sin que lo notes: en inglés las decisiones no se toman, se hacen.",
     ejercicios: [
@@ -509,6 +522,7 @@ export const BLOQUES: Bloque[] = [
     area: "Gramática",
     nivel: "C1",
     minutos: 6,
+    claseOrigen: { fecha: "16 jul", profesor: "Sinead" },
     intro:
       "La entiendes al leerla pero no te sale al escribir. Aquí el objetivo es producirla, no reconocerla.",
     ejercicios: [
@@ -574,6 +588,7 @@ export const BLOQUES: Bloque[] = [
     area: "Discurso",
     nivel: "C1",
     minutos: 5,
+    claseOrigen: { fecha: "9 jul", profesor: "Sinead" },
     intro:
       "A tu nivel el problema no es conectar ideas, es repetir siempre 'so' y 'but'. Aquí ampliamos el repertorio.",
     ejercicios: [

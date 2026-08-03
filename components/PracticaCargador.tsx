@@ -15,11 +15,13 @@ import Practica from "@/components/Practica";
 export default function PracticaCargador({
   alumnoId,
   nombre,
+  profesor,
   bloqueId,
   bloqueEstatico,
 }: {
   alumnoId: string;
   nombre: string;
+  profesor: string;
   bloqueId: string;
   bloqueEstatico: Bloque | null;
 }) {
@@ -37,7 +39,7 @@ export default function PracticaCargador({
       <Cabecera nombre={nombre} />
 
       {bloque ? (
-        <Practica bloque={bloque} alumnoId={alumnoId} />
+        <Practica bloque={bloque} alumnoId={alumnoId} profesor={profesor} />
       ) : buscando ? (
         <div className="esqueleto mx-auto max-w-2xl px-6 py-10" aria-label="Cargando el bloque">
           <div className="h-1.5 w-full rounded-full bg-drc-suave" />

@@ -22,6 +22,7 @@ export default function PaginaBloque({
     <PracticaCargador
       alumnoId={alumno.id}
       nombre={alumno.nombre}
+      profesor={alumno.profesor}
       bloqueId={params.bloqueId}
       bloqueEstatico={bloque}
     />
