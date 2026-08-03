@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Bloque, Ejercicio } from "@/lib/data";
 import { borrarAvance, guardarAvance, guardarProgreso, UMBRAL_DOMINADO } from "@/lib/progreso";
-import { BarraFases, FasesCompactas, nombreFase, numeroFase } from "@/components/BarraFases";
+import { TarjetaFases, nombreFase, numeroFase } from "@/components/TarjetaFases";
+
+// El banner de fase es exclusivo del móvil: en escritorio la tarjeta
+// de fases ya cuenta lo mismo y con más detalle.
+const ETAPAS = {
+  reconocer: { nombre: "Reconocer", desc: "Identifica la forma correcta." },
+  transformar: { nombre: "Transformar", desc: "Ahora escríbelo tú." },
+  producir: { nombre: "Producir", desc: "Tus propias palabras." },
+} as const;
 
 function normalizar(s: string) {
   return s
@@ -36,6 +44,10 @@ export default function Practica({
   const [terminado, setTerminado] = useState(false);
 
   const ej = ejercicios[i];
+  const etapaCambia = useMemo(
+    () => i === 0 || ejercicios[i - 1].tipo !== ej.tipo,
+    [i, ej, ejercicios]
+  );
 
   function registrar(ok: boolean) {
     setResuelto(true);
@@ -107,63 +119,77 @@ export default function Practica({
   const ultimo = i === ejercicios.length - 1;
 
   return (
-    <div className="mx-auto flex w-full max-w-[980px] flex-col lg:flex-row">
-      <BarraFases
-        titulo={bloque.titulo}
-        minutos={bloque.minutos}
-        indice={i}
-        ejercicios={ejercicios}
-        profesor={profesor}
-      />
+    // Móvil: la columna centrada de siempre. A partir de `lg` el
+    // contenedor se ensancha y el interior pasa a dos tarjetas.
+    <div className="mx-auto max-w-2xl px-6 py-7 sm:py-10 lg:max-w-6xl lg:px-8 lg:py-9">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <Link
+          href={`/alumno/${alumnoId}`}
+          className="text-[14px] text-drc-cuerpo transition-colors hover:text-drc-verde-texto"
+        >
+          ← Salir
+        </Link>
+        <span className="text-[13px] tabular-nums text-drc-cuerpo">
+          {i + 1} de {ejercicios.length}
+          <span className="hidden lg:inline"> · {bloque.minutos} min</span>
+        </span>
+      </div>
 
-      <div className="min-w-0 flex-1">
-        <FasesCompactas indice={i} ejercicios={ejercicios} />
+      {/* items-start: sin esto las dos tarjetas se estirarían a la misma altura. */}
+      <div className="lg:flex lg:items-start lg:gap-7">
+        <TarjetaFases
+          titulo={bloque.titulo}
+          indice={i}
+          ejercicios={ejercicios}
+          profesor={profesor}
+        />
 
-        <div className="px-6 py-6 sm:py-8 lg:px-10">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <Link
-              href={`/alumno/${alumnoId}`}
-              className="text-[14px] text-drc-cuerpo transition-colors hover:text-drc-verde-texto"
-            >
-              ← Salir
-            </Link>
-            {/* En desktop el contador vive en la barra lateral. */}
-            <span className="text-[13px] tabular-nums text-drc-cuerpo lg:hidden">
-              {i + 1} de {ejercicios.length}
-            </span>
-          </div>
-
-          <div className="mb-6 flex gap-1.5">
+        <div className="min-w-0 lg:flex-1 lg:rounded-2xl lg:border lg:border-marca-borde lg:bg-white lg:p-7">
+          <div className="mb-8 flex gap-1.5 lg:mb-5">
             {ejercicios.map((_, k) => (
               <div
                 key={k}
-                className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                className={`h-1.5 flex-1 rounded-full transition-colors duration-300 lg:h-1 ${
                   k < i ? "bg-drc-verde" : k === i ? "bg-drc-verde-solido" : "bg-drc-discontinuo"
                 }`}
               />
             ))}
           </div>
 
-          {/* La fase ya la desarrolla la barra lateral: aquí basta una línea. */}
-          <p className="mb-4 text-[11px] font-semibold uppercase leading-none tracking-widest text-drc-verde-texto">
+          {/* Banner de fase: solo móvil. */}
+          {etapaCambia && (
+            <div key={ej.tipo} className="aparece mb-6 rounded-[18px] bg-drc-banner px-5 py-4 lg:hidden">
+              <p className="font-display font-semibold text-white">
+                Fase {numeroFase(ej.tipo)} · {ETAPAS[ej.tipo].nombre}
+              </p>
+              <p className="mt-0.5 text-[14px] text-white/60">{ETAPAS[ej.tipo].desc}</p>
+            </div>
+          )}
+
+          {/* Línea de fase: solo escritorio. */}
+          <p className="hidden text-[11px] font-semibold uppercase leading-none tracking-widest text-marca-verde lg:mb-4 lg:block">
             Fase {numeroFase(ej.tipo)} · {nombreFase(ej.tipo)}
           </p>
 
           {/* ---------------- RECONOCER ---------------- */}
           {ej.tipo === "reconocer" && (
             <>
-              <h2 className="mb-6 font-display text-[21px] font-semibold leading-snug text-drc-titular sm:text-[24px]">
+              <h2 className="mb-7 font-display text-[21px] font-semibold leading-snug text-drc-titular sm:text-[24px] lg:mb-5 lg:text-[20px]">
                 {ej.enunciado}
               </h2>
-              <div className="flex flex-col gap-2">
+              {/* Apiladas en móvil, dos columnas a partir de `lg`. */}
+              <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2 lg:gap-2">
                 {ej.opciones.map((op, k) => {
                   const esCorrecta = k === ej.correcta;
                   const esElegida = k === elegida;
-                  let cls = "bg-drc-superficie border-drc-borde hover:border-drc-hairline";
+                  let cls =
+                    "bg-drc-superficie border-drc-borde hover:border-drc-hairline lg:bg-marca-niebla lg:border-marca-borde lg:hover:border-marca-verde";
                   if (resuelto) {
-                    if (esCorrecta) cls = "bg-drc-chip-verde border-drc-verde";
+                    if (esCorrecta) cls = "bg-drc-chip-verde border-drc-verde lg:border-marca-verde";
                     else if (esElegida) cls = "bg-[#FDECEC] border-[#D98282]";
-                    else cls = "bg-drc-superficie/60 border-transparent opacity-50";
+                    // En escritorio conservan el fondo niebla: sobre la tarjeta
+                    // blanca, un fondo transparente las dejaría como texto suelto.
+                    else cls = "bg-drc-superficie/60 border-transparent opacity-50 lg:bg-marca-niebla";
                   }
                   return (
                     <button
@@ -175,7 +201,7 @@ export default function Practica({
                         setElegida(k);
                         registrar(esCorrecta);
                       }}
-                      className={`w-full rounded-lg border-2 px-4 py-2.5 text-left text-[16px] leading-snug text-drc-texto transition-all duration-150 ${cls}`}
+                      className={`w-full rounded-xl border-2 px-5 py-4 text-left text-[16px] leading-snug text-drc-texto transition-all duration-150 lg:rounded-lg lg:px-4 lg:py-2.5 lg:text-[15px] ${cls}`}
                     >
                       {op}
                     </button>
@@ -189,7 +215,7 @@ export default function Practica({
           {ej.tipo === "transformar" && (
             <>
               <p className="mb-3 text-[15px] leading-[1.5] text-drc-cuerpo">{ej.instruccion}</p>
-              <p className="mb-5 rounded-lg bg-drc-superficie px-4 py-3 font-display text-[18px] font-semibold leading-snug text-drc-titular sm:text-[20px]">
+              <p className="mb-5 rounded-xl bg-drc-superficie px-5 py-4 font-display text-[18px] font-semibold leading-snug text-drc-titular sm:text-[20px] lg:bg-marca-niebla">
                 {ej.frase}
               </p>
               <textarea
@@ -204,7 +230,7 @@ export default function Practica({
                 disabled={resuelto}
                 rows={3}
                 placeholder="Escribe tu versión…"
-                className="w-full resize-none rounded-lg border-2 border-drc-borde bg-drc-superficie px-4 py-3 text-[16px] leading-[1.5] text-drc-texto outline-none transition-colors focus:border-drc-verde-solido disabled:opacity-60"
+                className="w-full resize-none rounded-xl border-2 border-drc-borde bg-drc-superficie px-5 py-4 text-[16px] leading-[1.5] text-drc-texto outline-none transition-colors focus:border-drc-verde-solido disabled:opacity-60 lg:border-marca-borde lg:bg-marca-niebla lg:focus:border-marca-verde"
               />
               {!resuelto && (
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
@@ -236,7 +262,7 @@ export default function Practica({
           {/* ---------------- PRODUCIR ---------------- */}
           {ej.tipo === "producir" && (
             <>
-              <h2 className="mb-2 font-display text-[21px] font-semibold leading-snug text-drc-titular sm:text-[24px]">
+              <h2 className="mb-2 font-display text-[21px] font-semibold leading-snug text-drc-titular sm:text-[24px] lg:text-[20px]">
                 {ej.instruccion}
               </h2>
               <p className="mb-5 text-[15px] leading-[1.55] text-drc-cuerpo">{ej.contexto}</p>
@@ -245,7 +271,7 @@ export default function Practica({
                 onChange={(e) => setTexto(e.target.value)}
                 rows={6}
                 placeholder="Escribe aquí…"
-                className="w-full resize-none rounded-lg border-2 border-drc-borde bg-drc-superficie px-4 py-3 text-[16px] leading-[1.55] text-drc-texto outline-none transition-colors focus:border-drc-verde-solido"
+                className="w-full resize-none rounded-xl border-2 border-drc-borde bg-drc-superficie px-5 py-4 text-[16px] leading-[1.55] text-drc-texto outline-none transition-colors focus:border-drc-verde-solido lg:border-marca-borde lg:bg-marca-niebla lg:focus:border-marca-verde"
               />
 
               {!verModelo ? (
@@ -258,7 +284,7 @@ export default function Practica({
                   Comparar con el modelo
                 </button>
               ) : (
-                <div className="aparece tarjeta mt-5">
+                <div className="aparece tarjeta mt-5 lg:border-marca-borde lg:bg-marca-niebla">
                   <p className="font-display text-[17px] font-semibold text-drc-titular">
                     Revisa tu respuesta
                   </p>
@@ -288,13 +314,12 @@ export default function Practica({
                       );
                     })}
                   </div>
-                  <div className="rounded-xl bg-drc-suave p-4">
+                  <div className="rounded-xl bg-drc-suave p-4 lg:bg-white">
                     <p className="eyebrow mb-2 text-drc-cuerpo">Un ejemplo válido</p>
                     <p className="text-[14px] leading-relaxed text-drc-texto">{ej.modelo}</p>
                   </div>
                   <p className="mt-4 text-[13px] text-drc-cuerpo">
-                    {profesor ? `${profesor} verá` : "Tu profesor verá"} esta respuesta antes de tu
-                    próxima clase.
+                    Tu profesor verá esta respuesta antes de la próxima clase.
                   </p>
                   <button
                     type="button"
@@ -311,10 +336,10 @@ export default function Practica({
             </>
           )}
 
-          {/* Ancla el ejercicio a la clase de la que salió. Los bloques
-              generados no traen `claseOrigen`: entonces no se muestra nada. */}
+          {/* Ancla el ejercicio a la clase de la que salió. Dato secundario:
+              línea de texto simple, sin adornos. Solo escritorio. */}
           {bloque.claseOrigen && ej.tipo !== "producir" && (
-            <p className="mt-5 border-l-2 border-drc-amarillo pl-3 text-[13px] leading-[1.5] text-drc-cuerpo">
+            <p className="mt-4 hidden text-[12px] leading-[1.5] text-drc-cuerpo lg:block">
               Lo viste con {bloque.claseOrigen.profesor} el {bloque.claseOrigen.fecha}.
             </p>
           )}
