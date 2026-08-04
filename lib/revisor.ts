@@ -58,13 +58,13 @@ export type Revision =
 
 const ESPECIFICACION_EXAMEN: Record<TipoExamen, string> = {
   b2_first:
-    "B2 First: la key word transformation se resuelve con entre DOS y CINCO palabras (la palabra clave incluida, y sin modificarla). Si el ejercicio pide otro rango, es un error.",
+    "B2 First: la key word transformation se resuelve con entre DOS y CINCO palabras, contando la palabra clave, que no puede modificarse. Marca formato_examen si la instrucción declara otro rango, o si alguna respuesta aceptada no completa la frase con sentido.",
   c1_advanced:
-    "C1 Advanced: la key word transformation se resuelve con entre TRES y SEIS palabras (la palabra clave incluida, y sin modificarla). Si el ejercicio pide otro rango, es un error.",
+    "C1 Advanced: la key word transformation se resuelve con entre TRES y SEIS palabras, contando la palabra clave, que no puede modificarse. Marca formato_examen si la instrucción declara otro rango, o si alguna respuesta aceptada no completa la frase con sentido.",
   b1_preliminary:
-    "B1 Preliminary: este examen NO tiene key word transformation. Si aparece una, con palabra clave obligatoria y recuento de palabras, es un error de formato.",
+    "B1 Preliminary: este examen NO tiene key word transformation al estilo Cambridge, es decir, no impone una palabra clave obligatoria en mayúsculas ni declara un recuento de palabras. Pedir que se reescriba una frase manteniendo el significado SÍ es apropiado para este examen y NO es un defecto. Marca formato_examen únicamente si un ejercicio impone palabra clave obligatoria o recuento de palabras.",
   ielts:
-    "IELTS no es un examen de Cambridge: no tiene key word transformation ni open cloze. Si aparece cualquiera de los dos, es un error de formato.",
+    "IELTS no es un examen de Cambridge: no tiene key word transformation ni open cloze. Reescribir una frase con registro académico, parafrasear o nominalizar SÍ es apropiado para IELTS y NO es un defecto. Marca formato_examen únicamente si un ejercicio impone una palabra clave obligatoria con recuento de palabras, o si presenta un open cloze de una sola palabra gramatical.",
 };
 
 const SISTEMA = [
@@ -73,6 +73,12 @@ const SISTEMA = [
   "Tu única tarea es DETECTAR defectos. No reescribes, no propones alternativas y no corriges: si algo está mal, se regenera entero.",
   "",
   "SÉ CONSERVADOR. Marca un problema solo si estás seguro. Un falso positivo cuesta una regeneración; un falso negativo llega al alumno y le damos por fallada una respuesta que era correcta. Ante la duda, no marques.",
+  "",
+  "ESTRUCTURA FIJA. Todos los bloques de DRC llevan siempre 5 ejercicios: 2 de tipo 'reconocer', 2 de tipo 'transformar' y 1 de tipo 'producir'. Es el formato pedagógico de la academia y no una afirmación sobre el examen. Que un bloque contenga ejercicios 'transformar', o que el 'producir' sea una tarea de escritura abierta, NO es un defecto: no comentes a qué sección del examen pertenecería cada ejercicio ni propongas otra estructura.",
+  "",
+  "NO REPORTES LO QUE NO ESTÁS AFIRMANDO. Si al razonarlo concluyes que en realidad no hay defecto, no lo incluyas en la lista. Cada entrada de 'problemas' es una afirmación de que algo está mal.",
+  "",
+  "UNA COLOCACIÓN MENOS FRECUENTE NO ES UN DISTRACTOR INVÁLIDO. En los exámenes de Cambridge es normal que el distractor sea una combinación posible pero que no es la que se usa en ese contexto. Marca distractor_valido solo cuando la opción sea plenamente natural EN ESA FRASE para un hablante nativo, no cuando sea simplemente menos habitual.",
   "",
   "Buscas EXACTAMENTE cuatro defectos:",
   "",
@@ -91,7 +97,7 @@ const SISTEMA = [
   "4. instruccion_incoherente — la instrucción no describe lo que de verdad hace falta para acertar. Ejemplo real:",
   "   · una instrucción decía 'corrige la frase cambiando solo la palabra relativa', pero las respuestas aceptadas exigían además eliminar un 'in it' del final.",
   "",
-  "5. formato_examen — solo cuando se te indique que el bloque prepara un examen concreto: las especificaciones no coinciden con las de ese examen.",
+  "5. formato_examen — solo cuando se te indique que el bloque prepara un examen concreto, y SOLO sobre lo que se te especifique abajo: el recuento de palabras de la key word transformation y los tipos de tarea que ese examen no tiene. Para nada más.",
   "",
   "FORMATO DE RESPUESTA",
   'Devuelves SOLO este objeto JSON, sin markdown y sin una palabra antes ni después: {"apto": true|false, "problemas": [{"ejercicio": 1, "tipo": "...", "detalle": "..."}]}',
