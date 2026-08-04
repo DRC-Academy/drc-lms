@@ -1,16 +1,35 @@
 import { notFound } from "next/navigation";
-import { ALUMNOS, getAlumno, getBloque, type Bloque } from "@/lib/data";
+import { BLOQUES } from "@/lib/data";
+import { obtenerAlumno } from "@/lib/gestion";
+import { nivelDeBloque } from "@/lib/perfil";
+import { calcularTarjetas } from "@/lib/modos";
 import PanelAlumno from "@/components/PanelAlumno";
 
-export function generateStaticParams() {
-  return ALUMNOS.map((a) => ({ id: a.id }));
-}
+// La ficha se arma con datos de Gestión en cada visita: no hay nada que
+// prerenderizar y los datos cambian en cuanto se analiza una clase nueva.
+export const dynamic = "force-dynamic";
 
-export default function PerfilAlumno({ params }: { params: { id: string } }) {
-  const alumno = getAlumno(params.id);
-  if (!alumno) notFound();
+export default async function PerfilAlumno({ params }: { params: { id: string } }) {
+  const datos = await obtenerAlumno(params.id);
 
-  const bloques = alumno.bloques.map(getBloque).filter(Boolean) as Bloque[];
+  // Solo es 404 cuando el id no corresponde a nadie. Un alumno con clase
+  // pero sin perfil ve su ficha con lo que haya.
+  if (!datos) notFound();
 
-  return <PanelAlumno alumno={alumno} bloques={bloques} />;
+  const { perfil, ultimaClase } = datos;
+  const tarjetas = calcularTarjetas(perfil, ultimaClase);
+
+  // Los bloques estáticos se filtran por nivel exacto. Un A2 no recibe
+  // material B1: su contenido sale del banco A2 al generar.
+  const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(perfil.nivel)) : [];
+
+  return (
+    <PanelAlumno
+      alumnoId={params.id}
+      perfil={perfil}
+      ultimaClase={ultimaClase}
+      tarjetas={tarjetas}
+      bloques={bloques}
+    />
+  );
 }

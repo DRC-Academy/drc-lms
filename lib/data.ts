@@ -38,7 +38,12 @@ export type Bloque = {
   id: string;
   titulo: string;
   area: string;
-  nivel: "B1" | "B2" | "C1";
+  /**
+   * A1 y A2 existen porque en Gestión hay 29 alumnos de esos niveles.
+   * Servirles material B1 sería darles ejercicios que no entienden, así
+   * que tienen banco propio en `lib/banco.ts`.
+   */
+  nivel: "A1" | "A2" | "B1" | "B2" | "C1";
   intro: string;
   minutos: number;
   ejercicios: Ejercicio[];
@@ -658,62 +663,89 @@ export const BLOQUES: Bloque[] = [
 ];
 
 // ---------------------------------------------------------------
-// FICHAS DE ALUMNO
-// Esto es lo que el "puente de datos" tendría que devolver desde
-// DRC Gestión. Los bloques se referencian por id.
+// LO QUE DEVUELVE DRC GESTIÓN
+// Estos tipos reflejan las dos vistas del contrato, no las tablas.
+// Las lecturas viven en `lib/gestion.ts`; aquí solo está la forma.
 // ---------------------------------------------------------------
 
-export type Alumno = {
-  id: string;
-  nombre: string;
-  nivel: "B1" | "B2" | "C1";
-  profesor: string;
-  clases: { fecha: string; tema: string }[];
-  logros: string[];
-  bloques: string[];
+/** Exámenes que sabemos preparar con formato propio. */
+export type TipoExamen = "b2_first" | "c1_advanced" | "ielts" | "b1_preliminary";
+
+/** Nombre de cara al alumno. El identificador interno no se enseña nunca. */
+export const NOMBRE_EXAMEN: Record<TipoExamen, string> = {
+  b2_first: "B2 First",
+  c1_advanced: "C1 Advanced",
+  ielts: "IELTS",
+  b1_preliminary: "B1 Preliminary",
 };
 
-export const ALUMNOS: Alumno[] = [
-  {
-    id: "laura",
-    nombre: "Laura",
-    nivel: "B2",
-    profesor: "Aoife",
-    clases: [
-      { fecha: "24 jul", tema: "Second & third conditionals" },
-      { fecha: "17 jul", tema: "Phrasal verbs con 'get'" },
-      { fecha: "10 jul", tema: "Past perfect en narración" },
-    ],
-    logros: ["Fluidez en speaking espontáneo", "Vocabulario de trabajo"],
-    bloques: ["conditionals-2-3", "phrasal-get", "past-perfect"],
-  },
-  {
-    id: "diego",
-    nombre: "Diego",
-    nivel: "B1",
-    profesor: "Liam",
-    clases: [
-      { fecha: "25 jul", tema: "Present perfect vs past simple" },
-      { fecha: "18 jul", tema: "Vocabulario de reuniones" },
-      { fecha: "11 jul", tema: "Preposiciones de tiempo" },
-    ],
-    logros: ["Pronunciación clara", "Se anima a preguntar en inglés"],
-    bloques: ["present-perfect-vs-past", "prepositions-time", "meeting-lexis"],
-  },
-  {
-    id: "marta",
-    nombre: "Marta",
-    nivel: "C1",
-    profesor: "Sinead",
-    clases: [
-      { fecha: "23 jul", tema: "Collocations formales para email" },
-      { fecha: "16 jul", tema: "Inversión y estructuras enfáticas" },
-      { fecha: "9 jul", tema: "Discourse markers en debate" },
-    ],
-    logros: ["Argumenta con soltura", "Comprensión auditiva casi nativa"],
-    bloques: ["formal-collocations", "inversion", "discourse-markers"],
-  },
-];
+/**
+ * Fila de `vista_perfil_alumno`, ya deduplicada y normalizada.
+ *
+ * Los campos del perfil (de `ocupacion` en adelante) solo tienen valor
+ * cuando el alumno ha rellenado el formulario de Gestión: en la mayoría
+ * de las filas son null.
+ */
+export type PerfilAlumno = {
+  alumnoId: string;
+  nombre: string;
+  email: string;
+  /** Tal cual viene de Gestión: incluye A1 y A2, no solo B1/B2/C1. */
+  nivel: string;
+  /** Texto del producto de WooCommerce. Lleva horarios y días pegados. */
+  plan: string;
+  producto: string | null;
+  /**
+   * NO es un objetivo pedagógico: es una copia literal del texto del
+   * producto de WooCommerce, con horarios y días. No se enseña al alumno
+   * ni se usa para generar ejercicios. Está aquí por si sirve más adelante.
+   */
+  objetivoSetter: string | null;
+  profesor: string;
+  ocupacion: string | null;
+  objetivoPerfil: string | null;
+  puntosFuertes: string | null;
+  puntosDebiles: string | null;
+  estiloAprendizaje: string | null;
+  focoRecomendado: string | null;
+  /** Llega como string JSON desde PostgREST; aquí ya viene parseado. */
+  respuestasFormulario: Record<string, unknown> | null;
+  tienePerfil: boolean;
+};
 
-export const getAlumno = (id: string) => ALUMNOS.find((a) => a.id === id);
+/**
+ * Guía que el análisis de la clase deja preparada para la siguiente.
+ * Es el material más valioso que hay: lo escribió el análisis a partir
+ * del transcript, así que no hay que volver a procesar el transcript.
+ */
+export type GuiaProxima = {
+  priority: string;
+  warmUp: string;
+  mainFocus: string;
+  activity: string;
+  notes: string;
+};
+
+/** Fila de `vista_ultima_clase`, normalizada. */
+export type UltimaClase = {
+  alumnoId: string;
+  /** ISO corto, `YYYY-MM-DD`. */
+  fechaClase: string;
+  titulo: string;
+  temas: string;
+  errores: string;
+  notasProgreso: string;
+  /** Llega como string JSON desde PostgREST; aquí ya viene parseado. */
+  guiaProxima: GuiaProxima | null;
+  analizadoEn: string;
+};
+
+/** Lo justo para pintar la lista de la home sin arrastrar el perfil entero. */
+export type ResumenAlumno = {
+  alumnoId: string;
+  nombre: string;
+  nivel: string;
+  profesor: string;
+};
+
 export const getBloque = (id: string) => BLOQUES.find((b) => b.id === id);

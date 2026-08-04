@@ -1,18 +1,18 @@
 import { notFound } from "next/navigation";
-import { ALUMNOS, getAlumno, getBloque } from "@/lib/data";
+import { getBloque } from "@/lib/data";
+import { obtenerAlumno } from "@/lib/gestion";
 import PracticaCargador from "@/components/PracticaCargador";
 
-export function generateStaticParams() {
-  return ALUMNOS.flatMap((a) => a.bloques.map((b) => ({ id: a.id, bloqueId: b })));
-}
+// Mismo motivo que la ficha: el alumno se resuelve contra Gestión.
+export const dynamic = "force-dynamic";
 
-export default function PaginaBloque({
+export default async function PaginaBloque({
   params,
 }: {
   params: { id: string; bloqueId: string };
 }) {
-  const alumno = getAlumno(params.id);
-  if (!alumno) notFound();
+  const datos = await obtenerAlumno(params.id);
+  if (!datos) notFound();
 
   // Si el bloque no está en `lib/data.ts` puede ser uno generado:
   // esos solo se pueden resolver en el cliente.
@@ -20,9 +20,9 @@ export default function PaginaBloque({
 
   return (
     <PracticaCargador
-      alumnoId={alumno.id}
-      nombre={alumno.nombre}
-      profesor={alumno.profesor}
+      alumnoId={params.id}
+      nombre={datos.perfil?.nombre ?? ""}
+      profesor={datos.perfil?.profesor ?? ""}
       bloqueId={params.bloqueId}
       bloqueEstatico={bloque}
     />

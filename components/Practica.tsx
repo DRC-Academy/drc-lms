@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Bloque, Ejercicio } from "@/lib/data";
 import { borrarAvance, guardarAvance, guardarProgreso, UMBRAL_DOMINADO } from "@/lib/progreso";
+import { normalizarRespuesta } from "@/lib/validarBloque";
 import { TarjetaFases, nombreFase, numeroFase } from "@/components/TarjetaFases";
 
 // El banner de fase es exclusivo del móvil: en escritorio la tarjeta
@@ -13,15 +14,6 @@ const ETAPAS = {
   transformar: { nombre: "Transformar", desc: "Ahora escríbelo tú." },
   producir: { nombre: "Producir", desc: "Tus propias palabras." },
 } as const;
-
-function normalizar(s: string) {
-  return s
-    .toLowerCase()
-    .replace(/[‘’]/g, "'")
-    .replace(/[.,;!?]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 export default function Practica({
   bloque,
@@ -58,7 +50,7 @@ export default function Practica({
   function comprobarTexto() {
     if (resuelto || !texto.trim()) return;
     const e = ej as Extract<Ejercicio, { tipo: "transformar" }>;
-    registrar(e.respuestas.some((r) => normalizar(r) === normalizar(texto)));
+    registrar(e.respuestas.some((r) => normalizarRespuesta(r) === normalizarRespuesta(texto)));
   }
 
   function siguiente() {

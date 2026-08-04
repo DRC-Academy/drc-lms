@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Alumno, Bloque } from "@/lib/data";
+import type { Bloque, PerfilAlumno, UltimaClase } from "@/lib/data";
+import type { ModoGeneracion, TarjetaModo } from "@/lib/modos";
+import { formatearFecha } from "@/lib/perfil";
 import { validarBloque } from "@/lib/validarBloque";
 import {
   contarGeneradosEstaSemana,
@@ -13,10 +15,7 @@ import {
   leerProgresoAlumno,
 } from "@/lib/progreso";
 import Cabecera from "@/components/Cabecera";
-import BannerGenerar, {
-  PASOS_GENERACION,
-  type EstadoGeneracion,
-} from "@/components/BannerGenerar";
+import TarjetasGeneracion, { type EstadoGeneracion } from "@/components/TarjetasGeneracion";
 import ListaBloques, {
   type AvanceBloques,
   type ProgresoBloques,
@@ -31,41 +30,35 @@ function fechaDeHoy() {
 }
 
 export default function PanelAlumno({
-  alumno,
+  alumnoId,
+  perfil,
+  ultimaClase,
+  tarjetas,
   bloques,
 }: {
-  alumno: Alumno;
+  alumnoId: string;
+  /** Puede ser null: hay alumnos con clase analizada y sin fila de perfil. */
+  perfil: PerfilAlumno | null;
+  ultimaClase: UltimaClase | null;
+  tarjetas: TarjetaModo[];
   bloques: Bloque[];
 }) {
   const [progreso, setProgreso] = useState<ProgresoBloques>({});
   const [avance, setAvance] = useState<AvanceBloques>({});
   const [generados, setGenerados] = useState<Bloque[]>([]);
-  const [estaSemana, setEstaSemana] = useState(0);
   const [estado, setEstado] = useState<EstadoGeneracion>("listo");
-  const [paso, setPaso] = useState(0);
+  const [modoActivo, setModoActivo] = useState<ModoGeneracion | null>(null);
   // En build queda congelada la fecha del prerender; el efecto la corrige.
   const [hoy, setHoy] = useState(fechaDeHoy);
 
   const zonaNuevos = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setProgreso(leerProgresoAlumno(alumno.id));
-    setAvance(leerAvanceAlumno(alumno.id));
-    setGenerados(leerBloquesGenerados(alumno.id));
-    setEstaSemana(contarGeneradosEstaSemana(alumno.id));
+    setProgreso(leerProgresoAlumno(alumnoId));
+    setAvance(leerAvanceAlumno(alumnoId));
+    setGenerados(leerBloquesGenerados(alumnoId));
     setHoy(fechaDeHoy());
-  }, [alumno.id]);
-
-  // Los pasos avanzan solos mientras se genera y se quedan en el último.
-  useEffect(() => {
-    if (estado !== "generando") return;
-    setPaso(0);
-    const relojes = [
-      window.setTimeout(() => setPaso(1), 700),
-      window.setTimeout(() => setPaso(2), 1450),
-    ];
-    return () => relojes.forEach(window.clearTimeout);
-  }, [estado]);
+  }, [alumnoId]);
 
   // Los generados van primero: son la novedad de la semana.
   const todos = useMemo(() => [...generados, ...bloques], [generados, bloques]);
@@ -106,48 +99,59 @@ export default function PanelAlumno({
   const disponibles = todos.filter((_, i) => i !== indiceBloqueado);
   const enCurso = disponibles.find((b) => !progreso[b.id]) ?? disponibles[0];
 
-  const generar = useCallback(async () => {
-    setEstado("generando");
-    try {
-      const respuesta = await fetch("/api/generar-bloque", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          alumnoId: alumno.id,
-          excluir: todos.map((b) => b.titulo),
-        }),
-      });
+  const generar = useCallback(
+    async (modo: ModoGeneracion) => {
+      setEstado("generando");
+      setModoActivo(modo);
+      try {
+        const respuesta = await fetch("/api/generar-bloque", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            alumnoId,
+            modo,
+            excluir: todos.map((b) => b.titulo),
+          }),
+        });
 
-      if (!respuesta.ok) throw new Error(`La API respondió ${respuesta.status}`);
+        if (!respuesta.ok) throw new Error(`La API respondió ${respuesta.status}`);
 
-      const cuerpo: unknown = await respuesta.json();
-      const bloque = validarBloque(
-        typeof cuerpo === "object" && cuerpo !== null
-          ? (cuerpo as { bloque?: unknown }).bloque
-          : null
-      );
-      if (!bloque) throw new Error("El bloque recibido no tiene la forma esperada");
+        const cuerpo: unknown = await respuesta.json();
+        const bloque = validarBloque(
+          typeof cuerpo === "object" && cuerpo !== null
+            ? (cuerpo as { bloque?: unknown }).bloque
+            : null
+        );
+        if (!bloque) throw new Error("El bloque recibido no tiene la forma esperada");
 
-      guardarBloqueGenerado(alumno.id, bloque);
-      setGenerados((previos) => [bloque, ...previos]);
-      setEstaSemana(contarGeneradosEstaSemana(alumno.id));
-      setEstado("listo");
+        guardarBloqueGenerado(alumnoId, bloque);
+        setGenerados((previos) => [bloque, ...previos]);
+        setEstado("listo");
+        setModoActivo(null);
 
-      // Que se vea aparecer: el bloque nuevo entra en cabeza de la lista.
-      window.requestAnimationFrame(() => {
-        zonaNuevos.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    } catch (error) {
-      console.error("[panel] No se pudo generar el bloque:", error);
-      setEstado("error");
-    }
-  }, [alumno.id, todos]);
+        // Que se vea aparecer: el bloque nuevo entra en cabeza de la lista.
+        window.requestAnimationFrame(() => {
+          zonaNuevos.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      } catch (error) {
+        console.error("[panel] No se pudo generar el bloque:", error);
+        setEstado("error");
+        setModoActivo(null);
+      }
+    },
+    [alumnoId, todos]
+  );
 
   const generando = estado === "generando";
+  const nombre = perfil?.nombre.trim() ?? "";
+  // Sin perfil no hay ni nivel ni profesor: se saluda igual y se enseña menos.
+  const subtitulo = perfil
+    ? `Nivel ${perfil.nivel} · clases con ${perfil.profesor}`
+    : null;
 
   return (
     <>
-      <Cabecera nombre={alumno.nombre} />
+      <Cabecera nombre={nombre || undefined} />
 
       <main className="mx-auto flex max-w-columna flex-col gap-10 px-6 pb-[140px] pt-7">
         <Link
@@ -162,128 +166,109 @@ export default function PanelAlumno({
           <p suppressHydrationWarning className="eyebrow tabular-nums text-drc-cuerpo">
             {hoy}
           </p>
-          <h1 className="mt-3.5 font-display text-[40px] font-semibold leading-none tracking-[-0.02em] text-drc-titular wide:text-[58px]">
-            Hola, {alumno.nombre}
+          <h1 className="mt-3.5 text-balance font-display text-[40px] font-semibold leading-none tracking-[-0.02em] text-drc-titular wide:text-[58px]">
+            {nombre ? `Hola, ${nombre}` : "Hola"}
           </h1>
-          <p className="mt-3 text-[16px] leading-[1.55] text-drc-cuerpo">
-            Nivel <span className="font-medium text-drc-verde-texto">{alumno.nivel}</span> · clases
-            con {alumno.profesor}
-          </p>
+          {subtitulo && (
+            <p className="mt-3 text-[16px] leading-[1.55] text-drc-cuerpo">
+              Nivel <span className="font-medium text-drc-verde-texto">{perfil?.nivel}</span> ·
+              clases con {perfil?.profesor}
+            </p>
+          )}
         </header>
 
         {/* --------------------------- RESUMEN DE PROGRESO ---------------------- */}
-        <section
-          aria-label="Tu progreso"
-          className="grid grid-cols-3 divide-x divide-drc-borde rounded-[20px] border border-drc-borde bg-drc-superficie"
-        >
-          <div className="px-2.5 py-5 text-center wide:px-6">
-            <p className="font-display text-[28px] font-semibold leading-none tabular-nums text-drc-titular wide:text-[32px]">
-              {resumen.dominados}
-              <span className="text-drc-cuerpo">/{resumen.total}</span>
-            </p>
-            {/* leading-[1.35] deja que la etiqueta parta en dos líneas en móvil sin cortarse. */}
-            <p className="eyebrow mt-2.5 leading-[1.35] text-drc-cuerpo">Dominados</p>
-          </div>
-          <div className="px-2.5 py-5 text-center wide:px-6">
-            <p className="font-display text-[28px] font-semibold leading-none tabular-nums text-drc-titular wide:text-[32px]">
-              {resumen.medio === null ? "—" : `${resumen.medio}%`}
-            </p>
-            <p className="eyebrow mt-2.5 leading-[1.35] text-drc-cuerpo">Acierto medio</p>
-          </div>
-          <div className="px-2.5 py-5 text-center wide:px-6">
-            <p className="font-display text-[28px] font-semibold leading-none tabular-nums text-drc-titular wide:text-[32px]">
-              {resumen.minutos}
-              <span className="text-[17px] text-drc-cuerpo"> min</span>
-            </p>
-            <p className="eyebrow mt-2.5 leading-[1.35] text-drc-cuerpo">Practicados</p>
-          </div>
-        </section>
+        {todos.length > 0 && (
+          <section
+            aria-label="Tu progreso"
+            className="grid grid-cols-3 divide-x divide-drc-borde rounded-[20px] border border-drc-borde bg-drc-superficie"
+          >
+            <div className="px-2.5 py-5 text-center wide:px-6">
+              <p className="font-display text-[28px] font-semibold leading-none tabular-nums text-drc-titular wide:text-[32px]">
+                {resumen.dominados}
+                <span className="text-drc-cuerpo">/{resumen.total}</span>
+              </p>
+              {/* leading-[1.35] deja que la etiqueta parta en dos líneas en móvil sin cortarse. */}
+              <p className="eyebrow mt-2.5 leading-[1.35] text-drc-cuerpo">Dominados</p>
+            </div>
+            <div className="px-2.5 py-5 text-center wide:px-6">
+              <p className="font-display text-[28px] font-semibold leading-none tabular-nums text-drc-titular wide:text-[32px]">
+                {resumen.medio === null ? "—" : `${resumen.medio}%`}
+              </p>
+              <p className="eyebrow mt-2.5 leading-[1.35] text-drc-cuerpo">Acierto medio</p>
+            </div>
+            <div className="px-2.5 py-5 text-center wide:px-6">
+              <p className="font-display text-[28px] font-semibold leading-none tabular-nums text-drc-titular wide:text-[32px]">
+                {resumen.minutos}
+                <span className="text-[17px] text-drc-cuerpo"> min</span>
+              </p>
+              <p className="eyebrow mt-2.5 leading-[1.35] text-drc-cuerpo">Practicados</p>
+            </div>
+          </section>
+        )}
 
-        {/* --------------------------- FILA DE TARJETAS -------------------------- */}
-        <section className="grid gap-4 wide:grid-cols-[1.15fr_1fr]">
-          <article className="tarjeta">
-            <h2 className="eyebrow text-drc-cuerpo">Lo que vienes trabajando</h2>
-            <ul className="mt-5 flex flex-col gap-3.5">
-              {alumno.clases.map((clase, k) => {
-                const reciente = k === 0;
-                return (
-                  <li key={`${clase.fecha}-${k}`} className="flex items-start gap-3">
-                    <span
-                      className={`w-[52px] shrink-0 text-[13px] tabular-nums ${
-                        reciente ? "font-medium text-drc-verde-texto" : "text-drc-cuerpo"
-                      }`}
-                    >
-                      {clase.fecha}
-                    </span>
-                    <span
-                      aria-hidden
-                      className={`mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full ${
-                        reciente ? "bg-drc-verde" : "bg-drc-hairline"
-                      }`}
-                    />
-                    <span
-                      className={`text-[15px] leading-[1.45] ${
-                        reciente ? "font-medium text-drc-titular" : "text-drc-chip-texto"
-                      }`}
-                    >
-                      {clase.tema}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </article>
+        {/* --------------------------- CONTEXTO DEL ALUMNO ---------------------- */}
+        {(ultimaClase || perfil?.puntosFuertes) && (
+          <section className="grid gap-4 wide:grid-cols-[1.15fr_1fr]">
+            {ultimaClase && (
+              <article className="tarjeta">
+                <h2 className="eyebrow text-drc-cuerpo">Tu última clase</h2>
+                <p className="mt-4 text-[13px] tabular-nums text-drc-verde-texto">
+                  {formatearFecha(ultimaClase.fechaClase)}
+                </p>
+                <p className="mt-1.5 text-pretty font-display text-[17px] font-semibold leading-snug text-drc-titular">
+                  {ultimaClase.titulo}
+                </p>
+              </article>
+            )}
 
-          <article className="tarjeta">
-            <h2 className="eyebrow text-drc-cuerpo">Vas bien en</h2>
-            <ul className="mt-5 flex flex-wrap gap-2">
-              {alumno.logros.map((logro) => (
-                <li
-                  key={logro}
-                  className="rounded-full bg-drc-chip-verde px-3.5 py-1.5 text-[13px] font-medium leading-snug text-drc-verde-texto"
-                >
-                  {logro}
-                </li>
-              ))}
-            </ul>
-          </article>
-        </section>
+            {perfil?.puntosFuertes && (
+              <article className="tarjeta">
+                <h2 className="eyebrow text-drc-cuerpo">Vas bien en</h2>
+                <p className="mt-4 text-pretty text-[15px] leading-[1.55] text-drc-texto">
+                  {perfil.puntosFuertes}
+                </p>
+              </article>
+            )}
+          </section>
+        )}
 
-        {/* ------------------------- GENERAR PRÓXIMA CLASE ---------------------- */}
-        <BannerGenerar
-          ultimaClase={alumno.clases[0].tema}
+        {/* ------------------------- MODOS DE GENERACIÓN ------------------------ */}
+        <TarjetasGeneracion
+          tarjetas={tarjetas}
           estado={estado}
-          paso={paso}
-          generadosEstaSemana={estaSemana}
+          modoActivo={modoActivo}
           onGenerar={generar}
         />
 
         {/* --------------------------- BLOQUES DE LA SEMANA ---------------------- */}
-        <section ref={zonaNuevos} className="scroll-mt-20">
-          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-drc-borde pb-5">
-            <div className="min-w-0">
-              <h2 className="font-display text-[30px] font-semibold leading-[1.1] text-drc-titular">
-                Tus bloques de esta semana
-              </h2>
-              <p className="mt-2 max-w-[46ch] text-pretty text-[15px] leading-[1.55] text-drc-cuerpo">
-                Cada bloque va de reconocer la forma a producirla tú solo. Cinco minutos cada uno.
+        {todos.length > 0 && (
+          <section ref={zonaNuevos} className="scroll-mt-20">
+            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-drc-borde pb-5">
+              <div className="min-w-0">
+                <h2 className="font-display text-[30px] font-semibold leading-[1.1] text-drc-titular">
+                  Tus bloques
+                </h2>
+                <p className="mt-2 max-w-[46ch] text-pretty text-[15px] leading-[1.55] text-drc-cuerpo">
+                  Cada bloque va de reconocer la forma a producirla tú solo. Cinco minutos cada uno.
+                </p>
+              </div>
+              <p className="eyebrow shrink-0 tabular-nums text-drc-cuerpo">
+                {todos.reduce((suma, b) => suma + b.minutos, 0)} min en total
               </p>
             </div>
-            <p className="eyebrow shrink-0 tabular-nums text-drc-cuerpo">
-              {todos.reduce((suma, b) => suma + b.minutos, 0)} min en total
-            </p>
-          </div>
 
-          <ListaBloques
-            bloques={todos}
-            alumnoId={alumno.id}
-            progreso={progreso}
-            avance={avance}
-            generados={idsGenerados}
-            indiceBloqueado={indiceBloqueado}
-            generando={generando}
-          />
-        </section>
+            <ListaBloques
+              bloques={todos}
+              alumnoId={alumnoId}
+              progreso={progreso}
+              avance={avance}
+              generados={idsGenerados}
+              indiceBloqueado={indiceBloqueado}
+              generando={generando}
+            />
+          </section>
+        )}
       </main>
 
       {/* ----------------------------- BARRA FIJA ------------------------------ */}
@@ -298,7 +283,7 @@ export default function PanelAlumno({
                 </p>
               </div>
               <Link
-                href={`/alumno/${alumno.id}/${enCurso.id}`}
+                href={`/alumno/${alumnoId}/${enCurso.id}`}
                 className="btn btn-amarillo min-h-[46px] shrink-0"
               >
                 Empezar

@@ -19,10 +19,27 @@ const ORDEN: Ejercicio["tipo"][] = [
   "producir",
 ];
 
-const NIVELES: Bloque["nivel"][] = ["B1", "B2", "C1"];
+const NIVELES: Bloque["nivel"][] = ["A1", "A2", "B1", "B2", "C1"];
 
 function esRegistro(valor: unknown): valor is Record<string, unknown> {
   return typeof valor === "object" && valor !== null && !Array.isArray(valor);
+}
+
+/**
+ * Criterio con el que se compara la respuesta del alumno en la práctica.
+ *
+ * Vive aquí y lo importa `Practica.tsx` para que haya UNA sola regla: la
+ * deduplicación de `respuestas` tiene que usar exactamente la misma que
+ * la comparación en tiempo real. Si dos variantes se comparan iguales al
+ * practicar, guardar las dos no aporta nada.
+ */
+export function normalizarRespuesta(texto: string): string {
+  return texto
+    .toLowerCase()
+    .replace(/[‘’]/g, "'")
+    .replace(/[.,;!?]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** Devuelve la cadena recortada, o null si está vacía o no es cadena. */
@@ -32,17 +49,43 @@ function cadena(valor: unknown, minimo = 1): string | null {
   return limpia.length >= minimo ? limpia : null;
 }
 
-/** Lista de cadenas no vacías, sin duplicados, con un mínimo de elementos. */
-function listaDeCadenas(valor: unknown, minimo: number, maximo = 12): string[] | null {
+/**
+ * Lista de cadenas no vacías con un mínimo de elementos.
+ *
+ * Qué hacer con los duplicados depende de para qué es la lista:
+ *
+ * - `opciones` los RECHAZA. Dos opciones que se leen igual dejan el
+ *   ejercicio sin solución única y rompen el índice `correcta`.
+ * - `respuestas` los DEDUPLICA. La práctica valida con `some()`, así que
+ *   una variante repetida es inocua; tirar el bloque entero por eso era
+ *   la causa de uno de cada cinco descartes.
+ */
+function listaDeCadenas(
+  valor: unknown,
+  minimo: number,
+  maximo = 12,
+  duplicados: "rechazar" | "deduplicar" = "rechazar"
+): string[] | null {
   if (!Array.isArray(valor) || valor.length < minimo || valor.length > maximo) return null;
+
   const salida: string[] = [];
+  const vistas = new Set<string>();
+
   for (const bruto of valor) {
     const limpia = cadena(bruto);
     if (!limpia) return null;
+
+    const clave = normalizarRespuesta(limpia);
+    if (vistas.has(clave)) {
+      if (duplicados === "rechazar") return null;
+      continue; // se conserva la primera, que es la que se muestra de modelo
+    }
+
+    vistas.add(clave);
     salida.push(limpia);
   }
-  const unicas = new Set(salida.map((s) => s.toLowerCase()));
-  return unicas.size === salida.length ? salida : null;
+
+  return salida.length >= minimo ? salida : null;
 }
 
 function validarReconocer(crudo: Record<string, unknown>, id: string): Reconocer | null {
@@ -63,7 +106,7 @@ function validarTransformar(crudo: Record<string, unknown>, id: string): Transfo
   const frase = cadena(crudo.frase, 5);
   const pista = cadena(crudo.pista, 3);
   const explicacion = cadena(crudo.explicacion, 10);
-  const respuestas = listaDeCadenas(crudo.respuestas, 1); // al menos una aceptada
+  const respuestas = listaDeCadenas(crudo.respuestas, 1, 12, "deduplicar"); // al menos una aceptada
 
   if (!instruccion || !frase || !pista || !explicacion || !respuestas) return null;
 

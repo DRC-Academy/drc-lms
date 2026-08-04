@@ -9,6 +9,139 @@
 import type { Bloque } from "@/lib/data";
 
 export const BANCO: Bloque[] = [
+  // ============================== A2 ==============================
+  // Nivel de entrada real de 29 alumnos. Las frases son cortas y el
+  // vocabulario, de alta frecuencia: un A2 con material B1 abandona.
+  {
+    id: "banco-a2-presentes",
+    titulo: "Present simple y continuous",
+    area: "Gramática",
+    nivel: "A2",
+    minutos: 5,
+    intro:
+      "Dos presentes con trabajos distintos: uno cuenta lo que haces siempre, el otro lo que estás haciendo justo ahora.",
+    ejercicios: [
+      {
+        tipo: "reconocer",
+        id: "ba2p-r1",
+        enunciado: "I ____ in an office every day.",
+        opciones: ["work", "am working", "working", "am work"],
+        correcta: 0,
+        explicacion:
+          "'Every day' habla de tu rutina, y la rutina va en present simple. 'Am working' sería lo que estás haciendo en este momento.",
+      },
+      {
+        tipo: "reconocer",
+        id: "ba2p-r2",
+        enunciado: "— Where is Ana? — She ____ lunch in the kitchen.",
+        opciones: ["is having", "has", "have", "is have"],
+        correcta: 0,
+        explicacion:
+          "Está pasando ahora mismo, así que toca present continuous: 'is' + verbo terminado en -ing.",
+      },
+      {
+        tipo: "transformar",
+        id: "ba2p-t1",
+        instruccion: "Cambia la frase para decir que está pasando ahora mismo.",
+        frase: "I watch TV.",
+        respuestas: ["I am watching TV.", "I'm watching TV."],
+        pista: "Empieza por 'I am…' y añade -ing al verbo.",
+        explicacion:
+          "Lo que ocurre en este momento se dice con 'am/is/are' + verbo con -ing. El verbo solo, sin 'am', significaría que lo haces siempre.",
+      },
+      {
+        tipo: "transformar",
+        id: "ba2p-t2",
+        instruccion: "Cambia la frase para hablar de su rutina, con 'every morning'.",
+        frase: "She is drinking coffee.",
+        respuestas: [
+          "She drinks coffee every morning.",
+          "Every morning she drinks coffee.",
+        ],
+        pista: "Quita el 'is', y cuidado con la -s del verbo.",
+        explicacion:
+          "Las rutinas van en present simple. Con he, she o it el verbo lleva -s: 'drinks'. Olvidar esa -s es lo que más se cuela a este nivel.",
+      },
+      {
+        tipo: "producir",
+        id: "ba2p-p1",
+        instruccion: "Escribe sobre un día normal en tu trabajo.",
+        contexto:
+          "Tres o cuatro frases cortas. Cuenta qué haces normalmente y qué estás haciendo ahora mismo.",
+        criterios: [
+          "Dos frases en present simple para la rutina.",
+          "Una frase en present continuous para ahora.",
+          "Con he, she o it, el verbo del present simple lleva -s.",
+        ],
+        modelo:
+          "I start work at nine. I answer emails every morning. Right now I am writing a report. My colleague is helping me.",
+      },
+    ],
+  },
+  {
+    id: "banco-a2-dia-a-dia",
+    titulo: "El vocabulario de tu día",
+    area: "Léxico",
+    nivel: "A2",
+    minutos: 5,
+    intro:
+      "En inglés el desayuno no se toma y los errores no se hacen. Aquí van los verbos que cambian respecto al español.",
+    ejercicios: [
+      {
+        tipo: "reconocer",
+        id: "ba2d-r1",
+        enunciado: "I ____ breakfast at eight.",
+        opciones: ["have", "take", "make", "do"],
+        correcta: 0,
+        explicacion:
+          "Las comidas van con 'have': have breakfast, have lunch, have dinner. 'Take breakfast' es la traducción literal de 'tomar' y en inglés no se dice.",
+      },
+      {
+        tipo: "reconocer",
+        id: "ba2d-r2",
+        enunciado: "My sister always ____ mistakes when she writes fast.",
+        opciones: ["makes", "does", "takes", "has"],
+        correcta: 0,
+        explicacion:
+          "Un error se 'makes', no se 'does'. 'Do' se queda para las tareas: do your homework, do the shopping.",
+      },
+      {
+        tipo: "transformar",
+        id: "ba2d-t1",
+        instruccion: "Corrige el verbo.",
+        frase: "I take breakfast with my family.",
+        respuestas: ["I have breakfast with my family."],
+        pista: "En inglés el desayuno no se toma.",
+        explicacion:
+          "'Tomar el desayuno' se dice 'have breakfast'. Con 'take' suena a que te lo llevas a otro sitio.",
+      },
+      {
+        tipo: "transformar",
+        id: "ba2d-t2",
+        instruccion: "Corrige el verbo.",
+        frase: "I do a mistake every time.",
+        respuestas: ["I make a mistake every time.", "I make mistakes every time."],
+        pista: "Los errores no van con 'do'.",
+        explicacion:
+          "Lo correcto es 'make a mistake'. En español cometemos errores, y ese verbo nos empuja hacia 'do', que aquí no encaja.",
+      },
+      {
+        tipo: "producir",
+        id: "ba2d-p1",
+        instruccion: "Cuenta cómo es tu mañana.",
+        contexto:
+          "Tres o cuatro frases cortas: a qué hora te levantas, qué desayunas y cómo vas al trabajo.",
+        criterios: [
+          "Una frase con 'have' y una comida.",
+          "Una frase con 'get up' y una hora.",
+          "Frases cortas, todas en present simple.",
+        ],
+        modelo:
+          "I get up at half past six. I have breakfast with my wife. Then I go to work by bus. I start at eight.",
+      },
+    ],
+  },
+
   // ============================== B1 ==============================
   {
     id: "banco-b1-futuros",
@@ -288,22 +421,45 @@ export const BANCO: Bloque[] = [
   },
 ];
 
+const ESCALA: Bloque["nivel"][] = ["A1", "A2", "B1", "B2", "C1"];
+
+/**
+ * Niveles ordenados por cercanía al pedido. A igual distancia gana el
+ * más bajo: si hay que desviarse, mejor un ejercicio que se le quede
+ * corto que uno que no entienda.
+ */
+function nivelesPorCercania(nivel: Bloque["nivel"]): Bloque["nivel"][] {
+  const origen = ESCALA.indexOf(nivel);
+  return [...ESCALA].sort((a, b) => {
+    const distanciaA = Math.abs(ESCALA.indexOf(a) - origen);
+    const distanciaB = Math.abs(ESCALA.indexOf(b) - origen);
+    if (distanciaA !== distanciaB) return distanciaA - distanciaB;
+    return ESCALA.indexOf(a) - ESCALA.indexOf(b);
+  });
+}
+
 /**
  * Elige un bloque del banco para un nivel, evitando títulos que el
- * alumno ya tiene delante. Si no queda ninguno libre del nivel,
- * relaja el filtro antes que devolver nada.
+ * alumno ya tiene delante.
+ *
+ * Si no hay material del nivel exacto se baja al más cercano, no a uno
+ * cualquiera: no hay bloques A1 escritos todavía, y sin este orden un
+ * alumno A1 podía recibir un bloque C1.
  */
 export function bloqueDeBanco(nivel: Bloque["nivel"], titulosExcluidos: string[] = []): Bloque {
   const excluidos = new Set(titulosExcluidos.map((t) => t.trim().toLowerCase()));
   const libre = (b: Bloque) => !excluidos.has(b.titulo.toLowerCase());
 
-  const delNivel = BANCO.filter((b) => b.nivel === nivel);
-  const candidatos = [
-    delNivel.filter(libre), // lo ideal: mismo nivel y tema nuevo
-    delNivel, // mismo nivel aunque repita
-    BANCO.filter(libre), // otro nivel pero tema nuevo
-    BANCO, // lo que haya
-  ].find((lista) => lista.length > 0) as Bloque[];
+  for (const candidato of nivelesPorCercania(nivel)) {
+    const delNivel = BANCO.filter((b) => b.nivel === candidato);
+    const lista = [
+      delNivel.filter(libre), // lo ideal: tema nuevo
+      delNivel, // ese nivel aunque repita
+    ].find((opciones) => opciones.length > 0);
 
-  return candidatos[Math.floor(Math.random() * candidatos.length)];
+    if (lista) return lista[Math.floor(Math.random() * lista.length)];
+  }
+
+  // Inalcanzable mientras BANCO no esté vacío, pero el tipo lo exige.
+  return BANCO[Math.floor(Math.random() * BANCO.length)];
 }
