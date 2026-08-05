@@ -16,6 +16,7 @@
 import { NextResponse } from "next/server";
 import { NOMBRE_EXAMEN, type Bloque, type TipoExamen } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
+import { sesionActual } from "@/lib/sesion-servidor";
 import { detectarExamen, nivelDeBloque } from "@/lib/perfil";
 import { primeraFrase, type ModoGeneracion } from "@/lib/modos";
 import { bloqueDeBanco } from "@/lib/banco";
@@ -442,6 +443,18 @@ function esModo(valor: unknown): valor is ModoGeneracion {
 }
 
 export async function POST(peticion: Request) {
+  // El `alumnoId` llega en el cuerpo, o sea del cliente, así que no se
+  // acepta sin comprobar: sin esto un alumno pediría bloques hechos con
+  // la última clase y el perfil de otro. La sesión se lee de la cookie
+  // firmada, igual que en las páginas.
+  const sesion = await sesionActual();
+  if (!sesion) {
+    return NextResponse.json(
+      { error: "Tu sesión ha caducado. Vuelve a entrar desde el enlace de tu email." },
+      { status: 401 }
+    );
+  }
+
   let cuerpo: unknown;
   try {
     cuerpo = await peticion.json();
@@ -450,7 +463,14 @@ export async function POST(peticion: Request) {
   }
 
   const datos = (cuerpo ?? {}) as { alumnoId?: unknown; modo?: unknown; excluir?: unknown };
-  const alumnoId = typeof datos.alumnoId === "string" ? datos.alumnoId : "";
+  const pedido = typeof datos.alumnoId === "string" ? datos.alumnoId : "";
+
+  // Al alumno se le impone el suyo y no se discute. El equipo sí puede
+  // generar para cualquiera: es lo que le deja revisar el producto.
+  const alumnoId = sesion.rol === "alumno" ? sesion.alumnoId : pedido;
+  if (sesion.rol === "alumno" && pedido !== "" && pedido !== sesion.alumnoId) {
+    return NextResponse.json({ error: "Esa ficha no es la tuya." }, { status: 403 });
+  }
 
   if (!esModo(datos.modo)) {
     return NextResponse.json(

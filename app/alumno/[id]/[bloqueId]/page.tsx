@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getBloque } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
+import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
 import PracticaCargador from "@/components/PracticaCargador";
 
 // Mismo motivo que la ficha: el alumno se resuelve contra Gestión.
@@ -11,6 +12,10 @@ export default async function PaginaBloque({
 }: {
   params: { id: string; bloqueId: string };
 }) {
+  // El bloque enseña el nombre y el profesor del alumno: el mismo
+  // guard que la ficha, o se colaría por aquí lo que se cierra allí.
+  await exigirAccesoAFicha(params.id);
+
   const datos = await obtenerAlumno(params.id);
   if (!datos) notFound();
 

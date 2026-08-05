@@ -35,6 +35,7 @@ export default function PanelAlumno({
   ultimaClase,
   tarjetas,
   bloques,
+  esAdministrador,
 }: {
   alumnoId: string;
   /** Puede ser null: hay alumnos con clase analizada y sin fila de perfil. */
@@ -42,6 +43,12 @@ export default function PanelAlumno({
   ultimaClase: UltimaClase | null;
   tarjetas: TarjetaModo[];
   bloques: Bloque[];
+  /**
+   * Solo cambia lo que se pinta. Lo decide el servidor al leer la cookie
+   * y lo que esconde no lo protege este prop: el buscador está cerrado
+   * en la propia home, no aquí.
+   */
+  esAdministrador: boolean;
 }) {
   const [progreso, setProgreso] = useState<ProgresoBloques>({});
   const [avance, setAvance] = useState<AvanceBloques>({});
@@ -154,12 +161,16 @@ export default function PanelAlumno({
       <Cabecera nombre={nombre || undefined} />
 
       <main className="mx-auto flex max-w-columna flex-col gap-10 px-6 pb-[140px] pt-7">
-        <Link
-          href="/"
-          className="-mb-4 self-start text-[14px] text-drc-cuerpo transition-colors hover:text-drc-verde-texto"
-        >
-          ← Cambiar de alumno
-        </Link>
+        {/* El buscador solo existe para el equipo, así que el alumno no ve
+            la vuelta atrás: su ficha es todo el sitio. */}
+        {esAdministrador && (
+          <Link
+            href="/"
+            className="-mb-4 self-start text-[14px] text-drc-cuerpo transition-colors hover:text-drc-verde-texto"
+          >
+            ← Cambiar de alumno
+          </Link>
+        )}
 
         {/* ------------------------------ CABECERA ------------------------------ */}
         <header className="min-w-0">

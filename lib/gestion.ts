@@ -163,7 +163,42 @@ function escaparLike(texto: string): string {
 }
 
 /**
- * Listado para la home provisional. Deduplica antes de recortar, para que
+ * Resuelve el alumno a partir de su email. Es lo que convierte el enlace
+ * del correo en una sesión, y también lo que decide si un email existe:
+ * la pantalla de acceso pregunta aquí antes de mandar nada.
+ *
+ * Se busca con `ilike` sin comodines, que en PostgREST es una igualdad
+ * que ignora mayúsculas. Hace falta porque en Gestión los emails están
+ * escritos como los tecleó cada alumno y el que llega del formulario
+ * viene siempre en minúsculas.
+ *
+ * Devuelve null si no hay nadie con ese email, y quien llama NO debe
+ * contárselo al visitante: saber qué direcciones tienen ficha es saber
+ * quién estudia en la academia.
+ */
+export async function buscarAlumnoPorEmail(email: string): Promise<ResumenAlumno | null> {
+  const limpio = email.trim();
+  if (limpio === "") return null;
+
+  const { data, error } = await soloLectura("vista_perfil_alumno")
+    .select("alumno_id, nombre, nivel, profesor")
+    .ilike("email", escaparLike(limpio))
+    .order("alumno_id", { ascending: true })
+    .returns<Fila[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo buscar por email en vista_perfil_alumno:", error.message);
+    return null;
+  }
+
+  // Mismo motivo que en la ficha: un alumno puede traer varias filas por
+  // assignments duplicadas, y el `order` fija cuál es la primera.
+  const filas = deduplicar(data ?? []);
+  return filas.length > 0 ? aResumen(filas[0]) : null;
+}
+
+/**
+ * Listado para la home del equipo. Deduplica antes de recortar, para que
  * el límite cuente alumnos y no filas.
  *
  * Con `busqueda` filtra por nombre sobre los 184 alumnos, no solo sobre

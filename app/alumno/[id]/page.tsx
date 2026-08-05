@@ -3,6 +3,7 @@ import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { nivelDeBloque } from "@/lib/perfil";
 import { calcularTarjetas } from "@/lib/modos";
+import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
 import PanelAlumno from "@/components/PanelAlumno";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
@@ -10,6 +11,10 @@ import PanelAlumno from "@/components/PanelAlumno";
 export const dynamic = "force-dynamic";
 
 export default async function PerfilAlumno({ params }: { params: { id: string } }) {
+  // Antes de leer nada: un alumno solo abre su propia ficha, aunque
+  // escriba otro id en la barra de direcciones. El equipo, cualquiera.
+  const sesion = await exigirAccesoAFicha(params.id);
+
   const datos = await obtenerAlumno(params.id);
 
   // Solo es 404 cuando el id no corresponde a nadie. Un alumno con clase
@@ -30,6 +35,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
       ultimaClase={ultimaClase}
       tarjetas={tarjetas}
       bloques={bloques}
+      esAdministrador={sesion.rol === "admin"}
     />
   );
 }

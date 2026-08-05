@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { listarAlumnos } from "@/lib/gestion";
+import { exigirAdministrador } from "@/lib/sesion-servidor";
 import Cabecera from "@/components/Cabecera";
 
-// Provisional: el acceso definitivo llegará desde WooCommerce. Mientras
-// tanto se listan alumnos reales para poder probar sin login.
+// Lee la cookie de sesión y datos de Gestión: nada que prerenderizar.
 export const dynamic = "force-dynamic";
 
 const POR_PAGINA = 20;
@@ -13,6 +13,11 @@ export default async function Home({
 }: {
   searchParams: { q?: string };
 }) {
+  // El buscador es solo del equipo. Un alumno no ve esta pantalla en
+  // ningún momento: `exigirAdministrador` lo manda a su propia ficha
+  // antes de que se lea una sola fila de la vista.
+  await exigirAdministrador();
+
   const busqueda = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
   const alumnos = await listarAlumnos(busqueda, POR_PAGINA);
 
@@ -21,13 +26,13 @@ export default async function Home({
       <Cabecera />
 
       <main className="mx-auto max-w-columna px-6 py-12 sm:py-16">
-        <p className="eyebrow text-drc-verde-texto">DRC Academy · prototipo</p>
+        <p className="eyebrow text-drc-verde-texto">DRC Academy · equipo</p>
         <h1 className="mt-3.5 text-balance font-display text-[34px] font-semibold leading-[1.08] tracking-[-0.02em] text-drc-titular sm:text-[44px]">
           Tu práctica, hecha con tus clases
         </h1>
         <p className="mt-3.5 max-w-[52ch] text-pretty text-[16px] leading-[1.55] text-drc-cuerpo">
-          Elige a un alumno para ver su ficha. Cada uno practica con lo que ha trabajado en
-          clase, con su examen o con lo suyo del día a día.
+          Elige a un alumno para ver su ficha tal y como la ve él. Cada uno practica con lo que
+          ha trabajado en clase, con su examen o con lo suyo del día a día.
         </p>
 
         {/* Formulario normal: se envía y el servidor filtra. Así el
