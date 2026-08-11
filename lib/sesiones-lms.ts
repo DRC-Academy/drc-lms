@@ -32,6 +32,8 @@ import "server-only";
 import { cache } from "react";
 import { baseLms } from "@/lib/supabase-lms";
 import type { Rol } from "@/lib/sesion";
+// ⚠ TEMPORAL — ver lib/diagnostico.ts
+import { diag } from "@/lib/diagnostico";
 
 export type OrigenSesion = "magic_link" | "woocommerce";
 
@@ -100,6 +102,28 @@ export async function crearSesion(datos: {
 
   if (error) {
     console.error("[sesiones] No se pudo abrir la sesión:", error.message);
+    // ⚠ TEMPORAL — ver lib/diagnostico.ts
+    //
+    // `message` por sí solo no distingue las causas, y son muy
+    // distintas. Los códigos que importan aquí:
+    //
+    //   PGRST125 — ruta inválida: LMS_SUPABASE_URL lleva /rest/v1/ y se
+    //              está duplicando. Es el fallo que ya nos pasó una vez.
+    //   PGRST205 — la tabla no existe: el esquema se creó en otro
+    //              proyecto, o la URL apunta al proyecto viejo.
+    //   401      — la clave no es de este proyecto, o no es la secreta.
+    //   42501    — RLS denegando: la clave no actúa como service_role,
+    //              o sea que se pegó la publishable en vez de la secret.
+    //   23514    — violación de CHECK: sería un fallo del código, no del
+    //              entorno. Sale también `details` con la restricción.
+    diag("sesiones · insert RECHAZADO", {
+      code: error.code ?? "(sin código)",
+      details: error.details ?? "(sin detalles)",
+      hint: error.hint ?? "(sin pista)",
+      rol: datos.rol,
+      alumno_id: datos.alumnoId === null ? "null" : "presente",
+      email_admin: datos.emailAdmin === null ? "null" : "presente",
+    });
     return null;
   }
 
