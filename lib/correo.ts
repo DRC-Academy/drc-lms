@@ -12,20 +12,20 @@
 import "server-only";
 import { Resend } from "resend";
 import { MINUTOS_ENLACE } from "@/lib/sesion";
+// ⚠ TEMPORAL — ver lib/diagnostico.ts
+import { describirClave, diag, ofuscarEmail } from "@/lib/diagnostico";
 
 /**
- * PENDIENTE: hay que verificar el dominio drcacademy.com en Resend y
- * cambiar esto por "DRC Academy <acceso@drcacademy.com>". Mientras siga
- * el remitente de pruebas, Resend SOLO entrega al email del titular de
- * la cuenta: cualquier otro destinatario recibe un 403 y el alumno se
- * queda esperando un correo que no llega.
+ * Sale del dominio propio, ya verificado en Resend.
  *
- * Y el remitente por sí solo no basta: mientras el LMS viva en un
- * vercel.app, el correo saldrá de @drcacademy.com con un enlace a otro
- * dominio, que es el patrón que Gmail y Outlook tratan como sospechoso.
- * Poner el LMS en practica.drcacademy.com es parte del mismo arreglo.
+ * QUEDA UN CABO SUELTO, y no lo arregla el remitente: mientras el LMS
+ * viva en un vercel.app, el correo sale de @drcacademy.com con un enlace
+ * a otro dominio, que es el patrón que Gmail y Outlook tratan como
+ * sospechoso. Se cierra poniendo el LMS en practica.drcacademy.com y
+ * apuntando URL_BASE ahí; hasta entonces, el enlace del correo puede
+ * acabar en spam aunque el envío salga bien.
  */
-const REMITENTE = "DRC Academy <onboarding@resend.dev>";
+const REMITENTE = "DRC Academy <practica@drcacademy.com>";
 
 const ASUNTO = "Tu acceso a la práctica de DRC Academy";
 
@@ -135,6 +135,20 @@ function texto(enlace: string): string {
  */
 export async function enviarEnlaceAcceso(email: string, token: string): Promise<boolean> {
   const clave = process.env.RESEND_API_KEY;
+
+  // ⚠ TEMPORAL — ver lib/diagnostico.ts
+  //
+  // El remitente se sigue registrando aunque ya salga del dominio
+  // propio: es lo que permite comprobar de un vistazo que el despliegue
+  // lleva el cambio y no una versión anterior. Si aquí apareciera
+  // `onboarding@resend.dev`, lo que está desplegado es código viejo.
+  diag("correo · configuración", {
+    RESEND_API_KEY: describirClave(clave),
+    remitente: REMITENTE,
+    destinatario: ofuscarEmail(email),
+    url_base: urlBase(),
+  });
+
   if (!clave) {
     console.error("[correo] Falta RESEND_API_KEY: no se ha enviado el enlace de acceso.");
     return false;
@@ -143,7 +157,11 @@ export async function enviarEnlaceAcceso(email: string, token: string): Promise<
   const enlace = `${urlBase()}/entrar?token=${encodeURIComponent(token)}`;
 
   try {
-    const { error } = await new Resend(clave).emails.send({
+    // ⚠ TEMPORAL — el token NO se escribe: quien lea el log entraría
+    // como esa persona. Solo consta que la llamada llegó a hacerse.
+    diag("correo · llamando a Resend");
+
+    const { data, error } = await new Resend(clave).emails.send({
       from: REMITENTE,
       to: email,
       subject: ASUNTO,
@@ -155,12 +173,23 @@ export async function enviarEnlaceAcceso(email: string, token: string): Promise<
       // Sin el email en el mensaje: los logs de Vercel no son sitio
       // para una lista de direcciones de alumnos.
       console.error(`[correo] Resend rechazó el envío: ${error.message}`);
+      // ⚠ TEMPORAL — `name` es lo que distingue un 403 por remitente de
+      // pruebas de un problema de clave o de formato.
+      diag("correo · Resend RECHAZÓ", { name: error.name, message: error.message });
       return false;
     }
+
+    // ⚠ TEMPORAL — el id es el que se busca en el panel de Resend.
+    diag("correo · Resend ACEPTÓ", { id: data?.id ?? "(sin id)" });
 
     return true;
   } catch (error) {
     console.error("[correo] No se pudo hablar con Resend:", error);
+    // ⚠ TEMPORAL — una excepción aquí es red o SDK, no un rechazo.
+    diag("correo · EXCEPCIÓN al hablar con Resend", {
+      tipo: error instanceof Error ? error.name : typeof error,
+      message: error instanceof Error ? error.message : String(error),
+    });
     return false;
   }
 }
