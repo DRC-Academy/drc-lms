@@ -85,10 +85,7 @@ export default function TarjetasGeneracion({
     tarjetas.length > 0 && !tarjetas.some((tarjeta) => tarjeta.modo === "contexto");
 
   return (
-    // `id` y `scroll-mt`: es el destino del enlace "Práctica" de la
-    // cabecera, y sin el margen de scroll la cabecera pegajosa taparía
-    // el titular al llegar.
-    <section id="practica" aria-labelledby="titulo-practica" className="scroll-mt-24">
+    <section aria-labelledby="titulo-practica">
       <div className="border-b border-drc-borde pb-5">
         <h2
           id="titulo-practica"

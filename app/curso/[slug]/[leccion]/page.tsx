@@ -172,7 +172,10 @@ export default async function PaginaLeccion({
               </p>
             )}
 
-            <EjerciciosLeccion ejercicios={ejerciciosVista} />
+            <EjerciciosLeccion
+              ejercicios={ejerciciosVista}
+              registrarIntentos={sesion.rol === "alumno"}
+            />
 
             {/* ------------------------- CONTINUAR ------------------------- */}
             <div className="mt-10 border-t border-marca-borde pt-7">

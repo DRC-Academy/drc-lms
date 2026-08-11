@@ -38,7 +38,7 @@ export default function Cabecera({
           ...(cursoSlug
             ? [{ clave: "curso" as const, texto: "Mi curso", href: `/curso/${cursoSlug}` }]
             : []),
-          { clave: "practica" as const, texto: "Práctica", href: `/alumno/${alumnoId}#practica` },
+          { clave: "practica" as const, texto: "Práctica", href: "/practica" },
         ]
       : [];
 

@@ -6,11 +6,7 @@ import { nivelDeBloque } from "@/lib/perfil";
 import { calcularTarjetas } from "@/lib/modos";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
 import { UMBRAL_DOMINADO, type RegistroProgreso } from "@/lib/progreso";
-import {
-  leerAvanceAlumno,
-  leerBloquesGenerados,
-  leerProgresoAlumno,
-} from "@/lib/progreso-servidor";
+import { leerBloquesGenerados, leerProgresoAlumno } from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
 import Cabecera from "@/components/Cabecera";
 import BannerCurso from "@/components/BannerCurso";
@@ -58,10 +54,11 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   // Gestión primero: de su `plan` y su `nivel` sale qué cursos le tocan,
   // así que la consulta de cursos no puede ir en el mismo lote.
-  const [datos, progreso, avance, generados] = await Promise.all([
+  // El avance parcial ya no se lee aquí: lo usa la lista de bloques, que
+  // vive en /practica. Una consulta menos por visita al inicio.
+  const [datos, progreso, generados] = await Promise.all([
     obtenerAlumno(params.id),
     leerProgresoAlumno(params.id),
-    leerAvanceAlumno(params.id),
     leerBloquesGenerados(params.id),
   ]);
 
@@ -138,11 +135,17 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           ultimaClase={ultimaClase}
           tarjetas={tarjetas}
           bloques={bloques}
-          progresoInicial={progreso}
-          avanceInicial={avance}
           generadosIniciales={generados}
           esAdministrador={sesion.rol === "admin"}
         />
+
+        {/* La lista de bloques vive ahora en /practica. Aquí queda el
+            paso hacia ella, que es lo que el inicio tiene que hacer. */}
+        <p className="text-[14px] text-drc-cuerpo">
+          <Link href="/practica" className="transition-colors hover:text-drc-verde-texto">
+            Ver toda tu práctica y tus bloques →
+          </Link>
+        </p>
       </main>
     </>
   );

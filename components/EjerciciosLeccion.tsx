@@ -42,6 +42,28 @@ function huecosAceptados(correcta: unknown): string[][] {
 const MISMO_ORDEN = (a: number[], b: number[]) =>
   a.length === b.length && a.every((v, i) => v === b[i]);
 
+/**
+ * Deja constancia del intento sin que el alumno espere: la corrección
+ * ya está pintada cuando esto sale.
+ *
+ * `keepalive` para que la petición sobreviva si comprueba el último
+ * ejercicio y pulsa "continuar" en el mismo gesto; sin él, ese intento
+ * —justo el que cierra la lección— se perdería al navegar.
+ *
+ * Que falle no se le cuenta a nadie: perder un intento no puede cortar
+ * la lección.
+ */
+function registrarIntento(ejercicioId: string, correcto: boolean) {
+  void fetch("/api/intento-ejercicio", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ejercicioId, correcto }),
+    keepalive: true,
+  }).catch((error) => {
+    console.error("[leccion] No se pudo registrar el intento:", error);
+  });
+}
+
 // ---------------------------------------------------------------
 
 function AvisoResultado({ correcto, solucion }: { correcto: boolean; solucion: string | null }) {
@@ -67,7 +89,7 @@ function AvisoResultado({ correcto, solucion }: { correcto: boolean; solucion: s
 
 // ---------------------------------------------------------------
 
-function Opciones({ ejercicio }: { ejercicio: EjercicioVista }) {
+function Opciones({ ejercicio, registrar }: { ejercicio: EjercicioVista; registrar: boolean }) {
   const multiple = ejercicio.tipo === "multiple";
   const correctas = indicesCorrectos(ejercicio.correcta);
 
@@ -85,7 +107,15 @@ function Opciones({ ejercicio }: { ejercicio: EjercicioVista }) {
     } else {
       setElegidas([i]);
       setResuelto(true);
+      // Se calcula aquí y no con `acertado`: ese valor es el de este
+      // render y todavía no ha visto la opción que acaba de elegirse.
+      if (registrar) registrarIntento(ejercicio.id, correctas.includes(i));
     }
+  }
+
+  function comprobarMultiple() {
+    setResuelto(true);
+    if (registrar) registrarIntento(ejercicio.id, acertado);
   }
 
   const solucion = correctas
@@ -130,7 +160,7 @@ function Opciones({ ejercicio }: { ejercicio: EjercicioVista }) {
       {multiple && !resuelto && (
         <button
           type="button"
-          onClick={() => setResuelto(true)}
+          onClick={comprobarMultiple}
           disabled={elegidas.length === 0}
           className="btn btn-primario mt-4 min-h-[44px] w-full sm:w-auto"
         >
@@ -145,7 +175,7 @@ function Opciones({ ejercicio }: { ejercicio: EjercicioVista }) {
 
 // ---------------------------------------------------------------
 
-function Huecos({ ejercicio }: { ejercicio: EjercicioVista }) {
+function Huecos({ ejercicio, registrar }: { ejercicio: EjercicioVista; registrar: boolean }) {
   const aceptados = huecosAceptados(ejercicio.correcta);
   const [respuestas, setRespuestas] = useState<string[]>(() => aceptados.map(() => ""));
   const [resuelto, setResuelto] = useState(false);
@@ -208,7 +238,12 @@ function Huecos({ ejercicio }: { ejercicio: EjercicioVista }) {
       {!resuelto ? (
         <button
           type="button"
-          onClick={() => setResuelto(true)}
+          onClick={() => {
+            setResuelto(true);
+            // `todoBien` ya está calculado sobre lo escrito, así que
+            // aquí sí vale: los campos son el estado, no el clic.
+            if (registrar) registrarIntento(ejercicio.id, todoBien);
+          }}
           disabled={!algoEscrito}
           className="btn btn-primario mt-4 min-h-[44px] w-full sm:w-auto"
         >
@@ -233,7 +268,14 @@ function Huecos({ ejercicio }: { ejercicio: EjercicioVista }) {
 
 // ---------------------------------------------------------------
 
-export default function EjerciciosLeccion({ ejercicios }: { ejercicios: EjercicioVista[] }) {
+export default function EjerciciosLeccion({
+  ejercicios,
+  registrarIntentos,
+}: {
+  ejercicios: EjercicioVista[];
+  /** false para el equipo: revisa el curso, no lo cursa. */
+  registrarIntentos: boolean;
+}) {
   if (ejercicios.length === 0) return null;
 
   return (
@@ -267,7 +309,7 @@ export default function EjerciciosLeccion({ ejercicios }: { ejercicios: Ejercici
 
             <div className="mt-4">
               {ejercicio.tipo === "cloze" ? (
-                <Huecos ejercicio={ejercicio} />
+                <Huecos ejercicio={ejercicio} registrar={registrarIntentos} />
               ) : ejercicio.tipo === "essay" ? (
                 // No hay ninguno importado, pero si algún día entra uno:
                 // no tiene corrección automática y se dice.
@@ -275,7 +317,7 @@ export default function EjerciciosLeccion({ ejercicios }: { ejercicios: Ejercici
                   Este ejercicio es de escritura libre y lo revisa tu profesor.
                 </p>
               ) : (
-                <Opciones ejercicio={ejercicio} />
+                <Opciones ejercicio={ejercicio} registrar={registrarIntentos} />
               )}
             </div>
           </li>

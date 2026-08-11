@@ -472,6 +472,33 @@ export async function completarLeccion(alumnoId: string, leccionId: string): Pro
 }
 
 /**
+ * Deja constancia de un intento de ejercicio.
+ *
+ * Append-only, igual que `progreso_bloques` en la práctica: cada
+ * intento es una fila y ninguno pisa al anterior. Sin esto el curso
+ * corrige y no aprende nada del alumno, y es lo que después alimenta el
+ * bucle de vuelta al profesor: no es lo mismo acertar a la primera que
+ * a la cuarta, y un porcentaje final no distingue las dos cosas.
+ *
+ * `origen: 'lms'` lo separa de lo que un día venga migrado de
+ * LearnDash, que tiene 13.101 registros de actividad de quiz.
+ */
+export async function guardarIntento(
+  alumnoId: string,
+  ejercicioId: string,
+  correcto: boolean
+): Promise<boolean> {
+  const { error } = await baseLms().from("intentos_ejercicio").insert({
+    alumno_id: alumnoId,
+    ejercicio_id: ejercicioId,
+    correcto,
+    origen: "lms",
+  });
+
+  return registrar("No se pudo guardar el intento", error);
+}
+
+/**
  * El estado de todos los cursos del alumno, con el que va en el banner
  * primero.
  *
