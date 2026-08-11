@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Bloque, Ejercicio } from "@/lib/data";
-import { borrarAvance, guardarAvance, guardarProgreso, UMBRAL_DOMINADO } from "@/lib/progreso";
+import { UMBRAL_DOMINADO } from "@/lib/progreso";
 import { normalizarRespuesta } from "@/lib/validarBloque";
 import { TarjetaFases, nombreFase, numeroFase } from "@/components/TarjetaFases";
 
@@ -41,6 +41,39 @@ export default function Practica({
     [i, ej, ejercicios]
   );
 
+  /**
+   * Manda a guardar sin esperar respuesta.
+   *
+   * El alumno no tiene por qué esperar a una escritura para pasar al
+   * ejercicio siguiente: la interfaz avanza y esto viaja por detrás.
+   *
+   * `keepalive` es lo que hace que la petición sobreviva a la
+   * navegación. Sin él, terminar un bloque y volver a la ficha en el
+   * mismo gesto cancelaría el guardado del último intento, que es justo
+   * el que importa.
+   *
+   * El `alumnoId` NO se envía: lo pone el servidor a partir de la
+   * cookie. Ver la cabecera de `app/api/progreso`.
+   */
+  function guardar(cuerpo: Record<string, unknown>) {
+    void fetch("/api/progreso", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...cuerpo, bloqueId: bloque.id }),
+      keepalive: true,
+    })
+      .then((respuesta) => {
+        if (!respuesta.ok) {
+          console.error(`[practica] El guardado respondió ${respuesta.status}`);
+        }
+      })
+      .catch((error) => {
+        // Se pierde este guardado y no se le dice al alumno: cortarle la
+        // práctica por esto sería peor que perder un intento.
+        console.error("[practica] No se pudo guardar:", error);
+      });
+  }
+
   function registrar(ok: boolean) {
     setResuelto(true);
     setCorrecto(ok);
@@ -53,16 +86,31 @@ export default function Practica({
     registrar(e.respuestas.some((r) => normalizarRespuesta(r) === normalizarRespuesta(texto)));
   }
 
-  function siguiente() {
+  /**
+   * `aciertosFinales` existe por la fase de producir, que llama a
+   * `registrar` y a `siguiente` en el mismo gesto. `siguiente` es la
+   * función de ESTE render, así que su `aciertos` es el de antes de
+   * registrar y el último acierto no se contaba. Con localStorage el
+   * error se quedaba en el navegador; ahora iría a la base, así que el
+   * valor se pasa explícito en vez de leerlo del cierre.
+   */
+  function siguiente(aciertosFinales: number = aciertos) {
     const ultimo = i === ejercicios.length - 1;
+
+    // El texto libre de la fase de producir, que hasta ahora se perdía.
+    if (ej.tipo === "producir" && texto.trim() !== "") {
+      guardar({ tipo: "produccion", ejercicioId: ej.id, texto });
+    }
+
     if (ultimo) {
-      guardarProgreso(alumnoId, bloque.id, aciertos, ejercicios.length);
-      borrarAvance(alumnoId, bloque.id);
+      // El servidor borra el avance al recibir el intento: cerrar el
+      // bloque y dejar la marca de "iba por la mitad" son la misma cosa.
+      guardar({ tipo: "progreso", aciertos: aciertosFinales, total: ejercicios.length });
       setTerminado(true);
       return;
     }
     // Deja constancia de por dónde iba: el bloque queda "en progreso".
-    guardarAvance(alumnoId, bloque.id, i + 1, ejercicios.length);
+    guardar({ tipo: "avance", indice: i + 1, total: ejercicios.length });
     setI(i + 1);
     setResuelto(false);
     setCorrecto(false);
@@ -316,8 +364,13 @@ export default function Practica({
                   <button
                     type="button"
                     onClick={() => {
-                      registrar(marcados.length === ej.criterios.length);
-                      setTimeout(siguiente, 0);
+                      const ok = marcados.length === ej.criterios.length;
+                      registrar(ok);
+                      // Ver `siguiente`: cuando salte el temporizador,
+                      // esta función seguirá viendo el `aciertos` de
+                      // ahora, así que el total se calcula aquí.
+                      const finales = aciertos + (ok ? 1 : 0);
+                      setTimeout(() => siguiente(finales), 0);
                     }}
                     className="btn btn-primario mt-4 min-h-[48px] w-full sm:w-auto"
                   >
@@ -349,7 +402,9 @@ export default function Practica({
               <p className="mt-1.5 text-[14px] leading-relaxed text-drc-texto">{ej.explicacion}</p>
               <button
                 type="button"
-                onClick={siguiente}
+                // Envuelto y no `onClick={siguiente}`: así el manejador
+                // no le pasa el evento del clic como primer argumento.
+                onClick={() => siguiente()}
                 className="btn btn-primario mt-5 min-h-[48px] w-full sm:w-auto"
               >
                 {ultimo ? "Terminar bloque" : "Siguiente"}

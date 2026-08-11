@@ -1,19 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Bloque, PerfilAlumno, UltimaClase } from "@/lib/data";
 import type { ModoGeneracion, TarjetaModo } from "@/lib/modos";
 import { formatearFecha } from "@/lib/perfil";
 import { validarBloque } from "@/lib/validarBloque";
+import { estadoDeBloque } from "@/lib/progreso";
 import {
-  contarGeneradosEstaSemana,
-  estadoDeBloque,
-  guardarBloqueGenerado,
-  leerAvanceAlumno,
-  leerBloquesGenerados,
-  leerProgresoAlumno,
-} from "@/lib/progreso";
+  borrarProgresoLocal,
+  hayProgresoLocal,
+  recogerProgresoLocal,
+} from "@/lib/migracion-local";
 import Cabecera from "@/components/Cabecera";
 import TarjetasGeneracion, { type EstadoGeneracion } from "@/components/TarjetasGeneracion";
 import ListaBloques, {
@@ -35,6 +34,9 @@ export default function PanelAlumno({
   ultimaClase,
   tarjetas,
   bloques,
+  progresoInicial,
+  avanceInicial,
+  generadosIniciales,
   esAdministrador,
 }: {
   alumnoId: string;
@@ -44,28 +46,108 @@ export default function PanelAlumno({
   tarjetas: TarjetaModo[];
   bloques: Bloque[];
   /**
+   * Progreso, avance y bloques generados, ya leídos de la base en el
+   * servidor. Antes se leían del localStorage en un efecto, así que la
+   * primera pintada salía vacía y las etiquetas de estado parpadeaban.
+   */
+  progresoInicial: ProgresoBloques;
+  avanceInicial: AvanceBloques;
+  generadosIniciales: Bloque[];
+  /**
    * Solo cambia lo que se pinta. Lo decide el servidor al leer la cookie
    * y lo que esconde no lo protege este prop: el buscador está cerrado
    * en la propia home, no aquí.
    */
   esAdministrador: boolean;
 }) {
-  const [progreso, setProgreso] = useState<ProgresoBloques>({});
-  const [avance, setAvance] = useState<AvanceBloques>({});
-  const [generados, setGenerados] = useState<Bloque[]>([]);
+  const router = useRouter();
   const [estado, setEstado] = useState<EstadoGeneracion>("listo");
   const [modoActivo, setModoActivo] = useState<ModoGeneracion | null>(null);
   // En build queda congelada la fecha del prerender; el efecto la corrige.
   const [hoy, setHoy] = useState(fechaDeHoy);
 
+  /**
+   * Los bloques generados en esta misma visita. Se guardan en la base
+   * desde la ruta de generación, pero el servidor no vuelve a
+   * consultarse hasta la siguiente navegación: hasta entonces viven aquí
+   * para que el bloque aparezca en la lista en el acto.
+   */
+  const [generadosNuevos, setGeneradosNuevos] = useState<Bloque[]>([]);
+
   const zonaNuevos = useRef<HTMLDivElement | null>(null);
 
+  const progreso = progresoInicial;
+  const avance = avanceInicial;
+
   useEffect(() => {
-    setProgreso(leerProgresoAlumno(alumnoId));
-    setAvance(leerAvanceAlumno(alumnoId));
-    setGenerados(leerBloquesGenerados(alumnoId));
     setHoy(fechaDeHoy());
-  }, [alumnoId]);
+  }, []);
+
+  /**
+   * MIGRACIÓN DEL PROGRESO QUE QUEDÓ EN EL NAVEGADOR
+   *
+   * Se ejecuta una sola vez, la primera visita después del cambio a base
+   * de datos, y se borra el localStorage solo cuando el servidor
+   * confirma el volcado.
+   *
+   * LA SALVAGUARDA: nada de esto puede dejar a nadie fuera ni enseñar un
+   * error. Si falla, el alumno se queda con lo que haya en la base —que
+   * puede ser nada— y se reintenta en la siguiente visita, porque las
+   * claves locales siguen ahí. Por eso no hay estado de carga ni aviso:
+   * pasa por detrás y no se nota.
+   */
+  const migracionLanzada = useRef(false);
+
+  useEffect(() => {
+    if (migracionLanzada.current || esAdministrador) return;
+    if (!hayProgresoLocal()) return;
+
+    migracionLanzada.current = true;
+    const datos = recogerProgresoLocal(alumnoId);
+
+    // Había claves, pero nada de este alumno: es un navegador
+    // compartido, o progreso de otra ficha. Se limpian y ya está.
+    if (!datos.progreso.length && !datos.avance.length && !datos.bloques.length) {
+      borrarProgresoLocal();
+      return;
+    }
+
+    void (async () => {
+      try {
+        const respuesta = await fetch("/api/migrar-local", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(datos),
+        });
+        if (!respuesta.ok) throw new Error(`La API respondió ${respuesta.status}`);
+
+        const cuerpo: unknown = await respuesta.json();
+        const migrado =
+          typeof cuerpo === "object" && cuerpo !== null && (cuerpo as { migrado?: unknown }).migrado === true;
+
+        // Solo se borra lo local si el servidor dice que lo tiene.
+        if (!migrado) return;
+
+        borrarProgresoLocal();
+        // Vuelve a pedir la ficha al servidor: ahora el progreso está en
+        // la base y esta pantalla todavía enseña el estado de antes.
+        router.refresh();
+      } catch (error) {
+        console.error("[panel] No se pudo migrar el progreso local:", error);
+        // A propósito: no se borra nada y no se avisa. Se reintenta solo.
+      }
+    })();
+  }, [alumnoId, esAdministrador, router]);
+
+  /**
+   * La lista del servidor manda. Lo generado en esta visita se antepone
+   * solo mientras el servidor no lo devuelva ya: en cuanto la ficha se
+   * recarga, el duplicado desaparece solo.
+   */
+  const generados = useMemo(() => {
+    const yaEstan = new Set(generadosIniciales.map((b) => b.id));
+    return [...generadosNuevos.filter((b) => !yaEstan.has(b.id)), ...generadosIniciales];
+  }, [generadosNuevos, generadosIniciales]);
 
   // Los generados van primero: son la novedad de la semana.
   const todos = useMemo(() => [...generados, ...bloques], [generados, bloques]);
@@ -131,8 +213,10 @@ export default function PanelAlumno({
         );
         if (!bloque) throw new Error("El bloque recibido no tiene la forma esperada");
 
-        guardarBloqueGenerado(alumnoId, bloque);
-        setGenerados((previos) => [bloque, ...previos]);
+        // Ya no se guarda desde aquí: lo hace `app/api/generar-bloque`
+        // antes de responder, así que cuando llega esta línea el bloque
+        // está en la base. Esto solo lo pone en pantalla.
+        setGeneradosNuevos((previos) => [bloque, ...previos]);
         setEstado("listo");
         setModoActivo(null);
 

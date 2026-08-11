@@ -29,10 +29,26 @@
 //
 // EL SOBRE (contrato con el LMS, ver `lib/sesion.ts`)
 //
-//   base64url( {"e": email, "t": ms, "n": nonce} ) . "." . base64url( firma )
+//   base64url( {"e": email, "t": ms, "n": nonce, "u": id} ) . "." . base64url( firma )
 //
 // donde la firma es HMAC-SHA256 de la cadena "woo." + el cuerpo ya
 // codificado, con la clave compartida.
+//
+// EL CAMPO "u" Y POR QUÉ SE AÑADIÓ
+//
+// Es el ID de usuario de WordPress. Hasta ahora el sobre solo llevaba
+// el email, que era la única llave entre WooCommerce, Gestión y el LMS.
+// El problema: el alumno puede cambiar su email en cualquiera de los
+// tres sitios, y en cuanto deja de coincidir el botón no encuentra su
+// ficha y lo manda a pedir un enlace por correo.
+//
+// Con el ID, el LMS guarda la correspondencia la primera vez y a partir
+// de ahí resuelve por ella. El email ya solo hace falta la primera vez.
+//
+// COMPATIBILIDAD: el LMS acepta sobres SIN este campo. Si este snippet
+// se actualiza más tarde que el LMS, o al revés, el botón sigue
+// funcionando por el camino de siempre. No hay que desplegar los dos a
+// la vez.
 //
 // POR QUÉ EL BOTÓN NO LLEVA EL TOKEN DENTRO
 //
@@ -167,6 +183,10 @@ if ( ! class_exists( 'DRC_Acceso_LMS' ) ) {
 					// Milisegundos desde epoch, como Date.now() en el LMS.
 					't' => (int) round( microtime( true ) * 1000 ),
 					'n' => $nonce,
+					// El ID de WordPress, que es estable aunque el alumno
+					// cambie de email. Va dentro del cuerpo firmado, así
+					// que nadie puede alterarlo por el camino.
+					'u' => (int) $usuario->ID,
 				)
 			);
 

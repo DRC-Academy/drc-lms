@@ -14,6 +14,13 @@
 // divergiendo, y de las dos capas la de la página es la que no se
 // puede saltar.
 //
+// LO QUE AQUÍ NO SE MIRA: si la sesión ha sido revocada. Eso exige
+// consultar la tabla `sesiones`, y esto corre en Edge, donde no llega
+// el cliente de Supabase —es server-only— y donde una consulta sería un
+// viaje de red antes de CADA navegación, porque el matcher cubre casi
+// todo. La revocación se comprueba en los guards, que corren en Node y
+// una vez por página. Ver la cabecera de `lib/sesiones-lms.ts`.
+//
 // Corre en el runtime Edge, así que la verificación de la firma usa
 // Web Crypto (ver `lib/sesion.ts`).
 // ---------------------------------------------------------------

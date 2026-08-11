@@ -23,6 +23,7 @@ import { bloqueDeBanco } from "@/lib/banco";
 import { validarBloque } from "@/lib/validarBloque";
 import { extraerJson } from "@/lib/json";
 import { avisosParaRegenerar, revisarBloque, type Revision } from "@/lib/revisor";
+import { guardarBloqueGenerado } from "@/lib/progreso-servidor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -405,19 +406,24 @@ function registrarRevision(etiqueta: string, revision: Revision) {
  * La revisión solo bloquea cuando dice explícitamente que hay problemas:
  * si falla o expira, el bloque sale igual. Nunca puede dejar al alumno
  * sin ejercicios.
+ *
+ * Devuelve también el veredicto del revisor, que ya no se tira: se
+ * guarda en `bloques_generados.revision`. Es lo que permitirá mirar
+ * después qué proporción de bloques salió "apto" a la primera y con qué
+ * problemas, sin tener que instrumentar nada más.
  */
 async function generarConRevision(
   clave: string,
   sistema: string,
   usuario: string,
   examen: TipoExamen | null
-): Promise<Bloque | null> {
+): Promise<{ bloque: Bloque; revision: Revision } | null> {
   const primero = await generarEstructural(clave, sistema, usuario);
   if (!primero) return null;
 
   const revision = await revisarBloque(clave, primero, examen);
   registrarRevision("revisión 1", revision);
-  if (revision.estado !== "con-problemas") return primero;
+  if (revision.estado !== "con-problemas") return { bloque: primero, revision };
 
   const segundo = await generarEstructural(
     clave,
@@ -428,7 +434,9 @@ async function generarConRevision(
 
   const segundaRevision = await revisarBloque(clave, segundo, examen);
   registrarRevision("revisión 2", segundaRevision);
-  if (segundaRevision.estado !== "con-problemas") return segundo;
+  if (segundaRevision.estado !== "con-problemas") {
+    return { bloque: segundo, revision: segundaRevision };
+  }
 
   console.warn("[revisor] Dos intentos rechazados por revisión. Se sirve un bloque del banco.");
   return null;
@@ -471,6 +479,21 @@ export async function POST(peticion: Request) {
   if (sesion.rol === "alumno" && pedido !== "" && pedido !== sesion.alumnoId) {
     return NextResponse.json({ error: "Esa ficha no es la tuya." }, { status: 403 });
   }
+
+  /**
+   * Un bloque generado por el equipo NO se guarda.
+   *
+   * El administrador abre la ficha de un alumno y genera un bloque para
+   * ver cómo queda. Si eso se persistiera, el alumno entraría después y
+   * se encontraría en su práctica un bloque que no pidió, quizá sobre un
+   * tema que no le toca. Se genera, se devuelve, se mira y no queda
+   * rastro.
+   *
+   * Es el mismo criterio que en `app/api/progreso`: lo que hace el
+   * equipo mientras revisa no es actividad del alumno. La diferencia es
+   * que aquello solo ensuciaba datos y esto lo vería el alumno.
+   */
+  const persistir = sesion.rol === "alumno";
 
   if (!esModo(datos.modo)) {
     return NextResponse.json(
@@ -551,9 +574,17 @@ export async function POST(peticion: Request) {
     // seguir el formato del examen.
     const examenARevisar = modo === "examen" ? examen : null;
 
-    const bloque = await generarConRevision(clave, sistema, usuario, examenARevisar);
-    if (bloque) {
-      const salida: RespuestaGeneracion = { bloque: conIdPropio(bloque), origen: "ia" };
+    const generado = await generarConRevision(clave, sistema, usuario, examenARevisar);
+    if (generado) {
+      const bloque = conIdPropio(generado.bloque);
+      // Se guarda antes de responder, no en segundo plano: si la
+      // escritura se quedara a medias, el alumno vería el bloque, lo
+      // practicaría y al volver no estaría. El coste es una inserción,
+      // que al lado de una llamada a la API de Anthropic no se nota.
+      if (persistir) {
+        await guardarBloqueGenerado(alumnoId, bloque, modo, "ia", generado.revision);
+      }
+      const salida: RespuestaGeneracion = { bloque, origen: "ia" };
       return NextResponse.json(salida);
     }
   }
@@ -561,9 +592,8 @@ export async function POST(peticion: Request) {
   // Sin clave, o con la generación descartada: banco de reserva.
   // El retardo hace que la experiencia se sienta igual en la demo.
   await esperar(ESPERA_BANCO_MS);
-  const salida: RespuestaGeneracion = {
-    bloque: conIdPropio(bloqueDeBanco(nivel, titulosExcluidos)),
-    origen: "banco",
-  };
+  const bloque = conIdPropio(bloqueDeBanco(nivel, titulosExcluidos));
+  if (persistir) await guardarBloqueGenerado(alumnoId, bloque, modo, "banco", null);
+  const salida: RespuestaGeneracion = { bloque, origen: "banco" };
   return NextResponse.json(salida);
 }

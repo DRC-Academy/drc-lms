@@ -26,6 +26,13 @@ function avisoDe(motivo: unknown): string | null {
       return "Ese enlace ya no es válido. Pide uno nuevo.";
     case "sinficha":
       return "Ese enlace es correcto, pero no encontramos tu ficha. Escribe a tu profesor y lo miramos.";
+    case "error":
+      // El sobre era bueno y la ficha existe: lo que falló fue abrir la
+      // sesión. No es culpa de quien entra, así que no se le manda a
+      // hablar con nadie, se le dice que reintente.
+      return "No hemos podido abrir tu sesión. Vuelve a intentarlo en un momento.";
+    case "salida":
+      return "Has cerrado sesión. Pide un enlace cuando quieras volver.";
     default:
       return null;
   }

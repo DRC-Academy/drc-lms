@@ -25,12 +25,17 @@
 // lo peor que se puede hacer desde WordPress es pedir la entrada, y
 // `app/entrar/woo` solo abre sesiones de alumno.
 //
-// LIMITACIÓN CONOCIDA Y ACEPTADA PARA EL PILOTO: un token autocontenido
-// no se puede revocar antes de que caduque. Si alguien intercepta el
-// enlace tiene 15 minutos para usarlo, y se puede usar más de una vez.
-// Los 15 minutos son lo que acota el riesgo. PENDIENTE: cuando el LMS
-// tenga base propia, pasar a tokens de un solo uso guardados en tabla
-// (marcar consumido al validar) y a una lista de sesiones revocables.
+// SESIONES REVOCABLES (ya no es una limitación)
+//
+// La cookie lleva ahora el id de una fila en `sesiones`, y quien decide
+// si esa sesión sigue viva es `lib/sesiones-lms.ts`. La firma sigue
+// siendo lo que autentica —sin ella el id no vale nada— pero la
+// existencia de la sesión ya no depende solo del sobre.
+//
+// LO QUE SIGUE PENDIENTE: el enlace del email sigue siendo un token
+// autocontenido de 15 minutos, así que se puede usar más de una vez
+// dentro de esa ventana. Pasarlo a un solo uso es otra tabla y otro
+// día; los 15 minutos son lo que acota el riesgo mientras tanto.
 //
 // Este módulo NO lleva `import "server-only"` a propósito: lo importa
 // `middleware.ts`, que se compila para el runtime Edge y no recibe la
@@ -77,6 +82,15 @@ export type Rol = "alumno" | "admin";
 export type Sesion =
   | { rol: "alumno"; email: string; alumnoId: string }
   | { rol: "admin"; email: string; alumnoId: null };
+
+/**
+ * Una sesión leída de una cookie, con el id de su fila en `sesiones`.
+ *
+ * Se separa de `Sesion` porque las dos puertas de entrada construyen
+ * primero la identidad y solo después abren la fila: hasta ese momento
+ * no hay id que poner. Al leer, en cambio, el id siempre está.
+ */
+export type SesionAbierta = Sesion & { sesionId: string };
 
 // ---------------------------------------------------------------
 // EMAIL
@@ -263,6 +277,12 @@ type SobreEnlace = {
   t: number;
   /** nonce */
   n: string;
+  /**
+   * Id de usuario de WordPress. SOLO en el sobre `woo`, y opcional:
+   * mientras no se actualice el snippet de WordPress seguirán llegando
+   * sobres sin él, y esos tienen que entrar igual resolviendo por email.
+   */
+  u?: number;
 };
 
 /**
@@ -281,22 +301,26 @@ export function crearTokenEnlace(email: string): Promise<string> {
   return cerrar("enlace", sobre);
 }
 
+/** Lo que sale de un sobre válido. `wooUserId` solo llega en los `woo`. */
+export type ContenidoSobre = { email: string; wooUserId: number | null };
+
 /**
- * El email de un sobre `{ e, t, n }`, o null si la firma no cuadra o el
- * sobre está fuera de su ventana. Lo comparten el enlace del email y el
- * botón de WooCommerce: misma forma, distinta clave y distinta duración.
+ * El contenido de un sobre `{ e, t, n, u? }`, o null si la firma no
+ * cuadra o el sobre está fuera de su ventana. Lo comparten el enlace
+ * del email y el botón de WooCommerce: misma forma, distinta clave y
+ * distinta duración.
  */
 async function abrirSobreConEmail(
   proposito: "enlace" | "woo",
   token: string,
   ventanaMs: number
-): Promise<string | null> {
+): Promise<ContenidoSobre | null> {
   if (token === "") return null;
 
   const datos = await abrir(proposito, token);
   if (typeof datos !== "object" || datos === null) return null;
 
-  const { e, t } = datos as { e?: unknown; t?: unknown };
+  const { e, t, u } = datos as { e?: unknown; t?: unknown; u?: unknown };
   if (typeof e !== "string" || typeof t !== "number" || !Number.isFinite(t)) return null;
 
   const ahora = Date.now();
@@ -306,16 +330,28 @@ async function abrirSobreConEmail(
   if (ahora - t > ventanaMs) return null;
 
   const email = normalizarEmail(e);
-  return esEmailPlausible(email) ? email : null;
+  if (!esEmailPlausible(email)) return null;
+
+  // Solo se acepta del sobre `woo`: un enlace de correo no tiene por
+  // qué traerlo y aceptarlo ahí sería ensanchar el contrato sin motivo.
+  const wooUserId =
+    proposito === "woo" && typeof u === "number" && Number.isSafeInteger(u) && u > 0 ? u : null;
+
+  return { email, wooUserId };
 }
 
 /** El email del enlace del correo, o null si no vale. */
-export function abrirTokenEnlace(token: string): Promise<string | null> {
-  return abrirSobreConEmail("enlace", token, MS_ENLACE);
+export async function abrirTokenEnlace(token: string): Promise<string | null> {
+  const contenido = await abrirSobreConEmail("enlace", token, MS_ENLACE);
+  return contenido?.email ?? null;
 }
 
 /**
- * El email del sobre que firma WordPress al pulsar el botón, o null.
+ * El sobre que firma WordPress al pulsar el botón, o null.
+ *
+ * Trae el email y, si el snippet está actualizado, el id de usuario de
+ * WordPress: es lo que permite fijar el vínculo por id y dejar de
+ * depender de que los dos emails coincidan.
  *
  * A diferencia de los otros dos, aquí se atrapa el fallo de
  * configuración en vez de dejarlo subir. Si falta SECRETO_WOO, el resto
@@ -323,7 +359,7 @@ export function abrirTokenEnlace(token: string): Promise<string | null> {
  * uno nuevo» y entra por el correo, que sí va. Un 500 lo dejaría
  * plantado sin salida. Quien tiene que enterarse es el log.
  */
-export async function abrirTokenWoo(token: string): Promise<string | null> {
+export async function abrirTokenWoo(token: string): Promise<ContenidoSobre | null> {
   try {
     return await abrirSobreConEmail("woo", token, MS_WOO);
   } catch (error) {
@@ -345,6 +381,8 @@ type SobreSesion = {
   a: string | null;
   /** expira en (ms) */
   x: number;
+  /** id de la fila en `sesiones`: lo que permite revocarla */
+  s: string;
 };
 
 /**
@@ -357,25 +395,45 @@ type SobreSesion = {
  * un alumno, su sesión dejaría de valer hasta que pidiera otro enlace.
  * Con ids estables es un intercambio que sale a cuenta.
  */
-export function crearCookieSesion(sesion: Sesion): Promise<string> {
+export function crearCookieSesion(sesion: Sesion, sesionId: string): Promise<string> {
   const sobre: SobreSesion = {
     e: sesion.email,
     r: sesion.rol,
     a: sesion.alumnoId,
     x: Date.now() + MS_SESION,
+    s: sesionId,
   };
   return cerrar("sesion", sobre);
 }
 
-/** Quién es, o null si no hay cookie, está manipulada o ha caducado. */
-export async function abrirSesion(valor: string | undefined): Promise<Sesion | null> {
+/**
+ * Quién es, o null si no hay cookie, está manipulada o ha caducado.
+ *
+ * Esto NO comprueba si la sesión sigue viva: aquí solo se abre el sobre.
+ * La revocación se mira en `lib/sesiones-lms.ts`, que necesita base de
+ * datos y por tanto no puede correr en el middleware. Ver la cabecera
+ * de aquel módulo.
+ *
+ * Una cookie sin `s` se rechaza. Son las emitidas antes de que
+ * existieran las sesiones revocables: no tienen fila detrás, así que no
+ * hay forma de saber si alguien las revocó. Aceptarlas sería dejar
+ * abierta justo la puerta que este cambio viene a cerrar.
+ */
+export async function abrirSesion(valor: string | undefined): Promise<SesionAbierta | null> {
   if (!valor) return null;
 
   const datos = await abrir("sesion", valor);
   if (typeof datos !== "object" || datos === null) return null;
 
-  const { e, r, a, x } = datos as { e?: unknown; r?: unknown; a?: unknown; x?: unknown };
+  const { e, r, a, x, s } = datos as {
+    e?: unknown;
+    r?: unknown;
+    a?: unknown;
+    x?: unknown;
+    s?: unknown;
+  };
   if (typeof e !== "string" || typeof x !== "number" || !Number.isFinite(x)) return null;
+  if (typeof s !== "string" || s === "") return null;
 
   // La caducidad se comprueba aquí y no se delega en el `maxAge` de la
   // cookie: el navegador la borra cuando toca, pero el valor firmado
@@ -385,9 +443,9 @@ export async function abrirSesion(valor: string | undefined): Promise<Sesion | n
   const email = normalizarEmail(e);
   if (!esEmailPlausible(email)) return null;
 
-  if (r === "admin") return { rol: "admin", email, alumnoId: null };
+  if (r === "admin") return { rol: "admin", email, alumnoId: null, sesionId: s };
   if (r === "alumno" && typeof a === "string" && a !== "") {
-    return { rol: "alumno", email, alumnoId: a };
+    return { rol: "alumno", email, alumnoId: a, sesionId: s };
   }
 
   return null;

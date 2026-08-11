@@ -78,6 +78,12 @@ if ( ! class_exists( 'DRC_Acceso_LMS' ) ) {
 					'e' => $email,
 					't' => (int) round( microtime( true ) * 1000 ),
 					'n' => $nonce,
+					// El ID de WordPress. Es lo que permite al LMS
+					// vincular al alumno por id y dejar de depender de
+					// que el email coincida en los tres sistemas. El LMS
+					// acepta sobres sin este campo, así que los dos lados
+					// no tienen que desplegarse a la vez.
+					'u' => (int) $usuario->ID,
 				)
 			);
 
