@@ -23,46 +23,6 @@
 
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-// ⚠ TEMPORAL — ver lib/diagnostico.ts
-import { diag } from "@/lib/diagnostico";
-
-/**
- * ⚠ TEMPORAL — ver lib/diagnostico.ts
- *
- * Ni la URL ni la clave salen en claro. Del host solo se publica el ref
- * enmascarado, que es lo justo para distinguir un proyecto del otro sin
- * dejar la dirección escrita en los logs.
- */
-function diagnosticarConexion(url: string, clave: string) {
-  let pathname = "(URL ilegible)";
-  let ref = "(desconocido)";
-
-  try {
-    const u = new URL(url);
-    pathname = u.pathname;
-    const m = u.hostname.match(/^([a-z0-9]+)\.supabase\./i);
-    if (m) ref = `${m[1].slice(0, 4)}***${m[1].slice(-2)}`;
-  } catch {
-    // Se queda con los valores por defecto de arriba.
-  }
-
-  const tipo = /^sb_secret_/.test(clave)
-    ? "sb_secret_ (correcta)"
-    : /^sb_publishable_/.test(clave)
-      ? "sb_publishable_ ← PÚBLICA, RLS la bloqueará"
-      : clave.split(".").length === 3
-        ? "JWT legacy"
-        : "formato desconocido";
-
-  diag("supabase-lms · conexión", {
-    ref,
-    pathname: JSON.stringify(pathname),
-    path_limpio: pathname === "/" ? "sí" : "NO ← la URL lleva path pegado",
-    termina_en_barra: url.endsWith("/") ? "sí" : "no",
-    clave: tipo,
-    clave_longitud: clave.length,
-  });
-}
 
 let cliente: SupabaseClient | null = null;
 
@@ -85,19 +45,6 @@ export function baseLms(): SupabaseClient {
       `Falta ${faltan} en el entorno. Es la base propia del LMS, distinta de la de Gestión.`
     );
   }
-
-  // ⚠ TEMPORAL — ver lib/diagnostico.ts
-  //
-  // Se ejecuta una sola vez por instancia, al crear el cliente. Mira las
-  // dos cosas que pueden estar mal en Vercel y no en local, sin escribir
-  // ni la URL ni la clave:
-  //
-  //   pathname distinto de "/"  → la URL lleva /rest/v1/ pegado y
-  //     supabase-js lo va a duplicar. Toda consulta dará PGRST125.
-  //   tipo de clave             → tiene que ser sb_secret_. Si sale
-  //     sb_publishable_, RLS se aplica y no hay política ninguna, así
-  //     que cualquier escritura se deniega.
-  diagnosticarConexion(url, clave);
 
   cliente = createClient(url, clave, {
     // No hay usuarios ni sesiones de Supabase: la sesión del alumno la

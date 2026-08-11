@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------
 // LA PUERTA DE LA CALLE
 //
-// Antes de esto, cualquiera con la URL veía el buscador con los 184
+// Antes de esto, cualquiera con la URL veía el buscador con los 174
 // alumnos y podía abrir la ficha de quien quisiera: nivel, profesor,
 // ocupación y las observaciones del profesor sobre sus errores. Son
 // datos personales de gente que paga.

@@ -52,7 +52,7 @@ export async function exigirSesion(): Promise<SesionAbierta> {
 }
 
 /**
- * Para lo que solo es del equipo: el buscador con los 184 alumnos.
+ * Para lo que solo es del equipo: el buscador con los 174 alumnos.
  * Un alumno que llegue aquí no ve un error, va a su ficha.
  */
 export async function exigirAdministrador(): Promise<SesionAbierta> {

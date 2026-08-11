@@ -13,7 +13,7 @@
 // sostiene todo el diseño. WordPress tiene la clave con la que se
 // firman estos sobres, así que un WordPress comprometido puede pedir
 // entrada como quien quiera. Si además pudiera entrar como
-// administrador, se llevaría de un golpe la ficha de los 184: nivel,
+// administrador, se llevaría de un golpe la ficha de los 174: nivel,
 // profesor, ocupación y las observaciones del profesor sobre cada uno.
 // Limitado a alumno, lo peor que consigue es suplantar a uno.
 //

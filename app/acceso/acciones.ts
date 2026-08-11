@@ -15,8 +15,6 @@ import { buscarAlumnoPorEmail } from "@/lib/gestion";
 import { crearTokenEnlace, esAdministrador, esEmailPlausible, normalizarEmail } from "@/lib/sesion";
 import { enviarEnlaceAcceso } from "@/lib/correo";
 import type { EstadoAcceso } from "@/app/acceso/estado";
-// ⚠ TEMPORAL — ver lib/diagnostico.ts
-import { diag, ofuscarEmail, radiografiaEmailsAdmin } from "@/lib/diagnostico";
 
 const MENSAJE_NEUTRO = "Si ese email está registrado, te hemos enviado un enlace para entrar.";
 
@@ -44,43 +42,16 @@ function esperar(ms: number): Promise<void> {
  * No devuelve nada: lo que pasa aquí dentro no sale al visitante.
  */
 async function atender(email: string): Promise<void> {
-  // ⚠ TEMPORAL — ver lib/diagnostico.ts
-  // Se lee del entorno aquí, y no dentro de `esAdministrador`, para ver
-  // exactamente lo mismo que ve esa función en esta misma invocación.
-  diag("2/6 EMAILS_ADMIN", radiografiaEmailsAdmin(process.env.EMAILS_ADMIN, normalizarEmail));
-
   // La búsqueda del alumno se hace SIEMPRE, también para los del
   // equipo. Comprobar primero si es administrador y ahorrarse la
   // consulta haría que esos emails respondieran antes, y eso también
   // es información que se filtra.
   const alumno = await buscarAlumnoPorEmail(email);
-
-  // ⚠ TEMPORAL — ver lib/diagnostico.ts
-  // `buscarAlumnoPorEmail` devuelve null tanto si el email no está en
-  // Gestión como si la consulta falló; en el segundo caso deja además
-  // un `[gestion]` en el log. Los dos casos se ven aquí como "no".
-  diag("3/6 Gestión", { encontrado: alumno === null ? "no" : "sí" });
-
-  const esAdmin = esAdministrador(email);
-  const puedeEntrar = alumno !== null || esAdmin;
-
-  // ⚠ TEMPORAL — ver lib/diagnostico.ts
-  diag("4/6 decisión", {
-    esAdministrador: esAdmin ? "sí" : "NO",
-    puedeEntrar: puedeEntrar ? "sí" : "NO",
-    corta_aqui: puedeEntrar ? "no" : "SÍ (no se llama a Resend)",
-  });
+  const puedeEntrar = alumno !== null || esAdministrador(email);
 
   if (!puedeEntrar) return;
 
-  // ⚠ TEMPORAL — ver lib/diagnostico.ts
-  diag("5/6 llamando a enviarEnlaceAcceso", { destinatario: ofuscarEmail(email) });
-
   const enviado = await enviarEnlaceAcceso(email, await crearTokenEnlace(email));
-
-  // ⚠ TEMPORAL — ver lib/diagnostico.ts
-  diag("6/6 resultado del envío", { enviado: enviado ? "sí" : "NO" });
-
   if (!enviado) {
     // El visitante ve el mensaje de siempre; el aviso se queda en el
     // log, que es donde alguien puede hacer algo al respecto.
@@ -90,16 +61,6 @@ async function atender(email: string): Promise<void> {
 
 export async function solicitarEnlace(datos: FormData): Promise<EstadoAcceso> {
   const email = normalizarEmail(datos.get("email"));
-
-  // ⚠ TEMPORAL — ver lib/diagnostico.ts
-  // Si esta línea no aparece en los logs, la Server Action ni siquiera
-  // se está ejecutando y el problema está antes: en el formulario o en
-  // el despliegue, no en este flujo.
-  diag("1/6 solicitud recibida", {
-    email: ofuscarEmail(email),
-    plausible: esEmailPlausible(email) ? "sí" : "NO",
-    entorno: process.env.VERCEL_ENV ?? "(fuera de Vercel)",
-  });
 
   // Esto sí se puede contar: que un email esté mal escrito se ve sin
   // preguntarle a nadie, así que decirlo no revela quién está dado de

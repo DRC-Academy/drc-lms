@@ -106,7 +106,7 @@ export async function obtenerPerfil(alumnoId: string): Promise<PerfilAlumno | nu
 
 /**
  * Última clase analizada de un alumno, o null si todavía no tiene ninguna.
- * Solo 68 de los 184 alumnos tienen fila aquí.
+ * Solo 76 de los 174 alumnos tienen fila aquí.
  */
 export async function obtenerUltimaClase(alumnoId: string): Promise<UltimaClase | null> {
   const { data, error } = await soloLectura("vista_ultima_clase")
@@ -201,7 +201,7 @@ export async function buscarAlumnoPorEmail(email: string): Promise<ResumenAlumno
  * Listado para la home del equipo. Deduplica antes de recortar, para que
  * el límite cuente alumnos y no filas.
  *
- * Con `busqueda` filtra por nombre sobre los 184 alumnos, no solo sobre
+ * Con `busqueda` filtra por nombre sobre los 174 alumnos, no solo sobre
  * los 20 que se ven: un buscador que solo mira la primera página no sirve
  * para encontrar a nadie.
  */
