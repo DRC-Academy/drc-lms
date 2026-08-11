@@ -7,26 +7,16 @@ import type { Bloque, PerfilAlumno, UltimaClase } from "@/lib/data";
 import type { ModoGeneracion, TarjetaModo } from "@/lib/modos";
 import { formatearFecha } from "@/lib/perfil";
 import { validarBloque } from "@/lib/validarBloque";
-import { estadoDeBloque } from "@/lib/progreso";
 import {
   borrarProgresoLocal,
   hayProgresoLocal,
   recogerProgresoLocal,
 } from "@/lib/migracion-local";
-import Cabecera from "@/components/Cabecera";
 import TarjetasGeneracion, { type EstadoGeneracion } from "@/components/TarjetasGeneracion";
 import ListaBloques, {
   type AvanceBloques,
   type ProgresoBloques,
 } from "@/components/ListaBloques";
-
-function fechaDeHoy() {
-  return new Intl.DateTimeFormat("es-ES", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(new Date());
-}
 
 export default function PanelAlumno({
   alumnoId,
@@ -63,8 +53,6 @@ export default function PanelAlumno({
   const router = useRouter();
   const [estado, setEstado] = useState<EstadoGeneracion>("listo");
   const [modoActivo, setModoActivo] = useState<ModoGeneracion | null>(null);
-  // En build queda congelada la fecha del prerender; el efecto la corrige.
-  const [hoy, setHoy] = useState(fechaDeHoy);
 
   /**
    * Los bloques generados en esta misma visita. Se guardan en la base
@@ -78,10 +66,6 @@ export default function PanelAlumno({
 
   const progreso = progresoInicial;
   const avance = avanceInicial;
-
-  useEffect(() => {
-    setHoy(fechaDeHoy());
-  }, []);
 
   /**
    * MIGRACIÓN DEL PROGRESO QUE QUEDÓ EN EL NAVEGADOR
@@ -156,35 +140,6 @@ export default function PanelAlumno({
   // El último bloque estático llega bloqueado hasta la siguiente clase.
   const indiceBloqueado = bloques.length > 1 ? todos.length - 1 : -1;
 
-  const resumen = useMemo(() => {
-    const visibles = todos.filter((_, i) => i !== indiceBloqueado);
-    let dominados = 0;
-    let minutos = 0;
-    const porcentajes: number[] = [];
-
-    for (const bloque of visibles) {
-      const { estado: estadoBloque, porcentaje } = estadoDeBloque(
-        progreso[bloque.id],
-        avance[bloque.id],
-        idsGenerados.includes(bloque.id)
-      );
-      if (estadoBloque === "dominado") dominados += 1;
-      if (porcentaje !== null) {
-        porcentajes.push(porcentaje);
-        minutos += bloque.minutos;
-      }
-    }
-
-    return {
-      dominados,
-      total: visibles.length,
-      medio: porcentajes.length
-        ? Math.round(porcentajes.reduce((suma, p) => suma + p, 0) / porcentajes.length)
-        : null,
-      minutos,
-    };
-  }, [todos, indiceBloqueado, progreso, avance, idsGenerados]);
-
   const disponibles = todos.filter((_, i) => i !== indiceBloqueado);
   const enCurso = disponibles.find((b) => !progreso[b.id]) ?? disponibles[0];
 
@@ -234,17 +189,13 @@ export default function PanelAlumno({
   );
 
   const generando = estado === "generando";
-  const nombre = perfil?.nombre.trim() ?? "";
-  // Sin perfil no hay ni nivel ni profesor: se saluda igual y se enseña menos.
-  const subtitulo = perfil
-    ? `Nivel ${perfil.nivel} · clases con ${perfil.profesor}`
-    : null;
 
+  // El saludo, la fecha y el resumen de tres números que había aquí se
+  // han ido: ahora el inicio empieza por el banner del curso y los
+  // números los pinta `TiraEstadisticas`, los dos desde el servidor.
+  // Este componente se queda con lo que necesita ser cliente.
   return (
     <>
-      <Cabecera nombre={nombre || undefined} />
-
-      <main className="mx-auto flex max-w-columna flex-col gap-10 px-6 pb-[140px] pt-7">
         {/* El buscador solo existe para el equipo, así que el alumno no ve
             la vuelta atrás: su ficha es todo el sitio. */}
         {esAdministrador && (
@@ -256,51 +207,16 @@ export default function PanelAlumno({
           </Link>
         )}
 
-        {/* ------------------------------ CABECERA ------------------------------ */}
-        <header className="min-w-0">
-          <p suppressHydrationWarning className="eyebrow tabular-nums text-drc-cuerpo">
-            {hoy}
-          </p>
-          <h1 className="mt-3.5 text-balance font-display text-[40px] font-semibold leading-none tracking-[-0.02em] text-drc-titular wide:text-[58px]">
-            {nombre ? `Hola, ${nombre}` : "Hola"}
-          </h1>
-          {subtitulo && (
-            <p className="mt-3 text-[16px] leading-[1.55] text-drc-cuerpo">
-              Nivel <span className="font-medium text-drc-verde-texto">{perfil?.nivel}</span> ·
-              clases con {perfil?.profesor}
-            </p>
-          )}
-        </header>
-
-        {/* --------------------------- RESUMEN DE PROGRESO ---------------------- */}
-        {todos.length > 0 && (
-          <section
-            aria-label="Tu progreso"
-            className="grid grid-cols-3 divide-x divide-drc-borde rounded-[20px] border border-drc-borde bg-drc-superficie"
-          >
-            <div className="px-2.5 py-5 text-center wide:px-6">
-              <p className="font-display text-[28px] font-semibold leading-none tabular-nums text-drc-titular wide:text-[32px]">
-                {resumen.dominados}
-                <span className="text-drc-cuerpo">/{resumen.total}</span>
-              </p>
-              {/* leading-[1.35] deja que la etiqueta parta en dos líneas en móvil sin cortarse. */}
-              <p className="eyebrow mt-2.5 leading-[1.35] text-drc-cuerpo">Dominados</p>
-            </div>
-            <div className="px-2.5 py-5 text-center wide:px-6">
-              <p className="font-display text-[28px] font-semibold leading-none tabular-nums text-drc-titular wide:text-[32px]">
-                {resumen.medio === null ? "—" : `${resumen.medio}%`}
-              </p>
-              <p className="eyebrow mt-2.5 leading-[1.35] text-drc-cuerpo">Acierto medio</p>
-            </div>
-            <div className="px-2.5 py-5 text-center wide:px-6">
-              <p className="font-display text-[28px] font-semibold leading-none tabular-nums text-drc-titular wide:text-[32px]">
-                {resumen.minutos}
-                <span className="text-[17px] text-drc-cuerpo"> min</span>
-              </p>
-              <p className="eyebrow mt-2.5 leading-[1.35] text-drc-cuerpo">Practicados</p>
-            </div>
-          </section>
-        )}
+        {/* ------------------------- MODOS DE GENERACIÓN ------------------------ */}
+        {/* Va justo debajo de la tira de estadísticas: banner, números y
+            práctica es el orden del inicio. El contexto del alumno pasa
+            a después, que es apoyo y no acción. */}
+        <TarjetasGeneracion
+          tarjetas={tarjetas}
+          estado={estado}
+          modoActivo={modoActivo}
+          onGenerar={generar}
+        />
 
         {/* --------------------------- CONTEXTO DEL ALUMNO ---------------------- */}
         {(ultimaClase || perfil?.puntosFuertes) && (
@@ -327,14 +243,6 @@ export default function PanelAlumno({
             )}
           </section>
         )}
-
-        {/* ------------------------- MODOS DE GENERACIÓN ------------------------ */}
-        <TarjetasGeneracion
-          tarjetas={tarjetas}
-          estado={estado}
-          modoActivo={modoActivo}
-          onGenerar={generar}
-        />
 
         {/* --------------------------- BLOQUES DE LA SEMANA ---------------------- */}
         {todos.length > 0 && (
@@ -364,7 +272,6 @@ export default function PanelAlumno({
             />
           </section>
         )}
-      </main>
 
       {/* ----------------------------- BARRA FIJA ------------------------------ */}
       {enCurso && !generando && (

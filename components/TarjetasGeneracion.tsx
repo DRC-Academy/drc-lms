@@ -83,7 +83,7 @@ export default function TarjetasGeneracion({
           id="titulo-practica"
           className="font-display text-[30px] font-semibold leading-[1.1] text-drc-titular"
         >
-          Prepara tu práctica
+          Tu práctica de hoy
         </h2>
         <p className="mt-2 max-w-[52ch] text-pretty text-[15px] leading-[1.55] text-drc-cuerpo">
           {tarjetas.length > 0
