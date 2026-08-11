@@ -196,17 +196,6 @@ export default function PanelAlumno({
   // Este componente se queda con lo que necesita ser cliente.
   return (
     <>
-        {/* El buscador solo existe para el equipo, así que el alumno no ve
-            la vuelta atrás: su ficha es todo el sitio. */}
-        {esAdministrador && (
-          <Link
-            href="/"
-            className="-mb-4 self-start text-[14px] text-drc-cuerpo transition-colors hover:text-drc-verde-texto"
-          >
-            ← Cambiar de alumno
-          </Link>
-        )}
-
         {/* ------------------------- MODOS DE GENERACIÓN ------------------------ */}
         {/* Va justo debajo de la tira de estadísticas: banner, números y
             práctica es el orden del inicio. El contexto del alumno pasa
@@ -286,7 +275,10 @@ export default function PanelAlumno({
               </div>
               <Link
                 href={`/alumno/${alumnoId}/${enCurso.id}`}
-                className="btn btn-amarillo min-h-[46px] shrink-0"
+                // Sobre el verde oscuro de la barra, un botón verde no se
+                // despega del fondo. Blanco con texto verde: sigue sin
+                // ser amarillo y se lee mejor que ninguna de las dos.
+                className="btn min-h-[46px] shrink-0 bg-white text-drc-verde-texto hover:bg-drc-fantasma-hover"
               >
                 Empezar
               </Link>

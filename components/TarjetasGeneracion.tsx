@@ -5,12 +5,20 @@ import { URL_FORMULARIO, type ModoGeneracion, type TarjetaModo } from "@/lib/mod
 export type EstadoGeneracion = "listo" | "generando" | "error";
 
 /**
- * El acento de cada modo. El amarillo solo aparece como relleno: sobre
- * blanco no llega al contraste mínimo, así que como texto no se usa.
+ * El acento de cada modo.
+ *
+ * El amarillo se queda en la BARRA, que es donde distingue un modo de
+ * otro, y no pasa al botón: el amarillo es acento —etiquetas, chips,
+ * barras— y las acciones son verdes. Con un botón amarillo, la tarjeta
+ * de examen competía con el verde del banner de curso y la página tenía
+ * dos llamadas a la acción discutiendo.
+ *
+ * Sobre blanco el amarillo tampoco llega al contraste mínimo, así que
+ * como texto no se usa en ningún caso.
  */
 const ACENTO: Record<ModoGeneracion, { barra: string; boton: string }> = {
   repaso: { barra: "bg-marca-verde", boton: "btn-primario" },
-  examen: { barra: "bg-marca-amarillo", boton: "btn-amarillo" },
+  examen: { barra: "bg-marca-amarillo", boton: "btn-primario" },
   contexto: {
     barra: "bg-marca-tinta",
     boton: "bg-marca-tinta text-white hover:bg-drc-titular",
@@ -77,7 +85,10 @@ export default function TarjetasGeneracion({
     tarjetas.length > 0 && !tarjetas.some((tarjeta) => tarjeta.modo === "contexto");
 
   return (
-    <section aria-labelledby="titulo-practica">
+    // `id` y `scroll-mt`: es el destino del enlace "Práctica" de la
+    // cabecera, y sin el margen de scroll la cabecera pegajosa taparía
+    // el titular al llegar.
+    <section id="practica" aria-labelledby="titulo-practica" className="scroll-mt-24">
       <div className="border-b border-drc-borde pb-5">
         <h2
           id="titulo-practica"

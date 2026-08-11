@@ -183,6 +183,294 @@ export async function estadoDelCurso(alumnoId: string, curso: CursoFila): Promis
   return { curso, total: ordenadas.length, completadas, siguiente, ultimaActividad };
 }
 
+// ---------------------------------------------------------------
+// EL ÍNDICE DEL CURSO
+// ---------------------------------------------------------------
+
+export type LeccionIndice = {
+  id: string;
+  titulo: string;
+  /** Lección sintética del importador: solo ejercicios, sin teoría. */
+  soloEjercicios: boolean;
+  completada: boolean;
+};
+
+export type ModuloIndice = {
+  id: string;
+  titulo: string;
+  lecciones: LeccionIndice[];
+  completadas: number;
+};
+
+export type ArbolCurso = {
+  curso: CursoFila;
+  modulos: ModuloIndice[];
+  total: number;
+  completadas: number;
+  /** La primera pendiente: el acordeón abre su módulo. */
+  leccionActual: string | null;
+};
+
+export async function cursoPorSlug(slug: string): Promise<CursoFila | null> {
+  const { data, error } = await baseLms()
+    .from("cursos")
+    .select("id, slug, titulo, nivel, tipo, examen")
+    .eq("slug", slug)
+    .eq("activo", true)
+    .limit(1)
+    .returns<CursoFila[]>();
+
+  if (!registrar("No se pudo leer el curso", error)) return null;
+  return (data ?? [])[0] ?? null;
+}
+
+/**
+ * El árbol entero del curso para el índice: 48 módulos y hasta 169
+ * lecciones.
+ *
+ * Ninguna consulta trae `contenido`. Saber cuáles son las lecciones de
+ * solo ejercicios se resuelve con una consulta aparte que filtra por
+ * `contenido = ''` y devuelve únicamente ids: pesa unos cientos de
+ * bytes en vez de los cientos de kilobytes que costaría traer el HTML
+ * de todo el curso para mirar si está vacío.
+ */
+export async function arbolDelCurso(alumnoId: string, curso: CursoFila): Promise<ArbolCurso> {
+  const cliente = baseLms();
+  const vacio: ArbolCurso = { curso, modulos: [], total: 0, completadas: 0, leccionActual: null };
+
+  const { data: modulos, error: e1 } = await cliente
+    .from("modulos")
+    .select("id, titulo, orden")
+    .eq("curso_id", curso.id)
+    .order("orden")
+    .returns<FilaModulo[]>();
+
+  if (!registrar("No se pudieron leer los módulos", e1)) return vacio;
+  const listaModulos = modulos ?? [];
+  if (listaModulos.length === 0) return vacio;
+
+  const idsModulo = listaModulos.map((m) => m.id);
+
+  const [lecciones, soloEjercicios, progreso] = await Promise.all([
+    cliente
+      .from("lecciones")
+      .select("id, titulo, orden, modulo_id")
+      .in("modulo_id", idsModulo)
+      .order("orden")
+      .returns<FilaLeccion[]>(),
+    cliente
+      .from("lecciones")
+      .select("id")
+      .in("modulo_id", idsModulo)
+      .eq("contenido", "")
+      .returns<{ id: string }[]>(),
+    cliente
+      .from("progreso_lecciones")
+      .select("leccion_id, completada_en")
+      .eq("alumno_id", alumnoId)
+      .returns<FilaProgreso[]>(),
+  ]);
+
+  if (!registrar("No se pudieron leer las lecciones", lecciones.error)) return vacio;
+
+  const sinTeoria = new Set((soloEjercicios.data ?? []).map((l) => l.id));
+  const hechas = new Set((progreso.data ?? []).map((p) => p.leccion_id));
+
+  const porModulo = new Map<string, FilaLeccion[]>();
+  for (const leccion of lecciones.data ?? []) {
+    const lista = porModulo.get(leccion.modulo_id);
+    if (lista) lista.push(leccion);
+    else porModulo.set(leccion.modulo_id, [leccion]);
+  }
+
+  let total = 0;
+  let completadas = 0;
+  let leccionActual: string | null = null;
+
+  const salida: ModuloIndice[] = listaModulos.map((modulo) => {
+    const suyas = (porModulo.get(modulo.id) ?? []).slice().sort((a, b) => a.orden - b.orden);
+    let hechasAqui = 0;
+
+    const lista: LeccionIndice[] = suyas.map((leccion) => {
+      const completada = hechas.has(leccion.id);
+      if (completada) hechasAqui++;
+      else if (leccionActual === null) leccionActual = leccion.id;
+
+      return {
+        id: leccion.id,
+        titulo: leccion.titulo,
+        soloEjercicios: sinTeoria.has(leccion.id),
+        completada,
+      };
+    });
+
+    total += lista.length;
+    completadas += hechasAqui;
+
+    return { id: modulo.id, titulo: modulo.titulo, lecciones: lista, completadas: hechasAqui };
+  });
+
+  return { curso, modulos: salida, total, completadas, leccionActual };
+}
+
+// ---------------------------------------------------------------
+// UNA LECCIÓN
+// ---------------------------------------------------------------
+
+export type EjercicioFila = {
+  id: string;
+  tipo: "single" | "multiple" | "cloze" | "essay";
+  enunciado: string;
+  opciones: string[];
+  correcta: unknown;
+  explicacion: string | null;
+  orden: number;
+};
+
+export type LeccionCompleta = {
+  curso: CursoFila;
+  moduloTitulo: string;
+  leccion: { id: string; titulo: string; contenido: string };
+  /** Las del mismo módulo, para la barra lateral. */
+  hermanas: LeccionIndice[];
+  ejercicios: EjercicioFila[];
+  completada: boolean;
+  /** A dónde lleva "completar y continuar". null si es la última del curso. */
+  siguienteId: string | null;
+};
+
+type FilaLeccionCompleta = {
+  id: string;
+  titulo: string;
+  contenido: string;
+  orden: number;
+  modulo_id: string;
+};
+
+/**
+ * Todo lo que necesita la vista de una lección.
+ *
+ * Aquí SÍ se trae `contenido`, pero solo el de esta lección. La barra
+ * lateral usa los títulos de las hermanas, sin su HTML.
+ */
+export async function leccionParaVer(
+  alumnoId: string,
+  curso: CursoFila,
+  leccionId: string
+): Promise<LeccionCompleta | null> {
+  const cliente = baseLms();
+
+  const { data: leccionData, error: e1 } = await cliente
+    .from("lecciones")
+    .select("id, titulo, contenido, orden, modulo_id")
+    .eq("id", leccionId)
+    .limit(1)
+    .returns<FilaLeccionCompleta[]>();
+
+  if (!registrar("No se pudo leer la lección", e1)) return null;
+  const leccion = (leccionData ?? [])[0];
+  if (!leccion) return null;
+
+  // Los módulos del curso: hacen falta para comprobar que la lección es
+  // de este curso y para saber cuál es la siguiente al saltar de módulo.
+  const { data: modulos, error: e2 } = await cliente
+    .from("modulos")
+    .select("id, titulo, orden")
+    .eq("curso_id", curso.id)
+    .order("orden")
+    .returns<FilaModulo[]>();
+
+  if (!registrar("No se pudieron leer los módulos", e2)) return null;
+  const listaModulos = modulos ?? [];
+
+  // Una lección de otro curso no se sirve desde esta URL: si no, el slug
+  // sería decorativo y bastaría con adivinar un uuid.
+  const modulo = listaModulos.find((m) => m.id === leccion.modulo_id);
+  if (!modulo) return null;
+
+  const idsModulo = listaModulos.map((m) => m.id);
+
+  const [todas, soloEjercicios, progreso, ejercicios] = await Promise.all([
+    cliente
+      .from("lecciones")
+      .select("id, titulo, orden, modulo_id")
+      .in("modulo_id", idsModulo)
+      .order("orden")
+      .returns<FilaLeccion[]>(),
+    cliente
+      .from("lecciones")
+      .select("id")
+      .in("modulo_id", idsModulo)
+      .eq("contenido", "")
+      .returns<{ id: string }[]>(),
+    cliente
+      .from("progreso_lecciones")
+      .select("leccion_id, completada_en")
+      .eq("alumno_id", alumnoId)
+      .returns<FilaProgreso[]>(),
+    cliente
+      .from("ejercicios_leccion")
+      .select("id, tipo, enunciado, opciones, correcta, explicacion, orden")
+      .eq("leccion_id", leccionId)
+      .order("orden")
+      .returns<EjercicioFila[]>(),
+  ]);
+
+  if (!registrar("No se pudieron leer las lecciones del curso", todas.error)) return null;
+
+  const sinTeoria = new Set((soloEjercicios.data ?? []).map((l) => l.id));
+  const hechas = new Set((progreso.data ?? []).map((p) => p.leccion_id));
+  const ordenModulo = new Map(listaModulos.map((m) => [m.id, m.orden]));
+
+  const ordenadas = (todas.data ?? []).slice().sort((a, b) => {
+    const dm = (ordenModulo.get(a.modulo_id) ?? 0) - (ordenModulo.get(b.modulo_id) ?? 0);
+    return dm !== 0 ? dm : a.orden - b.orden;
+  });
+
+  const posicion = ordenadas.findIndex((l) => l.id === leccionId);
+  const siguiente = posicion >= 0 ? ordenadas[posicion + 1] : undefined;
+
+  const hermanas: LeccionIndice[] = ordenadas
+    .filter((l) => l.modulo_id === modulo.id)
+    .map((l) => ({
+      id: l.id,
+      titulo: l.titulo,
+      soloEjercicios: sinTeoria.has(l.id),
+      completada: hechas.has(l.id),
+    }));
+
+  return {
+    curso,
+    moduloTitulo: modulo.titulo,
+    leccion: { id: leccion.id, titulo: leccion.titulo, contenido: leccion.contenido },
+    hermanas,
+    ejercicios: ejercicios.data ?? [],
+    completada: hechas.has(leccionId),
+    siguienteId: siguiente?.id ?? null,
+  };
+}
+
+/**
+ * Deja una lección por vista.
+ *
+ * `origen: 'lms'` la distingue de lo que un día venga migrado de
+ * LearnDash, que es lo que permitirá deshacer solo la migración.
+ *
+ * El UNIQUE de la tabla convierte el segundo intento en un conflicto:
+ * se ignora en vez de fallar, porque volver a marcar una lección ya
+ * hecha es una pulsación de más, no un error.
+ */
+export async function completarLeccion(alumnoId: string, leccionId: string): Promise<boolean> {
+  const { error } = await baseLms()
+    .from("progreso_lecciones")
+    .upsert(
+      { alumno_id: alumnoId, leccion_id: leccionId, origen: "lms" },
+      { onConflict: "alumno_id,leccion_id", ignoreDuplicates: true }
+    );
+
+  return registrar("No se pudo marcar la lección como completada", error);
+}
+
 /**
  * El estado de todos los cursos del alumno, con el que va en el banner
  * primero.

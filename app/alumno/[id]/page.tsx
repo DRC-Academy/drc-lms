@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
@@ -102,9 +103,26 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   return (
     <>
-      <Cabecera nombre={nombre || undefined} />
+      <Cabecera
+        nombre={nombre || undefined}
+        alumnoId={sesion.alumnoId}
+        cursoSlug={estadosCurso[0]?.curso.slug ?? null}
+        seccion="inicio"
+      />
 
       <main className="mx-auto flex max-w-columna flex-col gap-10 px-6 pb-[140px] pt-7">
+        {/* Control del equipo, no del alumno: va arriba del todo y fuera
+            del contenido. En medio de la página partía el hilo entre el
+            banner y la práctica. */}
+        {sesion.rol === "admin" && (
+          <Link
+            href="/"
+            className="-mb-6 self-start text-[14px] text-drc-cuerpo transition-colors hover:text-drc-verde-texto"
+          >
+            ← Cambiar de alumno
+          </Link>
+        )}
+
         <BannerCurso estados={estadosCurso} />
 
         <TiraEstadisticas

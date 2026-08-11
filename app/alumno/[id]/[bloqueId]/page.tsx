@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getBloque } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { buscarBloqueGenerado } from "@/lib/progreso-servidor";
+import { cursosAsignados } from "@/lib/cursos-servidor";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
 import Cabecera from "@/components/Cabecera";
 import Practica from "@/components/Practica";
@@ -30,10 +31,22 @@ export default async function PaginaBloque({
 
   const nombre = datos.perfil?.nombre ?? "";
 
+  // El curso principal, solo para que la cabecera pueda pintar "Mi curso".
+  // Son 7 filas y evita que la navegación cambie de forma entre pantallas.
+  const cursos = datos.perfil
+    ? await cursosAsignados(datos.perfil.plan, datos.perfil.nivel)
+    : [];
+  const cursoSlug = cursos[0]?.slug ?? null;
+
   if (!bloque) {
     return (
       <>
-        <Cabecera nombre={nombre} />
+        <Cabecera
+          nombre={nombre}
+          alumnoId={sesion.alumnoId}
+          cursoSlug={cursoSlug}
+          seccion="practica"
+        />
         <div className="mx-auto max-w-md px-6 pt-16 text-center">
           <div className="tarjeta">
             <h1 className="font-display text-[24px] font-semibold leading-tight text-drc-titular">

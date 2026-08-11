@@ -115,6 +115,56 @@
     @apply bg-drc-amarillo text-drc-titular hover:bg-drc-amarillo-hover;
   }
 
+  /* ---------------------------------------------------------------
+     CONTENIDO DE LAS LECCIONES
+
+     El HTML viene de LearnDash con sus propias etiquetas y sin una sola
+     clase de Tailwind, así que se le da forma desde el contenedor. Sin
+     esto, los <h3> salen del tamaño del texto y las listas sin sangría:
+     legible no es lo mismo que sin estilos.
+
+     Se aplica solo dentro de `.leccion` para no tocar el resto de la
+     aplicación, donde las etiquetas sí llevan sus clases.
+     --------------------------------------------------------------- */
+  .leccion {
+    @apply text-[16px] leading-[1.7] text-drc-texto;
+  }
+  .leccion > * + * {
+    @apply mt-4;
+  }
+  .leccion h1,
+  .leccion h2,
+  .leccion h3,
+  .leccion h4 {
+    @apply mt-8 font-display font-semibold leading-snug text-marca-tinta;
+  }
+  .leccion h1 { @apply text-[24px]; }
+  .leccion h2 { @apply text-[21px]; }
+  .leccion h3 { @apply text-[18px]; }
+  .leccion h4 { @apply text-[16px]; }
+  .leccion p { @apply text-pretty; }
+  .leccion strong, .leccion b { @apply font-semibold text-marca-tinta; }
+  .leccion ul { @apply list-disc pl-6; }
+  .leccion ol { @apply list-decimal pl-6; }
+  .leccion li + li { @apply mt-1.5; }
+  .leccion a {
+    @apply font-medium text-drc-verde-texto underline underline-offset-2 hover:text-drc-enlace-hover;
+  }
+  .leccion blockquote {
+    @apply border-l-4 border-marca-borde pl-4 text-drc-cuerpo;
+  }
+  .leccion code {
+    @apply rounded bg-marca-niebla px-1.5 py-0.5 text-[14px];
+  }
+  .leccion hr { @apply my-8 border-marca-borde; }
+  /* Las tablas del material se salen en móvil: se dejan desplazar solas. */
+  .leccion table { @apply block w-full overflow-x-auto text-[15px]; }
+  .leccion th, .leccion td { @apply border border-marca-borde px-3 py-2 text-left align-top; }
+  .leccion th { @apply bg-marca-niebla font-semibold text-marca-tinta; }
+  .leccion img { @apply h-auto max-w-full rounded-xl; }
+  /* Los 7 vídeos de YouTube que sobreviven al saneado. */
+  .leccion iframe { @apply aspect-video h-auto w-full rounded-xl; }
+
   /* Disuelve el contenido por detrás de la barra fija. */
   .fondo-fundido {
     background: linear-gradient(
