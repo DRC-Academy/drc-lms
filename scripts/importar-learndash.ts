@@ -16,10 +16,8 @@
 // usar sintaxis borrable: nada de `enum`, `namespace` ni propiedades de
 // parámetro en constructores.
 //
-// SIN DEPENDENCIAS NUEVAS. El ZIP se lee con `node:zlib`, que trae Node:
-// un ZIP es un directorio central y una ristra de deflate crudo, y son
-// setenta líneas. Añadir un paquete al package.json de la aplicación
-// para un script que se ejecuta tres veces en la vida no compensa.
+// El lector de ZIP vive en `learndash-zip.ts`, compartido con
+// `migrar-progreso.ts`.
 //
 // IDEMPOTENTE: todo entra por `upsert` con `learndash_id` como clave de
 // conflicto, así que correrlo dos veces no duplica nada.
@@ -37,9 +35,16 @@
 // Gestión, empezando por `alumno_vinculos.woo_user_id`.
 // ---------------------------------------------------------------
 
-import { readFileSync } from "node:fs";
-import { inflateRawSync } from "node:zlib";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  abrirZip,
+  entero,
+  leerEnv,
+  leerJsonl,
+  texto,
+  type Registro,
+  type Zip,
+} from "./learndash-zip.ts";
 
 const RUTA_ZIP = "import/learndash-export-20260811-6a7b8548cf750.zip";
 const RUTA_ENV = ".env.local";
@@ -50,98 +55,9 @@ const TITULO_EXCLUIDO = "Curso Test";
 /** Tamaño de tanda para las escrituras. */
 const TANDA = 400;
 
-// ---------------------------------------------------------------
-// LECTOR DE ZIP
-// ---------------------------------------------------------------
-
-type Zip = Map<string, () => Buffer>;
-
-const FIRMA_EOCD = 0x06054b50;
-const FIRMA_CENTRAL = 0x02014b50;
-
-function abrirZip(ruta: string): Zip {
-  const buf = readFileSync(ruta);
-
-  // El fin del directorio central está al final, detrás de un comentario
-  // de longitud variable: hay que buscarlo hacia atrás.
-  let eocd = -1;
-  for (let i = buf.length - 22; i >= 0 && i > buf.length - 22 - 65536; i--) {
-    if (buf.readUInt32LE(i) === FIRMA_EOCD) {
-      eocd = i;
-      break;
-    }
-  }
-  if (eocd === -1) throw new Error("ZIP corrupto: no se encontró el directorio central");
-
-  const total = buf.readUInt16LE(eocd + 10);
-  let p = buf.readUInt32LE(eocd + 16);
-  if (p === 0xffffffff) throw new Error("ZIP64 no soportado por este lector");
-
-  const entradas: Zip = new Map();
-
-  for (let n = 0; n < total; n++) {
-    if (buf.readUInt32LE(p) !== FIRMA_CENTRAL) throw new Error(`ZIP corrupto en la entrada ${n}`);
-
-    const metodo = buf.readUInt16LE(p + 10);
-    const comprimido = buf.readUInt32LE(p + 20);
-    const nombreLen = buf.readUInt16LE(p + 28);
-    const extraLen = buf.readUInt16LE(p + 30);
-    const comentLen = buf.readUInt16LE(p + 32);
-    const offsetLocal = buf.readUInt32LE(p + 42);
-    const nombre = buf.toString("utf8", p + 46, p + 46 + nombreLen);
-
-    entradas.set(nombre, () => {
-      // La cabecera local tiene su propio campo `extra`, que NO tiene por
-      // qué medir lo mismo que el del directorio central. Leerlo del
-      // sitio equivocado desplaza el inicio de los datos.
-      const nl = buf.readUInt16LE(offsetLocal + 26);
-      const el = buf.readUInt16LE(offsetLocal + 28);
-      const inicio = offsetLocal + 30 + nl + el;
-      const crudo = buf.subarray(inicio, inicio + comprimido);
-      return metodo === 0 ? Buffer.from(crudo) : inflateRawSync(crudo);
-    });
-
-    p += 46 + nombreLen + extraLen + comentLen;
-  }
-
-  return entradas;
-}
-
-// ---------------------------------------------------------------
-// LECTURA DEL EXPORT
-// ---------------------------------------------------------------
-
-type Registro = Record<string, unknown>;
-
-/** Cada `.ld` es JSONL: un objeto por línea, no un array. */
-function leerJsonl(zip: Zip, archivo: string): Registro[] {
-  const leer = zip.get(archivo);
-  if (!leer) throw new Error(`Falta ${archivo} en el ZIP`);
-
-  const salida: Registro[] = [];
-  const lineas = leer().toString("utf8").split(/\r?\n/);
-
-  for (const linea of lineas) {
-    if (linea.trim() === "") continue;
-    try {
-      salida.push(JSON.parse(linea) as Registro);
-    } catch {
-      // Una línea ilegible no puede tirar el import entero.
-      console.warn(`  aviso: línea no parseable en ${archivo}`);
-    }
-  }
-
-  return salida;
-}
-
 const wpPost = (r: Registro): Registro => (r.wp_post ?? {}) as Registro;
 const wpMeta = (r: Registro): Registro => (r.wp_post_meta ?? {}) as Registro;
 
-const texto = (v: unknown): string => (typeof v === "string" ? v : "");
-const entero = (v: unknown): number => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
 
 /**
  * Las metas de WordPress llegan como array de un elemento, y ese
@@ -292,6 +208,107 @@ function limpiarHtmlConSaltos(html: string): string {
 /** Pega trozos de HTML saltándose los vacíos. */
 function juntar(trozos: string[]): string {
   return trozos.filter((t) => t.trim() !== "").join("\n\n");
+}
+
+// ---------------------------------------------------------------
+// IMÁGENES: 11 se quedan, 291 se van
+//
+// Las 305 `<img>` del export apuntaban a drcacademy.com, y ese servidor
+// ya devuelve 502 en todo lo que Cloudflare no tenga en caché: no es una
+// dependencia que caduque el día que se apague WordPress, es una
+// dependencia que hoy no funciona.
+//
+// De las 305, 291 son decoración: 79 de los 82 archivos son fotos de
+// stock de Pexels, 58 archivos están reciclados en más de una lección
+// —uno de ellos en catorce— y el `alt` viene del blog comercial y ni
+// siquiera coincide con la clase ("Simple Present for habits" con alt
+// "Comparativos en inglés"). Se van.
+//
+// Las 14 que quedan —11 archivos, porque algunos se comparten— son las
+// que el ejercicio necesita para existir: "look at the picture of the
+// tropical beach below", "compare the two pictures". Esas viven ahora en
+// `public/lecciones/`, servidas por la propia aplicación.
+//
+// SE GUARDA EL NOMBRE SIN EL RECORTE. El HTML pedía la miniatura
+// `-300x200`, que es justo la que ya no existe en el servidor; en el ZIP
+// está el original, y es el que se copió a `public/`.
+// ---------------------------------------------------------------
+
+/**
+ * Qué archivo se queda EN QUÉ lección. No basta con una lista de
+ * archivos: los mismos ficheros se usan también de adorno en otras
+ * lecciones —`artempodrez-5716036` aparece 8 veces en total y solo una
+ * de ellas es el ejercicio— y una lista suelta los colaría de vuelta.
+ * La pareja lección + archivo es lo que distingue "esta foto es el
+ * ejercicio" de "esta foto rellena hueco".
+ */
+const IMAGENES_LECCION: Record<number, string[]> = {
+  // "Look at the picture of the tropical beach below"
+  26694: ["pexels-asadphoto-457882.webp"],
+  // El mismo ejercicio, duplicado en un quiz que está fuera del árbol.
+  9828: ["pexels-asadphoto-457882.webp"],
+  // "Look at the two pictures below. Compare them"
+  20321: ["pexels-mart-production-8472795.webp", "pexels-koolshooters-8531232.webp"],
+  // "Describe the first photograph… the second photograph"
+  20208: ["pexels-artempodrez-5716036.webp", "pexels-koolshooters-8531232.webp"],
+  // Tres pares de Speaking Part 2.
+  15268: [
+    "pexels-diva-plavalaguna-6150527.webp",
+    "pexels-olly-826349-1.webp",
+    "pexels-karolina-grabowska-7876197.webp",
+    "pexels-koolshooters-8531232.webp",
+    "pexels-olly-3767411.webp",
+    "pexels-rdne-6517289.webp",
+  ],
+  // "Look at two images… They show people working in different environments"
+  15239: ["pexels-proxyclick-2451566.webp", "pexels-denniz-futalan-339724-4956918.webp"],
+};
+
+/** `pexels-x-300x200.webp` → `pexels-x.webp`, que es el archivo real. */
+function sinRecorte(src: string): string {
+  const archivo = src.split("/").pop() ?? "";
+  return decodeURIComponent(archivo.split("?")[0])
+    .toLowerCase()
+    .replace(/-\d+x\d+(\.\w+)$/, "$1");
+}
+
+type Reescritura = { html: string; conservadas: number; quitadas: number };
+
+/**
+ * La etiqueta se reconstruye entera en vez de sustituir solo el `src`.
+ * La original traía `width="350" height="233"` —medidas de la miniatura
+ * que ya no existe— y un `alt` de SEO que describía otra cosa. Un alt
+ * equivocado es peor que ninguno: un lector de pantalla anunciaría
+ * "Opiniones de Coursera" sobre la foto de una playa. Quien necesite
+ * saber qué hay en la imagen lo tiene en el enunciado, que para eso
+ * la nombra.
+ */
+function reescribirImagenes(html: string, ids: number[]): Reescritura {
+  let conservadas = 0;
+  let quitadas = 0;
+
+  // El contenido de una lección puede venir de varias piezas —el topic y
+  // sus quizzes—, así que vale con que el archivo esté permitido en
+  // cualquiera de ellas.
+  const permitidos = new Set(ids.flatMap((id) => IMAGENES_LECCION[id] ?? []));
+
+  let salida = html.replace(/<img[^>]*>/gi, (etiqueta) => {
+    const src = (etiqueta.match(/\ssrc\s*=\s*["']([^"']+)["']/i) ?? [])[1] ?? "";
+    const archivo = sinRecorte(src);
+
+    if (!permitidos.has(archivo)) {
+      quitadas++;
+      return "";
+    }
+    conservadas++;
+    return `<img src="/lecciones/${archivo}" alt="" loading="lazy" />`;
+  });
+
+  // Quitar la imagen deja el párrafo que la envolvía vacío, y un <p>
+  // vacío es un hueco en blanco en medio de la lección.
+  salida = salida.replace(/<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, "");
+
+  return { html: salida.trim(), conservadas, quitadas };
 }
 
 /** Solo para el resumen: contar qué lecciones acaban con reproductor. */
@@ -555,6 +572,10 @@ type Resumen = {
   audios: number;
   /** Reproductores de audio en quizzes que no cuelgan de ningún curso. */
   audiosInalcanzables: number;
+  /** `<img>` reescritas a `/lecciones/`. */
+  imagenesConservadas: number;
+  /** `<img>` de decoración eliminadas. */
+  imagenesQuitadas: number;
 };
 
 // ---------------------------------------------------------------
@@ -609,6 +630,8 @@ function montar(zip: Zip) {
     videosDeModulo: 0,
     audios: 0,
     audiosInalcanzables: 0,
+    imagenesConservadas: 0,
+    imagenesQuitadas: 0,
   };
 
   const topicsUsados = new Set<number>();
@@ -675,7 +698,10 @@ function montar(zip: Zip) {
 
         // El enunciado del quiz se pega debajo del topic: ahí es donde
         // está el reproductor de audio. Ver `contenidoDeQuiz`.
-        const contenido = juntar([propio, ...susQuizzes.map(contenidoDeQuiz)]);
+        const contenido = contenidoFinal(
+          [propio, ...susQuizzes.map(contenidoDeQuiz)],
+          [idTopic, ...susQuizzes]
+        );
 
         if (contenido === "" && susQuizzes.length === 0 && video === null) {
           // Ni contenido, ni ejercicio, ni vídeo: no hay lección que enseñar.
@@ -721,7 +747,7 @@ function montar(zip: Zip) {
         const antes = filasEjercicio.length;
         añadirEjercicios(idQuiz, idQuiz);
 
-        const contenido = contenidoDeQuiz(idQuiz);
+        const contenido = contenidoFinal([contenidoDeQuiz(idQuiz)], [idQuiz]);
 
         // Un quiz sin preguntas legibles ya no se salta a ciegas: si
         // trae enunciado —y 11 de los 98 con audio son SOLO el
@@ -760,6 +786,14 @@ function montar(zip: Zip) {
   function contenidoDeQuiz(idQuiz: number): string {
     const quiz = quizPorId.get(idQuiz);
     return quiz ? texto(wpPost(quiz).post_content).trim() : "";
+  }
+
+  /** Junta los trozos, reescribe las imágenes y lleva la cuenta. */
+  function contenidoFinal(trozos: string[], ids: number[]): string {
+    const r = reescribirImagenes(juntar(trozos), ids);
+    resumen.imagenesConservadas += r.conservadas;
+    resumen.imagenesQuitadas += r.quitadas;
+    return r.html;
   }
 
   function añadirEjercicios(idQuiz: number, idLeccion: number): void {
@@ -826,21 +860,6 @@ function montar(zip: Zip) {
 // ---------------------------------------------------------------
 // ESCRITURA
 // ---------------------------------------------------------------
-
-function leerEnv(ruta: string): Record<string, string> {
-  const salida: Record<string, string> = {};
-  for (const linea of readFileSync(ruta, "utf8").split(/\r?\n/)) {
-    const l = linea.trim();
-    if (l === "" || l.startsWith("#")) continue;
-    const i = l.indexOf("=");
-    if (i === -1) continue;
-    salida[l.slice(0, i).trim()] = l
-      .slice(i + 1)
-      .trim()
-      .replace(/^["']|["']$/g, "");
-  }
-  return salida;
-}
 
 async function enTandas<T>(filas: T[], tarea: (tanda: T[]) => Promise<void>): Promise<void> {
   for (let i = 0; i < filas.length; i += TANDA) {
@@ -964,6 +983,41 @@ async function principal(): Promise<void> {
   console.log(`      de esos, lecciones que solo`);
   console.log(`      existen por su vídeo        : ${resumen.videosQueSalvanLaLeccion}`);
   console.log(`    lecciones con audio Podbean   : ${resumen.audios}`);
+  console.log(`    imágenes servidas por la app  : ${resumen.imagenesConservadas}`);
+  console.log(`    imágenes de decoración fuera  : ${resumen.imagenesQuitadas}`);
+  console.log("");
+
+  // ---------------------------------------------------------------
+  // NADA PUEDE SEGUIR COLGANDO DE WORDPRESS
+  //
+  // Se mira TODO lo que se va a escribir, no solo el HTML de las
+  // lecciones: la descripción de los cursos sale de `post_excerpt` y los
+  // enunciados salen de `proquiz`, y cualquiera de los dos podría traer
+  // una URL en mitad del texto. Si esto no da cero, el LMS sigue atado a
+  // un servidor que ya devuelve 502.
+  // ---------------------------------------------------------------
+  const rastro = /drcacademy\.com|wp-content/i;
+  const restos: string[] = [];
+
+  for (const c of filasCurso) {
+    if (rastro.test(c.descripcion ?? "")) restos.push(`curso ${c.learndash_id} (descripcion)`);
+  }
+  for (const l of filasLeccion) {
+    if (rastro.test(l.contenido)) restos.push(`lección ${l.learndash_id} (contenido)`);
+    if (rastro.test(l.video_url ?? "")) restos.push(`lección ${l.learndash_id} (video_url)`);
+  }
+  for (const e of filasEjercicio) {
+    const texto = e.enunciado + " " + e.opciones.join(" ") + " " + (e.explicacion ?? "");
+    if (rastro.test(texto)) restos.push(`ejercicio ${e.learndash_id}`);
+  }
+
+  console.log("  REFERENCIAS A drcacademy.com EN LO QUE ENTRA");
+  if (restos.length === 0) {
+    console.log("    ninguna. Nada de lo que se escribe depende de WordPress.");
+  } else {
+    console.log(`    ⚠ ${restos.length}:`);
+    restos.slice(0, 20).forEach((r) => console.log(`      ${r}`));
+  }
   console.log("");
 
   const porTipo = new Map<string, number>();

@@ -109,10 +109,13 @@ function tarjetaContexto(perfil: PerfilAlumno): TarjetaModo {
 
   return {
     modo: "contexto",
-    etiqueta: "Tu contexto",
+    // "Tu día a día" y no "Tu contexto": nombra lo que el alumno
+    // reconoce —su trabajo, sus correos, sus reuniones— en vez de la
+    // palabra con la que lo llamamos nosotros por dentro.
+    etiqueta: "Tu día a día",
     titulo: "Inglés para tu trabajo",
     descripcion: `Ejercicios con situaciones tuyas, no frases de libro. ${primeraFrase(fuente)}`,
-    llamada: "Practicar con lo mío",
+    llamada: "Practicar con tu contexto",
   };
 }
 

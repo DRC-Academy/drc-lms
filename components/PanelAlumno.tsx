@@ -2,38 +2,35 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import type { Bloque, PerfilAlumno, UltimaClase } from "@/lib/data";
+import type { Bloque } from "@/lib/data";
 import type { TarjetaModo } from "@/lib/modos";
-import { formatearFecha } from "@/lib/perfil";
 import {
   borrarProgresoLocal,
   hayProgresoLocal,
   recogerProgresoLocal,
 } from "@/lib/migracion-local";
 import { usarGenerador } from "@/components/usarGenerador";
-import TarjetasGeneracion from "@/components/TarjetasGeneracion";
+import TarjetasPractica from "@/components/TarjetasPractica";
 
 /**
  * La parte del inicio que necesita ser cliente: las tarjetas de
  * generación y la migración del progreso que quedó en el navegador.
  *
- * El banner del curso y la tira de estadísticas los pinta el servidor
- * desde `app/alumno/[id]/page.tsx`, y la lista de bloques se ha ido a
- * `/practica`, que es su sección.
+ * El saludo, el banner del curso, la tira de estadísticas y la
+ * invitación al perfil los pinta el servidor desde
+ * `app/alumno/[id]/page.tsx`, y la lista de bloques vive en `/practica`.
  */
 export default function PanelAlumno({
   alumnoId,
-  perfil,
-  ultimaClase,
+  profesor,
   tarjetas,
   bloques,
   generadosIniciales,
   esAdministrador,
 }: {
   alumnoId: string;
-  /** Puede ser null: hay alumnos con clase analizada y sin fila de perfil. */
-  perfil: PerfilAlumno | null;
-  ultimaClase: UltimaClase | null;
+  /** Nombre del profesor para el subtítulo. Vacío si no hay perfil. */
+  profesor: string;
   tarjetas: TarjetaModo[];
   bloques: Bloque[];
   generadosIniciales: Bloque[];
@@ -106,39 +103,12 @@ export default function PanelAlumno({
   }, [alumnoId, esAdministrador, router]);
 
   return (
-    <>
-      <TarjetasGeneracion
-        tarjetas={tarjetas}
-        estado={estado}
-        modoActivo={modoActivo}
-        onGenerar={generar}
-      />
-
-      {/* --------------------------- CONTEXTO DEL ALUMNO ---------------------- */}
-      {(ultimaClase || perfil?.puntosFuertes) && (
-        <section className="grid gap-4 wide:grid-cols-[1.15fr_1fr]">
-          {ultimaClase && (
-            <article className="tarjeta">
-              <h2 className="eyebrow text-drc-cuerpo">Tu última clase</h2>
-              <p className="mt-4 text-[13px] tabular-nums text-drc-verde-texto">
-                {formatearFecha(ultimaClase.fechaClase)}
-              </p>
-              <p className="mt-1.5 text-pretty font-display text-[17px] font-semibold leading-snug text-drc-titular">
-                {ultimaClase.titulo}
-              </p>
-            </article>
-          )}
-
-          {perfil?.puntosFuertes && (
-            <article className="tarjeta">
-              <h2 className="eyebrow text-drc-cuerpo">Vas bien en</h2>
-              <p className="mt-4 text-pretty text-[15px] leading-[1.55] text-drc-texto">
-                {perfil.puntosFuertes}
-              </p>
-            </article>
-          )}
-        </section>
-      )}
-    </>
+    <TarjetasPractica
+      tarjetas={tarjetas}
+      profesor={profesor}
+      estado={estado}
+      modoActivo={modoActivo}
+      onGenerar={generar}
+    />
   );
 }

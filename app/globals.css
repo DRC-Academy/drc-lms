@@ -28,6 +28,21 @@
     font-size: 16px;
   }
 
+  /* ---------------------------------------------------------------
+     HUECO PARA LA NAVEGACIÓN INFERIOR
+
+     La barra de secciones de móvil es `fixed`, así que no ocupa sitio y
+     taparía el final de la página. En vez de que cada pantalla se
+     acuerde de dejar un padding —y de que la próxima se olvide—, el
+     hueco se reserva aquí y solo cuando la barra existe: las pantallas
+     del equipo y el acceso no la llevan.
+     --------------------------------------------------------------- */
+  @media (max-width: 1023px) {
+    body:has(nav[data-nav-inferior]) {
+      padding-bottom: 78px;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
