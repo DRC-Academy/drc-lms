@@ -162,8 +162,14 @@
   .leccion th, .leccion td { @apply border border-marca-borde px-3 py-2 text-left align-top; }
   .leccion th { @apply bg-marca-niebla font-semibold text-marca-tinta; }
   .leccion img { @apply h-auto max-w-full rounded-xl; }
-  /* Los 7 vídeos de YouTube que sobreviven al saneado. */
+  /* El vídeo de la lección ya no viaja en este HTML: va en `video_url` y
+     lo pinta la vista, con su propio marco. Los iframes que llegan aquí
+     son los reproductores de audio de Podbean —los 98 ejercicios de
+     listening—, que miden 150 px de alto y no son un 16:9. La regla
+     general se deja igualmente por si algún día vuelve a entrar un
+     vídeo incrustado en el cuerpo. */
   .leccion iframe { @apply aspect-video h-auto w-full rounded-xl; }
+  .leccion iframe[src*="podbean.com"] { @apply aspect-auto h-[150px] rounded-xl; }
 
   /* Disuelve el contenido por detrás de la barra fija. */
   .fondo-fundido {

@@ -233,6 +233,11 @@ export async function cursoPorSlug(slug: string): Promise<CursoFila | null> {
  * `contenido = ''` y devuelve únicamente ids: pesa unos cientos de
  * bytes en vez de los cientos de kilobytes que costaría traer el HTML
  * de todo el curso para mirar si está vacío.
+ *
+ * El filtro exige además `video_url is null`. Una lección de vídeo
+ * tiene el contenido vacío —lo normal: son 158 de las 160— y sin esa
+ * condición saldrían todas etiquetadas como "· ejercicios", que es
+ * justo lo que no son.
  */
 export async function arbolDelCurso(alumnoId: string, curso: CursoFila): Promise<ArbolCurso> {
   const cliente = baseLms();
@@ -263,6 +268,7 @@ export async function arbolDelCurso(alumnoId: string, curso: CursoFila): Promise
       .select("id")
       .in("modulo_id", idsModulo)
       .eq("contenido", "")
+      .is("video_url", null)
       .returns<{ id: string }[]>(),
     cliente
       .from("progreso_lecciones")
@@ -330,7 +336,7 @@ export type EjercicioFila = {
 export type LeccionCompleta = {
   curso: CursoFila;
   moduloTitulo: string;
-  leccion: { id: string; titulo: string; contenido: string };
+  leccion: { id: string; titulo: string; contenido: string; videoUrl: string | null };
   /** Las del mismo módulo, para la barra lateral. */
   hermanas: LeccionIndice[];
   ejercicios: EjercicioFila[];
@@ -343,6 +349,7 @@ type FilaLeccionCompleta = {
   id: string;
   titulo: string;
   contenido: string;
+  video_url: string | null;
   orden: number;
   modulo_id: string;
 };
@@ -362,7 +369,7 @@ export async function leccionParaVer(
 
   const { data: leccionData, error: e1 } = await cliente
     .from("lecciones")
-    .select("id, titulo, contenido, orden, modulo_id")
+    .select("id, titulo, contenido, video_url, orden, modulo_id")
     .eq("id", leccionId)
     .limit(1)
     .returns<FilaLeccionCompleta[]>();
@@ -402,6 +409,7 @@ export async function leccionParaVer(
       .select("id")
       .in("modulo_id", idsModulo)
       .eq("contenido", "")
+      .is("video_url", null)
       .returns<{ id: string }[]>(),
     cliente
       .from("progreso_lecciones")
@@ -442,7 +450,12 @@ export async function leccionParaVer(
   return {
     curso,
     moduloTitulo: modulo.titulo,
-    leccion: { id: leccion.id, titulo: leccion.titulo, contenido: leccion.contenido },
+    leccion: {
+      id: leccion.id,
+      titulo: leccion.titulo,
+      contenido: leccion.contenido,
+      videoUrl: leccion.video_url,
+    },
     hermanas,
     ejercicios: ejercicios.data ?? [],
     completada: hechas.has(leccionId),

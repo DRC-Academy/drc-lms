@@ -24,6 +24,14 @@
 // IDEMPOTENTE: todo entra por `upsert` con `learndash_id` como clave de
 // conflicto, así que correrlo dos veces no duplica nada.
 //
+// EL MULTIMEDIA NO ESTÁ DONDE PARECE. Ninguna de las dos cosas viaja en
+// el `post_content` del topic, que es lo único que se leía antes:
+//
+//   vídeo → meta del topic, `sfwd-topic_lesson_video_url`  (ver `videoDe`)
+//   audio → `post_content` del QUIZ, iframe de Podbean     (ver `contenidoDeQuiz`)
+//
+// Buscarlos en el HTML de los topics da 7 y 0. Son 161 y 100.
+//
 // NO IMPORTA PROGRESO. Solo contenido. El progreso de los alumnos es
 // otro paso y necesita resolver `user_id` de WordPress → `alumno_id` de
 // Gestión, empezando por `alumno_vinculos.woo_user_id`.
@@ -147,6 +155,42 @@ function metaObjeto(meta: Registro, clave: string): Registro | null {
   return primero !== null && typeof primero === "object" ? (primero as Registro) : null;
 }
 
+/**
+ * EL VÍDEO NO ESTÁ EN EL HTML, ESTÁ EN LA META
+ *
+ * Buscar YouTube dentro de `post_content` da 7 topics y engaña: los 7
+ * son menciones en prosa ("use podcasts, movies and YouTube videos"),
+ * ni una sola incrustación. El vídeo de verdad son 160 topics + 1
+ * módulo, y vive en
+ *
+ *   _sfwd-topic[0].sfwd-topic_lesson_video_url
+ *
+ * —sí, `sfwd-topic_LESSON_video_url`, con el nombre de las lecciones
+ * dentro de la meta de los topics; es de LearnDash, no una errata.
+ *
+ * Y esos 160 topics tienen `post_content` VACÍO: son topics que son un
+ * vídeo y nada más. Por eso este campo no es un adorno, es lo único que
+ * los distingue de un topic en blanco.
+ *
+ * Se lee cualquier clave que acabe en `_video_url` para no depender del
+ * prefijo. No se mira `_video_enabled`: en el export los dos conjuntos
+ * son exactamente los mismos 161, así que filtrar por él no quita nada
+ * y sí puede tirar un vídeo si algún día se desincronizan.
+ */
+function videoDe(registro: Registro): string | null {
+  for (const clave of ["_sfwd-topic", "_sfwd-lessons"]) {
+    const bloque = metaObjeto(wpMeta(registro), clave);
+    if (!bloque) continue;
+
+    for (const [campo, valor] of Object.entries(bloque)) {
+      if (!campo.endsWith("_video_url")) continue;
+      const url = texto(valor).trim();
+      if (url !== "") return url;
+    }
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------
 // NIVEL, TIPO Y EXAMEN A PARTIR DEL TÍTULO
 //
@@ -243,6 +287,16 @@ function limpiarHtmlConSaltos(html: string): string {
     .map((l) => l.trim())
     .join("\n")
     .trim();
+}
+
+/** Pega trozos de HTML saltándose los vacíos. */
+function juntar(trozos: string[]): string {
+  return trozos.filter((t) => t.trim() !== "").join("\n\n");
+}
+
+/** Solo para el resumen: contar qué lecciones acaban con reproductor. */
+function tieneAudio(html: string): boolean {
+  return /<iframe[^>]*podbean/i.test(html);
 }
 
 function limpiarHtml(html: string): string {
@@ -463,6 +517,8 @@ type FilaLeccion = {
   modulo_ld: number;
   titulo: string;
   contenido: string;
+  /** De la meta del topic, no del HTML. Ver `videoDe`. */
+  video_url: string | null;
   orden: number;
   learndash_id: number;
 };
@@ -489,6 +545,16 @@ type Resumen = {
   /** Preguntas atrapadas en quizzes que no cuelgan de ningún curso. */
   preguntasInalcanzables: Map<string, number>;
   ensayos: number;
+  /** Lecciones con vídeo en `video_url`. */
+  videos: number;
+  /** Topics que EXISTEN solo por su vídeo: sin ese campo se descartaban. */
+  videosQueSalvanLaLeccion: number;
+  /** Vídeos de módulo: `modulos` no tiene dónde guardarlos. Se pierden. */
+  videosDeModulo: number;
+  /** Lecciones cuyo contenido acaba llevando un reproductor de audio. */
+  audios: number;
+  /** Reproductores de audio en quizzes que no cuelgan de ningún curso. */
+  audiosInalcanzables: number;
 };
 
 // ---------------------------------------------------------------
@@ -538,6 +604,11 @@ function montar(zip: Zip) {
     preguntasDescartadas: 0,
     preguntasInalcanzables: new Map<string, number>(),
     ensayos: 0,
+    videos: 0,
+    videosQueSalvanLaLeccion: 0,
+    videosDeModulo: 0,
+    audios: 0,
+    audiosInalcanzables: 0,
   };
 
   const topicsUsados = new Set<number>();
@@ -598,20 +669,34 @@ function montar(zip: Zip) {
         if (!topic) continue;
         topicsUsados.add(idTopic);
 
-        const contenido = texto(wpPost(topic).post_content).trim();
+        const propio = texto(wpPost(topic).post_content).trim();
         const susQuizzes = quizDeTopic.get(idTopic) ?? [];
+        const video = videoDe(topic);
 
-        if (contenido === "" && susQuizzes.length === 0) {
-          // Ni contenido ni ejercicio: no hay lección que enseñar.
+        // El enunciado del quiz se pega debajo del topic: ahí es donde
+        // está el reproductor de audio. Ver `contenidoDeQuiz`.
+        const contenido = juntar([propio, ...susQuizzes.map(contenidoDeQuiz)]);
+
+        if (contenido === "" && susQuizzes.length === 0 && video === null) {
+          // Ni contenido, ni ejercicio, ni vídeo: no hay lección que enseñar.
           resumen.topicsVacios++;
           continue;
         }
+
+        if (video !== null) {
+          resumen.videos++;
+          // Lo que este campo rescata: sin él, estos topics caían en la
+          // rama de arriba y no llegaban ni a existir como lección.
+          if (contenido === "" && susQuizzes.length === 0) resumen.videosQueSalvanLaLeccion++;
+        }
+        if (tieneAudio(contenido)) resumen.audios++;
 
         const idLeccion = idTopic;
         filasLeccion.push({
           modulo_ld: nodo.id,
           titulo: texto(wpPost(topic).post_title).trim() || "Lección",
           contenido,
+          video_url: video,
           orden: ordenLeccion++,
           learndash_id: idLeccion,
         });
@@ -636,18 +721,45 @@ function montar(zip: Zip) {
         const antes = filasEjercicio.length;
         añadirEjercicios(idQuiz, idQuiz);
 
-        if (filasEjercicio.length === antes) continue; // quiz sin preguntas legibles
+        const contenido = contenidoDeQuiz(idQuiz);
+
+        // Un quiz sin preguntas legibles ya no se salta a ciegas: si
+        // trae enunciado —y 11 de los 98 con audio son SOLO el
+        // reproductor, sin una palabra— la lección sigue teniendo algo
+        // que dar, aunque no haya ejercicio que corregir.
+        if (filasEjercicio.length === antes && contenido === "") continue;
+
+        if (tieneAudio(contenido)) resumen.audios++;
 
         filasLeccion.push({
           modulo_ld: nodo.id,
           titulo: `Ejercicios: ${tituloQuiz}`,
-          contenido: "",
+          contenido,
+          video_url: null,
           orden: ordenLeccion++,
           learndash_id: idQuiz,
         });
         resumen.leccionesSinteticas++;
       }
     }
+  }
+
+  /**
+   * EL AUDIO ESTÁ EN EL `post_content` DEL QUIZ
+   *
+   * De un quiz solo se sacaban las preguntas, que viven en `proquiz`.
+   * Su `post_content` —el enunciado que el alumno lee antes de
+   * responder— se tiraba entero, y ahí es donde está el reproductor:
+   * 98 de los 581 quizzes llevan un iframe de Podbean, y son todos los
+   * ejercicios de listening del curso. Sin esto el alumno ve "escucha
+   * el audio y responde" y no hay audio.
+   *
+   * Vuelca tal cual, sin tocar el HTML: `lib/sanear-html.ts` decide
+   * después qué se pinta, y Podbean está en su lista de permitidos.
+   */
+  function contenidoDeQuiz(idQuiz: number): string {
+    const quiz = quizPorId.get(idQuiz);
+    return quiz ? texto(wpPost(quiz).post_content).trim() : "";
   }
 
   function añadirEjercicios(idQuiz: number, idLeccion: number): void {
@@ -682,6 +794,13 @@ function montar(zip: Zip) {
     const id = entero(wpPost(t).ID);
     if (!topicsUsados.has(id)) resumen.topicsHuerfanos++;
   }
+
+  // Un módulo con vídeo no tiene dónde caer: `modulos` es título y orden,
+  // y un vídeo de módulo no es una lección. Es 1 en este export (17584).
+  // Se cuenta para que se vea, no se inventa una lección para él.
+  for (const m of modulos) {
+    if (videoDe(m) !== null) resumen.videosDeModulo++;
+  }
   // Los quizzes que no aparecen en `ld_course_steps` de ningún curso.
   // Tampoco traen `course_id` en su meta, así que NO HAY forma de saber
   // a qué curso pertenecían: se cuentan y se dice qué se pierde.
@@ -689,6 +808,7 @@ function montar(zip: Zip) {
     const idQuiz = entero(wpPost(q).ID);
     if (quizzesUsados.has(idQuiz)) continue;
     resumen.quizzesFueraDelArbol++;
+    if (tieneAudio(texto(wpPost(q).post_content))) resumen.audiosInalcanzables++;
 
     const datos = datosQuiz.get(idQuiz);
     if (datos === undefined) continue;
@@ -777,6 +897,7 @@ async function escribir(
           modulo_id: idModulo.get(l.modulo_ld),
           titulo: l.titulo,
           contenido: l.contenido,
+          video_url: l.video_url,
           orden: l.orden,
           learndash_id: l.learndash_id,
         })),
@@ -835,8 +956,14 @@ async function principal(): Promise<void> {
   console.log("=== LO QUE ENTRA ===");
   console.log(`  cursos     : ${filasCurso.length}`);
   console.log(`  módulos    : ${filasModulo.length}`);
-  console.log(`  lecciones  : ${filasLeccion.length}   (${resumen.leccionesSinteticas} sintéticas, solo ejercicios)`);
+  console.log(`  lecciones  : ${filasLeccion.length}   (${resumen.leccionesSinteticas} sintéticas, nacidas de un quiz)`);
   console.log(`  ejercicios : ${filasEjercicio.length}`);
+  console.log("");
+  console.log("  MULTIMEDIA");
+  console.log(`    vídeos (video_url)            : ${resumen.videos}`);
+  console.log(`      de esos, lecciones que solo`);
+  console.log(`      existen por su vídeo        : ${resumen.videosQueSalvanLaLeccion}`);
+  console.log(`    lecciones con audio Podbean   : ${resumen.audios}`);
   console.log("");
 
   const porTipo = new Map<string, number>();
@@ -863,10 +990,20 @@ async function principal(): Promise<void> {
 
   console.log("=== LO QUE SE QUEDA FUERA ===");
   for (const c of resumen.cursosSaltados) console.log(`  curso saltado: ${c}`);
-  console.log(`  topics sin contenido ni ejercicio : ${resumen.topicsVacios}`);
-  console.log(`  topics fuera de ld_course_steps   : ${resumen.topicsHuerfanos}`);
-  console.log(`  quizzes fuera de ld_course_steps  : ${resumen.quizzesFueraDelArbol}`);
-  console.log(`  preguntas descartadas al validar  : ${resumen.preguntasDescartadas}`);
+  console.log(`  topics sin contenido, ni ejercicio, ni vídeo : ${resumen.topicsVacios}`);
+  console.log(`  topics fuera de ld_course_steps              : ${resumen.topicsHuerfanos}`);
+  console.log(`  quizzes fuera de ld_course_steps             : ${resumen.quizzesFueraDelArbol}`);
+  console.log(`  preguntas descartadas al validar             : ${resumen.preguntasDescartadas}`);
+  console.log(`  audios en esos quizzes sueltos               : ${resumen.audiosInalcanzables}`);
+
+  if (resumen.videosDeModulo > 0) {
+    console.log("");
+    console.log(`  ⚠ ${resumen.videosDeModulo} vídeo(s) cuelgan de un MÓDULO, no de un topic.`);
+    console.log("      `modulos` es título y orden: no hay columna donde guardarlos y un");
+    console.log("      vídeo de módulo no es una lección. Si hace falta rescatarlo, la vía");
+    console.log("      es una lección propia al principio del módulo, como se hace con los");
+    console.log("      quizzes de módulo. No se hace solo: son decisiones de contenido.");
+  }
 
   const inalcanzables = Array.from(resumen.preguntasInalcanzables.entries());
   const totalInalcanzables = inalcanzables.reduce((a, [, n]) => a + n, 0);

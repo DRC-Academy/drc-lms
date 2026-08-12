@@ -4,6 +4,7 @@ import { exigirSesion } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { cursoPorSlug, cursosAsignados, leccionParaVer } from "@/lib/cursos-servidor";
 import { sanearHtml, tieneContenido } from "@/lib/sanear-html";
+import { incrustacionYoutube } from "@/lib/youtube";
 import Cabecera from "@/components/Cabecera";
 import EjerciciosLeccion, { type EjercicioVista } from "@/components/EjerciciosLeccion";
 
@@ -36,6 +37,11 @@ export default async function PaginaLeccion({
 
   const html = sanearHtml(leccion.contenido);
   const hayTeoria = tieneContenido(html);
+
+  // 158 de las 160 lecciones con vídeo no tienen NADA más: el vídeo es
+  // la lección entera. Si esto devuelve null, la página se comporta
+  // exactamente como antes.
+  const video = incrustacionYoutube(leccion.videoUrl);
 
   const ejerciciosVista: EjercicioVista[] = ejercicios.map((e) => ({
     id: e.id,
@@ -150,15 +156,40 @@ export default async function PaginaLeccion({
               {leccion.titulo}
             </h1>
 
+            {/* ---------------------------- VÍDEO ----------------------------
+                Arriba del contenido: cuando hay las dos cosas, el texto es
+                el apoyo del vídeo y no al revés.
+
+                Ver el vídeo NO es requisito para avanzar. LearnDash lo
+                bloqueaba —marcaba la lección solo al terminar el vídeo, con
+                los controles escondidos— y aquí se decidió no traerlo: el
+                botón de completar sigue estando desde el primer segundo. Un
+                alumno que ya sabe el tema, que vuelve a repasar o que se
+                quedó sin datos no tiene por qué mirar nueve minutos de vídeo
+                para pasar de pantalla. */}
+            {video !== null && (
+              <div className="mt-6">
+                <iframe
+                  src={video}
+                  title={leccion.titulo}
+                  loading="lazy"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="aspect-video w-full rounded-xl border border-marca-borde bg-marca-niebla"
+                />
+              </div>
+            )}
+
             {hayTeoria ? (
               // El HTML viene de LearnDash y pasa por `sanearHtml` antes de
               // llegar aquí: sin scripts, sin manejadores y sin iframes que
-              // no sean de YouTube. Ver `lib/sanear-html.ts`.
+              // no sean de YouTube o Podbean. Ver `lib/sanear-html.ts`.
               <div
                 className="leccion mt-6"
                 dangerouslySetInnerHTML={{ __html: html }}
               />
             ) : (
+              video === null &&
               ejerciciosVista.length > 0 && (
                 <p className="mt-5 text-[15px] leading-[1.55] text-drc-cuerpo">
                   Esta lección es práctica: ve directo a los ejercicios.
@@ -166,7 +197,7 @@ export default async function PaginaLeccion({
               )
             )}
 
-            {!hayTeoria && ejerciciosVista.length === 0 && (
+            {!hayTeoria && video === null && ejerciciosVista.length === 0 && (
               <p className="mt-6 text-[15px] leading-[1.55] text-drc-cuerpo">
                 Esta lección todavía no tiene contenido. Puedes seguir con la siguiente.
               </p>

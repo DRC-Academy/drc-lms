@@ -18,8 +18,20 @@
 // verdad; mientras tanto es la barrera proporcionada al riesgo.
 // ---------------------------------------------------------------
 
-/** Solo se dejan pasar iframes de estos anfitriones. */
-const YOUTUBE = /^https?:\/\/(www\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\//i;
+/**
+ * Solo se dejan pasar iframes de estos anfitriones.
+ *
+ * Podbean está aquí porque es donde vive TODO el audio del curso: los
+ * 104 iframes del export son suyos, y son los ejercicios de listening.
+ * Sin esta línea, el alumno lee "escucha el audio y responde" y no hay
+ * nada que escuchar.
+ */
+const ANFITRIONES = [
+  /^https?:\/\/(www\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\//i,
+  /^https?:\/\/(www\.)?podbean\.com\//i,
+];
+
+const permitido = (src: string): boolean => ANFITRIONES.some((a) => a.test(src));
 
 /**
  * Etiquetas que se van con su contenido dentro. No basta con quitar la
@@ -64,16 +76,24 @@ export function sanearHtml(html: string): string {
   salida = salida.replace(CON_CONTENIDO, "");
   salida = salida.replace(SUELTAS, "");
 
-  // Los iframes: se conservan los de YouTube —solo 7 lecciones de 999
-  // llevan vídeo— y se descarta cualquier otro con su cierre.
+  // Los iframes: se conservan los de la lista de arriba y se descarta
+  // cualquier otro con su cierre.
+  //
+  // El recuento que había aquí antes —"solo 7 lecciones de 999 llevan
+  // vídeo"— era falso. Esos 7 son menciones en prosa ("watch YouTube
+  // videos with subtitles"), no incrustaciones. El vídeo real del curso
+  // son 160 topics y 1 módulo, y no viaja en el HTML sino en la meta
+  // `sfwd-topic_lesson_video_url`: entra por `lecciones.video_url` y lo
+  // pinta la vista, sin pasar por aquí. Por este saneador solo pasan los
+  // iframes de audio.
   salida = salida.replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe\s*>/gi, (trozo) => {
     const apertura = trozo.match(/<iframe\b[^>]*>/i);
     if (!apertura) return "";
-    return YOUTUBE.test(srcDe(apertura[0])) ? trozo : "";
+    return permitido(srcDe(apertura[0])) ? trozo : "";
   });
   // Y los que vengan sin cerrar.
   salida = salida.replace(/<iframe\b[^>]*\/?>/gi, (etiqueta) =>
-    YOUTUBE.test(srcDe(etiqueta)) ? etiqueta : ""
+    permitido(srcDe(etiqueta)) ? etiqueta : ""
   );
 
   salida = salida.replace(MANEJADORES, "");
@@ -88,7 +108,14 @@ export function sanearHtml(html: string): string {
  * Una lección "vacía" del importador puede traer `<p>&nbsp;</p>` en vez
  * de la cadena vacía, y eso pinta un hueco en blanco que parece un
  * fallo de carga.
+ *
+ * Ojo con medir esto quitando las etiquetas y mirando si queda texto:
+ * 11 de los 98 quizzes con audio son SOLO el reproductor, sin una
+ * palabra alrededor. Por texto darían vacío y su audio no se pintaría,
+ * que es justo el fallo que veníamos a arreglar. Un iframe o una imagen
+ * son contenido aunque no lleven texto.
  */
 export function tieneContenido(html: string): boolean {
+  if (/<(iframe|img|audio|video)\b/i.test(html)) return true;
   return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() !== "";
 }

@@ -149,6 +149,14 @@ comment on table public.modulos is
 -- Son los `sfwd-topic`. El HTML viene limpio: ni un solo topic del
 -- export trae `_elementor_data`, así que `contenido` se guarda tal cual
 -- sale de `post_content` y no hace falta ninguna conversión.
+--
+-- SOBRE `video_url`: el vídeo de LearnDash NO viaja en el HTML. Vive en
+-- la meta del topic (`sfwd-topic_lesson_video_url`) y son 160 topics,
+-- todos de YouTube. Los 160 tienen además `post_content` vacío: son
+-- topics que son un vídeo y nada más, así que sin esta columna no es
+-- que se perdiera el vídeo, es que la lección entera desaparecía por
+-- parecer vacía. Columna aparte y no incrustado en `contenido` porque
+-- la vista lo pinta arriba, con su propio marco.
 -- ===============================================================
 
 create table if not exists public.lecciones (
@@ -161,14 +169,25 @@ create table if not exists public.lecciones (
   -- Ver la nota sobre el hallazgo, arriba.
   contenido     text        not null default '',
 
+  -- URL de YouTube tal cual venía. NULL = la lección no tiene vídeo.
+  video_url     text,
+
   orden         integer     not null default 0,
   learndash_id  bigint      unique,
 
   creado_en     timestamptz not null default now()
 );
 
+-- Para las bases donde la tabla ya existía sin la columna: este script
+-- es `if not exists`, así que el `create` de arriba no se vuelve a
+-- ejecutar y por sí solo no la añadiría.
+alter table public.lecciones add column if not exists video_url text;
+
 comment on table public.lecciones is
-  'Lecciones de un módulo (sfwd-topic). contenido vacío = lección que solo tiene ejercicios.';
+  'Lecciones de un módulo (sfwd-topic). Sin contenido, sin vídeo y con ejercicios = lección de solo práctica.';
+
+comment on column public.lecciones.video_url is
+  'URL de YouTube de la meta sfwd-topic_lesson_video_url. NULL si no hay vídeo.';
 
 
 -- ===============================================================
