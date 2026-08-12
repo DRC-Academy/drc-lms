@@ -28,9 +28,13 @@
  * que son los que unen un emoji compuesto: sin ellos quedarían restos
  * invisibles que descuadran los espacios.
  */
+// LAS FLECHAS NO SON EMOJIS. El rango 2190-21FF se quedó fuera a
+// propósito: "go → went", "claim → reason → evidence" o "❌ → ✅" son
+// notación de la lección, no adorno, y aparecen en 197 lecciones, 24
+// enunciados y 3 títulos. Las flechas de emoji de verdad (➡ ⬅) viven en
+// otros rangos y esas sí se van.
 const EMOJI = new RegExp(
   "[\\uD800-\\uDBFF][\\uDC00-\\uDFFF]" + // plano astral: 1F300-1FAFF y compañía
-    "|[\\u2190-\\u21FF]" + //               flechas
     "|[\\u2300-\\u23FF]" + //               reloj, símbolos técnicos
     "|[\\u2460-\\u24FF]" + //               números en círculo
     "|[\\u25A0-\\u27BF]" + //               cuadros, estrellas, ✅ ❌ ✔ ➡
@@ -81,6 +85,49 @@ export function quitarEmojis(html: string): string {
     .replace(/>[ \t]+/g, ">")
     .replace(/[ \t]+</g, "<")
     .replace(/[ \t]{2,}/g, " ");
+}
+
+/**
+ * Lo mismo, pero para un título: aquí SÍ se van también ✅ ❌ 🚫.
+ *
+ * La excepción de arriba existe porque en el cuerpo de la lección esas
+ * marcas contrastan inglés correcto con incorrecto. Un título no
+ * contrasta nada: "✅ Writing: Full-length article under timed
+ * conditions" es decoración, igual que el "🎥" de los 60 títulos de
+ * vídeo. Y como el título se pinta como texto y no como HTML, además
+ * hay que recoger los espacios que deja el emoji al irse.
+ */
+export function quitarEmojisDeTitulo(texto: string): string {
+  return limpiarTexto(texto, false);
+}
+
+/**
+ * Y para el enunciado de un ejercicio, donde ✅ ❌ 🚫 SÍ se quedan.
+ *
+ * Ahí vuelven a contrastar: "❌ Being tired, the nap was necessary" es un
+ * ejercicio de corregir la frase, y son 27 enunciados. Sin la marca, el
+ * alumno no sabe si la frase que lee es el modelo o el error.
+ */
+export function quitarEmojisDeEnunciado(texto: string): string {
+  return limpiarTexto(texto, true);
+}
+
+function limpiarTexto(texto: string, conservarMarcas: boolean): string {
+  const limpio = texto
+    .replace(EMOJI, (encontrado) =>
+      conservarMarcas && MARCAS_QUE_ENSENAN.has(encontrado) ? encontrado : ""
+    )
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ +([,.;:!?])/g, "$1")
+    .trim();
+
+  // NUNCA DEJAR VACÍO LO QUE TENÍA ALGO. Hay opciones de examen que son
+  // un emoji y nada más; vaciarlas hacía que el ejercicio se quedara con
+  // menos de dos opciones y el importador lo descartaba entero. Se
+  // perdían 8 ejercicios por limpiar un adorno. Si no queda nada, se
+  // devuelve lo que había: un emoji suelto molesta menos que un
+  // ejercicio que desaparece.
+  return limpio === "" ? texto.trim() : limpio;
 }
 
 export type TituloLeccion = { id: string; texto: string };

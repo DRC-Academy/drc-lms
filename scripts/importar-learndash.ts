@@ -45,6 +45,10 @@ import {
   type Registro,
   type Zip,
 } from "./learndash-zip.ts";
+// Por ruta relativa y no por el alias `@/`: el alias lo resuelve
+// TypeScript pero no Node al ejecutar el script. `leccion-html.ts` no
+// importa nada, así que entra sin arrastrar la aplicación detrás.
+import { quitarEmojisDeEnunciado, quitarEmojisDeTitulo } from "../lib/leccion-html.ts";
 
 const RUTA_ZIP = "import/learndash-export-20260811-6a7b8548cf750.zip";
 const RUTA_ENV = ".env.local";
@@ -200,7 +204,7 @@ function limpiarHtmlConSaltos(html: string): string {
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .split("\n")
-    .map((l) => l.trim())
+    .map((l) => quitarEmojisDeEnunciado(l))
     .join("\n")
     .trim();
 }
@@ -317,15 +321,16 @@ function tieneAudio(html: string): boolean {
 }
 
 function limpiarHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, " ")
-    .trim();
+  return quitarEmojisDeEnunciado(
+    html
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, " ")
+  );
 }
 
 /**
@@ -641,7 +646,7 @@ function montar(zip: Zip) {
 
   for (const curso of cursos) {
     const post = wpPost(curso);
-    const titulo = texto(post.post_title).trim();
+    const titulo = quitarEmojisDeTitulo(texto(post.post_title));
     const idCurso = entero(post.ID);
 
     if (titulo === TITULO_EXCLUIDO) {
@@ -679,7 +684,7 @@ function montar(zip: Zip) {
 
       filasModulo.push({
         curso_ld: idCurso,
-        titulo: texto(wpPost(modulo).post_title).trim() || "Módulo",
+        titulo: quitarEmojisDeTitulo(texto(wpPost(modulo).post_title)) || "Módulo",
         orden: ordenModulo++,
         learndash_id: nodo.id,
       });
@@ -720,7 +725,7 @@ function montar(zip: Zip) {
         const idLeccion = idTopic;
         filasLeccion.push({
           modulo_ld: nodo.id,
-          titulo: texto(wpPost(topic).post_title).trim() || "Lección",
+          titulo: quitarEmojisDeTitulo(texto(wpPost(topic).post_title)) || "Lección",
           contenido,
           video_url: video,
           orden: ordenLeccion++,
@@ -743,7 +748,7 @@ function montar(zip: Zip) {
         if (!quiz) continue;
         quizzesUsados.add(idQuiz);
 
-        const tituloQuiz = texto(wpPost(quiz).post_title).trim() || "Ejercicios";
+        const tituloQuiz = quitarEmojisDeTitulo(texto(wpPost(quiz).post_title)) || "Ejercicios";
         const antes = filasEjercicio.length;
         añadirEjercicios(idQuiz, idQuiz);
 

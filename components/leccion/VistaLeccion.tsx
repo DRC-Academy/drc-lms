@@ -65,6 +65,22 @@ export default function VistaLeccion({
 }) {
   const hayTeoria = contenidoHtml.trim() !== "";
   const hayEjercicios = ejercicios.length > 0;
+  const hayVideo = leccion.videoIncrustado !== null;
+
+  // ---------------------------------------------------------------
+  // QUÉ CUENTA COMO "LECCIÓN VACÍA"
+  //
+  // El HTML no es lo único que se enseña. 158 lecciones son SOLO un
+  // vídeo —su `post_content` viene vacío de LearnDash— y mirar únicamente
+  // el HTML las declaraba vacías: al alumno le salía "esta lección
+  // todavía no tiene contenido, puedes seguir con la siguiente" justo
+  // encima del vídeo que tenía que ver.
+  //
+  // El audio no necesita su propia condición: los 98 son iframes de
+  // Podbean dentro del HTML, así que ya cuentan como teoría —
+  // `tieneContenido` da por bueno un iframe aunque no lleve texto.
+  // ---------------------------------------------------------------
+  const hayAlgoQueEnsenar = hayTeoria || hayVideo || hayEjercicios;
 
   // Una lección de solo ejercicios no tiene teoría que enseñar: se entra
   // directamente al flujo en vez de a una pantalla en blanco con un
@@ -143,7 +159,12 @@ export default function VistaLeccion({
         ) : (
           <>
             <main className="min-w-0 bg-marca-niebla">
-              <div className="mx-auto w-full max-w-[680px] px-4 pb-6 pt-7 min-[1100px]:px-14 min-[1100px]:pb-6 min-[1100px]:pt-10">
+              {/* EL PADDING SE SUMA AL ANCHO MÁXIMO. Tailwind mide en
+                  `border-box`, así que con `max-w-[680px] px-14` los 56px
+                  de cada lado salían DE los 680: la columna de lectura
+                  medía 568 de verdad y todo —vídeo incluido— se veía
+                  encogido. Los 7rem son los dos paddings de escritorio. */}
+              <div className="mx-auto w-full max-w-[calc(680px+7rem)] px-4 pb-6 pt-7 min-[1100px]:px-14 min-[1100px]:pb-6 min-[1100px]:pt-10">
                 <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
                   Lección {posicion + 1} de {hermanas.length}
                 </p>
@@ -152,15 +173,18 @@ export default function VistaLeccion({
                   {leccion.titulo}
                 </h1>
 
+                {/* 16:9 a todo el ancho de la columna. El `aspect-video`
+                    iba antes en el propio iframe, que trae su altura por
+                    defecto y ganaba: salía una banda de 150px. */}
                 {leccion.videoIncrustado && (
-                  <div className="mt-6 overflow-hidden rounded-[14px] border border-marca-bordeSuave">
+                  <div className="relative mt-6 aspect-video w-full overflow-hidden rounded-[14px] border border-marca-bordeSuave bg-marca-pista">
                     <iframe
                       src={leccion.videoIncrustado}
                       title={leccion.titulo}
                       loading="lazy"
                       allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
-                      className="aspect-video w-full bg-marca-pista"
+                      className="absolute inset-0 h-full w-full border-0"
                     />
                   </div>
                 )}
@@ -200,46 +224,52 @@ export default function VistaLeccion({
                   </div>
                 )}
 
-                {!hayTeoria && !hayEjercicios && (
+                {!hayAlgoQueEnsenar && (
                   <p className="mt-7 text-[16px] leading-[1.6] text-marca-gris">
                     Esta lección todavía no tiene contenido. Puedes seguir con la siguiente.
                   </p>
                 )}
               </div>
 
-              {/* ------------------------ BARRA DE ACCIONES ----------------------- */}
+              {/* ------------------------ BARRA DE ACCIONES -----------------------
+                  UN SOLO BOTÓN DE AVANZAR, y es el de marcar. Antes había
+                  dos que hacían lo mismo: el verde y una flecha "Siguiente
+                  →" al lado. Con dos caminos al mismo sitio, el alumno
+                  elige el que no deja constancia de que ha hecho la
+                  lección, que es justo el que no queremos que elija.
+                  Para volver atrás sí hace falta la flecha: no hay otra. */}
               <div className="sticky bottom-0 border-t border-marca-borde bg-white/[0.94] backdrop-blur-md">
-                <div className="mx-auto flex w-full max-w-[680px] items-center gap-3 px-3.5 pb-4 pt-3 min-[1100px]:gap-4 min-[1100px]:px-14 min-[1100px]:py-3.5">
-                  <FlechaLeccion href={anteriorId ? `/curso/${cursoSlug}/${anteriorId}` : null} atras />
+                <div className="mx-auto w-full max-w-[calc(680px+7rem)] px-3.5 pb-4 pt-3 min-[1100px]:px-14 min-[1100px]:py-3.5">
+                  <div className="flex items-center gap-3 min-[1100px]:gap-4">
+                    <FlechaLeccion href={anteriorId ? `/curso/${cursoSlug}/${anteriorId}` : null} />
 
-                  <BotonCompletar
-                    leccionId={leccion.id}
-                    cursoSlug={cursoSlug}
-                    siguienteId={siguienteId}
-                    className="flex-1 rounded-full bg-marca-verde px-6 py-[13px] text-center text-[15px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc min-[1100px]:flex-none min-[1100px]:px-[30px] min-[1100px]:py-3.5 min-[1100px]:text-[15.5px]"
-                  >
-                    {/* El equipo revisa el curso, no lo cursa: su pulsación
-                        no escribe progreso de nadie —lo filtra la API— así
-                        que tampoco se le promete que marque nada. */}
-                    <span className="min-[1100px]:hidden">
-                      {!registrarIntentos
-                        ? "Siguiente"
-                        : completada
-                        ? "Continuar"
-                        : "Completada y continuar"}
-                    </span>
-                    <span className="hidden min-[1100px]:inline">
-                      {!registrarIntentos
-                        ? "Siguiente lección"
-                        : completada
-                        ? "Continuar"
-                        : esUltimaDelModulo
-                        ? "Marcar el módulo como completado"
-                        : "Marcar como completada y continuar"}
-                    </span>
-                  </BotonCompletar>
+                    <BotonCompletar
+                      leccionId={leccion.id}
+                      cursoSlug={cursoSlug}
+                      siguienteId={siguienteId}
+                      className="flex-1 rounded-full bg-marca-verde px-6 py-[13px] text-center text-[15px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc min-[1100px]:py-3.5 min-[1100px]:text-[15.5px]"
+                    >
+                      <span className="min-[1100px]:hidden">
+                        {completada ? "Continuar" : "Completada y continuar"}
+                      </span>
+                      <span className="hidden min-[1100px]:inline">
+                        {completada
+                          ? "Continuar"
+                          : esUltimaDelModulo
+                          ? "Marcar el módulo como completado"
+                          : "Marcar como completada y continuar"}
+                      </span>
+                    </BotonCompletar>
+                  </div>
 
-                  <FlechaLeccion href={siguienteId ? `/curso/${cursoSlug}/${siguienteId}` : null} />
+                  {/* El equipo revisa el curso, no lo cursa: la API no le
+                      escribe progreso a nadie. Se dice, en vez de cambiar
+                      el botón y dejar la pantalla sin acción principal. */}
+                  {!registrarIntentos && (
+                    <p className="mt-2 text-center text-[12.5px] text-marca-grisSuave">
+                      Estás viendo el curso como equipo: esto no guarda progreso.
+                    </p>
+                  )}
                 </div>
               </div>
             </main>
@@ -316,10 +346,14 @@ export default function VistaLeccion({
   );
 }
 
-/** Las flechas de anterior y siguiente. Sin destino, no se pintan. */
-function FlechaLeccion({ href, atras }: { href: string | null; atras?: boolean }) {
+/**
+ * Volver a la lección anterior. En la primera del curso no hay destino y
+ * queda el hueco: quitarla movería el botón principal de sitio al pasar
+ * de la primera a la segunda lección.
+ */
+function FlechaLeccion({ href }: { href: string | null }) {
   const clase =
-    "grid h-11 w-11 shrink-0 place-items-center rounded-full border border-marca-borde text-[15px] leading-none text-marca-tinta transition-colors hover:bg-marca-niebla min-[1100px]:h-auto min-[1100px]:w-auto min-[1100px]:rounded-full min-[1100px]:px-[18px] min-[1100px]:py-[11px] min-[1100px]:text-[14.5px] min-[1100px]:font-medium";
+    "grid h-11 w-11 shrink-0 place-items-center rounded-full border border-marca-borde text-[15px] leading-none text-marca-tinta transition-colors hover:bg-marca-niebla min-[1100px]:h-auto min-[1100px]:w-auto min-[1100px]:px-[18px] min-[1100px]:py-[11px] min-[1100px]:text-[14.5px] min-[1100px]:font-medium";
 
   if (!href) {
     return <span aria-hidden className={`${clase} pointer-events-none opacity-0`} />;
@@ -327,8 +361,8 @@ function FlechaLeccion({ href, atras }: { href: string | null; atras?: boolean }
 
   return (
     <Link href={href} className={clase}>
-      <span className="min-[1100px]:hidden">{atras ? "←" : "→"}</span>
-      <span className="hidden min-[1100px]:inline">{atras ? "← Anterior" : "Siguiente →"}</span>
+      <span className="min-[1100px]:hidden">←</span>
+      <span className="hidden min-[1100px]:inline">← Anterior</span>
     </Link>
   );
 }

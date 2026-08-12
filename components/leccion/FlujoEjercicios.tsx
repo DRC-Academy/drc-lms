@@ -244,7 +244,7 @@ export default function FlujoEjercicios({
     const todos = aciertos === ejercicios.length;
 
     return (
-      <div className="mx-auto w-full max-w-[600px] px-4 py-10 min-[1100px]:px-14 min-[1100px]:py-14">
+      <div className="mx-auto w-full max-w-[calc(600px+7rem)] px-4 py-10 min-[1100px]:px-14 min-[1100px]:py-14">
         <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
           Ejercicios terminados
         </p>
@@ -339,7 +339,9 @@ export default function FlujoEjercicios({
   const puedeComprobar = pendienteMultiple && estado.elegidas.length > 0;
 
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col px-4 pb-6 pt-6 min-[1100px]:px-14 min-[1100px]:pb-6 min-[1100px]:pt-[34px]">
+    // Igual que en la teoría: el padding se suma al ancho máximo para
+    // que la caja de contenido mida de verdad los 760px del diseño.
+    <div className="mx-auto flex w-full max-w-[calc(760px+7rem)] flex-1 flex-col px-4 pb-6 pt-6 min-[1100px]:px-14 min-[1100px]:pb-6 min-[1100px]:pt-[34px]">
       {/* ------------------------------ PROGRESO ------------------------------ */}
       <div className="flex items-center gap-4 min-[1100px]:gap-5">
         <span className="shrink-0 text-[13px] font-semibold text-marca-gris tabular-nums">
