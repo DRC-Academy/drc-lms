@@ -142,26 +142,35 @@
      aplicación, donde las etiquetas sí llevan sus clases.
      --------------------------------------------------------------- */
   .leccion {
-    @apply text-[16px] leading-[1.7] text-drc-texto;
+    @apply text-[16px] leading-[1.65] text-marca-tintaCuerpo;
+  }
+  @media (min-width: 1100px) {
+    .leccion {
+      @apply text-[17px] leading-[1.7];
+    }
   }
   .leccion > * + * {
-    @apply mt-4;
+    @apply mt-[26px];
   }
   .leccion h1,
   .leccion h2,
   .leccion h3,
   .leccion h4 {
-    @apply mt-8 font-display font-semibold leading-snug text-marca-tinta;
+    @apply mt-8 font-display font-bold leading-[1.3] text-marca-tinta;
+    /* El índice de la derecha lleva el scroll a mano, pero un enlace con
+       almohadilla no: sin esto el título aterriza debajo de la cabecera. */
+    scroll-margin-top: 90px;
   }
-  .leccion h1 { @apply text-[24px]; }
-  .leccion h2 { @apply text-[21px]; }
-  .leccion h3 { @apply text-[18px]; }
-  .leccion h4 { @apply text-[16px]; }
+  .leccion h1 { @apply text-[22px] min-[1100px]:text-[24px]; }
+  .leccion h2 { @apply text-[19px] min-[1100px]:text-[22px]; }
+  .leccion h3 { @apply text-[18px] min-[1100px]:text-[21px]; }
+  .leccion h4 { @apply text-[17px] min-[1100px]:text-[19px]; }
   .leccion p { @apply text-pretty; }
   .leccion strong, .leccion b { @apply font-semibold text-marca-tinta; }
-  .leccion ul { @apply list-disc pl-6; }
-  .leccion ol { @apply list-decimal pl-6; }
-  .leccion li + li { @apply mt-1.5; }
+  .leccion ul { @apply list-disc pl-5; }
+  .leccion ol { @apply list-decimal pl-[22px]; }
+  .leccion li + li { @apply mt-[11px]; }
+  .leccion li { @apply leading-[1.6]; }
   .leccion a {
     @apply font-medium text-drc-verde-texto underline underline-offset-2 hover:text-drc-enlace-hover;
   }

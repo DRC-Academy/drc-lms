@@ -336,6 +336,8 @@ export type EjercicioFila = {
 export type LeccionCompleta = {
   curso: CursoFila;
   moduloTitulo: string;
+  /** Posición del módulo en el curso, desde 0: la etiqueta lo numera. */
+  moduloOrden: number;
   leccion: { id: string; titulo: string; contenido: string; videoUrl: string | null };
   /** Las del mismo módulo, para la barra lateral. */
   hermanas: LeccionIndice[];
@@ -343,6 +345,11 @@ export type LeccionCompleta = {
   completada: boolean;
   /** A dónde lleva "completar y continuar". null si es la última del curso. */
   siguienteId: string | null;
+  /** La anterior del curso, para el botón de atrás. null en la primera. */
+  anteriorId: string | null;
+  /** Progreso del curso entero: va en la cabecera de la lección. */
+  cursoCompletadas: number;
+  cursoTotal: number;
 };
 
 type FilaLeccionCompleta = {
@@ -437,6 +444,7 @@ export async function leccionParaVer(
 
   const posicion = ordenadas.findIndex((l) => l.id === leccionId);
   const siguiente = posicion >= 0 ? ordenadas[posicion + 1] : undefined;
+  const anterior = posicion > 0 ? ordenadas[posicion - 1] : undefined;
 
   const hermanas: LeccionIndice[] = ordenadas
     .filter((l) => l.modulo_id === modulo.id)
@@ -450,6 +458,7 @@ export async function leccionParaVer(
   return {
     curso,
     moduloTitulo: modulo.titulo,
+    moduloOrden: modulo.orden,
     leccion: {
       id: leccion.id,
       titulo: leccion.titulo,
@@ -460,6 +469,9 @@ export async function leccionParaVer(
     ejercicios: ejercicios.data ?? [],
     completada: hechas.has(leccionId),
     siguienteId: siguiente?.id ?? null,
+    anteriorId: anterior?.id ?? null,
+    cursoCompletadas: ordenadas.filter((l) => hechas.has(l.id)).length,
+    cursoTotal: ordenadas.length,
   };
 }
 

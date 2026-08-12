@@ -67,9 +67,38 @@ const config: Config = {
           grisSuave: "#7A8A80",
           grisTenue: "#8A9891",
           niebla: "#F4F7F4",
+          /** Hover de los botones suaves y separadores dentro de una tarjeta. */
+          nieblaOscura: "#EDF1EE",
           borde: "#E2E8E4",
-          /** Fondo de las escalas de progreso. */
+          /** Bordes de multimedia y de hueco sin corregir. */
+          bordeSuave: "#DCE4DE",
+          /** Fondo de las escalas de progreso, y del CTA inactivo. */
           pista: "#E8EEE9",
+          /** Fondo de la opción correcta y del ítem de lección actual. */
+          verdeFondo: "#F0FAF2",
+          /** Texto de las lecciones: más cálido que la tinta de titular. */
+          tintaCuerpo: "#24352C",
+          /** Marca de lección pendiente. */
+          puntoPendiente: "#C9D6CD",
+          /** Texto del CTA cuando todavía no se puede pulsar. */
+          grisInactivo: "#9BA8A1",
+          /** Opción descartada una vez respondido el ejercicio. */
+          casiBlanco: "#FBFCFB",
+          /** Hueco sin corregir. */
+          huecoFondo: "#F8FAF8",
+          // ---------------------------------------------------------------
+          // EL FALLO NO ES ROJO
+          //
+          // Una respuesta equivocada se marca con un neutro cálido y un
+          // guion, no con rojo y una cruz: el alumno está aprendiendo, no
+          // cometiendo una infracción. El rojo es para lo que hay que
+          // arreglar ya, y aquí no hay nada roto.
+          // ---------------------------------------------------------------
+          calido: "#C0A97A",
+          calidoFondo: "#FBF7EF",
+          calidoBadge: "#EFE3C0",
+          calidoBadgeTexto: "#6B5A2E",
+          calidoSegmento: "#D8CDB4",
           examen: "#FFFBEB",
           examenBorde: "#EFE3C0",
           contexto: "#EEF2EF",

@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------
 // UN INTENTO DE EJERCICIO DE CURSO
 //
-// Lo llama `components/EjerciciosLeccion.tsx` en cuanto el alumno
+// Lo llama `components/leccion/FlujoEjercicios.tsx` en cuanto el alumno
 // comprueba una respuesta. No espera contestación: la corrección ya se
 // ha pintado en el navegador y esto solo deja constancia.
 //
