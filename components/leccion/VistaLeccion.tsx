@@ -98,7 +98,12 @@ export default function VistaLeccion({
     : "min-[1100px]:grid-cols-[300px_minmax(0,1fr)]";
 
   return (
-    <div className="min-h-screen bg-marca-niebla">
+    // Columna de altura completa: la cabecera arriba y la rejilla
+    // ocupando lo que sobra. Es lo que deja la barra de acciones pegada
+    // al fondo de la ventana cuando la lección es corta, sin tener que
+    // restar a mano la altura de la cabecera —que además no mide igual
+    // en móvil, donde lleva la tira de progreso debajo.
+    <div className="flex min-h-dvh flex-col bg-marca-niebla">
       <CabeceraLeccion
         cursoTitulo={cursoTitulo}
         cursoSlug={cursoSlug}
@@ -128,7 +133,7 @@ export default function VistaLeccion({
         }
       />
 
-      <div className={`grid grid-cols-1 ${columnas}`}>
+      <div className={`grid flex-1 grid-cols-1 ${columnas}`}>
         <LateralLecciones
           lecciones={hermanas}
           actualId={leccion.id}
@@ -142,7 +147,7 @@ export default function VistaLeccion({
         />
 
         {enEjercicios ? (
-          <main className="flex min-h-[calc(100vh-64px)] flex-col bg-marca-niebla">
+          <main className="flex flex-col bg-marca-niebla">
             <FlujoEjercicios
               ejercicios={ejercicios}
               registrarIntentos={registrarIntentos}
@@ -158,13 +163,24 @@ export default function VistaLeccion({
           </main>
         ) : (
           <>
-            <main className="min-w-0 bg-marca-niebla">
-              {/* EL PADDING SE SUMA AL ANCHO MÁXIMO. Tailwind mide en
-                  `border-box`, así que con `max-w-[680px] px-14` los 56px
-                  de cada lado salían DE los 680: la columna de lectura
-                  medía 568 de verdad y todo —vídeo incluido— se veía
-                  encogido. Los 7rem son los dos paddings de escritorio. */}
-              <div className="mx-auto w-full max-w-[calc(680px+7rem)] px-4 pb-6 pt-7 min-[1100px]:px-14 min-[1100px]:pb-6 min-[1100px]:pt-10">
+            <main className="flex min-w-0 flex-col bg-marca-niebla">
+              {/* `columna-leccion` es la rejilla de tres calles: el texto
+                  en la del medio a 680px y el vídeo rompiendo a lo ancho.
+                  Ver `globals.css`. */}
+              <div className="columna-leccion flex-1 px-4 pb-6 pt-7 min-[1100px]:px-14 min-[1100px]:pb-6 min-[1100px]:pt-10">
+                {/* Antes iba debajo del botón de completar, donde se leía
+                    cuando ya lo habías pulsado. Va arriba, que es cuando
+                    sirve de algo. */}
+                {!registrarIntentos && (
+                  <p className="mb-5 flex items-center gap-2.5 rounded-[12px] border border-marca-examenBorde bg-marca-examen px-4 py-3 text-[13.5px] leading-[1.4] text-marca-tinta">
+                    <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-marca-amarillo" />
+                    <span>
+                      <strong className="font-semibold">Estás viendo el curso como equipo.</strong>{" "}
+                      Nada de lo que marques aquí guarda progreso.
+                    </span>
+                  </p>
+                )}
+
                 <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
                   Lección {posicion + 1} de {hermanas.length}
                 </p>
@@ -173,11 +189,12 @@ export default function VistaLeccion({
                   {leccion.titulo}
                 </h1>
 
-                {/* 16:9 a todo el ancho de la columna. El `aspect-video`
-                    iba antes en el propio iframe, que trae su altura por
-                    defecto y ganaba: salía una banda de 150px. */}
+                {/* `ancho` lo saca de la calle del texto: 960px en vez de
+                    680. El `aspect-video` va en el contenedor y no en el
+                    iframe, que trae su propia altura por defecto y ganaba:
+                    salía una banda de 150px. */}
                 {leccion.videoIncrustado && (
-                  <div className="relative mt-6 aspect-video w-full overflow-hidden rounded-[14px] border border-marca-bordeSuave bg-marca-pista">
+                  <div className="ancho relative mt-6 aspect-video overflow-hidden rounded-[14px] border border-marca-bordeSuave bg-marca-pista">
                     <iframe
                       src={leccion.videoIncrustado}
                       title={leccion.titulo}
@@ -262,14 +279,6 @@ export default function VistaLeccion({
                     </BotonCompletar>
                   </div>
 
-                  {/* El equipo revisa el curso, no lo cursa: la API no le
-                      escribe progreso a nadie. Se dice, en vez de cambiar
-                      el botón y dejar la pantalla sin acción principal. */}
-                  {!registrarIntentos && (
-                    <p className="mt-2 text-center text-[12.5px] text-marca-grisSuave">
-                      Estás viendo el curso como equipo: esto no guarda progreso.
-                    </p>
-                  )}
                 </div>
               </div>
             </main>

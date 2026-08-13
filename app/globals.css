@@ -141,6 +141,32 @@
      Se aplica solo dentro de `.leccion` para no tocar el resto de la
      aplicación, donde las etiquetas sí llevan sus clases.
      --------------------------------------------------------------- */
+  /* ---------------------------------------------------------------
+     LA COLUMNA DE LA LECCIÓN, CON SITIO PARA LO ANCHO
+
+     El texto quiere unos 680px: setenta caracteres por línea, que es lo
+     que se lee sin perder el renglón. El vídeo no quiere eso — a 680 se
+     queda pequeño en un área que en pantalla grande pasa de 1300.
+
+     En vez de sacarlo del flujo con márgenes negativos, la columna es
+     una rejilla de tres calles: todo cae en la del medio, que mide los
+     680, y lo que lleve `.ancho` ocupa las tres. El `1fr` de los lados
+     absorbe lo que sobre, así que el texto sigue centrado esté donde
+     esté la ventana.
+     --------------------------------------------------------------- */
+  .columna-leccion {
+    display: grid;
+    grid-template-columns: 1fr min(680px, 100%) 1fr;
+  }
+  .columna-leccion > * {
+    grid-column: 2;
+  }
+  .columna-leccion > .ancho {
+    grid-column: 1 / -1;
+    width: min(100%, 960px);
+    margin-inline: auto;
+  }
+
   .leccion {
     @apply text-[16px] leading-[1.65] text-marca-tintaCuerpo;
   }
