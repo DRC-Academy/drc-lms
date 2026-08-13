@@ -19,13 +19,19 @@ import type { FichaPanel } from "@/lib/admin-servidor";
 export default function ListaAlumnos({
   alumnos,
   vacio,
-  /** Texto extra por alumno, como "4 bloques". */
-  detalle,
+  detalles,
 }: {
   alumnos: FichaPanel[];
   /** Qué decir cuando no hay nadie. Cambia mucho según la lista. */
   vacio: string;
-  detalle?: (alumno: FichaPanel) => string;
+  /**
+   * Texto extra por alumno, indexado por id: `{ "a12": "4 bloques" }`.
+   *
+   * Un mapa y no una función a propósito. Este componente es de cliente
+   * y quien lo usa es de servidor, así que todo lo que cruza esa
+   * frontera tiene que poder serializarse — y una función no puede.
+   */
+  detalles?: Record<string, string>;
 }) {
   const [abierto, setAbierto] = useState(false);
 
@@ -64,9 +70,9 @@ export default function ListaAlumnos({
                     {alumno.profesor ? ` · ${alumno.profesor}` : ""}
                   </span>
                 </span>
-                {detalle && (
+                {detalles?.[alumno.alumnoId] && (
                   <span className="shrink-0 text-[12px] font-semibold text-marca-verdeOsc tabular-nums">
-                    {detalle(alumno)}
+                    {detalles[alumno.alumnoId]}
                   </span>
                 )}
                 <span aria-hidden className="shrink-0 text-[13px] text-marca-grisTenue">

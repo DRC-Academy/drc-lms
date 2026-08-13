@@ -389,10 +389,12 @@ export default function PanelAdmin({ datos }: { datos: DatosPanel }) {
                 <ListaAlumnos
                   alumnos={m.usuarios.map((u) => u.alumno)}
                   vacio="Nadie ha usado este modo en el periodo."
-                  detalle={(alumno) => {
-                    const u = m.usuarios.find((x) => x.alumno.alumnoId === alumno.alumnoId);
-                    return `${u?.bloques ?? 0} ${u?.bloques === 1 ? "bloque" : "bloques"}`;
-                  }}
+                  detalles={Object.fromEntries(
+                    m.usuarios.map((u) => [
+                      u.alumno.alumnoId,
+                      `${u.bloques} ${u.bloques === 1 ? "bloque" : "bloques"}`,
+                    ])
+                  )}
                 />
               </article>
             );
@@ -413,7 +415,9 @@ export default function PanelAdmin({ datos }: { datos: DatosPanel }) {
             total={total}
             ayuda="Sin análisis de clase no hay repaso que generar. Es el cuello de botella real del producto, y dice qué profesores no están subiendo."
             vacio="Todos tienen su última clase analizada."
-            detalle={(a) => a.profesor || "sin profesor"}
+            detalles={Object.fromEntries(
+              atencion.sinTranscript.map((a) => [a.alumnoId, a.profesor || "sin profesor"])
+            )}
           />
           <FilaAtencion
             titulo="Sin perfil completado"
@@ -448,14 +452,14 @@ function FilaAtencion({
   total,
   ayuda,
   vacio,
-  detalle,
+  detalles,
 }: {
   titulo: string;
   alumnos: FichaPanel[];
   total: number;
   ayuda: string;
   vacio: string;
-  detalle?: (alumno: FichaPanel) => string;
+  detalles?: Record<string, string>;
 }) {
   return (
     <article className="rounded-[16px] border border-marca-borde bg-white p-4 lg:p-5">
@@ -469,7 +473,7 @@ function FilaAtencion({
       </div>
       <Barra valor={porcentaje(alumnos.length, total)} tono="amarillo" />
       <p className="mt-2.5 text-[12.5px] leading-[1.45] text-marca-gris">{ayuda}</p>
-      <ListaAlumnos alumnos={alumnos} vacio={vacio} detalle={detalle} />
+      <ListaAlumnos alumnos={alumnos} vacio={vacio} detalles={detalles} />
     </article>
   );
 }
