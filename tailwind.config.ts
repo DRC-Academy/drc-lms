@@ -47,6 +47,58 @@ const config: Config = {
           "enlace-hover": "#014D22",
           "fantasma-hover": "#F1F6F2",
         },
+        // ---------------------------------------------------------------
+        // EL TEMARIO MES A MES (/curso/[slug])
+        //
+        // Paleta propia del rediseño. Convive con `marca-*` en vez de
+        // reutilizarla porque sus verdes y grises son medio tono
+        // distintos, y mezclarlos en la misma pantalla se nota más que
+        // tener dos escalas separadas. La tipografía sí es la de la app:
+        // la cabecera de lección va arriba de esta misma página.
+        // ---------------------------------------------------------------
+        temario: {
+          fondo: "#F5F6F4",
+          borde: "#E4E7E1",
+          /** Borde de las filas de módulo, medio tono por debajo del de tarjeta. */
+          bordeFila: "#E7E9E4",
+          bordeHover: "#C5D2C8",
+          filaHover: "#FCFDFB",
+          // Panel oscuro del plan
+          oscuro: "#10221A",
+          oscuroLinea: "#23342B",
+          oscuroTexto: "#9BAAA1",
+          oscuroTenue: "#7F8F86",
+          oscuroClaro: "#E4E9E5",
+          /** Lección hecha en la rejilla de puntos. */
+          punto: "#2FB35B",
+          /** Lección pendiente, sobre el panel oscuro. */
+          puntoOff: "#2A3A31",
+          // Acción
+          verde: "#1DA34B",
+          verdeHover: "#17853D",
+          verdeTexto: "#14603A",
+          tinte: "#E4F3EA",
+          // El módulo en curso
+          ambar: "#E9B429",
+          ambarTexto: "#8A7A2E",
+          crema: "#FDFBEE",
+          cremaBorde: "#DFD4A2",
+          // Tinta y grises
+          tinta: "#0F1A14",
+          medio: "#6B756E",
+          suave: "#8A948D",
+          tenue: "#98A29B",
+          enlace: "#5F6B64",
+          separador: "#C3CAC5",
+          puntoSuave: "#B4BCB6",
+          // Líneas
+          rail: "#EDEFEB",
+          linea: "#E1E4DE",
+          circulo: "#DCE0D9",
+          pillHover: "#A9BFB0",
+          /** Fondo del círculo de mes pendiente, solo en móvil. */
+          mesPendiente: "#F3F5F1",
+        },
         // La paleta del inicio del alumno y del visor de curso. La usaba
         // ya media aplicación con seis tokens; el rediseño del inicio
         // añade los que faltaban en vez de meter hex sueltos por el JSX.

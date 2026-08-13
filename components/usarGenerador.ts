@@ -61,6 +61,8 @@ export function usarGenerador({
   const [progreso, setProgreso] = useState(0);
   const [tardando, setTardando] = useState(false);
   const [mensajeError, setMensajeError] = useState(MENSAJE_GENERICO);
+  /** El "error" es en realidad un "todavía no toca": se cuenta distinto. */
+  const [esEspera, setEsEspera] = useState(false);
 
   /**
    * Los generados en esta misma visita. Se guardan en la base desde la
@@ -126,6 +128,7 @@ export function usarGenerador({
 
       setEstado("generando");
       setModoActivo(modo);
+      setEsEspera(false);
       setEtapa("preparando");
       setProgreso(0);
       setTardando(false);
@@ -148,7 +151,7 @@ export function usarGenerador({
         // explicación es mejor que cualquier texto genérico nuestro:
         // sabe si caducó la sesión o si falta la ficha.
         if (!respuesta.ok) {
-          throw new Error(await mensajeDeFallo(respuesta));
+          throw await mensajeDeFallo(respuesta);
         }
 
         const bloque = respuesta.headers.get("content-type")?.includes(TIPO_FLUJO)
@@ -167,6 +170,7 @@ export function usarGenerador({
         });
       } catch (error) {
         console.error("[practica] No se pudo generar el bloque:", error);
+        setEsEspera(error instanceof ErrorDeEspera);
         setMensajeError(
           error instanceof DOMException && error.name === "TimeoutError"
             ? "La preparación ha tardado más de lo que podemos esperar. Vuelve a darle y lo intentamos otra vez."
@@ -194,7 +198,17 @@ export function usarGenerador({
     progreso,
     tardando,
     mensajeError,
+    esEspera,
     reintentar,
+    /**
+     * Solo los de esta visita, el más reciente primero.
+     *
+     * Es lo que pinta el inicio: la lista completa vive en `/practica` y
+     * repetirla entera aquí sería tener la misma pantalla dos veces. Al
+     * volver a entrar esto vuelve a estar vacío, y es lo correcto —
+     * entonces ya no son la novedad de hace un momento, son su práctica.
+     */
+    recienGenerados: generadosNuevos,
     generados,
     todos,
     idsGenerados,
@@ -207,19 +221,33 @@ export function usarGenerador({
 // LECTURA DE LA RESPUESTA
 // ---------------------------------------------------------------
 
+/**
+ * No es un fallo: es que ese modo todavía no toca.
+ *
+ * Se distingue del resto porque se cuenta distinto —sin "no ha salido" y
+ * sin botón de reintentar, que volvería a dar lo mismo—. Se llega aquí
+ * con una pestaña que lleva horas abierta, con las tarjetas de entonces.
+ */
+class ErrorDeEspera extends Error {}
+
 /** El texto que explica un fallo previo a la generación, si lo hay. */
-async function mensajeDeFallo(respuesta: Response): Promise<string> {
+async function mensajeDeFallo(respuesta: Response): Promise<Error> {
+  let mensaje = MENSAJE_GENERICO;
+  let esEspera = false;
+
   try {
     const cuerpo: unknown = await respuesta.json();
-    const dicho =
-      typeof cuerpo === "object" && cuerpo !== null
-        ? (cuerpo as { error?: unknown }).error
-        : null;
-    if (typeof dicho === "string" && dicho.trim() !== "") return dicho;
+    if (typeof cuerpo === "object" && cuerpo !== null) {
+      const dicho = (cuerpo as { error?: unknown }).error;
+      if (typeof dicho === "string" && dicho.trim() !== "") mensaje = dicho;
+      // La ruta marca las esperas con `motivo`; el resto de 409 no lo llevan.
+      esEspera = typeof (cuerpo as { motivo?: unknown }).motivo === "string";
+    }
   } catch {
     // Un cuerpo que no es JSON no aporta nada: se usa el genérico.
   }
-  return MENSAJE_GENERICO;
+
+  return esEspera ? new ErrorDeEspera(mensaje) : new Error(mensaje);
 }
 
 /**

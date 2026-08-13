@@ -9,6 +9,7 @@ import {
   leerAvanceAlumno,
   leerBloquesGenerados,
   leerProgresoAlumno,
+  leerUltimaGeneracionPorModo,
 } from "@/lib/progreso-servidor";
 import { cursosAsignados } from "@/lib/cursos-servidor";
 import Cabecera from "@/components/Cabecera";
@@ -30,11 +31,12 @@ export default async function PaginaPractica() {
 
   const alumnoId = sesion.alumnoId;
 
-  const [datos, progreso, avance, generados] = await Promise.all([
+  const [datos, progreso, avance, generados, ultimasGeneraciones] = await Promise.all([
     obtenerAlumno(alumnoId),
     leerProgresoAlumno(alumnoId),
     leerAvanceAlumno(alumnoId),
     leerBloquesGenerados(alumnoId),
+    leerUltimaGeneracionPorModo(alumnoId),
   ]);
 
   // Sin ficha en Gestión no hay perfil del que generar nada. No es un
@@ -42,7 +44,7 @@ export default async function PaginaPractica() {
   const perfil = datos?.perfil ?? null;
   const ultimaClase = datos?.ultimaClase ?? null;
 
-  const tarjetas = calcularTarjetas(perfil, ultimaClase);
+  const tarjetas = calcularTarjetas(perfil, ultimaClase, ultimasGeneraciones);
   const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(perfil.nivel)) : [];
 
   // Solo para que la cabecera pueda pintar "Mi curso" sin cambiar de

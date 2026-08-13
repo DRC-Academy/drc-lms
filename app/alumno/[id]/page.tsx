@@ -6,7 +6,11 @@ import { formatearFecha, nivelDeBloque } from "@/lib/perfil";
 import { calcularTarjetas, tieneContexto } from "@/lib/modos";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
 import { UMBRAL_DOMINADO, type RegistroProgreso } from "@/lib/progreso";
-import { leerBloquesGenerados, leerProgresoAlumno } from "@/lib/progreso-servidor";
+import {
+  leerBloquesGenerados,
+  leerProgresoAlumno,
+  leerUltimaGeneracionPorModo,
+} from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
 import Cabecera from "@/components/Cabecera";
 import BannerCurso from "@/components/BannerCurso";
@@ -65,10 +69,11 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   // Gestión primero: de su `plan` y su `nivel` sale qué cursos le tocan,
   // así que la consulta de cursos no puede ir en el mismo lote.
-  const [datos, progreso, generados] = await Promise.all([
+  const [datos, progreso, generados, ultimasGeneraciones] = await Promise.all([
     obtenerAlumno(params.id),
     leerProgresoAlumno(params.id),
     leerBloquesGenerados(params.id),
+    leerUltimaGeneracionPorModo(params.id),
   ]);
 
   // Solo es 404 cuando el id no corresponde a nadie. Un alumno con clase
@@ -76,7 +81,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   if (!datos) notFound();
 
   const { perfil, ultimaClase } = datos;
-  const tarjetas = calcularTarjetas(perfil, ultimaClase);
+  const tarjetas = calcularTarjetas(perfil, ultimaClase, ultimasGeneraciones);
 
   // Sin perfil no hay plan ni nivel, así que tampoco curso: el banner
   // enseña el estado sobrio y la práctica sigue funcionando.

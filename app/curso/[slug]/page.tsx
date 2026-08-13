@@ -3,25 +3,30 @@ import { notFound, redirect } from "next/navigation";
 import { exigirSesion } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { arbolDelCurso, cursoPorSlug, cursosAsignados } from "@/lib/cursos-servidor";
-import { etiquetaModulo, partirModulo } from "@/lib/modulo";
+import { construirTemario } from "@/lib/temario";
 import CabeceraLeccion from "@/components/leccion/CabeceraLeccion";
+import Temario from "@/components/curso/Temario";
 
 export const dynamic = "force-dynamic";
 
 /**
- * El índice del curso completo.
+ * El índice del curso completo, mes a mes.
  *
- * ANTES ERA UN ACORDEÓN de 48 módulos: para ver qué había en el módulo
- * 30 tocaba desplegarlo, y para comparar dos, desplegar los dos. Ahora
- * es una rejilla de tarjetas donde los 48 se ven de una vez, cada uno
- * con su progreso, y se entra directamente al que interese.
+ * ANTES ERA UNA REJILLA PLANA de 47 tarjetas: los 47 módulos se veían de
+ * una vez, sí, pero nada decía que el curso dura seis meses ni por dónde
+ * iba el alumno dentro de ese plan. Ahora se agrupa en meses
+ * desplegables, cada uno con sus cuatro semanas, y arriba un panel que
+ * enseña el curso entero como densidad de lecciones hechas.
  *
- * SOBRE LAS "SEMANAS": el diseño pedía agrupar por semana, pero en estos
- * datos la semana no es un nivel de la jerarquía. Los módulos se llaman
- * "Week 1 - Lesson 1: …" y el número se repite cada ocho: seis ciclos de
- * cuatro semanas a lo largo del curso. Agrupar por él daría seis
- * "Semana 1" distintas. Así que la semana se queda donde sí significa
- * algo —la etiqueta de cada tarjeta— y la rejilla es de módulos.
+ * SOBRE LAS "SEMANAS": el número que viene en el título ("Week 1 -
+ * Lesson 1: …") se repite cada ocho módulos, y durante un tiempo eso lo
+ * hizo inservible como agrupador —daba seis "Semana 1" distintas—. Con
+ * los meses por encima vuelve a significar algo: la semana 1 del mes 3
+ * es un sitio concreto del curso. Ese reinicio es justo lo que confirma
+ * el corte por meses.
+ *
+ * La agrupación y todos los contadores se resuelven en `lib/temario.ts`,
+ * en el servidor. Al cliente solo le llega qué pintar y qué abrir.
  */
 export default async function IndiceCurso({ params }: { params: { slug: string } }) {
   const sesion = await exigirSesion();
@@ -42,13 +47,13 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
   }
 
   const arbol = await arbolDelCurso(alumnoId, curso);
-  const porcentaje = arbol.total > 0 ? Math.round((arbol.completadas / arbol.total) * 100) : 0;
+  const temario = construirTemario(arbol);
 
   const inicio = sesion.rol === "alumno" ? `/alumno/${sesion.alumnoId}` : "/";
   const nombre = perfil?.nombre.trim() ?? "";
 
   return (
-    <div className="min-h-screen bg-marca-niebla">
+    <div className="min-h-screen bg-temario-fondo text-temario-tinta">
       <CabeceraLeccion
         cursoTitulo={curso.titulo}
         cursoSlug={curso.slug}
@@ -58,130 +63,43 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
         volverA={inicio}
       />
 
-      <main className="mx-auto w-full max-w-[1120px] px-4 pb-14 pt-6 min-[1100px]:px-10 min-[1100px]:pb-14 min-[1100px]:pt-9">
+      <main className="mx-auto w-full max-w-[1240px] px-4 pb-14 pt-6 min-[900px]:px-11 min-[900px]:pb-16 min-[900px]:pt-10">
         <Link
           href={arbol.leccionActual ? `/curso/${curso.slug}/${arbol.leccionActual}` : inicio}
-          className="text-[14px] text-marca-gris transition-colors hover:text-marca-tinta"
+          className="text-[13px] font-semibold text-temario-enlace transition-colors hover:text-temario-tinta min-[900px]:text-[14px]"
         >
           ← {arbol.leccionActual ? "Volver a la lección" : "Volver al inicio"}
         </Link>
 
         {/* ------------------------------ CABECERA ------------------------------ */}
-        <header className="mt-5 flex flex-col gap-5 min-[1100px]:mt-6 min-[1100px]:flex-row min-[1100px]:items-end min-[1100px]:justify-between min-[1100px]:gap-10">
+        <header className="mt-3 flex flex-col gap-2 min-[900px]:mt-[22px] min-[900px]:flex-row min-[900px]:items-end min-[900px]:justify-between min-[900px]:gap-10">
           <div className="min-w-0">
-            <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
+            <p className="hidden text-[11.5px] font-extrabold uppercase leading-none tracking-[0.18em] text-temario-suave min-[900px]:block">
               Curso completo
             </p>
-            <h1 className="mt-2.5 text-pretty font-display text-[26px] font-bold leading-[1.15] text-marca-tinta min-[1100px]:text-[34px]">
+            <h1 className="text-pretty font-display text-[26px] font-extrabold leading-[1.1] tracking-[-0.02em] min-[900px]:mt-[9px] min-[900px]:text-[42px] min-[900px]:leading-[1.05] min-[900px]:tracking-[-0.025em]">
               {curso.titulo}
             </h1>
-            <p className="mt-2 text-[15px] text-marca-gris">
-              {arbol.modulos.length} módulos · {arbol.total} lecciones
-            </p>
           </div>
 
-          {arbol.total > 0 && (
-            <div className="shrink-0 min-[1100px]:text-right">
-              <p className="flex items-baseline gap-1.5 min-[1100px]:justify-end">
-                <span className="font-display text-[30px] font-bold leading-none text-marca-tinta tabular-nums min-[1100px]:text-[34px]">
-                  {porcentaje}
-                </span>
-                <span className="text-[16px] font-semibold text-marca-grisSuave">%</span>
-              </p>
-              <div
-                className="mt-2.5 h-1.5 w-full overflow-hidden rounded-[3px] bg-marca-pista min-[1100px]:w-[260px]"
-                role="progressbar"
-                aria-valuenow={porcentaje}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`Progreso en ${curso.titulo}`}
-              >
-                <div className="h-full rounded-[3px] bg-marca-verde" style={{ width: `${porcentaje}%` }} />
-              </div>
-              <p className="mt-2 text-[13px] text-marca-grisSuave tabular-nums">
-                {arbol.completadas} de {arbol.total} lecciones
-              </p>
-            </div>
-          )}
+          {/* Los tres contadores salen de los datos, nunca fijos: si el
+              curso cambia de tamaño, el titular se ajusta solo. */}
+          <p className="flex items-center gap-2.5 text-[12.5px] font-medium text-temario-medio tabular-nums min-[900px]:shrink-0 min-[900px]:text-[13.5px]">
+            <span>
+              {temario.totalModulos} {temario.totalModulos === 1 ? "módulo" : "módulos"}
+            </span>
+            <span aria-hidden className="text-temario-separador">·</span>
+            <span>
+              {temario.totalLecciones} {temario.totalLecciones === 1 ? "lección" : "lecciones"}
+            </span>
+            <span aria-hidden className="text-temario-separador">·</span>
+            <span>
+              {temario.totalSemanas} {temario.totalSemanas === 1 ? "semana" : "semanas"}
+            </span>
+          </p>
         </header>
 
-        {/* ------------------------------ MÓDULOS ------------------------------ */}
-        {arbol.modulos.length === 0 ? (
-          <p className="mt-9 text-[16px] leading-[1.6] text-marca-gris">
-            Este curso todavía no tiene contenido cargado.
-          </p>
-        ) : (
-          <ol className="mt-7 grid grid-cols-1 gap-4 min-[1100px]:mt-[30px] min-[1100px]:grid-cols-3">
-            {arbol.modulos.map((modulo, i) => {
-              const partido = partirModulo(modulo.titulo, i);
-              const total = modulo.lecciones.length;
-              const pct = total > 0 ? Math.round((modulo.completadas / total) * 100) : 0;
-              const hecho = total > 0 && modulo.completadas === total;
-              const actual = modulo.lecciones.some((l) => l.id === arbol.leccionActual);
-
-              // Sin lecciones no hay a dónde entrar: la tarjeta se pinta
-              // apagada en vez de llevar a una pantalla vacía.
-              const destino =
-                modulo.lecciones[0] !== undefined
-                  ? `/curso/${curso.slug}/${
-                      modulo.lecciones.find((l) => !l.completada)?.id ?? modulo.lecciones[0].id
-                    }`
-                  : null;
-
-              const tarjeta = (
-                <>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span
-                      className={`text-[11.5px] font-semibold uppercase leading-none tracking-[0.09em] ${
-                        actual ? "text-marca-verdeOsc" : "text-marca-grisSuave"
-                      }`}
-                    >
-                      {etiquetaModulo(partido)}
-                    </span>
-                    <span
-                      className={`shrink-0 text-[11.5px] font-semibold ${
-                        actual ? "text-marca-verdeOsc" : "text-marca-gris"
-                      }`}
-                    >
-                      {hecho ? "Completado" : actual ? "Aquí vas" : "Pendiente"}
-                    </span>
-                  </div>
-
-                  <p className="mt-2.5 text-pretty font-display text-[17px] font-bold leading-[1.25] text-marca-tinta">
-                    {partido.titulo}
-                  </p>
-
-                  <p className="mt-2 text-[13px] text-marca-grisSuave tabular-nums">
-                    {total} {total === 1 ? "lección" : "lecciones"}
-                    {total > 0 && ` · ${modulo.completadas} hechas`}
-                  </p>
-
-                  <div className="mt-3.5 h-[5px] overflow-hidden rounded-[3px] bg-marca-pista">
-                    <div className="h-full rounded-[3px] bg-marca-verde" style={{ width: `${pct}%` }} />
-                  </div>
-                </>
-              );
-
-              const clase = `block rounded-[14px] border-[1.5px] p-4 text-left transition-colors min-[1100px]:rounded-[16px] min-[1100px]:p-5 ${
-                actual
-                  ? "border-marca-verde bg-marca-verdeFondo"
-                  : "border-marca-borde bg-white hover:border-marca-verde"
-              }`;
-
-              return (
-                <li key={modulo.id}>
-                  {destino ? (
-                    <Link href={destino} className={clase}>
-                      {tarjeta}
-                    </Link>
-                  ) : (
-                    <div className={`${clase} opacity-60`}>{tarjeta}</div>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        )}
+        <Temario temario={temario} slug={curso.slug} />
       </main>
     </div>
   );

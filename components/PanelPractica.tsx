@@ -45,6 +45,7 @@ export default function PanelPractica({
     progreso: progresoGeneracion,
     tardando,
     mensajeError,
+    esEspera,
     todos,
     idsGenerados,
     generar,
@@ -67,11 +68,16 @@ export default function PanelPractica({
         progreso={progresoGeneracion}
         tardando={tardando}
         mensajeError={mensajeError}
+        esEspera={esEspera}
         onGenerar={generar}
         onReintentar={reintentar}
       />
 
-      {todos.length > 0 && (
+      {/* `|| generando` porque el primer bloque de un alumno nace aquí: sin
+          eso, la sección entera —hueco animado incluido— seguía oculta
+          mientras se generaba, y quien no tenía ninguno no veía nada
+          debajo de las tarjetas hasta que el bloque ya estaba hecho. */}
+      {(todos.length > 0 || generando) && (
         <section ref={zonaNuevos} className="scroll-mt-20">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-drc-borde pb-5">
             <div className="min-w-0">

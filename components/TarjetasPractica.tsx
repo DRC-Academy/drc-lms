@@ -2,8 +2,10 @@
 
 import { type ModoGeneracion, type TarjetaModo } from "@/lib/modos";
 import type { EstadoGeneracion } from "@/components/TarjetasGeneracion";
+import type { Bloque } from "@/lib/data";
 import type { EtapaGeneracion } from "@/lib/generacion";
 import AvanceGeneracion from "@/components/AvanceGeneracion";
+import BloquesGenerados from "@/components/BloquesGenerados";
 
 /**
  * Las tarjetas de práctica del inicio.
@@ -52,6 +54,12 @@ export default function TarjetasPractica({
   progreso,
   tardando,
   mensajeError,
+  esEspera,
+  generados,
+  idsNuevos,
+  alumnoId,
+  totalPractica,
+  zonaNuevos,
   onGenerar,
   onReintentar,
 }: {
@@ -68,6 +76,17 @@ export default function TarjetasPractica({
   /** La espera se ha pasado del presupuesto previsto. */
   tardando: boolean;
   mensajeError: string;
+  /** El mensaje no es un fallo, es un "todavía no toca". */
+  esEspera: boolean;
+  /** Todos los generados del alumno, el más reciente primero. */
+  generados: Bloque[];
+  /** Los de esta visita: los únicos que llevan el sello "Nuevo". */
+  idsNuevos: string[];
+  alumnoId: string;
+  /** Cuántos bloques tiene en total, para el enlace a la práctica. */
+  totalPractica: number;
+  /** Adónde llevar la vista cuando el bloque está listo. */
+  zonaNuevos: React.RefObject<HTMLDivElement>;
   onGenerar: (modo: ModoGeneracion) => void;
   onReintentar: () => void;
 }) {
@@ -128,18 +147,31 @@ export default function TarjetasPractica({
                     </p>
                   </div>
 
+                  {/* Mientras no toca, la tarjeta cuenta de qué depende.
+                      Va antes del botón para que se lea primero el porqué
+                      y después el botón apagado, y no al revés. */}
+                  {tarjeta.espera && (
+                    <p className="mt-2.5 text-[13px] leading-[1.45] text-marca-gris lg:mt-3 lg:text-[13.5px]">
+                      {tarjeta.espera.nota}
+                    </p>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => onGenerar(tarjeta.modo)}
-                    disabled={generando}
+                    disabled={generando || tarjeta.espera !== null}
                     aria-live="polite"
-                    className={`flex min-h-[44px] w-full items-center justify-center rounded-full bg-marca-verde px-6 py-[13px] text-[15px] font-semibold leading-[1.1] text-white transition-colors hover:bg-marca-verdeOsc disabled:cursor-wait disabled:opacity-60 ${
-                      horizontal ? "mt-3.5 lg:mt-0 lg:w-auto lg:shrink-0" : "mt-3.5 lg:mt-auto"
-                    }`}
+                    className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-6 py-[13px] text-[15px] font-semibold leading-[1.1] transition-colors disabled:cursor-default ${
+                      tarjeta.espera
+                        ? "bg-marca-pista text-marca-grisInactivo"
+                        : "bg-marca-verde text-white hover:bg-marca-verdeOsc disabled:cursor-wait disabled:opacity-60"
+                    } ${horizontal ? "mt-3.5 lg:mt-0 lg:w-auto lg:shrink-0" : "mt-3.5 lg:mt-auto"}`}
                   >
                     {activa && <IconoGirando />}
                     <span className={activa ? "ml-2" : ""}>
-                      {activa ? "Preparando…" : tarjeta.llamada}
+                      {activa
+                        ? "Preparando…"
+                        : (tarjeta.espera?.etiquetaBoton ?? tarjeta.llamada)}
                     </span>
                   </button>
                 </article>
@@ -158,19 +190,37 @@ export default function TarjetasPractica({
         />
       )}
 
+      {/* Justo debajo de las tarjetas y del panel de avance: el hueco
+          animado marca dónde va a caer el bloque y luego se convierte en
+          él, sin que la página se mueva. */}
+      <BloquesGenerados
+        bloques={generados}
+        idsNuevos={idsNuevos}
+        alumnoId={alumnoId}
+        generando={generando}
+        totalPractica={totalPractica}
+        zonaRef={zonaNuevos}
+      />
+
       {estado === "error" && (
         <div className="aparece mt-4 rounded-[16px] bg-marca-examen px-5 py-4">
-          <p className="font-display text-[15px] font-bold text-marca-tinta">Esta vez no ha salido.</p>
+          <p className="font-display text-[15px] font-bold text-marca-tinta">
+            {esEspera ? "Por ahora, ya está" : "Esta vez no ha salido."}
+          </p>
           <p className="mt-1 text-[14px] leading-[1.5] text-marca-gris">{mensajeError}</p>
-          {/* El reintento vuelve al mismo modo que falló: obligar a buscar
-              otra vez la tarjeta convierte un fallo nuestro en trabajo suyo. */}
-          <button
-            type="button"
-            onClick={onReintentar}
-            className="btn btn-primario mt-4 min-h-[42px] w-full wide:w-auto"
-          >
-            Volver a intentarlo
-          </button>
+          {/* Sin botón cuando es una espera: reintentar daría lo mismo.
+              El reintento vuelve al mismo modo que falló, que obligar a
+              buscar otra vez la tarjeta convierte un fallo nuestro en
+              trabajo suyo. */}
+          {!esEspera && (
+            <button
+              type="button"
+              onClick={onReintentar}
+              className="btn btn-primario mt-4 min-h-[42px] w-full wide:w-auto"
+            >
+              Volver a intentarlo
+            </button>
+          )}
         </div>
       )}
     </section>

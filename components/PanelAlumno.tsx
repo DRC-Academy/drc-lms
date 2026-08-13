@@ -38,12 +38,21 @@ export default function PanelAlumno({
   esAdministrador: boolean;
 }) {
   const router = useRouter();
-  const { estado, modoActivo, etapa, progreso, tardando, mensajeError, generar, reintentar } =
-    usarGenerador({
-      alumnoId,
-      bloques,
-      generadosIniciales,
-    });
+  const {
+    estado,
+    modoActivo,
+    etapa,
+    progreso,
+    tardando,
+    mensajeError,
+    esEspera,
+    recienGenerados,
+    generados,
+    todos,
+    generar,
+    reintentar,
+    zonaNuevos,
+  } = usarGenerador({ alumnoId, bloques, generadosIniciales });
 
   /**
    * MIGRACIÓN DEL PROGRESO QUE QUEDÓ EN EL NAVEGADOR
@@ -113,6 +122,15 @@ export default function PanelAlumno({
       progreso={progreso}
       tardando={tardando}
       mensajeError={mensajeError}
+      esEspera={esEspera}
+      // Se le pasan todos los generados —también los de días anteriores—
+      // y aparte los ids de esta visita, que son los que llevan sello.
+      // El recorte a los que caben lo hace el propio componente.
+      generados={generados}
+      idsNuevos={recienGenerados.map((bloque) => bloque.id)}
+      alumnoId={alumnoId}
+      totalPractica={todos.length}
+      zonaNuevos={zonaNuevos}
       onGenerar={generar}
       onReintentar={reintentar}
     />

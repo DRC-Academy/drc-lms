@@ -13,8 +13,13 @@
 //
 // OJO CON LA SEMANA: el número se repite. El curso son seis ciclos de
 // cuatro semanas, así que "Week 1" aparece seis veces a lo largo de los
-// 48 módulos. Sirve como etiqueta dentro de un módulo, pero NO como
-// agrupador: una lista de doce semanas únicas no existe en estos datos.
+// 47 módulos. Por sí sola no agrupa nada —daría seis "Semana 1"
+// distintas— y durante un tiempo eso la dejó reducida a etiqueta.
+//
+// Con el mes por encima vuelve a significar algo: la semana 1 del mes 3
+// es un sitio concreto del curso. Ese reinicio cada ocho módulos es
+// justamente lo que confirma dónde corta un mes. Quien agrupa es
+// `lib/temario.ts`; aquí solo se lee el número del título.
 // ---------------------------------------------------------------
 
 export type ModuloPartido = {

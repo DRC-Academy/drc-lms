@@ -23,7 +23,8 @@ import { bloqueDeBanco } from "@/lib/banco";
 import { validarBloque } from "@/lib/validarBloque";
 import { extraerJson } from "@/lib/json";
 import { avisosParaRegenerar, revisarBloque, type Revision } from "@/lib/revisor";
-import { guardarBloqueGenerado } from "@/lib/progreso-servidor";
+import { guardarBloqueGenerado, leerUltimaGeneracionPorModo } from "@/lib/progreso-servidor";
+import { calcularDisponibilidad, comoFecha, DIAS_CONTEXTO, type Disponibilidad } from "@/lib/limites";
 import { abrirPlazo, conLimite, conLimiteOAlternativa, describir, type Plazo } from "@/lib/tiempo";
 import { TIPO_FLUJO, type EventoGeneracion } from "@/lib/generacion";
 
@@ -161,6 +162,25 @@ function flujoDeGeneracion(
       "x-accel-buffering": "no",
     },
   });
+}
+
+/**
+ * Lo que se le responde a quien pulsa un modo que todavía no le toca.
+ *
+ * Es la red de seguridad, no el camino normal: aquí se llega con una
+ * pestaña que lleva horas abierta. Aun así se cuenta igual que en la
+ * tarjeta —de qué depende, no qué tiene prohibido— porque el alumno no
+ * tiene forma de saber que su pantalla estaba vieja.
+ */
+function mensajeDeEspera(disponibilidad: Exclude<Disponibilidad, { disponible: true }>): string {
+  if (disponibilidad.motivo === "clase") {
+    return "Ya has repasado lo de tu última clase. En cuanto tengas la siguiente, preparamos el próximo bloque.";
+  }
+  if (disponibilidad.motivo === "dias") {
+    const dias = disponibilidad.diasRestantes;
+    return `Estos ejercicios salen de tu perfil, y eso no cambia de un día para otro. Cada ${DIAS_CONTEXTO} días te preparamos uno nuevo: este te toca ${dias === 1 ? "mañana" : `en ${dias} días`}.`;
+  }
+  return "Ya has practicado el formato hoy. Mañana preparamos otro.";
 }
 
 function huellaClave(clave: string | undefined): string {
@@ -838,6 +858,49 @@ export async function POST(peticion: Request) {
       );
     }
     usuario = usuarioContexto(ctx, perfil.ocupacion, perfil.objetivoPerfil);
+  }
+
+  // ---------------------------------------------------------------
+  // ¿TOCA GENERAR?
+  //
+  // Las tarjetas ya llegan sabiéndolo, así que en condiciones normales
+  // el alumno no pulsa un modo que no le toca. Esto es la comprobación
+  // de verdad, la que aguanta una pestaña vieja o una petición a mano.
+  //
+  // Solo para alumnos. El rol sale de la cookie firmada —el mismo dato
+  // que decide `persistir` unas líneas más arriba— así que no hay nada
+  // que el cliente pueda mandar para saltárselo, y la superficie es
+  // exactamente la del acceso de administrador, que ya da mucho más.
+  // Además, lo que genera el equipo no se guarda: no gasta cupo de
+  // nadie ni desplaza el conteo de un alumno.
+  // ---------------------------------------------------------------
+  if (sesion.rol === "alumno") {
+    const ultimas = await conLimiteOAlternativa<Record<ModoGeneracion, string | null> | null>(
+      leerUltimaGeneracionPorModo(alumnoId),
+      TIEMPO_BASE_MS,
+      "leerUltimaGeneracionPorModo",
+      // Si la base no contesta se deja pasar. Es la misma decisión que
+      // toma `consultarViva` con las sesiones: un mal minuto de Supabase
+      // no puede dejar sin práctica a quien sí le tocaba.
+      null
+    );
+
+    if (ultimas) {
+      const disponibilidad = calcularDisponibilidad(
+        modo,
+        comoFecha(ultimas[modo]),
+        comoFecha(ultimaClase?.analizadoEn),
+        new Date()
+      );
+
+      if (!disponibilidad.disponible) {
+        traza("límite", `${modo} · ${disponibilidad.motivo}`);
+        return NextResponse.json(
+          { error: mensajeDeEspera(disponibilidad), motivo: disponibilidad.motivo },
+          { status: 409 }
+        );
+      }
+    }
   }
 
   // La clave se recorta: recién rotada y pegada con un salto de línea,

@@ -11,6 +11,12 @@
 
 import { NOMBRE_EXAMEN, type PerfilAlumno, type TipoExamen, type UltimaClase } from "@/lib/data";
 import { detectarExamen, formatearFecha } from "@/lib/perfil";
+import {
+  calcularDisponibilidad,
+  comoFecha,
+  DIAS_CONTEXTO,
+  type Disponibilidad,
+} from "@/lib/limites";
 
 // ---------------------------------------------------------------
 // PENDIENTE: URL del formulario de perfil de DRC Gestión.
@@ -21,12 +27,28 @@ export const URL_FORMULARIO = "https://gestion.drcacademy.es/perfil";
 
 export type ModoGeneracion = "repaso" | "examen" | "contexto";
 
+/**
+ * Lo que se enseña cuando el modo todavía no está disponible.
+ *
+ * Se redacta aquí, en el servidor, y no en el componente: el texto
+ * depende del profesor y de los días que falten, que son datos que solo
+ * hay de este lado. El componente solo lo pinta.
+ */
+export type EsperaTarjeta = {
+  /** Sustituye a `llamada` en el botón, que va desactivado. */
+  etiquetaBoton: string;
+  /** Una línea que explica de qué depende. Nunca por qué "no puede". */
+  nota: string;
+};
+
 export type TarjetaModo = {
   modo: ModoGeneracion;
   etiqueta: string;
   titulo: string;
   descripcion: string;
   llamada: string;
+  /** Null cuando se puede generar ya. */
+  espera: EsperaTarjeta | null;
 };
 
 /**
@@ -72,7 +94,10 @@ export function tieneContexto(perfil: PerfilAlumno | null): boolean {
   return perfil.ocupacion !== null || perfil.objetivoPerfil !== null;
 }
 
-function tarjetaRepaso(perfil: PerfilAlumno | null, clase: UltimaClase): TarjetaModo {
+function tarjetaRepaso(
+  perfil: PerfilAlumno | null,
+  clase: UltimaClase
+): Omit<TarjetaModo, "espera"> {
   const fecha = formatearFecha(clase.fechaClase);
   const profesor = perfil?.profesor.trim();
 
@@ -91,7 +116,7 @@ function tarjetaRepaso(perfil: PerfilAlumno | null, clase: UltimaClase): Tarjeta
   };
 }
 
-function tarjetaExamen(examen: TipoExamen): TarjetaModo {
+function tarjetaExamen(examen: TipoExamen): Omit<TarjetaModo, "espera"> {
   return {
     modo: "examen",
     etiqueta: "Tu examen",
@@ -101,7 +126,7 @@ function tarjetaExamen(examen: TipoExamen): TarjetaModo {
   };
 }
 
-function tarjetaContexto(perfil: PerfilAlumno): TarjetaModo {
+function tarjetaContexto(perfil: PerfilAlumno): Omit<TarjetaModo, "espera"> {
   // La ocupación describe mejor la situación; el objetivo entra cuando
   // no hay ocupación. Siempre precedida de una frase nuestra, para que
   // no parezca un campo volcado en pantalla.
@@ -119,22 +144,84 @@ function tarjetaContexto(perfil: PerfilAlumno): TarjetaModo {
   };
 }
 
+// ---------------------------------------------------------------
+// LO QUE SE CUENTA MIENTRAS NO TOCA
+//
+// Ninguno de estos textos dice que el alumno no pueda. Dicen de qué
+// depende, que es distinto: de su próxima clase, de que su perfil dé
+// para algo nuevo, de que pase el día. La espera es una consecuencia de
+// cómo funciona el material, no una norma que se le impone.
+// ---------------------------------------------------------------
+
+function redactarEspera(
+  disponibilidad: Disponibilidad,
+  profesor: string
+): EsperaTarjeta | null {
+  if (disponibilidad.disponible) return null;
+
+  if (disponibilidad.motivo === "clase") {
+    // El vínculo con el profesor es el punto: lo siguiente que desbloquea
+    // esto es su próxima clase, no un contador. Sin nombre se cuenta
+    // igual, sin fingir que lo sabemos.
+    return {
+      etiquetaBoton: "Después de tu próxima clase",
+      nota: profesor
+        ? `Ya has repasado lo de tu última clase. En cuanto tengas la siguiente con ${profesor}, preparamos el próximo bloque.`
+        : "Ya has repasado lo de tu última clase. En cuanto tengas la siguiente, preparamos el próximo bloque.",
+    };
+  }
+
+  if (disponibilidad.motivo === "dias") {
+    const dias = disponibilidad.diasRestantes;
+    return {
+      etiquetaBoton: dias === 1 ? "Disponible mañana" : `Disponible en ${dias} días`,
+      nota: `Estos ejercicios salen de tu perfil, y eso no cambia de un día para otro. Cada ${DIAS_CONTEXTO} días te preparamos uno nuevo.`,
+    };
+  }
+
+  return {
+    etiquetaBoton: "Disponible mañana",
+    nota: "Ya has practicado el formato hoy. Mañana preparamos otro.",
+  };
+}
+
 /**
  * Tarjetas que le tocan a este alumno, en orden de cercanía: lo que
  * acaba de ver en clase, luego su examen, luego su contexto.
+ *
+ * Cada una llega sabiendo ya si se puede pulsar. Se decide aquí y no al
+ * pulsar para que el alumno no choque contra nada: ve antes de tocar
+ * que ese bloque le toca mañana, y con las otras tarjetas activas.
  */
 export function calcularTarjetas(
   perfil: PerfilAlumno | null,
-  ultimaClase: UltimaClase | null
+  ultimaClase: UltimaClase | null,
+  ultimasGeneraciones: Record<ModoGeneracion, string | null>,
+  ahora: Date = new Date()
 ): TarjetaModo[] {
   const tarjetas: TarjetaModo[] = [];
+  const analizadaEn = comoFecha(ultimaClase?.analizadoEn);
+  const profesor = perfil?.profesor.trim() ?? "";
 
-  if (ultimaClase) tarjetas.push(tarjetaRepaso(perfil, ultimaClase));
+  const conEspera = (tarjeta: Omit<TarjetaModo, "espera">): TarjetaModo => ({
+    ...tarjeta,
+    espera: redactarEspera(
+      calcularDisponibilidad(
+        tarjeta.modo,
+        comoFecha(ultimasGeneraciones[tarjeta.modo]),
+        analizadaEn,
+        ahora
+      ),
+      profesor
+    ),
+  });
+
+  if (ultimaClase) tarjetas.push(conEspera(tarjetaRepaso(perfil, ultimaClase)));
 
   const examen = perfil ? detectarExamen(perfil.plan) : null;
-  if (examen) tarjetas.push(tarjetaExamen(examen));
+  if (examen) tarjetas.push(conEspera(tarjetaExamen(examen)));
 
-  if (perfil && tieneContexto(perfil)) tarjetas.push(tarjetaContexto(perfil));
+  if (perfil && tieneContexto(perfil)) tarjetas.push(conEspera(tarjetaContexto(perfil)));
 
   return tarjetas;
 }

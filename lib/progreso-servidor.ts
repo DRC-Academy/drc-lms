@@ -160,6 +160,51 @@ export async function leerBloquesGenerados(alumnoId: string): Promise<Bloque[]> 
 }
 
 /**
+ * Cuándo generó por última vez un bloque de cada modo.
+ *
+ * Es lo que necesitan las reglas de `lib/limites.ts`: no hace falta
+ * contar cuántos lleva, solo cuándo fue el último de cada clase. Los
+ * modos sin ningún bloque salen como null, que es lo que las reglas
+ * leen como "primera vez, adelante".
+ *
+ * Cuenta los dos orígenes, `ia` y `banco`: si la generación falló y se
+ * sirvió un bloque del banco, el alumno tiene cinco minutos de práctica
+ * delante igual. Descontarlo solo cuando la IA acierta sería cargarle
+ * nuestra tasa de fallo como si fuera suya.
+ *
+ * Va sobre `idx_bloques_generados_alumno (alumno_id, generado_en desc)`,
+ * que ya estaba creado justo para esto.
+ */
+export async function leerUltimaGeneracionPorModo(
+  alumnoId: string
+): Promise<Record<ModoGeneracion, string | null>> {
+  const salida: Record<ModoGeneracion, string | null> = {
+    repaso: null,
+    examen: null,
+    contexto: null,
+  };
+
+  const { data, error } = await baseLms()
+    .from("bloques_generados")
+    .select("modo, generado_en")
+    .eq("alumno_id", alumnoId)
+    .order("generado_en", { ascending: false })
+    .returns<{ modo: string; generado_en: string }[]>();
+
+  if (!registrar("No se pudo leer la última generación por modo", error)) return salida;
+
+  // Vienen del más reciente al más antiguo, así que el primero de cada
+  // modo es el bueno y los siguientes se ignoran.
+  for (const fila of data ?? []) {
+    if (fila.modo in salida && salida[fila.modo as ModoGeneracion] === null) {
+      salida[fila.modo as ModoGeneracion] = fila.generado_en;
+    }
+  }
+
+  return salida;
+}
+
+/**
  * Un bloque generado concreto. Filtra por alumno además de por clave:
  * la clave es única, pero sin el `eq` de alumno bastaría con adivinarla
  * para leer el bloque de otro.

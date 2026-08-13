@@ -75,6 +75,7 @@ export default function TarjetasGeneracion({
   progreso,
   tardando,
   mensajeError,
+  esEspera,
   onGenerar,
   onReintentar,
 }: {
@@ -89,6 +90,8 @@ export default function TarjetasGeneracion({
   /** La espera se ha pasado del presupuesto previsto. */
   tardando: boolean;
   mensajeError: string;
+  /** El mensaje no es un fallo, es un "todavía no toca". */
+  esEspera: boolean;
   onGenerar: (modo: ModoGeneracion) => void;
   onReintentar: () => void;
 }) {
@@ -143,16 +146,31 @@ export default function TarjetasGeneracion({
                       {tarjeta.descripcion}
                     </p>
 
+                    {/* Mientras no toca, la tarjeta cuenta de qué depende.
+                        Va antes del botón para que se lea primero el porqué
+                        y después el botón apagado, y no al revés. */}
+                    {tarjeta.espera && (
+                      <p className="mt-3 text-[13.5px] leading-[1.5] text-drc-cuerpo">
+                        {tarjeta.espera.nota}
+                      </p>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => onGenerar(tarjeta.modo)}
-                      disabled={generando}
+                      disabled={generando || tarjeta.espera !== null}
                       aria-live="polite"
-                      className={`btn mt-5 min-h-[46px] w-full disabled:cursor-wait ${acento.boton}`}
+                      className={`btn mt-5 min-h-[46px] w-full ${
+                        tarjeta.espera
+                          ? "cursor-default bg-drc-suave text-drc-cuerpo"
+                          : `disabled:cursor-wait ${acento.boton}`
+                      }`}
                     >
                       {activa && <IconoGirando />}
                       <span className={activa ? "ml-2" : ""}>
-                        {activa ? "Preparando…" : tarjeta.llamada}
+                        {activa
+                          ? "Preparando…"
+                          : (tarjeta.espera?.etiquetaBoton ?? tarjeta.llamada)}
                       </span>
                     </button>
                   </article>
@@ -183,18 +201,22 @@ export default function TarjetasGeneracion({
       {estado === "error" && (
         <div className="aparece mt-4 rounded-[18px] bg-[#FFF7E0] px-5 py-4">
           <p className="font-display text-[15px] font-semibold text-drc-titular">
-            Esta vez no ha salido.
+            {esEspera ? "Por ahora, ya está" : "Esta vez no ha salido."}
           </p>
           <p className="mt-1 text-[14px] leading-[1.5] text-drc-cuerpo">{mensajeError}</p>
-          {/* El reintento vuelve al mismo modo que falló: obligar a buscar
-              otra vez la tarjeta convierte un fallo nuestro en trabajo suyo. */}
-          <button
-            type="button"
-            onClick={onReintentar}
-            className="btn btn-primario mt-4 min-h-[42px] w-full wide:w-auto"
-          >
-            Volver a intentarlo
-          </button>
+          {/* Sin botón cuando es una espera: reintentar daría lo mismo.
+              El reintento vuelve al mismo modo que falló, que obligar a
+              buscar otra vez la tarjeta convierte un fallo nuestro en
+              trabajo suyo. */}
+          {!esEspera && (
+            <button
+              type="button"
+              onClick={onReintentar}
+              className="btn btn-primario mt-4 min-h-[42px] w-full wide:w-auto"
+            >
+              Volver a intentarlo
+            </button>
+          )}
         </div>
       )}
     </section>
