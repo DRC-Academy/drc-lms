@@ -136,8 +136,29 @@ create table if not exists public.modulos (
   orden         integer     not null default 0,
   learndash_id  bigint      unique,
 
-  creado_en     timestamptz not null default now()
+  -- DÍAS DESDE LA MATRÍCULA HASTA QUE EL MÓDULO SE ABRE.
+  --
+  -- Es el drip de LearnDash (`sfwd-lessons_visible_after`), que se quedó
+  -- fuera de la primera importación. El curso está diseñado para durar
+  -- seis meses y esto es lo que lo sostiene: 24 tramos de 0 a 161 días.
+  --
+  -- Va en `modulos` y no en `lecciones` porque es donde estaba en
+  -- LearnDash: las 991 topics del export tienen su propio
+  -- `sfwd-topic_visible_after` a cero, o sea que heredan del módulo.
+  -- La lección hereda igual aquí.
+  --
+  -- 0 = disponible desde el primer día. Nunca null: un módulo sin dato
+  -- se abre, que es el lado seguro por el que fallar.
+  visible_after integer     not null default 0,
+
+  creado_en     timestamptz not null default now(),
+
+  constraint modulos_visible_after_no_negativo check (visible_after >= 0)
 );
+
+-- Para los cursos ya importados antes de que existiera la columna.
+alter table public.modulos
+  add column if not exists visible_after integer not null default 0;
 
 comment on table public.modulos is
   'Módulos de un curso (sfwd-lessons en LearnDash).';

@@ -68,8 +68,12 @@ export type ModuloTemario = {
   totalLecciones: number;
   completadas: number;
   hecho: boolean;
-  /** El primero sin terminar de todo el curso. */
+  /** El primero sin terminar de todo el curso, entre los abiertos. */
   esActual: boolean;
+  /** false si su apertura programada todavía no ha llegado. */
+  disponible: boolean;
+  /** Días que faltan para abrirse, o null si ya está abierto. */
+  diasParaAbrir: number | null;
   /** A la primera lección pendiente, o null si el módulo está vacío. */
   destino: string | null;
 };
@@ -94,6 +98,12 @@ export type MesTemario = {
   estado: EstadoMes;
   /** Una casilla por lección, en orden. `true` = hecha. */
   puntos: boolean[];
+  /**
+   * Días para que se abra el PRIMER módulo del mes, o null si ya hay
+   * algo abierto. Es lo que deja contar "este mes empieza en tres
+   * semanas" sin desplegarlo.
+   */
+  diasParaAbrir: number | null;
 };
 
 export type Temario = {
@@ -151,8 +161,13 @@ export function construirTemario(arbol: ArbolCurso): Temario {
 
   // El actual es el primero sin terminar. Un módulo vacío no cuenta: no
   // se puede "estar" en algo a lo que no se entra.
+  // Entre los ABIERTOS: apuntar a uno bloqueado pondría un "Continuar"
+  // que lleva a una pantalla que rechaza al alumno.
   const indiceActual = arbol.modulos.findIndex(
-    (modulo) => modulo.lecciones.length > 0 && modulo.completadas < modulo.lecciones.length
+    (modulo) =>
+      modulo.lecciones.length > 0 &&
+      modulo.completadas < modulo.lecciones.length &&
+      modulo.lecciones.some((leccion) => !leccion.completada && leccion.disponible)
   );
 
   const modulos: ModuloTemario[] = arbol.modulos.map((modulo, i) => {
@@ -171,7 +186,10 @@ export function construirTemario(arbol: ArbolCurso): Temario {
       completadas: modulo.completadas,
       hecho: totalLecciones > 0 && modulo.completadas === totalLecciones,
       esActual: i === indiceActual,
-      destino: (pendiente ?? modulo.lecciones[0])?.id ?? null,
+      disponible: modulo.disponible,
+      diasParaAbrir: modulo.diasParaAbrir,
+      // Un módulo cerrado no lleva a ningún sitio: la fila no es enlace.
+      destino: modulo.disponible ? ((pendiente ?? modulo.lecciones[0])?.id ?? null) : null,
     };
   });
 
@@ -221,6 +239,9 @@ export function construirTemario(arbol: ArbolCurso): Temario {
       porcentaje: porcentajeDe(completadas, totalLecciones),
       puntos: delMes.flatMap((m) => leccionesDeModulo.get(m.id) ?? []),
       estado,
+      diasParaAbrir: delMes.some((m) => m.disponible)
+        ? null
+        : Math.min(...delMes.map((m) => m.diasParaAbrir ?? 0)),
     };
   });
 

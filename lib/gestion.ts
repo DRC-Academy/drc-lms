@@ -39,6 +39,7 @@ function aPerfil(fila: Fila): PerfilAlumno {
     producto: comoTextoOpcional(fila.producto),
     objetivoSetter: comoTextoOpcional(fila.objetivo_setter),
     profesor: comoTexto(fila.profesor),
+    fechaInicio: comoTextoOpcional(fila.fecha_inicio),
     ocupacion: comoTextoOpcional(fila.ocupacion),
     objetivoPerfil: comoTextoOpcional(fila.objetivo_perfil),
     puntosFuertes: comoTextoOpcional(fila.puntos_fuertes),
@@ -143,6 +144,96 @@ export async function obtenerAlumno(
 
   if (!perfil && !ultimaClase) return null;
   return { perfil, ultimaClase };
+}
+
+// ---------------------------------------------------------------
+// LECTURAS DEL PANEL DEL EQUIPO
+//
+// El panel necesita a los 174 de una vez y con más campos que el
+// buscador: de `plan`, `ocupacion` y `objetivo_perfil` sale quién es
+// elegible para cada modo de generación, y de `fecha_inicio` cuándo
+// empezó. Son dos consultas —las dos vistas del contrato— y de ahí no
+// se vuelve a tocar Gestión.
+// ---------------------------------------------------------------
+
+export type AlumnoPanel = {
+  alumnoId: string;
+  nombre: string;
+  nivel: string;
+  plan: string;
+  profesor: string;
+  ocupacion: string | null;
+  objetivoPerfil: string | null;
+  fechaInicio: string | null;
+};
+
+/** Todos los alumnos con ficha, sin recortar. */
+export async function alumnosDelPanel(): Promise<AlumnoPanel[]> {
+  const { data, error } = await soloLectura("vista_perfil_alumno")
+    .select("alumno_id, nombre, nivel, plan, profesor, ocupacion, objetivo_perfil, fecha_inicio")
+    .order("nombre", { ascending: true })
+    .returns<Fila[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo listar para el panel:", error.message);
+    return [];
+  }
+
+  return deduplicar(data ?? []).map((fila) => ({
+    alumnoId: comoTexto(fila.alumno_id),
+    nombre: comoTexto(fila.nombre),
+    nivel: comoTexto(fila.nivel),
+    plan: comoTexto(fila.plan),
+    profesor: comoTexto(fila.profesor),
+    ocupacion: comoTextoOpcional(fila.ocupacion),
+    objetivoPerfil: comoTextoOpcional(fila.objetivo_perfil),
+    fechaInicio: comoTextoOpcional(fila.fecha_inicio),
+  }));
+}
+
+export type ClasePanel = {
+  alumnoId: string;
+  titulo: string;
+  /** Lo que de verdad importa: si el análisis trae contenido o vino vacío. */
+  conTranscript: boolean;
+  fechaClase: string;
+};
+
+/**
+ * La última clase de cada alumno, para saber quién tiene transcript.
+ *
+ * No basta con tener fila: hay filas con `temas` y `errores` vacíos, que
+ * es una clase registrada sin análisis detrás. Para el panel eso cuenta
+ * igual que no tenerla, porque el modo repaso no puede construir nada.
+ */
+export async function clasesDelPanel(): Promise<ClasePanel[]> {
+  const { data, error } = await soloLectura("vista_ultima_clase")
+    .select("alumno_id, titulo, temas, errores, fecha_clase")
+    .order("fecha_clase", { ascending: false })
+    .returns<Fila[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo leer las clases para el panel:", error.message);
+    return [];
+  }
+
+  const vistos = new Set<string>();
+  const salida: ClasePanel[] = [];
+
+  for (const fila of data ?? []) {
+    const alumnoId = comoTexto(fila.alumno_id);
+    if (alumnoId === "" || vistos.has(alumnoId)) continue;
+    vistos.add(alumnoId);
+
+    salida.push({
+      alumnoId,
+      titulo: comoTexto(fila.titulo),
+      conTranscript: comoTexto(fila.temas).trim() !== "" || comoTexto(fila.errores).trim() !== "",
+      fechaClase: comoTexto(fila.fecha_clase),
+    });
+  }
+
+  return salida;
 }
 
 function aResumen(fila: Fila): ResumenAlumno {

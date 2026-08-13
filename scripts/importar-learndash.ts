@@ -147,6 +147,38 @@ function clasificar(titulo: string): Clasificacion | null {
   return { nivel, tipo: "general", examen: null };
 }
 
+// ---------------------------------------------------------------
+// EL DRIP: CUÁNDO SE ABRE CADA MÓDULO
+//
+// `sfwd-lessons_visible_after` son los días desde la matrícula del
+// alumno. La malla real del curso es de 7 en 7: 0, 7, 14 … 161, que son
+// las 24 semanas de los seis meses.
+//
+// SOBRE EL REDONDEO. Hay un módulo a 107 días —"Week 4 - Lesson 7" de
+// C1— cuyo compañero de semana está a 105. Tal cual, la Lesson 8 se
+// abriría DOS DÍAS ANTES que la Lesson 7 de la misma semana. Es una
+// errata de tecleo en LearnDash, no un tramo real, así que se baja al
+// múltiplo de 7 más cercano por debajo y se deja anotado. Redondear
+// hacia abajo y no hacia arriba es deliberado: ante la duda, se abre
+// antes, nunca después.
+// ---------------------------------------------------------------
+
+function visibleAfterDe(modulo: Registro, resumen: Resumen): number {
+  const ajustes = metaObjeto(wpMeta(modulo), "_sfwd-lessons");
+  const bruto = ajustes === null ? 0 : entero(ajustes["sfwd-lessons_visible_after"]);
+  if (!Number.isFinite(bruto) || bruto <= 0) return 0;
+
+  const encajado = Math.floor(bruto / 7) * 7;
+  if (encajado !== bruto) {
+    resumen.dripFueraDeMalla.push({
+      titulo: texto(wpPost(modulo).post_title),
+      bruto,
+      encajado,
+    });
+  }
+  return encajado;
+}
+
 function comoSlug(titulo: string): string {
   return titulo
     .normalize("NFD")
@@ -533,7 +565,14 @@ type FilaCurso = {
   learndash_id: number;
 };
 
-type FilaModulo = { curso_ld: number; titulo: string; orden: number; learndash_id: number };
+type FilaModulo = {
+  curso_ld: number;
+  titulo: string;
+  orden: number;
+  learndash_id: number;
+  /** Días desde la matrícula hasta que se abre. Ver `visibleAfterDe`. */
+  visible_after: number;
+};
 
 type FilaLeccion = {
   modulo_ld: number;
@@ -558,6 +597,8 @@ type FilaEjercicio = {
 
 type Resumen = {
   cursosSaltados: string[];
+  /** Módulos cuyo drip no caía en la malla de 7 días y se ha encajado. */
+  dripFueraDeMalla: { titulo: string; bruto: number; encajado: number }[];
   topicsVacios: number;
   topicsHuerfanos: number;
   leccionesSinteticas: number;
@@ -623,6 +664,7 @@ function montar(zip: Zip) {
 
   const resumen: Resumen = {
     cursosSaltados: [],
+    dripFueraDeMalla: [],
     topicsVacios: 0,
     topicsHuerfanos: 0,
     leccionesSinteticas: 0,
@@ -687,6 +729,7 @@ function montar(zip: Zip) {
         titulo: quitarEmojisDeTitulo(texto(wpPost(modulo).post_title)) || "Módulo",
         orden: ordenModulo++,
         learndash_id: nodo.id,
+        visible_after: visibleAfterDe(modulo, resumen),
       });
 
       let ordenLeccion = 0;
@@ -901,6 +944,7 @@ async function escribir(
           titulo: m.titulo,
           orden: m.orden,
           learndash_id: m.learndash_id,
+          visible_after: m.visible_after,
         })),
         { onConflict: "learndash_id" }
       )
@@ -979,7 +1023,20 @@ async function principal(): Promise<void> {
 
   console.log("=== LO QUE ENTRA ===");
   console.log(`  cursos     : ${filasCurso.length}`);
-  console.log(`  módulos    : ${filasModulo.length}`);
+  const conDrip = filasModulo.filter((m) => m.visible_after > 0).length;
+  console.log(
+    `  módulos    : ${filasModulo.length}   (${conDrip} con apertura diferida, hasta ${Math.max(
+      0,
+      ...filasModulo.map((m) => m.visible_after)
+    )} días)`
+  );
+
+  // Se cuenta aparte porque es una corrección nuestra sobre el dato de
+  // origen, no un recuento: tiene que verse en cada importación.
+  for (const d of resumen.dripFueraDeMalla) {
+    console.log(`    · drip encajado: ${d.bruto} → ${d.encajado} días · "${d.titulo}"`);
+  }
+
   console.log(`  lecciones  : ${filasLeccion.length}   (${resumen.leccionesSinteticas} sintéticas, nacidas de un quiz)`);
   console.log(`  ejercicios : ${filasEjercicio.length}`);
   console.log("");

@@ -19,6 +19,7 @@ import { buscarAlumnoPorEmail } from "@/lib/gestion";
 import { entrarComo, volverAAcceso } from "@/lib/entrada";
 import { guardarVinculo } from "@/lib/vinculos";
 import { abrirTokenEnlace, esAdministrador, type Sesion } from "@/lib/sesion";
+import { registrarIntento } from "@/lib/accesos-servidor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +28,13 @@ export async function GET(peticion: NextRequest) {
   const token = peticion.nextUrl.searchParams.get("token") ?? "";
   const email = await abrirTokenEnlace(token);
 
-  if (!email) return volverAAcceso(peticion.url, "caducado");
+  if (!email) {
+    // Aquí no hay email que mirar —el token no se pudo abrir— así que
+    // no se sabe de quién era. Cuenta igual: un pico de caducados dice
+    // que los correos se están leyendo tarde.
+    await registrarIntento({ resultado: "enlace_caducado", rol: "desconocido" });
+    return volverAAcceso(peticion.url, "caducado");
+  }
 
   let sesion: Sesion;
 
@@ -37,7 +44,10 @@ export async function GET(peticion: NextRequest) {
     // El email estaba en la vista cuando se pidió el enlace, pero
     // podría no estarlo ya: se vuelve a comprobar antes de dar sesión.
     const alumno = await buscarAlumnoPorEmail(email);
-    if (!alumno) return volverAAcceso(peticion.url, "sinficha");
+    if (!alumno) {
+      await registrarIntento({ resultado: "sin_ficha", rol: "alumno" });
+      return volverAAcceso(peticion.url, "sinficha");
+    }
     sesion = { rol: "alumno", email, alumnoId: alumno.alumnoId };
 
     // Deja anotada la correspondencia email ↔ alumno aunque este alumno

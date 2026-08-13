@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ModuloTemario } from "@/lib/temario";
+import { textoDeEspera } from "@/lib/drip";
 
 /**
  * Un módulo dentro de su semana.
@@ -19,7 +20,7 @@ export default function FilaModulo({
   modulo: ModuloTemario;
   slug: string;
 }) {
-  const { esActual, hecho, totalLecciones, completadas } = modulo;
+  const { esActual, hecho, totalLecciones, completadas, disponible } = modulo;
 
   const meta = `${totalLecciones} ${totalLecciones === 1 ? "lección" : "lecciones"} · ${completadas} ${
     completadas === 1 ? "hecha" : "hechas"
@@ -29,7 +30,14 @@ export default function FilaModulo({
     <>
       {/* Punto ámbar en el actual; check redondo en el resto. Ocupan lo
           mismo para que las filas no se desalineen entre sí. */}
-      {esActual ? (
+      {!disponible ? (
+        // Círculo hueco y apagado: ni hecho ni por hacer todavía. Es el
+        // mismo peso visual que los demás para que la fila no se hunda.
+        <span
+          aria-hidden
+          className="mt-[1px] block h-[18px] w-[18px] shrink-0 rounded-full border-[1.5px] border-dashed border-temario-circulo min-[900px]:mt-0"
+        />
+      ) : esActual ? (
         <span
           aria-hidden
           className="mt-[3px] block h-[7px] w-[7px] shrink-0 rounded-full bg-temario-ambar min-[900px]:mt-0"
@@ -65,12 +73,18 @@ export default function FilaModulo({
           {modulo.titulo}
         </span>
 
-        <span className="mt-[5px] block text-[11.5px] font-medium text-temario-medio min-[900px]:mt-0 min-[900px]:whitespace-nowrap min-[900px]:text-[12.5px]">
-          {meta}
-        </span>
+        {disponible && (
+          <span className="mt-[5px] block text-[11.5px] font-medium text-temario-medio min-[900px]:mt-0 min-[900px]:whitespace-nowrap min-[900px]:text-[12.5px]">
+            {meta}
+          </span>
+        )}
       </div>
 
-      {esActual ? (
+      {!disponible ? (
+        <span className="mt-[2px] shrink-0 whitespace-nowrap text-[12.5px] font-semibold text-temario-suave min-[900px]:mt-0">
+          {textoDeEspera(modulo.diasParaAbrir ?? 1)}
+        </span>
+      ) : esActual ? (
         <span className="mt-[2px] shrink-0 whitespace-nowrap text-[13px] font-bold text-temario-verdeTexto min-[900px]:mt-0">
           Continuar →
         </span>
@@ -87,16 +101,26 @@ export default function FilaModulo({
   const base =
     "flex min-h-[44px] items-start gap-3 rounded-[12px] px-4 py-3 transition-colors min-[900px]:items-center min-[900px]:gap-4 min-[900px]:px-[18px] min-[900px]:py-[14px]";
 
-  const aspecto = esActual
-    ? "border border-dashed border-temario-cremaBorde bg-temario-crema"
-    : "border border-temario-bordeFila bg-white hover:border-temario-bordeHover hover:bg-temario-filaHover";
+  const aspecto = !disponible
+    ? // Se ve, con su título y su sitio, pero no invita a pulsar: sin
+      // hover, sin blanco de tarjeta. Lo que retiene es saber que está
+      // ahí y cuándo llega, no que se pueda tocar.
+      "border border-temario-borde bg-temario-rail/50 text-temario-suave"
+    : esActual
+      ? "border border-dashed border-temario-cremaBorde bg-temario-crema"
+      : "border border-temario-bordeFila bg-white hover:border-temario-bordeHover hover:bg-temario-filaHover";
 
   // Sin lecciones no hay a dónde entrar: se pinta apagado en vez de
   // llevar a una pantalla vacía.
   if (!modulo.destino) {
     return (
-      <li className={`${base} ${aspecto} opacity-60`}>
+      <li className={`${base} ${aspecto}`} aria-disabled>
         {contenido}
+        {!disponible && (
+          <span className="sr-only">
+            Se abre en {modulo.diasParaAbrir} días
+          </span>
+        )}
       </li>
     );
   }

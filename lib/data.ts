@@ -702,6 +702,13 @@ export type PerfilAlumno = {
    */
   objetivoSetter: string | null;
   profesor: string;
+  /**
+   * Cuándo empezó con la academia (`assignments.start_date`, el más
+   * antiguo de sus assignments activos). Es lo que fija la apertura
+   * progresiva del curso. Null en los pocos alumnos sin fecha: esos ven
+   * el curso entero, que es el lado seguro por el que fallar.
+   */
+  fechaInicio: string | null;
   ocupacion: string | null;
   objetivoPerfil: string | null;
   puntosFuertes: string | null;

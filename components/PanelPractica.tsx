@@ -46,6 +46,7 @@ export default function PanelPractica({
     tardando,
     mensajeError,
     esEspera,
+    recienGenerados,
     todos,
     idsGenerados,
     generar,
@@ -99,6 +100,7 @@ export default function PanelPractica({
             progreso={progreso}
             avance={avance}
             generados={idsGenerados}
+            idsNuevos={recienGenerados.map((b) => b.id)}
             indiceBloqueado={indiceBloqueado}
             generando={generando}
           />

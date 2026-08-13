@@ -55,6 +55,7 @@ export default function ListaBloques({
   progreso,
   avance,
   generados,
+  idsNuevos = [],
   indiceBloqueado,
   generando = false,
 }: {
@@ -62,8 +63,17 @@ export default function ListaBloques({
   alumnoId: string;
   progreso: ProgresoBloques;
   avance: AvanceBloques;
-  /** Ids de los bloques creados con la IA: son los que llevan el sello "Nuevo". */
+  /** Ids de los bloques creados con la IA. Decide el chip "Nuevo" solo
+   *  cuando además están en `idsNuevos`. */
   generados: string[];
+  /**
+   * Los generados EN ESTA VISITA: los únicos con sello "Nuevo".
+   *
+   * Antes lo llevaba cualquier bloque generado y sin empezar, así que uno
+   * de hace tres semanas seguía anunciándose como nuevo y el sello dejaba
+   * de señalar nada. Ahora significa lo mismo que en el inicio.
+   */
+  idsNuevos?: string[];
   /** Posición del bloque que aún no se ha desbloqueado, o -1 si no hay ninguno. */
   indiceBloqueado: number;
   /** Mientras es true se muestra el hueco animado en cabeza de la lista. */
@@ -76,13 +86,16 @@ export default function ListaBloques({
       {bloques.map((bloque, i) => {
         const bloqueado = i === indiceBloqueado;
         const esGenerado = generados.includes(bloque.id);
+        const esNuevo = idsNuevos.includes(bloque.id);
         const { estado, porcentaje, fases } = estadoDeBloque(
           progreso[bloque.id],
           avance[bloque.id],
           esGenerado
         );
-        const etiqueta = ETIQUETA[estado];
-        const destacado = estado === "nuevo";
+        // El estado "nuevo" de `estadoDeBloque` significa "generado y sin
+        // empezar"; el sello y el realce se reservan a los de esta visita.
+        const etiqueta = estado === "nuevo" && !esNuevo ? ETIQUETA["sin-empezar"] : ETIQUETA[estado];
+        const destacado = esNuevo;
         // Solo el primero de la lista lleva el botón sólido: si todos gritan, ninguno destaca.
         const primario = i === 0 && estado !== "dominado";
 

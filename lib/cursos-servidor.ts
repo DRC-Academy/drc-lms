@@ -16,6 +16,7 @@
 // ---------------------------------------------------------------
 
 import "server-only";
+import { aperturaDeLeccion, calcularApertura } from "@/lib/drip";
 import { baseLms } from "@/lib/supabase-lms";
 import { claveCoincide, cursosDelAlumno } from "@/lib/cursos";
 
@@ -45,7 +46,9 @@ export type EstadoCurso = {
   ultimaActividad: string | null;
 };
 
-type FilaModulo = { id: string; titulo: string; orden: number };
+type FilaModulo = { id: string; titulo: string; orden: number
+  visible_after: number;
+};
 type FilaLeccion = { id: string; titulo: string; orden: number; modulo_id: string };
 type FilaProgreso = { leccion_id: string; completada_en: string };
 
@@ -108,7 +111,7 @@ export async function estadoDelCurso(alumnoId: string, curso: CursoFila): Promis
 
   const { data: modulos, error: errorModulos } = await cliente
     .from("modulos")
-    .select("id, titulo, orden")
+    .select("id, titulo, orden, visible_after")
     .eq("curso_id", curso.id)
     .order("orden")
     .returns<FilaModulo[]>();
@@ -193,6 +196,8 @@ export type LeccionIndice = {
   /** Lección sintética del importador: solo ejercicios, sin teoría. */
   soloEjercicios: boolean;
   completada: boolean;
+  /** false solo si su módulo todavía no se ha abierto Y no está hecha. */
+  disponible: boolean;
 };
 
 export type ModuloIndice = {
@@ -200,6 +205,12 @@ export type ModuloIndice = {
   titulo: string;
   lecciones: LeccionIndice[];
   completadas: number;
+  /** Días desde la matrícula que pide este módulo. 0 = desde el principio. */
+  visibleAfter: number;
+  /** Si el módulo se ha abierto ya por calendario. */
+  disponible: boolean;
+  /** Cuántos días faltan, o null si ya está abierto. */
+  diasParaAbrir: number | null;
 };
 
 export type ArbolCurso = {
@@ -239,13 +250,21 @@ export async function cursoPorSlug(slug: string): Promise<CursoFila | null> {
  * condición saldrían todas etiquetadas como "· ejercicios", que es
  * justo lo que no son.
  */
-export async function arbolDelCurso(alumnoId: string, curso: CursoFila): Promise<ArbolCurso> {
+export async function arbolDelCurso(
+  alumnoId: string,
+  curso: CursoFila,
+  /**
+   * Cuándo empezó el alumno. Null —o alumno del equipo— abre el curso
+   * entero: ver `lib/drip.ts` para por qué se falla abierto.
+   */
+  fechaInicio: Date | null = null
+): Promise<ArbolCurso> {
   const cliente = baseLms();
   const vacio: ArbolCurso = { curso, modulos: [], total: 0, completadas: 0, leccionActual: null };
 
   const { data: modulos, error: e1 } = await cliente
     .from("modulos")
-    .select("id, titulo, orden")
+    .select("id, titulo, orden, visible_after")
     .eq("curso_id", curso.id)
     .order("orden")
     .returns<FilaModulo[]>();
@@ -293,27 +312,48 @@ export async function arbolDelCurso(alumnoId: string, curso: CursoFila): Promise
   let completadas = 0;
   let leccionActual: string | null = null;
 
+  const ahora = new Date();
+
   const salida: ModuloIndice[] = listaModulos.map((modulo) => {
     const suyas = (porModulo.get(modulo.id) ?? []).slice().sort((a, b) => a.orden - b.orden);
+    const visibleAfter = modulo.visible_after ?? 0;
+    const apertura = calcularApertura(visibleAfter, fechaInicio, ahora);
     let hechasAqui = 0;
 
     const lista: LeccionIndice[] = suyas.map((leccion) => {
       const completada = hechas.has(leccion.id);
       if (completada) hechasAqui++;
-      else if (leccionActual === null) leccionActual = leccion.id;
+
+      // Lo completado nunca se cierra, así que una lección hecha dentro
+      // de un módulo aún por abrir sigue disponible.
+      const suya = aperturaDeLeccion(visibleAfter, fechaInicio, completada, ahora);
+
+      // "La actual" es la primera pendiente A LA QUE SE PUEDE ENTRAR: si
+      // apuntara a una bloqueada, el botón Continuar llevaría a una
+      // pantalla que rechaza al alumno.
+      if (!completada && suya.abierto && leccionActual === null) leccionActual = leccion.id;
 
       return {
         id: leccion.id,
         titulo: leccion.titulo,
         soloEjercicios: sinTeoria.has(leccion.id),
         completada,
+        disponible: suya.abierto,
       };
     });
 
     total += lista.length;
     completadas += hechasAqui;
 
-    return { id: modulo.id, titulo: modulo.titulo, lecciones: lista, completadas: hechasAqui };
+    return {
+      id: modulo.id,
+      titulo: modulo.titulo,
+      lecciones: lista,
+      completadas: hechasAqui,
+      visibleAfter,
+      disponible: apertura.abierto,
+      diasParaAbrir: apertura.abierto ? null : apertura.diasRestantes,
+    };
   });
 
   return { curso, modulos: salida, total, completadas, leccionActual };
@@ -334,6 +374,15 @@ export type EjercicioFila = {
 };
 
 export type LeccionCompleta = {
+  /**
+   * false si el módulo todavía no se ha abierto para este alumno. La
+   * lección se devuelve igualmente —con su título y su sitio en el
+   * curso— para que la página pueda contar CUÁNDO estará en vez de
+   * fingir que no existe. Quien decide qué hacer con esto es la página.
+   */
+  disponible: boolean;
+  /** Días que faltan, o null si ya está abierta. */
+  diasParaAbrir: number | null;
   curso: CursoFila;
   moduloTitulo: string;
   /** Posición del módulo en el curso, desde 0: la etiqueta lo numera. */
@@ -370,7 +419,9 @@ type FilaLeccionCompleta = {
 export async function leccionParaVer(
   alumnoId: string,
   curso: CursoFila,
-  leccionId: string
+  leccionId: string,
+  /** Ver `arbolDelCurso`: null abre el curso entero. */
+  fechaInicio: Date | null = null
 ): Promise<LeccionCompleta | null> {
   const cliente = baseLms();
 
@@ -446,16 +497,27 @@ export async function leccionParaVer(
   const siguiente = posicion >= 0 ? ordenadas[posicion + 1] : undefined;
   const anterior = posicion > 0 ? ordenadas[posicion - 1] : undefined;
 
+  const ahora = new Date();
+  const visibleAfter = modulo.visible_after ?? 0;
+
   const hermanas: LeccionIndice[] = ordenadas
     .filter((l) => l.modulo_id === modulo.id)
-    .map((l) => ({
-      id: l.id,
-      titulo: l.titulo,
-      soloEjercicios: sinTeoria.has(l.id),
-      completada: hechas.has(l.id),
-    }));
+    .map((l) => {
+      const completada = hechas.has(l.id);
+      return {
+        id: l.id,
+        titulo: l.titulo,
+        soloEjercicios: sinTeoria.has(l.id),
+        completada,
+        disponible: aperturaDeLeccion(visibleAfter, fechaInicio, completada, ahora).abierto,
+      };
+    });
+
+  const apertura = aperturaDeLeccion(visibleAfter, fechaInicio, hechas.has(leccionId), ahora);
 
   return {
+    disponible: apertura.abierto,
+    diasParaAbrir: apertura.abierto ? null : apertura.diasRestantes,
     curso,
     moduloTitulo: modulo.titulo,
     moduloOrden: modulo.orden,

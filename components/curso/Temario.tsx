@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import type { MesTemario, Temario as DatosTemario } from "@/lib/temario";
 import PanelPlan from "@/components/curso/PanelPlan";
 import FilaModulo from "@/components/curso/FilaModulo";
+import { textoDeEspera } from "@/lib/drip";
 
 /**
  * El temario mes a mes.
@@ -198,6 +199,17 @@ function Mes({
               {mes.totalModulos} {mes.totalModulos === 1 ? "módulo" : "módulos"} · {mes.totalLecciones}{" "}
               {mes.totalLecciones === 1 ? "lección" : "lecciones"}
             </span>
+
+            {/* Un mes entero por abrir se dice aquí, para no obligar a
+                desplegarlo solo para descubrir que no toca todavía. */}
+            {/* Un mes ya completado no necesita saber cuándo se abre:
+                el alumno lo hizo antes de que le tocara, y la nota se
+                lee como una contradicción. */}
+            {mes.diasParaAbrir !== null && mes.estado !== "completado" && (
+              <span className="mt-[5px] block text-[11.5px] font-semibold text-temario-suave min-[900px]:mt-1.5 min-[900px]:text-[12px]">
+                {textoDeEspera(mes.diasParaAbrir)}
+              </span>
+            )}
           </span>
 
           <span className="hidden whitespace-nowrap text-[13px] font-medium text-temario-medio tabular-nums min-[900px]:block">

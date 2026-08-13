@@ -24,41 +24,14 @@
 // ---------------------------------------------------------------
 
 import type { ModoGeneracion } from "@/lib/modos";
+import { comoFecha, diasNaturales } from "@/lib/fechas";
+
+// Se reexportan porque media aplicación los importaba desde aquí, y
+// porque quien razona sobre límites razona sobre días naturales.
+export { comoFecha, diaLocal, diasNaturales } from "@/lib/fechas";
 
 /** Cada cuántos días naturales se renueva el bloque de contexto. */
 export const DIAS_CONTEXTO = 3;
-
-/**
- * El día se corta a medianoche en España, no en UTC.
- *
- * Con UTC el corte cae a la 01:00 o las 02:00 hora local, así que un
- * alumno que genera a las once y media de la noche estaría gastando el
- * cupo del día siguiente sin saberlo.
- */
-const ZONA = "Europe/Madrid";
-
-// `en-CA` da exactamente "AAAA-MM-DD", que es lo que se quiere comparar.
-const FORMATO_DIA = new Intl.DateTimeFormat("en-CA", {
-  timeZone: ZONA,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-/** El día natural español de un instante, como "2026-08-13". */
-export function diaLocal(momento: Date): string {
-  return FORMATO_DIA.format(momento);
-}
-
-/**
- * Días naturales entre dos instantes, contando cambios de fecha y no
- * periodos de 24 horas: de las 23:00 del lunes a las 09:00 del martes
- * hay un día, no cero.
- */
-export function diasNaturales(desde: Date, hasta: Date): number {
-  const enDias = (dia: string) => Math.round(Date.parse(`${dia}T00:00:00Z`) / 86_400_000);
-  return enDias(diaLocal(hasta)) - enDias(diaLocal(desde));
-}
 
 /**
  * Por qué no se puede generar todavía, o que sí se puede.
@@ -119,15 +92,4 @@ export function calcularDisponibilidad(
   return diasNaturales(ultimaGeneracion, ahora) >= 1
     ? DISPONIBLE
     : { disponible: false, motivo: "hoy" };
-}
-
-/**
- * Una fecha de la base, que llega como texto y puede venir vacía o
- * torcida. Devuelve null antes que un `Invalid Date`, que compararía
- * como NaN y dejaría pasar cualquier cosa.
- */
-export function comoFecha(valor: string | null | undefined): Date | null {
-  if (!valor) return null;
-  const momento = Date.parse(valor);
-  return Number.isFinite(momento) ? new Date(momento) : null;
 }

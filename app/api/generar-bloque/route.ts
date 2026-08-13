@@ -96,16 +96,6 @@ function abrirTraza(): { traza: Traza; plazo: Plazo } {
 }
 
 /**
- * Qué se sabe de la clave sin decir cuál es.
- *
- * `sk-ant-` es el prefijo público de todas las claves de Anthropic, así
- * que mostrarlo no revela nada, y la longitud confirma que llegó entera.
- * Lo que de verdad importa aquí es el aviso de espacios o saltos de
- * línea: una clave recién rotada y pegada con un `\n` al final hace que
- * `fetch` lance `Invalid header value` antes de salir de la instancia,
- * y el fallo se parecía mucho a un problema de red.
- */
-/**
  * Envuelve la generación en un flujo NDJSON: una línea JSON por evento,
  * emitida en el momento en que ocurre.
  *
@@ -183,6 +173,16 @@ function mensajeDeEspera(disponibilidad: Exclude<Disponibilidad, { disponible: t
   return "Ya has practicado el formato hoy. Mañana preparamos otro.";
 }
 
+/**
+ * Qué se sabe de la clave sin decir cuál es.
+ *
+ * `sk-ant-` es el prefijo público de todas las claves de Anthropic, así
+ * que mostrarlo no revela nada, y la longitud confirma que llegó entera.
+ * Lo que de verdad importa aquí es el aviso de espacios o saltos de
+ * línea: una clave recién rotada y pegada con un `\n` al final hace que
+ * `fetch` lance `Invalid header value` antes de salir de la instancia,
+ * y el fallo se parecía mucho a un problema de red.
+ */
 function huellaClave(clave: string | undefined): string {
   if (clave === undefined) return "AUSENTE";
   if (clave.trim() === "") return "VACÍA";
@@ -649,7 +649,7 @@ async function generarConRevision(
   plazo: Plazo,
   traza: Traza,
   emitir: (evento: EventoGeneracion) => void
-): Promise<{ bloque: Bloque; revision: Revision } | null> {
+): Promise<{ bloque: Bloque; revision: Revision; intentos: number } | null> {
   traza("generación:inicio", `presupuesto ${plazo.restante()}ms`);
 
   // Cada `emitir` va justo antes de la espera que describe, nunca
@@ -663,7 +663,7 @@ async function generarConRevision(
   emitir({ tipo: "etapa", etapa: "revisando", ms: plazo.transcurrido() });
   const revision = await revisarBloque(clave, primero, examen, plazo.hasta(TIEMPO_REVISOR_MS));
   registrarRevision("revisión 1", revision);
-  if (revision.estado !== "con-problemas") return { bloque: primero, revision };
+  if (revision.estado !== "con-problemas") return { bloque: primero, revision, intentos: 1 };
 
   // La regeneración es un lujo: si no queda presupuesto se entrega el
   // bloque que ya tenemos con su veredicto. Un bloque con un defecto
@@ -672,7 +672,7 @@ async function generarConRevision(
   if (plazo.restante() < 5_000) {
     traza("revisión 1:sin margen para regenerar", `restante ${plazo.restante()}ms`);
     console.warn("[revisor] No queda presupuesto para regenerar. Se entrega el bloque revisado.");
-    return { bloque: primero, revision };
+    return { bloque: primero, revision, intentos: 1 };
   }
 
   emitir({ tipo: "etapa", etapa: "reescribiendo", ms: plazo.transcurrido() });
@@ -690,7 +690,7 @@ async function generarConRevision(
   const segundaRevision = await revisarBloque(clave, segundo, examen, plazo.hasta(TIEMPO_REVISOR_MS));
   registrarRevision("revisión 2", segundaRevision);
   if (segundaRevision.estado !== "con-problemas") {
-    return { bloque: segundo, revision: segundaRevision };
+    return { bloque: segundo, revision: segundaRevision, intentos: 2 };
   }
 
   console.warn("[revisor] Dos intentos rechazados por revisión. Se sirve un bloque del banco.");
@@ -947,7 +947,15 @@ export async function POST(peticion: Request) {
           traza("guardado:ia");
           emitir({ tipo: "etapa", etapa: "guardando", ms: plazoPeticion.transcurrido() });
           await conLimiteOAlternativa(
-            guardarBloqueGenerado(alumnoId, bloque, modo, "ia", generado.revision),
+            // El veredicto MÁS cuántos intentos costó. Hasta ahora un
+            // bloque que salió a la primera y otro que necesitó dos
+            // quedaban los dos como "apto", indistinguibles, así que la
+            // tasa de regeneración no se podía medir. Esto empieza a
+            // contar desde el despliegue: lo anterior no se reconstruye.
+            guardarBloqueGenerado(alumnoId, bloque, modo, "ia", {
+              ...generado.revision,
+              intentos: generado.intentos,
+            }),
             TIEMPO_BASE_MS,
             "guardarBloqueGenerado(ia)",
             false

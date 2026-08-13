@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { exigirSesion } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { cursoPorSlug, cursosAsignados, leccionParaVer } from "@/lib/cursos-servidor";
+import { comoFecha } from "@/lib/fechas";
 import { sanearHtml, tieneContenido } from "@/lib/sanear-html";
 import { prepararLeccion } from "@/lib/leccion-html";
 import { etiquetaModulo, partirModulo } from "@/lib/modulo";
@@ -33,8 +34,15 @@ export default async function PaginaLeccion({
     if (!suyos.some((c) => c.id === curso.id)) redirect(`/alumno/${sesion.alumnoId}`);
   }
 
-  const vista = await leccionParaVer(alumnoId, curso, params.leccion);
+  const vista = await leccionParaVer(alumnoId, curso, params.leccion, comoFecha(perfil?.fechaInicio));
   if (!vista) notFound();
+
+  // La lección existe y es suya, pero su módulo todavía no se ha abierto.
+  // No es un 404 —la lección está ahí y la verá— así que se le devuelve
+  // al temario, que es donde pone cuándo la tendrá. Llegar aquí es raro:
+  // en la pantalla del curso la fila no es un enlace. Pasa con un enlace
+  // viejo, con el botón atrás o escribiendo la URL a mano.
+  if (!vista.disponible) redirect(`/curso/${curso.slug}`);
 
   const {
     leccion,

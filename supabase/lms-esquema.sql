@@ -558,3 +558,59 @@ order by c.relname;
 --   grant all on tables to anon, authenticated;
 -- alter default privileges in schema public
 --   grant all on sequences to anon, authenticated;
+
+
+-- ===============================================================
+-- 8. intentos_acceso
+--
+-- Qué pasa cuando alguien intenta entrar y NO acaba en sesión.
+--
+-- `sesiones` solo guarda los finales felices, así que hasta ahora la
+-- pregunta "¿funciona el enlace mágico?" no se podía contestar: si de
+-- 172 invitaciones entran 20, sin esta tabla los otros 152 son silencio.
+-- Aquí se anota cada desenlace, y el panel compara enlaces enviados con
+-- sesiones abiertas.
+--
+-- SIN EMAIL, A PROPÓSITO. `app/acceso/acciones.ts` se sostiene sobre no
+-- revelar quién está registrado; guardar aquí las direcciones que se
+-- prueban crearía justo la lista que ese fichero evita. Se guarda el
+-- `alumno_id` cuando se sabe —que ya está en Gestión— y para el resto
+-- solo el recuento.
+-- ===============================================================
+
+create table if not exists public.intentos_acceso (
+  id            uuid        primary key default gen_random_uuid(),
+
+  -- Null cuando el email no correspondía a ningún alumno, o cuando era
+  -- del equipo: ahí no hay ficha que señalar.
+  alumno_id     text,
+  rol           text        not null,
+  resultado     text        not null,
+  origen        text        not null default 'magic_link',
+  creado_en     timestamptz not null default now(),
+
+  constraint intentos_acceso_rol_valido
+    check (rol in ('alumno', 'admin', 'desconocido')),
+
+  constraint intentos_acceso_origen_valido
+    check (origen in ('magic_link', 'woocommerce')),
+
+  -- Los seis finales que no son una sesión, más el enlace enviado, que
+  -- es el denominador con el que se comparan las sesiones.
+  constraint intentos_acceso_resultado_valido
+    check (resultado in (
+      'enlace_enviado',    -- salió el correo
+      'envio_fallido',     -- Resend lo rechazó
+      'sin_cuenta',        -- email bien escrito, sin ficha ni equipo
+      'email_invalido',    -- ni siquiera parecía un email
+      'enlace_caducado',   -- pulsó tarde, o el token venía roto
+      'sin_ficha'          -- pidió el enlace y para cuando lo pulsó ya no estaba en Gestión
+    ))
+);
+
+comment on table public.intentos_acceso is
+  'Intentos de acceso que no acabaron en sesión, más los enlaces enviados. Sin emails: solo alumno_id cuando se conoce.';
+
+-- El panel siempre pregunta por una ventana de tiempo.
+create index if not exists idx_intentos_acceso_fecha
+  on public.intentos_acceso (creado_en desc);

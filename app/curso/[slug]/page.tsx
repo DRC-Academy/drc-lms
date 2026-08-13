@@ -4,6 +4,7 @@ import { exigirSesion } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { arbolDelCurso, cursoPorSlug, cursosAsignados } from "@/lib/cursos-servidor";
 import { construirTemario } from "@/lib/temario";
+import { comoFecha } from "@/lib/fechas";
 import CabeceraLeccion from "@/components/leccion/CabeceraLeccion";
 import Temario from "@/components/curso/Temario";
 
@@ -46,7 +47,9 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
     if (!suyos.some((c) => c.id === curso.id)) redirect(`/alumno/${sesion.alumnoId}`);
   }
 
-  const arbol = await arbolDelCurso(alumnoId, curso);
+  // El equipo no es alumno de nada: sin fecha, ve el curso entero. Es
+  // justo lo que necesita para revisarlo.
+  const arbol = await arbolDelCurso(alumnoId, curso, comoFecha(perfil?.fechaInicio));
   const temario = construirTemario(arbol);
 
   const inicio = sesion.rol === "alumno" ? `/alumno/${sesion.alumnoId}` : "/";

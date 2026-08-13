@@ -14,7 +14,11 @@
 import { buscarAlumnoPorEmail } from "@/lib/gestion";
 import { crearTokenEnlace, esAdministrador, esEmailPlausible, normalizarEmail } from "@/lib/sesion";
 import { enviarEnlaceAcceso } from "@/lib/correo";
+import { registrarIntento, type ResultadoIntento, type RolIntento } from "@/lib/accesos-servidor";
 import type { EstadoAcceso } from "@/app/acceso/estado";
+
+/** Lo que hay que dejar anotado, decidido dentro pero escrito fuera. */
+type Anotacion = { resultado: ResultadoIntento; rol: RolIntento; alumnoId: string | null };
 
 const MENSAJE_NEUTRO = "Si ese email está registrado, te hemos enviado un enlace para entrar.";
 
@@ -41,15 +45,16 @@ function esperar(ms: number): Promise<void> {
  * Mira si ese email puede entrar y, si puede, le manda el enlace.
  * No devuelve nada: lo que pasa aquí dentro no sale al visitante.
  */
-async function atender(email: string): Promise<void> {
+async function atender(email: string): Promise<Anotacion> {
   // La búsqueda del alumno se hace SIEMPRE, también para los del
   // equipo. Comprobar primero si es administrador y ahorrarse la
   // consulta haría que esos emails respondieran antes, y eso también
   // es información que se filtra.
   const alumno = await buscarAlumnoPorEmail(email);
-  const puedeEntrar = alumno !== null || esAdministrador(email);
+  const admin = esAdministrador(email);
+  const rol: RolIntento = alumno !== null ? "alumno" : admin ? "admin" : "desconocido";
 
-  if (!puedeEntrar) return;
+  if (alumno === null && !admin) return { resultado: "sin_cuenta", rol, alumnoId: null };
 
   const enviado = await enviarEnlaceAcceso(email, await crearTokenEnlace(email));
   if (!enviado) {
@@ -57,6 +62,12 @@ async function atender(email: string): Promise<void> {
     // log, que es donde alguien puede hacer algo al respecto.
     console.error("[acceso] Un enlace válido no llegó a enviarse. Revisa RESEND_API_KEY y el remitente.");
   }
+
+  return {
+    resultado: enviado ? "enlace_enviado" : "envio_fallido",
+    rol,
+    alumnoId: alumno?.alumnoId ?? null,
+  };
 }
 
 export async function solicitarEnlace(datos: FormData): Promise<EstadoAcceso> {
@@ -66,19 +77,32 @@ export async function solicitarEnlace(datos: FormData): Promise<EstadoAcceso> {
   // preguntarle a nadie, así que decirlo no revela quién está dado de
   // alta y ahorra al alumno esperar un correo que nunca iba a llegar.
   if (!esEmailPlausible(email)) {
+    await registrarIntento({ resultado: "email_invalido", rol: "desconocido" });
     return {
       estado: "invalido",
       mensaje: "Ese email no parece completo. Revísalo y vuelve a probar.",
     };
   }
 
+  // Por defecto se anota como "sin cuenta": es lo que hay que registrar
+  // si `atender` se rompe a mitad, y es además el desenlace más
+  // frecuente de los que no acaban en enlace.
+  let anotacion: Anotacion = { resultado: "sin_cuenta", rol: "desconocido", alumnoId: null };
+
   try {
-    await Promise.all([atender(email), esperar(SUELO_MS)]);
+    const [resultado] = await Promise.all([atender(email), esperar(SUELO_MS)]);
+    anotacion = resultado;
   } catch (error) {
     // Ni una excepción cambia la respuesta: si Gestión no contesta, el
     // visitante no tiene por qué enterarse de que ese email existía.
     console.error("[acceso] Falló la petición de enlace:", error);
   }
+
+  // FUERA del `Promise.all` y en TODOS los caminos, a propósito. Dentro,
+  // el email registrado pagaría una escritura que el desconocido no, y
+  // esa diferencia de tiempo delata cuál es cuál — justo lo que el suelo
+  // de 500 ms está ahí para tapar.
+  await registrarIntento(anotacion);
 
   return { estado: "enviado", mensaje: MENSAJE_NEUTRO };
 }
