@@ -35,8 +35,22 @@ export default function PanelPractica({
   avance: AvanceBloques;
   generadosIniciales: Bloque[];
 }) {
-  const { estado, modoActivo, generando, todos, idsGenerados, generar, zonaNuevos } =
-    usarGenerador({ alumnoId, bloques, generadosIniciales });
+  const {
+    estado,
+    modoActivo,
+    generando,
+    etapa,
+    // `progreso` ya es en esta pantalla el de los bloques terminados.
+    // El de la generación se renombra para que no se pisen.
+    progreso: progresoGeneracion,
+    tardando,
+    mensajeError,
+    todos,
+    idsGenerados,
+    generar,
+    reintentar,
+    zonaNuevos,
+  } = usarGenerador({ alumnoId, bloques, generadosIniciales });
 
   // El último bloque estático llega bloqueado hasta la siguiente clase.
   const indiceBloqueado = bloques.length > 1 ? todos.length - 1 : -1;
@@ -49,7 +63,12 @@ export default function PanelPractica({
         tarjetas={tarjetas}
         estado={estado}
         modoActivo={modoActivo}
+        etapa={etapa}
+        progreso={progresoGeneracion}
+        tardando={tardando}
+        mensajeError={mensajeError}
         onGenerar={generar}
+        onReintentar={reintentar}
       />
 
       {todos.length > 0 && (

@@ -168,11 +168,22 @@ function interpretar(crudo: unknown): { apto: boolean; problemas: Problema[] } |
 export async function revisarBloque(
   clave: string,
   bloque: Bloque,
-  examen: TipoExamen | null
+  examen: TipoExamen | null,
+  limiteMs: number = TIEMPO_MAXIMO_MS
 ): Promise<Revision> {
   const arranque = Date.now();
+
+  // El plazo lo fija quien llama, que es el único que sabe cuánto queda
+  // del presupuesto de la petición. Sin margen no se llama siquiera: una
+  // revisión que va a expirar es una espera que el alumno paga para
+  // acabar en el mismo sitio.
+  const plazo = Math.min(limiteMs, TIEMPO_MAXIMO_MS);
+  if (plazo < 1_000) {
+    return { estado: "no-disponible", motivo: `sin margen (${plazo}ms)`, ms: 0 };
+  }
+
   const control = new AbortController();
-  const corte = setTimeout(() => control.abort(), TIEMPO_MAXIMO_MS);
+  const corte = setTimeout(() => control.abort(), plazo);
 
   try {
     const respuesta = await fetch(URL_API, {
@@ -239,7 +250,7 @@ export async function revisarBloque(
   } catch (error) {
     const ms = Date.now() - arranque;
     const motivo = control.signal.aborted
-      ? `timeout de ${TIEMPO_MAXIMO_MS / 1000}s`
+      ? `timeout de ${plazo / 1000}s`
       : error instanceof Error
       ? error.message
       : "error desconocido";

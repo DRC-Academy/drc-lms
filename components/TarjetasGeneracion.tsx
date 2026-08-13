@@ -1,6 +1,8 @@
 "use client";
 
 import { URL_FORMULARIO, type ModoGeneracion, type TarjetaModo } from "@/lib/modos";
+import type { EtapaGeneracion } from "@/lib/generacion";
+import AvanceGeneracion from "@/components/AvanceGeneracion";
 
 export type EstadoGeneracion = "listo" | "generando" | "error";
 
@@ -69,13 +71,26 @@ export default function TarjetasGeneracion({
   tarjetas,
   estado,
   modoActivo,
+  etapa,
+  progreso,
+  tardando,
+  mensajeError,
   onGenerar,
+  onReintentar,
 }: {
   tarjetas: TarjetaModo[];
   estado: EstadoGeneracion;
   /** Modo que se está generando ahora mismo, o null si no hay ninguno. */
   modoActivo: ModoGeneracion | null;
+  /** Etapa que el servidor dice estar ejecutando. */
+  etapa: EtapaGeneracion;
+  /** De 0 a 95 mientras se espera; 100 solo con el bloque ya en la mano. */
+  progreso: number;
+  /** La espera se ha pasado del presupuesto previsto. */
+  tardando: boolean;
+  mensajeError: string;
   onGenerar: (modo: ModoGeneracion) => void;
+  onReintentar: () => void;
 }) {
   const generando = estado === "generando";
 
@@ -156,14 +171,30 @@ export default function TarjetasGeneracion({
         </>
       )}
 
+      {generando && modoActivo && (
+        <AvanceGeneracion
+          modo={modoActivo}
+          etapa={etapa}
+          progreso={progreso}
+          tardando={tardando}
+        />
+      )}
+
       {estado === "error" && (
         <div className="aparece mt-4 rounded-[18px] bg-[#FFF7E0] px-5 py-4">
           <p className="font-display text-[15px] font-semibold text-drc-titular">
             Esta vez no ha salido.
           </p>
-          <p className="mt-1 text-[14px] leading-[1.5] text-drc-cuerpo">
-            A veces la conexión se hace la remolona. Vuelve a darle y lo preparamos.
-          </p>
+          <p className="mt-1 text-[14px] leading-[1.5] text-drc-cuerpo">{mensajeError}</p>
+          {/* El reintento vuelve al mismo modo que falló: obligar a buscar
+              otra vez la tarjeta convierte un fallo nuestro en trabajo suyo. */}
+          <button
+            type="button"
+            onClick={onReintentar}
+            className="btn btn-primario mt-4 min-h-[42px] w-full wide:w-auto"
+          >
+            Volver a intentarlo
+          </button>
         </div>
       )}
     </section>

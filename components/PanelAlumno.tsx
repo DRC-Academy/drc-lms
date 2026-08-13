@@ -38,11 +38,12 @@ export default function PanelAlumno({
   esAdministrador: boolean;
 }) {
   const router = useRouter();
-  const { estado, modoActivo, generar } = usarGenerador({
-    alumnoId,
-    bloques,
-    generadosIniciales,
-  });
+  const { estado, modoActivo, etapa, progreso, tardando, mensajeError, generar, reintentar } =
+    usarGenerador({
+      alumnoId,
+      bloques,
+      generadosIniciales,
+    });
 
   /**
    * MIGRACIÓN DEL PROGRESO QUE QUEDÓ EN EL NAVEGADOR
@@ -108,7 +109,12 @@ export default function PanelAlumno({
       profesor={profesor}
       estado={estado}
       modoActivo={modoActivo}
+      etapa={etapa}
+      progreso={progreso}
+      tardando={tardando}
+      mensajeError={mensajeError}
       onGenerar={generar}
+      onReintentar={reintentar}
     />
   );
 }

@@ -2,6 +2,8 @@
 
 import { type ModoGeneracion, type TarjetaModo } from "@/lib/modos";
 import type { EstadoGeneracion } from "@/components/TarjetasGeneracion";
+import type { EtapaGeneracion } from "@/lib/generacion";
+import AvanceGeneracion from "@/components/AvanceGeneracion";
 
 /**
  * Las tarjetas de práctica del inicio.
@@ -46,7 +48,12 @@ export default function TarjetasPractica({
   profesor,
   estado,
   modoActivo,
+  etapa,
+  progreso,
+  tardando,
+  mensajeError,
   onGenerar,
+  onReintentar,
 }: {
   tarjetas: TarjetaModo[];
   /** Va en el subtítulo: es lo que hace que esto no parezca genérico. */
@@ -54,7 +61,15 @@ export default function TarjetasPractica({
   estado: EstadoGeneracion;
   /** Modo que se está generando ahora mismo, o null si no hay ninguno. */
   modoActivo: ModoGeneracion | null;
+  /** Etapa que el servidor dice estar ejecutando. */
+  etapa: EtapaGeneracion;
+  /** De 0 a 95 mientras se espera; 100 solo con el bloque ya en la mano. */
+  progreso: number;
+  /** La espera se ha pasado del presupuesto previsto. */
+  tardando: boolean;
+  mensajeError: string;
   onGenerar: (modo: ModoGeneracion) => void;
+  onReintentar: () => void;
 }) {
   const generando = estado === "generando";
   const horizontal = tarjetas.length === 1;
@@ -134,12 +149,28 @@ export default function TarjetasPractica({
         </ul>
       )}
 
+      {generando && modoActivo && (
+        <AvanceGeneracion
+          modo={modoActivo}
+          etapa={etapa}
+          progreso={progreso}
+          tardando={tardando}
+        />
+      )}
+
       {estado === "error" && (
         <div className="aparece mt-4 rounded-[16px] bg-marca-examen px-5 py-4">
           <p className="font-display text-[15px] font-bold text-marca-tinta">Esta vez no ha salido.</p>
-          <p className="mt-1 text-[14px] leading-[1.5] text-marca-gris">
-            A veces la conexión se hace la remolona. Vuelve a darle y lo preparamos.
-          </p>
+          <p className="mt-1 text-[14px] leading-[1.5] text-marca-gris">{mensajeError}</p>
+          {/* El reintento vuelve al mismo modo que falló: obligar a buscar
+              otra vez la tarjeta convierte un fallo nuestro en trabajo suyo. */}
+          <button
+            type="button"
+            onClick={onReintentar}
+            className="btn btn-primario mt-4 min-h-[42px] w-full wide:w-auto"
+          >
+            Volver a intentarlo
+          </button>
         </div>
       )}
     </section>

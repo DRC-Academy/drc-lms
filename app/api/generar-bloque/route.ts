@@ -24,24 +24,156 @@ import { validarBloque } from "@/lib/validarBloque";
 import { extraerJson } from "@/lib/json";
 import { avisosParaRegenerar, revisarBloque, type Revision } from "@/lib/revisor";
 import { guardarBloqueGenerado } from "@/lib/progreso-servidor";
+import { abrirPlazo, conLimite, conLimiteOAlternativa, describir, type Plazo } from "@/lib/tiempo";
+import { TIPO_FLUJO, type EventoGeneracion } from "@/lib/generacion";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Sin esto la plataforma corta por su cuenta y el alumno recibe un 504
+// del gateway en vez de un bloque del banco. Es el techo duro; el
+// presupuesto de abajo está calculado para caber dentro con holgura.
+export const maxDuration = 60;
+
 const MODELO = "claude-sonnet-4-6";
 const URL_API = "https://api.anthropic.com/v1/messages";
 const ESPERA_BANCO_MS = 1600; // el banco responde al instante: sin esto la demo se siente falsa
-const TIEMPO_MAXIMO_MS = 45_000;
+
+// ---------------------------------------------------------------
+// PRESUPUESTO DE TIEMPO
+//
+// Cada llamada tenía su propio máximo y nadie sumaba: dos generaciones
+// y dos revisiones daban 210 segundos en el peor caso, con el alumno
+// mirando un spinner. Ahora hay un único presupuesto para toda la fase
+// de IA y cada llamada solo puede gastar lo que quede.
+//
+// La cuenta del peor caso: 45s de generación agotan el presupuesto, no
+// hay reintento ni revisión, y se sirve el banco. Total por debajo de
+// `maxDuration`, siempre.
+// ---------------------------------------------------------------
+
+const TIEMPO_MAXIMO_MS = 45_000; // tope de UNA llamada al modelo
+const PRESUPUESTO_IA_MS = 45_000; // tope de TODA la fase de generación
+const TIEMPO_REVISOR_MS = 15_000; // tope de una revisión
+const TIEMPO_BASE_MS = 8_000; // tope de una consulta a Supabase
 const INTENTOS = 2;
 
-export type Origen = "ia" | "banco";
-export type RespuestaGeneracion = { bloque: Bloque; origen: Origen };
+// `Origen` y la forma de la respuesta viven ahora en `lib/generacion.ts`,
+// que es el contrato que comparten esta ruta y el cliente que la lee.
 
 const AREAS = ["Gramática", "Léxico", "Discurso"];
 const MODOS: ModoGeneracion[] = ["repaso", "examen", "contexto"];
 
 function esperar(ms: number) {
   return new Promise<void>((resolver) => setTimeout(resolver, ms));
+}
+
+// ---------------------------------------------------------------
+// TRAZA TEMPORAL
+//
+// Instrumentación puesta para localizar en qué punto se quedaba colgada
+// la generación. Cada petición lleva un identificador corto y cada
+// etapa deja su marca con los milisegundos transcurridos, de modo que
+// en el log se lee la secuencia completa y dónde se detuvo.
+//
+// QUITAR cuando el incidente esté cerrado. Nada de esto imprime datos
+// del alumno ni, por supuesto, la clave.
+// ---------------------------------------------------------------
+
+type Traza = (etapa: string, detalle?: string) => void;
+
+function abrirTraza(): { traza: Traza; plazo: Plazo } {
+  const id = Math.random().toString(36).slice(2, 8);
+  const plazo = abrirPlazo(maxDuration * 1000);
+
+  const traza: Traza = (etapa, detalle) => {
+    const marca = `[generar-bloque:${id}] +${plazo.transcurrido()}ms ${etapa}`;
+    console.info(detalle ? `${marca} · ${detalle}` : marca);
+  };
+
+  return { traza, plazo };
+}
+
+/**
+ * Qué se sabe de la clave sin decir cuál es.
+ *
+ * `sk-ant-` es el prefijo público de todas las claves de Anthropic, así
+ * que mostrarlo no revela nada, y la longitud confirma que llegó entera.
+ * Lo que de verdad importa aquí es el aviso de espacios o saltos de
+ * línea: una clave recién rotada y pegada con un `\n` al final hace que
+ * `fetch` lance `Invalid header value` antes de salir de la instancia,
+ * y el fallo se parecía mucho a un problema de red.
+ */
+/**
+ * Envuelve la generación en un flujo NDJSON: una línea JSON por evento,
+ * emitida en el momento en que ocurre.
+ *
+ * Se responde en directo y no de una vez al final porque la pantalla
+ * necesita saber en qué punto va, y la única fuente honesta de eso es
+ * esta función según avanza. Un temporizador en el cliente adivinando
+ * etapas diría "revisando" cuando el revisor ni siquiera ha arrancado.
+ *
+ * Todo lo que pueda fallar antes de aquí —sesión, ficha, modo— ya ha
+ * respondido con su código HTTP. A partir de este punto la respuesta es
+ * siempre 200: el estado viaja dentro del flujo, porque las cabeceras ya
+ * salieron cuando se emitió la primera etapa.
+ */
+function flujoDeGeneracion(
+  traza: Traza,
+  ejecutar: (emitir: (evento: EventoGeneracion) => void) => Promise<void>
+): Response {
+  const codificador = new TextEncoder();
+
+  const cuerpo = new ReadableStream<Uint8Array>({
+    async start(controlador) {
+      let abierto = true;
+
+      const emitir = (evento: EventoGeneracion) => {
+        if (!abierto) return;
+        controlador.enqueue(codificador.encode(`${JSON.stringify(evento)}\n`));
+      };
+
+      try {
+        await ejecutar(emitir);
+      } catch (error) {
+        // Que no se escape nada: un flujo que se corta sin decir por qué
+        // deja al alumno con la barra a medias y sin mensaje.
+        traza("flujo:error", describir(error));
+        console.error("[generar-bloque] La generación se rompió:", describir(error));
+        emitir({
+          tipo: "error",
+          mensaje: "No hemos podido preparar el bloque. Inténtalo otra vez.",
+        });
+      } finally {
+        abierto = false;
+        controlador.close();
+      }
+    },
+  });
+
+  return new Response(cuerpo, {
+    headers: {
+      "content-type": `${TIPO_FLUJO}; charset=utf-8`,
+      // `no-transform` y `x-accel-buffering` para que ningún proxy por el
+      // camino acumule las líneas y las entregue juntas al final: eso
+      // devolvería exactamente el spinner mudo que estamos quitando.
+      "cache-control": "no-store, no-transform",
+      "x-accel-buffering": "no",
+    },
+  });
+}
+
+function huellaClave(clave: string | undefined): string {
+  if (clave === undefined) return "AUSENTE";
+  if (clave.trim() === "") return "VACÍA";
+
+  const limpia = clave.trim();
+  const notas = [`len=${limpia.length}`, `prefijo=${limpia.slice(0, 7)}`];
+
+  if (limpia !== clave) notas.push("¡CON ESPACIOS ALREDEDOR!");
+  if (/[\r\n]/.test(clave)) notas.push("¡CON SALTO DE LÍNEA!");
+
+  return notas.join(" ");
 }
 
 /**
@@ -298,15 +430,41 @@ function usuarioContexto(ctx: Contexto, ocupacion: string | null, objetivo: stri
 // LLAMADA AL MODELO
 // ---------------------------------------------------------------
 
+/**
+ * El resultado de pedir un bloque, distinguiendo si vale la pena
+ * insistir. Antes todo fallo devolvía `null` y se reintentaba siempre:
+ * con una clave revocada eso son dos esperas completas para obtener el
+ * mismo 401 dos veces.
+ */
+type ResultadoModelo =
+  | { estado: "ok"; bloque: Bloque }
+  | { estado: "reintentable"; motivo: string }
+  | { estado: "definitivo"; motivo: string };
+
+/** Un 429 o un 5xx pueden ir bien al segundo intento; un 401 no. */
+function esReintentable(codigo: number): boolean {
+  return codigo === 408 || codigo === 409 || codigo === 429 || codigo >= 500;
+}
+
 async function pedirBloqueAlModelo(
   clave: string,
   sistema: string,
-  usuario: string
-): Promise<Bloque | null> {
+  usuario: string,
+  limiteMs: number,
+  traza: Traza
+): Promise<ResultadoModelo> {
+  const plazo = Math.min(limiteMs, TIEMPO_MAXIMO_MS);
+  if (plazo < 1_000) {
+    return { estado: "definitivo", motivo: `sin margen (${plazo}ms)` };
+  }
+
   const control = new AbortController();
-  const corte = setTimeout(() => control.abort(), TIEMPO_MAXIMO_MS);
+  const corte = setTimeout(() => control.abort(), plazo);
+  const arranque = Date.now();
 
   try {
+    traza("modelo:petición", `${MODELO} · plazo ${plazo}ms`);
+
     const respuesta = await fetch(URL_API, {
       method: "POST",
       signal: control.signal,
@@ -323,17 +481,28 @@ async function pedirBloqueAlModelo(
       }),
     });
 
+    traza("modelo:cabeceras", `HTTP ${respuesta.status} en ${Date.now() - arranque}ms`);
+
     if (!respuesta.ok) {
       const detalle = await respuesta.text();
-      console.error(`[generar-bloque] La API respondió ${respuesta.status}: ${detalle.slice(0, 400)}`);
-      return null;
+      const motivo = `HTTP ${respuesta.status}: ${detalle.slice(0, 300)}`;
+      console.error(`[generar-bloque] La API respondió ${motivo}`);
+      return esReintentable(respuesta.status)
+        ? { estado: "reintentable", motivo }
+        : { estado: "definitivo", motivo };
     }
 
     const cuerpo: unknown = await respuesta.json();
-    if (typeof cuerpo !== "object" || cuerpo === null) return null;
+    traza("modelo:cuerpo", `leído en ${Date.now() - arranque}ms`);
+
+    if (typeof cuerpo !== "object" || cuerpo === null) {
+      return { estado: "reintentable", motivo: "respuesta que no es un objeto" };
+    }
 
     const contenido = (cuerpo as { content?: unknown }).content;
-    if (!Array.isArray(contenido)) return null;
+    if (!Array.isArray(contenido)) {
+      return { estado: "reintentable", motivo: "respuesta sin content" };
+    }
 
     const texto = contenido
       .filter(
@@ -346,12 +515,23 @@ async function pedirBloqueAlModelo(
       .map((bloque) => bloque.text)
       .join("\n");
 
-    if (!texto.trim()) return null;
+    if (!texto.trim()) {
+      return { estado: "reintentable", motivo: "respuesta sin texto" };
+    }
 
-    return validarBloque(extraerJson(texto));
+    const bloque = validarBloque(extraerJson(texto));
+    return bloque
+      ? { estado: "ok", bloque }
+      : { estado: "reintentable", motivo: "no pasó la validación estructural" };
   } catch (error) {
-    console.error("[generar-bloque] Falló la llamada a la API:", error);
-    return null;
+    // Distinguir el corte por plazo del resto: un `AbortError` genérico
+    // en el log no dejaba claro si era la red o nuestro propio timeout.
+    const motivo = control.signal.aborted
+      ? `timeout de ${plazo / 1000}s`
+      : `fallo de red: ${describir(error)}`;
+    console.error(`[generar-bloque] Falló la llamada a la API — ${motivo}`);
+    traza("modelo:error", motivo);
+    return { estado: "reintentable", motivo };
   } finally {
     clearTimeout(corte);
   }
@@ -361,17 +541,46 @@ async function pedirBloqueAlModelo(
 // GENERACIÓN CON REVISIÓN
 // ---------------------------------------------------------------
 
-/** Pide bloques hasta que uno pase la validación estructural. */
+/**
+ * Pide bloques hasta que uno pase la validación estructural, sin salirse
+ * del presupuesto y sin insistir cuando el fallo no va a cambiar.
+ */
 async function generarEstructural(
   clave: string,
   sistema: string,
-  usuario: string
+  usuario: string,
+  plazo: Plazo,
+  traza: Traza
 ): Promise<Bloque | null> {
   for (let intento = 1; intento <= INTENTOS; intento++) {
-    const bloque = await pedirBloqueAlModelo(clave, sistema, usuario);
-    if (bloque) return bloque;
-    console.warn(`[generar-bloque] Intento ${intento}/${INTENTOS} descartado por validación estructural.`);
+    if (plazo.agotado()) {
+      traza("generación:presupuesto agotado", `antes del intento ${intento}/${INTENTOS}`);
+      return null;
+    }
+
+    const resultado = await pedirBloqueAlModelo(
+      clave,
+      sistema,
+      usuario,
+      plazo.hasta(TIEMPO_MAXIMO_MS),
+      traza
+    );
+
+    if (resultado.estado === "ok") {
+      traza("generación:bloque válido", `intento ${intento}/${INTENTOS}`);
+      return resultado.bloque;
+    }
+
+    console.warn(
+      `[generar-bloque] Intento ${intento}/${INTENTOS} descartado — ${resultado.motivo}`
+    );
+
+    if (resultado.estado === "definitivo") {
+      traza("generación:fallo definitivo", "no se reintenta");
+      return null;
+    }
   }
+
   return null;
 }
 
@@ -416,23 +625,49 @@ async function generarConRevision(
   clave: string,
   sistema: string,
   usuario: string,
-  examen: TipoExamen | null
+  examen: TipoExamen | null,
+  plazo: Plazo,
+  traza: Traza,
+  emitir: (evento: EventoGeneracion) => void
 ): Promise<{ bloque: Bloque; revision: Revision } | null> {
-  const primero = await generarEstructural(clave, sistema, usuario);
+  traza("generación:inicio", `presupuesto ${plazo.restante()}ms`);
+
+  // Cada `emitir` va justo antes de la espera que describe, nunca
+  // después: es lo que hace que el texto de la pantalla y lo que está
+  // ocurriendo aquí dentro sean la misma cosa.
+  emitir({ tipo: "etapa", etapa: "escribiendo", ms: plazo.transcurrido() });
+  const primero = await generarEstructural(clave, sistema, usuario, plazo, traza);
   if (!primero) return null;
 
-  const revision = await revisarBloque(clave, primero, examen);
+  traza("revisión 1:inicio", `restante ${plazo.restante()}ms`);
+  emitir({ tipo: "etapa", etapa: "revisando", ms: plazo.transcurrido() });
+  const revision = await revisarBloque(clave, primero, examen, plazo.hasta(TIEMPO_REVISOR_MS));
   registrarRevision("revisión 1", revision);
   if (revision.estado !== "con-problemas") return { bloque: primero, revision };
 
+  // La regeneración es un lujo: si no queda presupuesto se entrega el
+  // bloque que ya tenemos con su veredicto. Un bloque con un defecto
+  // señalado en `bloques_generados` es mejor que un banco genérico, y
+  // muchísimo mejor que seguir haciendo esperar al alumno.
+  if (plazo.restante() < 5_000) {
+    traza("revisión 1:sin margen para regenerar", `restante ${plazo.restante()}ms`);
+    console.warn("[revisor] No queda presupuesto para regenerar. Se entrega el bloque revisado.");
+    return { bloque: primero, revision };
+  }
+
+  emitir({ tipo: "etapa", etapa: "reescribiendo", ms: plazo.transcurrido() });
   const segundo = await generarEstructural(
     clave,
     sistema,
-    usuario + avisosParaRegenerar(revision.problemas)
+    usuario + avisosParaRegenerar(revision.problemas),
+    plazo,
+    traza
   );
   if (!segundo) return null;
 
-  const segundaRevision = await revisarBloque(clave, segundo, examen);
+  traza("revisión 2:inicio", `restante ${plazo.restante()}ms`);
+  emitir({ tipo: "etapa", etapa: "revisando", ms: plazo.transcurrido() });
+  const segundaRevision = await revisarBloque(clave, segundo, examen, plazo.hasta(TIEMPO_REVISOR_MS));
   registrarRevision("revisión 2", segundaRevision);
   if (segundaRevision.estado !== "con-problemas") {
     return { bloque: segundo, revision: segundaRevision };
@@ -451,17 +686,37 @@ function esModo(valor: unknown): valor is ModoGeneracion {
 }
 
 export async function POST(peticion: Request) {
+  const { traza, plazo: plazoPeticion } = abrirTraza();
+  traza("entrada");
+
   // El `alumnoId` llega en el cuerpo, o sea del cliente, así que no se
   // acepta sin comprobar: sin esto un alumno pediría bloques hechos con
   // la última clase y el perfil de otro. La sesión se lee de la cookie
   // firmada, igual que en las páginas.
-  const sesion = await sesionActual();
+  //
+  // Con plazo, porque debajo hay una consulta a Supabase: `sesionViva`
+  // ya falla abierto ante un error, pero un socket que no responde no
+  // es un error, es una espera sin fin.
+  let sesion;
+  try {
+    sesion = await conLimite(sesionActual(), TIEMPO_BASE_MS, "sesionActual");
+  } catch (error) {
+    traza("sesión:fallo", describir(error));
+    console.error("[generar-bloque] No se pudo comprobar la sesión:", describir(error));
+    return NextResponse.json(
+      { error: "No hemos podido comprobar tu sesión. Vuelve a intentarlo en un momento." },
+      { status: 503 }
+    );
+  }
+
   if (!sesion) {
+    traza("sesión:ausente");
     return NextResponse.json(
       { error: "Tu sesión ha caducado. Vuelve a entrar desde el enlace de tu email." },
       { status: 401 }
     );
   }
+  traza("sesión:ok", `rol=${sesion.rol}`);
 
   let cuerpo: unknown;
   try {
@@ -503,10 +758,30 @@ export async function POST(peticion: Request) {
   }
   const modo = datos.modo;
 
-  const alumno = alumnoId ? await obtenerAlumno(alumnoId) : null;
+  // Dos lecturas contra Gestión, también con plazo. Este era el punto
+  // más probable de cuelgue: pasa antes de tocar el modelo, así que un
+  // Supabase que no responde dejaba la petición parada sin llegar
+  // siquiera al try/catch que sirve el banco.
+  let alumno;
+  try {
+    traza("gestión:lectura");
+    alumno = alumnoId
+      ? await conLimite(obtenerAlumno(alumnoId), TIEMPO_BASE_MS, "obtenerAlumno")
+      : null;
+  } catch (error) {
+    traza("gestión:fallo", describir(error));
+    console.error("[generar-bloque] No se pudo leer la ficha del alumno:", describir(error));
+    return NextResponse.json(
+      { error: "No hemos podido leer tu ficha ahora mismo. Vuelve a intentarlo en un momento." },
+      { status: 503 }
+    );
+  }
+
   if (!alumno) {
+    traza("gestión:sin ficha");
     return NextResponse.json({ error: "No encontramos a ese alumno." }, { status: 404 });
   }
+  traza("gestión:ok");
 
   const { perfil, ultimaClase } = alumno;
 
@@ -565,35 +840,83 @@ export async function POST(peticion: Request) {
     usuario = usuarioContexto(ctx, perfil.ocupacion, perfil.objetivoPerfil);
   }
 
-  const clave = process.env.ANTHROPIC_API_KEY;
+  // La clave se recorta: recién rotada y pegada con un salto de línea,
+  // `fetch` lanzaría `Invalid header value` en cada intento y el alumno
+  // acabaría en el banco sin que el log dijera por qué.
+  const claveCruda = process.env.ANTHROPIC_API_KEY;
+  const clave = claveCruda?.trim();
+  traza("clave", huellaClave(claveCruda));
 
-  if (clave) {
-    const sistema = construirSistema(nivel);
-    // Las especificaciones de examen solo se revisan en el modo examen:
-    // un bloque de repaso de un alumno que prepara First no tiene por qué
-    // seguir el formato del examen.
-    const examenARevisar = modo === "examen" ? examen : null;
+  return flujoDeGeneracion(traza, async (emitir) => {
+    if (clave) {
+      const sistema = construirSistema(nivel);
+      // Las especificaciones de examen solo se revisan en el modo examen:
+      // un bloque de repaso de un alumno que prepara First no tiene por qué
+      // seguir el formato del examen.
+      const examenARevisar = modo === "examen" ? examen : null;
 
-    const generado = await generarConRevision(clave, sistema, usuario, examenARevisar);
-    if (generado) {
-      const bloque = conIdPropio(generado.bloque);
-      // Se guarda antes de responder, no en segundo plano: si la
-      // escritura se quedara a medias, el alumno vería el bloque, lo
-      // practicaría y al volver no estaría. El coste es una inserción,
-      // que al lado de una llamada a la API de Anthropic no se nota.
-      if (persistir) {
-        await guardarBloqueGenerado(alumnoId, bloque, modo, "ia", generado.revision);
+      // El presupuesto de IA es el menor entre su propio tope y lo que
+      // queda de la petición: lo gastado en sesión y ficha ya no está.
+      const plazoIa = abrirPlazo(Math.min(PRESUPUESTO_IA_MS, plazoPeticion.restante() - 5_000));
+
+      const generado = await generarConRevision(
+        clave,
+        sistema,
+        usuario,
+        examenARevisar,
+        plazoIa,
+        traza,
+        emitir
+      );
+
+      if (generado) {
+        const bloque = conIdPropio(generado.bloque);
+        // Se guarda antes de responder, no en segundo plano: si la
+        // escritura se quedara a medias, el alumno vería el bloque, lo
+        // practicaría y al volver no estaría. El coste es una inserción,
+        // que al lado de una llamada a la API de Anthropic no se nota.
+        //
+        // Con plazo, eso sí, y sin cortar la respuesta si falla: llegados
+        // aquí el bloque ya está generado y pagado. Perder la escritura
+        // es perder el historial de un bloque; perder la respuesta es
+        // dejar al alumno con el spinner después de esperarlo todo.
+        if (persistir) {
+          traza("guardado:ia");
+          emitir({ tipo: "etapa", etapa: "guardando", ms: plazoPeticion.transcurrido() });
+          await conLimiteOAlternativa(
+            guardarBloqueGenerado(alumnoId, bloque, modo, "ia", generado.revision),
+            TIEMPO_BASE_MS,
+            "guardarBloqueGenerado(ia)",
+            false
+          );
+        }
+        traza("salida:ia");
+        emitir({ tipo: "listo", bloque, origen: "ia" });
+        return;
       }
-      const salida: RespuestaGeneracion = { bloque, origen: "ia" };
-      return NextResponse.json(salida);
     }
-  }
 
-  // Sin clave, o con la generación descartada: banco de reserva.
-  // El retardo hace que la experiencia se sienta igual en la demo.
-  await esperar(ESPERA_BANCO_MS);
-  const bloque = conIdPropio(bloqueDeBanco(nivel, titulosExcluidos));
-  if (persistir) await guardarBloqueGenerado(alumnoId, bloque, modo, "banco", null);
-  const salida: RespuestaGeneracion = { bloque, origen: "banco" };
-  return NextResponse.json(salida);
+    // Sin clave, o con la generación descartada: banco de reserva.
+    traza("banco:inicio");
+    emitir({ tipo: "etapa", etapa: "banco", ms: plazoPeticion.transcurrido() });
+
+    // El retardo hace que la experiencia se sienta igual en la demo, pero
+    // solo cuando el banco respondió al instante. Si venimos de agotar el
+    // presupuesto de IA, el alumno ya ha esperado de sobra.
+    if (plazoPeticion.transcurrido() < ESPERA_BANCO_MS) {
+      await esperar(ESPERA_BANCO_MS - plazoPeticion.transcurrido());
+    }
+
+    const bloque = conIdPropio(bloqueDeBanco(nivel, titulosExcluidos));
+    if (persistir) {
+      await conLimiteOAlternativa(
+        guardarBloqueGenerado(alumnoId, bloque, modo, "banco", null),
+        TIEMPO_BASE_MS,
+        "guardarBloqueGenerado(banco)",
+        false
+      );
+    }
+    traza("salida:banco");
+    emitir({ tipo: "listo", bloque, origen: "banco" });
+  });
 }
