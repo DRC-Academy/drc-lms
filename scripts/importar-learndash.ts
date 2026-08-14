@@ -45,6 +45,7 @@ import {
   type Registro,
   type Zip,
 } from "./learndash-zip.ts";
+import { corregir, CORRECCIONES } from "./correcciones-ejercicios.ts";
 // Por ruta relativa y no por el alias `@/`: el alias lo resuelve
 // TypeScript pero no Node al ejecutar el script. `leccion-html.ts` no
 // importa nada, así que entra sin arrastrar la aplicación detrás.
@@ -455,15 +456,41 @@ function interpretarPregunta(o: Registro): Pregunta | null {
     return { enunciado: completo, tipo, opciones: [], correcta: huecos, explicacion, learndashId };
   }
 
-  // single y multiple
-  const opciones = respuestas.filter((r) => r !== "");
-  if (opciones.length < 2) return null;
-
+  // ---------------------------------------------------------------
+  // SINGLE Y MULTIPLE: LAS OPCIONES SE FILTRAN Y SE NUMERAN A LA VEZ
+  //
+  // `correcta` guarda índices SOBRE `opciones`, que es la lista ya
+  // filtrada. Numerarlos recorriendo `datos` —la lista sin filtrar, que
+  // es como estaba— los desplaza en cuanto una respuesta se quede vacía
+  // al limpiarla: con la opción 0 vacía, la correcta 2 se guarda como 2
+  // cuando en `opciones` ya es la 1, y el alumno que marca la buena
+  // recibe un "incorrecto".
+  //
+  // Y NO AVISARÍA NADIE. El índice desplazado sigue dentro de rango, así
+  // que ni la restricción del esquema ni `auditar-ejercicios.ts` lo ven:
+  // los dos pueden comprobar que apunta a UNA opción, no que apunte a la
+  // BUENA. Por eso se arregla aunque hoy no ocurra: de las 1.328
+  // preguntas single/multiple del export, ninguna tiene una respuesta
+  // que quede vacía, y por eso el import de hoy sale idéntico. Es el
+  // material del futuro el que activaría esto.
+  //
+  // Una opción vacía marcada como correcta se cae con su opción: no se
+  // puede elegir lo que no se pinta. Si era la única correcta, la
+  // pregunta se descarta abajo, que es lo que ya hacía.
+  // ---------------------------------------------------------------
+  const opciones: string[] = [];
   const correctas: number[] = [];
+
   datos.forEach((d, i) => {
+    const opcion = respuestas[i];
+    if (opcion === "") return;
+
     const marca = d._correct;
-    if (marca === true || marca === 1 || marca === "1") correctas.push(i);
+    if (marca === true || marca === 1 || marca === "1") correctas.push(opciones.length);
+    opciones.push(opcion);
   });
+
+  if (opciones.length < 2) return null;
   if (correctas.length === 0) return null;
 
   return { enunciado, tipo, opciones, correcta: correctas, explicacion, learndashId };
@@ -622,6 +649,10 @@ type Resumen = {
   imagenesConservadas: number;
   /** `<img>` de decoración eliminadas. */
   imagenesQuitadas: number;
+  /** Parches de `correcciones-ejercicios.ts` que sí encajaron. */
+  correcciones: string[];
+  /** Parches que ya no encuentran lo suyo: hay que mirarlos. */
+  avisosCorreccion: string[];
 };
 
 // ---------------------------------------------------------------
@@ -679,6 +710,8 @@ function montar(zip: Zip) {
     audiosInalcanzables: 0,
     imagenesConservadas: 0,
     imagenesQuitadas: 0,
+    correcciones: [],
+    avisosCorreccion: [],
   };
 
   const topicsUsados = new Set<number>();
@@ -856,17 +889,33 @@ function montar(zip: Zip) {
     let orden = 0;
     for (const p of preguntas) {
       if (p.tipo === "essay") resumen.ensayos++;
-      filasEjercicio.push({
-        leccion_ld: idLeccion,
-        tipo: p.tipo,
+
+      const posicion = orden++;
+      // Si la pregunta no trae `_id`, se deriva del quiz y su posición.
+      // Es estable entre ejecuciones, que es lo que necesita el upsert.
+      const learndashId = p.learndashId ?? idQuiz * 1000 + orden;
+
+      // LAS CORRECCIONES SE APLICAN AQUÍ Y NO EN `interpretarPregunta`
+      // porque es aquí donde el `learndash_id` ya es el definitivo: las
+      // preguntas sin `_id` propio lo reciben derivado del quiz, y los
+      // parches van indexados por él. Ver `correcciones-ejercicios.ts`.
+      const c = corregir(learndashId, {
         enunciado: p.enunciado,
         opciones: p.opciones,
         correcta: p.correcta,
+      });
+      resumen.correcciones.push(...c.hechas);
+      resumen.avisosCorreccion.push(...c.avisos);
+
+      filasEjercicio.push({
+        leccion_ld: idLeccion,
+        tipo: p.tipo,
+        enunciado: c.enunciado,
+        opciones: c.opciones,
+        correcta: c.correcta,
         explicacion: p.explicacion,
-        orden: orden++,
-        // Si la pregunta no trae `_id`, se deriva del quiz y su posición.
-        // Es estable entre ejecuciones, que es lo que necesita el upsert.
-        learndash_id: p.learndashId ?? idQuiz * 1000 + orden,
+        orden: posicion,
+        learndash_id: learndashId,
       });
     }
   }
@@ -1090,6 +1139,26 @@ async function principal(): Promise<void> {
         .map(([k, v]) => `${k}=${v}`)
         .join(", ")
   );
+  console.log("");
+
+  // ---------------------------------------------------------------
+  // LAS CORRECCIONES PUNTUALES
+  //
+  // Se imprimen SIEMPRE, también cuando no encajó ninguna. Un parche que
+  // deja de aplicarse en silencio es la forma de que un ejercicio
+  // arreglado vuelva a estar roto sin que nadie se entere, y esa lista
+  // vacía es la única señal de que hay que ir a mirar.
+  // ---------------------------------------------------------------
+  const esperadas = Object.keys(CORRECCIONES).length;
+  console.log(`  CORRECCIONES PUNTUALES (correcciones-ejercicios.ts): ${resumen.correcciones.length} de ${esperadas}`);
+  for (const c of resumen.correcciones) console.log(`    ✓ ${c}`);
+
+  const sinAplicar = esperadas - resumen.correcciones.length;
+  if (sinAplicar > 0) {
+    console.log(`    ⚠ ${sinAplicar} no hicieron falta o no encajaron. Si el ejercicio ya venía`);
+    console.log("      bien de LearnDash, se puede borrar su entrada del archivo.");
+  }
+  for (const a of resumen.avisosCorreccion) console.log(`    ⚠ ${a}`);
   console.log("");
 
   console.log("  cursos, uno a uno:");

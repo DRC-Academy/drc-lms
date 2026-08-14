@@ -1,6 +1,33 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export type SeccionActiva = "inicio" | "curso" | "practica";
+
+// ---------------------------------------------------------------
+// EL LOGOTIPO
+//
+// `public/logo-drc.png` mide 918×243 y ya trae las dos piezas que antes
+// se montaban aquí a mano: el símbolo y el texto "DRC Academy". Por eso
+// sustituye al conjunto y no solo al cuadrado.
+//
+// LAS MEDIDAS VAN EN EL ATRIBUTO Y EL TAMAÑO EN CSS. `width` y `height`
+// le dan al navegador la proporción antes de que la imagen llegue, así
+// que reserva la caja y la cabecera no pega el salto al cargar; la
+// altura real la ponen las clases, que es lo que cambia entre móvil y
+// escritorio. Si se pusiera solo en CSS, el hueco sería cero hasta que
+// bajara el archivo.
+//
+// 121×32 es la medida de escritorio (32 × 918/243 = 120,9). En móvil se
+// baja a 26px de alto y el ancho lo saca el navegador de la proporción:
+// 98px, que son 43 MENOS que el cuadrado + texto de antes. El logotipo
+// nuevo no aprieta la cabecera en móvil, la desahoga.
+//
+// SOBRE FONDO CLARO. Toda la tinta del archivo es verde (#008030) sobre
+// transparencia, sin una sola zona blanca: 5,19:1 sobre el blanco de
+// esta cabecera. En un fondo oscuro se caería a 2,8:1, así que si algún
+// día esta barra se pinta en oscuro hace falta otra versión del archivo.
+// ---------------------------------------------------------------
+const LOGO = { ancho: 121, alto: 32 };
 
 /**
  * Barra de marca y navegación.
@@ -51,17 +78,16 @@ export default function Cabecera({
         <div className="mx-auto flex h-[60px] max-w-contenido items-center gap-4 px-4 sm:h-[68px] sm:gap-10 sm:px-9">
           <Link
             href={alumnoId != null ? `/alumno/${alumnoId}` : "/"}
-            className="flex shrink-0 items-center gap-2.5 rounded-lg transition-opacity hover:opacity-70"
+            className="flex shrink-0 items-center rounded-lg transition-opacity hover:opacity-70"
           >
-            <span
-              aria-hidden
-              className="grid h-[26px] w-[26px] place-items-center rounded-[8px] bg-marca-verde font-display text-[13px] font-bold leading-none text-white sm:h-[30px] sm:w-[30px] sm:rounded-[9px] sm:text-[15px]"
-            >
-              D
-            </span>
-            <span className="font-display text-[15px] font-bold text-marca-tinta sm:text-[17px]">
-              DRC Academy
-            </span>
+            <Image
+              src="/logo-drc.png"
+              alt="DRC Academy"
+              width={LOGO.ancho}
+              height={LOGO.alto}
+              priority
+              className="h-[26px] w-auto sm:h-8"
+            />
           </Link>
 
           {/* En escritorio, junto al logotipo. En móvil, en la barra de abajo. */}

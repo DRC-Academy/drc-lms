@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { sesionActual } from "@/lib/sesion-servidor";
 import FormularioAcceso from "@/components/FormularioAcceso";
@@ -47,16 +48,18 @@ export default async function Acceso({ searchParams }: { searchParams: { motivo?
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[440px] flex-col justify-center px-6 py-16">
-      <div className="mb-9 flex items-center gap-2.5">
-        <span
-          aria-hidden
-          className="grid h-8 w-8 place-items-center rounded-[10px] bg-drc-verde-solido font-display text-[14px] font-bold leading-none text-white"
-        >
-          D
-        </span>
-        <span className="font-display text-[16px] font-semibold tracking-[-0.01em] text-drc-titular">
-          DRC Academy
-        </span>
+      {/* Aquí el logotipo no está dentro de una cabecera con altura fija:
+          es lo primero de la pantalla de entrar, sobre el fondo #F4F3EF
+          del body. El verde del archivo da 4,74:1 contra ese fondo. */}
+      <div className="mb-9 flex items-center">
+        <Image
+          src="/logo-drc.png"
+          alt="DRC Academy"
+          width={121}
+          height={32}
+          priority
+          className="h-[28px] w-auto sm:h-8"
+        />
       </div>
 
       <h1 className="text-balance font-display text-[34px] font-semibold leading-[1.08] tracking-[-0.02em] text-drc-titular">

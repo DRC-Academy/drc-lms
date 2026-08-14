@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 /**
@@ -39,14 +40,18 @@ export default function CabeceraLeccion({
     <header className="sticky top-0 z-30 border-b border-marca-borde bg-white/[0.94] backdrop-blur-md">
       {/* --------------------------- ESCRITORIO --------------------------- */}
       <div className="hidden h-16 items-center gap-[22px] px-6 min-[1100px]:flex">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5 transition-opacity hover:opacity-70">
-          <span
-            aria-hidden
-            className="grid h-[27px] w-[27px] place-items-center rounded-[8px] bg-marca-verde font-display text-[14px] font-bold leading-none text-white"
-          >
-            D
-          </span>
-          <span className="font-display text-[16px] font-bold text-marca-tinta">DRC Academy</span>
+        {/* Solo escritorio: este bloque es el `min-[1100px]:flex` de arriba,
+            y en móvil el logotipo lo sustituyen la flecha de volver y el
+            nombre del curso. Por eso aquí la altura es fija y no responde. */}
+        <Link href="/" className="flex shrink-0 items-center transition-opacity hover:opacity-70">
+          <Image
+            src="/logo-drc.png"
+            alt="DRC Academy"
+            width={121}
+            height={32}
+            priority
+            className="h-8 w-auto"
+          />
         </Link>
 
         <span aria-hidden className="h-[22px] w-px shrink-0 bg-marca-borde" />

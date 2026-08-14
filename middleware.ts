@@ -69,6 +69,22 @@ export const config = {
     // `_next/static` y `_next/image` son los assets del build, y los
     // ficheros sueltos de la raíz (favicon, robots) tampoco son datos
     // de nadie.
-    "/((?!acceso(?:/|$)|entrar(?:/|$)|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml).*)",
+    //
+    // `logo-drc.png` ESTÁ AQUÍ POR DOS RAZONES, Y LA SEGUNDA NO SE VE.
+    // La primera es que la pantalla de acceso lo pinta, y quien la abre
+    // todavía no tiene sesión: protegido, el logotipo de la pantalla de
+    // entrar se redirige a la pantalla de entrar.
+    //
+    // La segunda es que `next/image` no lee el archivo del disco: para
+    // optimizarlo se lo pide al propio servidor por HTTP, y esa petición
+    // vuelve a pasar por aquí. Sin sesión recibía el 307 a `/acceso`, o
+    // sea HTML, y el optimizador respondía 400 "The requested resource
+    // isn't a valid image". La imagen no salía en NINGUNA pantalla
+    // mientras el navegador no tuviera cookie, y el hueco quedaba en
+    // blanco sin un solo error en consola.
+    //
+    // `/lecciones/` NO se abre: esas son las imágenes de los ejercicios,
+    // que son el material del curso y sí van detrás de la puerta.
+    "/((?!acceso(?:/|$)|entrar(?:/|$)|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo-drc\\.png).*)",
   ],
 };
