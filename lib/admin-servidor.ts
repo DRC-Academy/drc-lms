@@ -168,7 +168,7 @@ async function alumnosCon(
   columnaFecha: string,
   desde: string | null,
   /** Un `eq` opcional, como `["origen", "lms"]`. */
-  igual?: readonly [string, string]
+  igual?: readonly [string, string | boolean]
 ): Promise<Set<string> | null> {
   let consulta = baseLms().from(tabla).select("alumno_id");
   if (igual) consulta = consulta.eq(igual[0], igual[1]);
@@ -186,9 +186,18 @@ async function alumnosCon(
   return salida;
 }
 
-/** Los bloques generados en el periodo, con su modo. */
+/**
+ * Los bloques generados en el periodo, con su modo.
+ *
+ * Sin los del equipo: los que se generan revisando una ficha son
+ * nuestros, no del alumno, y contarlos aquí inflaría el uso por modo con
+ * el trabajo de mirar el producto.
+ */
 async function bloquesDelPeriodo(desde: string | null): Promise<FilaBloque[] | null> {
-  let consulta = baseLms().from("bloques_generados").select("alumno_id, modo");
+  let consulta = baseLms()
+    .from("bloques_generados")
+    .select("alumno_id, modo")
+    .eq("generado_por_equipo", false);
   if (desde) consulta = consulta.gte("generado_en", desde);
 
   const { data, error } = await consulta.returns<FilaBloque[]>();
@@ -339,7 +348,10 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
       alumnosCon("progreso_lecciones", "completada_en", desde, ["origen", "lms"]),
       // Sin periodo: "nunca ha completado" es un estado, no una ventana.
       alumnosCon("progreso_bloques", "completado_en", null),
-      alumnosCon("bloques_generados", "generado_en", null),
+      // Sin los del equipo, por lo mismo que en `bloquesDelPeriodo`: un
+      // alumno al que le generamos un bloque para revisar no ha generado
+      // nada, y aparecería como que sí.
+      alumnosCon("bloques_generados", "generado_en", null, ["generado_por_equipo", false]),
       sesionesDelPeriodo(desde),
       intentosDelPeriodo(desde),
     ]);

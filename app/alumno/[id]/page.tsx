@@ -72,7 +72,9 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   const [datos, progreso, generados, ultimasGeneraciones] = await Promise.all([
     obtenerAlumno(params.id),
     leerProgresoAlumno(params.id),
-    leerBloquesGenerados(params.id),
+    // Con el rol: los bloques que el equipo genera para revisar solo
+    // salen en la lista de quien los generó. Al alumno no le aparecen.
+    leerBloquesGenerados(params.id, sesion.rol === "admin"),
     leerUltimaGeneracionPorModo(params.id),
   ]);
 

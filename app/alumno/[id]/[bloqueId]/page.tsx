@@ -27,7 +27,12 @@ export default async function PaginaBloque({
   // solo existían en el localStorage del navegador y había que buscarlos
   // desde el cliente, con su pantalla de carga; ahora están en la base y
   // se resuelven aquí, así que la página llega ya con los ejercicios.
-  const bloque = getBloque(params.bloqueId) ?? (await buscarBloqueGenerado(params.id, params.bloqueId));
+  //
+  // El equipo abre además los que generó él para revisar, que son los
+  // que no salen en la práctica del alumno.
+  const bloque =
+    getBloque(params.bloqueId) ??
+    (await buscarBloqueGenerado(params.id, params.bloqueId, sesion.rol === "admin"));
 
   const nombre = datos.perfil?.nombre ?? "";
 
@@ -50,20 +55,20 @@ export default async function PaginaBloque({
         <div className="mx-auto max-w-md px-6 pt-16 text-center">
           <div className="tarjeta">
             <h1 className="font-display text-[24px] font-semibold leading-tight text-drc-titular">
-              {sesion.rol === "admin" ? "Este bloque no se guardó" : "Este bloque ya no está aquí"}
+              Este bloque ya no está aquí
             </h1>
-            {/* Para el equipo el motivo es otro y conviene decirlo: los
-                bloques que genera un administrador no se persisten, para
-                que no aparezcan en la práctica del alumno. Sin esta
-                distinción, el aviso de "ya no está aquí" le haría buscar
-                una avería que no existe. */}
+            {/* Para el equipo el motivo casi siempre es otro y conviene
+                decirlo: hasta hace poco los bloques que generaba un
+                administrador no se guardaban, así que los de entonces no
+                se pueden abrir. Los de ahora sí. Sin esta distinción, el
+                aviso le haría buscar una avería que no existe. */}
             <p className="mt-3 text-[15px] leading-[1.55] text-drc-cuerpo">
               {sesion.rol === "admin"
-                ? "Los bloques que genera el equipo no se guardan: así no aparecen en la práctica del alumno. Puedes verlo en la ficha, pero no abrirlo."
+                ? "Los bloques que el equipo generaba antes no llegaban a guardarse, así que no hay nada que abrir. Genera uno nuevo desde la ficha y ese sí se puede revisar entero."
                 : "No encontramos este bloque entre los tuyos. Genera uno nuevo y seguimos donde lo dejaste."}
             </p>
             <Link href={`/alumno/${params.id}`} className="btn btn-primario mt-7 min-h-[48px] w-full">
-              Volver a mis bloques
+              {sesion.rol === "admin" ? "Volver a la ficha" : "Volver a mis bloques"}
             </Link>
           </div>
         </div>
