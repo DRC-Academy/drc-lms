@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { formatearFecha, nivelDeBloque } from "@/lib/perfil";
-import { calcularTarjetas, tieneContexto } from "@/lib/modos";
+import { calcularTarjetas, tieneContexto, urlFormulario } from "@/lib/modos";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
 import { UMBRAL_DOMINADO, type RegistroProgreso } from "@/lib/progreso";
 import {
@@ -134,7 +134,14 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   // La invitación al perfil desaparece en cuanto hay con qué ambientar
   // los ejercicios, y entonces el banner pasa a ancho completo.
-  const invitacionPerfil = !tieneContexto(perfil);
+  //
+  // Y DESAPARECE TAMBIÉN SI NO HAY A DÓNDE MANDARLE. La tarjeta es un
+  // botón con una explicación alrededor: sin token utilizable el botón
+  // abriría una pantalla rota, y entonces lo que sobra es la tarjeta
+  // entera, no solo el botón. Son 123 de los 169 alumnos, así que esto
+  // no es un caso raro: es la mayoría. Ver `urlFormulario()`.
+  const enlaceFormulario = urlFormulario(process.env.URL_FORMULARIO_BASE, perfil?.formToken ?? null);
+  const invitacionPerfil = !tieneContexto(perfil) && enlaceFormulario !== null;
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
@@ -181,7 +188,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
               el alumno acaba de ver a dónde tiene que ir. */}
           {invitacionPerfil && (
             <div className="hidden lg:block">
-              <TarjetaPerfil />
+              <TarjetaPerfil url={enlaceFormulario} />
             </div>
           )}
         </div>
@@ -212,7 +219,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
             acaba de elegir su práctica. */}
         {invitacionPerfil && (
           <div className="mt-3 lg:hidden">
-            <TarjetaPerfil />
+            <TarjetaPerfil url={enlaceFormulario} />
           </div>
         )}
       </main>

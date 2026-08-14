@@ -48,6 +48,9 @@ function aPerfil(fila: Fila): PerfilAlumno {
     focoRecomendado: comoTextoOpcional(fila.foco_recomendado),
     respuestasFormulario: asObject(fila.respuestas_formulario),
     tienePerfil: comoBooleano(fila.tiene_perfil),
+    // `comoTextoOpcional` devuelve null si no es una cadena, así que
+    // aguanta que la columna todavía no exista en la vista de Gestión.
+    formToken: comoTextoOpcional(fila.form_token),
   };
 }
 

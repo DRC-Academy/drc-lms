@@ -1,6 +1,6 @@
 "use client";
 
-import { URL_FORMULARIO, type ModoGeneracion, type TarjetaModo } from "@/lib/modos";
+import type { ModoGeneracion, TarjetaModo } from "@/lib/modos";
 import type { EtapaGeneracion } from "@/lib/generacion";
 import AvanceGeneracion from "@/components/AvanceGeneracion";
 
@@ -36,10 +36,19 @@ function IconoGirando() {
   );
 }
 
-/** Enlace al formulario, que vive en Gestión: el LMS no escribe. */
-function EnlaceFormulario({ className }: { className: string }) {
+/**
+ * Enlace al formulario, que vive en Gestión: el LMS no escribe.
+ *
+ * `url` es null cuando el alumno no tiene un token utilizable, y
+ * entonces aquí no se pinta nada. El que lo llama decide qué poner en su
+ * lugar, porque no es lo mismo quedarse sin el botón de una invitación
+ * —que entonces sobra entera— que quedarse sin él en la tarjeta que es
+ * la única que ese alumno tiene delante.
+ */
+function EnlaceFormulario({ url, className }: { url: string | null; className: string }) {
+  if (url === null) return null;
   return (
-    <a href={URL_FORMULARIO} target="_blank" rel="noopener noreferrer" className={className}>
+    <a href={url} target="_blank" rel="noopener noreferrer" className={className}>
       Completar mi perfil
     </a>
   );
@@ -48,8 +57,17 @@ function EnlaceFormulario({ className }: { className: string }) {
 /**
  * Tarjeta única para quien todavía no tiene de dónde tirar. No es un
  * estado de error ni un bloqueo: es una invitación, y cuenta qué gana.
+ *
+ * ESTA NO SE PUEDE OCULTAR CUANDO NO HAY ENLACE, y es la diferencia con
+ * `TarjetaPerfil`. Aquella es un extra en una pantalla llena; esta es lo
+ * ÚNICO que hay delante de un alumno sin práctica disponible. Quitarla
+ * dejaría la sección en blanco, sin decir por qué.
+ *
+ * Así que sin token se queda el texto y se cambia el botón por quién se
+ * lo va a mandar, que es la verdad: los tokens los emite Gestión, el LMS
+ * no puede crearlos.
  */
-function TarjetaSinDatos() {
+function TarjetaSinDatos({ url }: { url: string | null }) {
   return (
     <article className="tarjeta relative flex flex-col overflow-hidden">
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-marca-verde" />
@@ -62,7 +80,17 @@ function TarjetaSinDatos() {
         con tus situaciones de verdad en lugar de frases de libro. Se tarda dos minutos y lo
         notas desde el primer bloque.
       </p>
-      <EnlaceFormulario className="btn btn-primario mt-5 min-h-[46px] w-full wide:w-auto wide:self-start" />
+
+      {url === null ? (
+        <p className="mt-5 text-[14px] leading-[1.55] text-drc-cuerpo">
+          Tu profesor te enviará el enlace para completarlo.
+        </p>
+      ) : (
+        <EnlaceFormulario
+          url={url}
+          className="btn btn-primario mt-5 min-h-[46px] w-full wide:w-auto wide:self-start"
+        />
+      )}
     </article>
   );
 }
@@ -78,6 +106,7 @@ export default function TarjetasGeneracion({
   esEspera,
   onGenerar,
   onReintentar,
+  urlFormulario,
 }: {
   tarjetas: TarjetaModo[];
   estado: EstadoGeneracion;
@@ -94,13 +123,25 @@ export default function TarjetasGeneracion({
   esEspera: boolean;
   onGenerar: (modo: ModoGeneracion) => void;
   onReintentar: () => void;
+  /**
+   * El enlace al formulario de Gestión, ya montado con el token del
+   * alumno. Null si no tiene ninguno utilizable: entonces no hay botón
+   * en ningún sitio. Lo resuelve el servidor, ver `urlFormulario()` en
+   * `lib/modos.ts`.
+   */
+  urlFormulario: string | null;
 }) {
   const generando = estado === "generando";
 
   // Quien ya tiene alguna tarjeta pero no la de contexto puede desbloquearla.
   // Se ofrece en una línea discreta, nunca como candado ni como requisito.
+  //
+  // Sin enlace la línea no se pinta: es una invitación de una frase, y
+  // una invitación que no lleva a ningún sitio solo da envidia.
   const puedeSumarContexto =
-    tarjetas.length > 0 && !tarjetas.some((tarjeta) => tarjeta.modo === "contexto");
+    urlFormulario !== null &&
+    tarjetas.length > 0 &&
+    !tarjetas.some((tarjeta) => tarjeta.modo === "contexto");
 
   return (
     <section aria-labelledby="titulo-practica">
@@ -120,7 +161,7 @@ export default function TarjetasGeneracion({
 
       {tarjetas.length === 0 ? (
         <div className="mt-5">
-          <TarjetaSinDatos />
+          <TarjetaSinDatos url={urlFormulario} />
         </div>
       ) : (
         <>
@@ -183,7 +224,10 @@ export default function TarjetasGeneracion({
             <p className="mt-4 text-[14px] leading-[1.55] text-drc-cuerpo">
               ¿Nos cuentas a qué te dedicas? Con eso te preparamos también ejercicios con tus
               situaciones del día a día.{" "}
-              <EnlaceFormulario className="font-medium text-drc-verde-texto underline underline-offset-2 transition-colors hover:text-drc-enlace-hover" />
+              <EnlaceFormulario
+                url={urlFormulario}
+                className="font-medium text-drc-verde-texto underline underline-offset-2 transition-colors hover:text-drc-enlace-hover"
+              />
             </p>
           )}
         </>

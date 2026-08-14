@@ -718,6 +718,19 @@ export type PerfilAlumno = {
   /** Llega como string JSON desde PostgREST; aquí ya viene parseado. */
   respuestasFormulario: Record<string, unknown> | null;
   tienePerfil: boolean;
+  /**
+   * Token del formulario de perfil que este alumno puede usar ahora, o
+   * null si no tiene ninguno utilizable —que es el caso de 123 de los
+   * 169—. Lo resuelve Gestión en la propia vista: el más reciente sin
+   * completar y sin caducar. Aquí no se decide nada, solo se lee.
+   *
+   * Null también mientras Gestión no haya ejecutado
+   * `supabase/gestion-vista-perfil-token.sql`: la vista se lee con
+   * `select("*")`, así que la columna que todavía no existe llega
+   * `undefined` y el botón simplemente no se pinta. El orden de
+   * despliegue da igual.
+   */
+  formToken: string | null;
 };
 
 /**

@@ -1,5 +1,3 @@
-import { URL_FORMULARIO } from "@/lib/modos";
-
 /**
  * La invitación a completar el perfil.
  *
@@ -13,8 +11,12 @@ import { URL_FORMULARIO } from "@/lib/modos";
  *
  * El formulario vive en Gestión —el LMS no escribe en esa base—, así que
  * esto es un enlace externo y no una ruta de la aplicación.
+ *
+ * `url` LLEGA HECHA Y NUNCA ES NULL. Quien decide si hay enlace es la
+ * página, en el servidor, y si no lo hay no llega a montar esta tarjeta:
+ * sin el botón no queda nada que enseñar, solo una promesa sin puerta.
  */
-export default function TarjetaPerfil() {
+export default function TarjetaPerfil({ url }: { url: string }) {
   return (
     <section className="rounded-[16px] border-[1.5px] border-dashed border-marca-perfilBorde bg-marca-perfil p-[18px] lg:p-5">
       <span className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-amarilloTexto lg:text-[11px]">
@@ -30,7 +32,7 @@ export default function TarjetaPerfil() {
       </p>
 
       <a
-        href={URL_FORMULARIO}
+        href={url}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-3 block rounded-full border-[1.5px] border-marca-verde px-[18px] py-3 text-center text-[14.5px] font-semibold text-marca-verdeOsc transition-colors hover:bg-marca-verde hover:text-white lg:mt-3.5 lg:inline-block lg:py-[9px] lg:text-[14px]"

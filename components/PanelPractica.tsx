@@ -27,6 +27,7 @@ export default function PanelPractica({
   progreso,
   avance,
   generadosIniciales,
+  urlFormulario,
 }: {
   alumnoId: string;
   tarjetas: TarjetaModo[];
@@ -34,6 +35,8 @@ export default function PanelPractica({
   progreso: ProgresoBloques;
   avance: AvanceBloques;
   generadosIniciales: Bloque[];
+  /** Enlace al formulario de Gestión con el token del alumno, o null. */
+  urlFormulario: string | null;
 }) {
   const {
     estado,
@@ -72,6 +75,7 @@ export default function PanelPractica({
         esEspera={esEspera}
         onGenerar={generar}
         onReintentar={reintentar}
+        urlFormulario={urlFormulario}
       />
 
       {/* `|| generando` porque el primer bloque de un alumno nace aquí: sin

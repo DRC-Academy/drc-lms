@@ -19,11 +19,35 @@ import {
 } from "@/lib/limites";
 
 // ---------------------------------------------------------------
-// PENDIENTE: URL del formulario de perfil de DRC Gestión.
-// El LMS no escribe en la base, así que el formulario vive en Gestión
-// y aquí solo enlazamos. Sustituir por la definitiva cuando se decida.
+// EL ENLACE AL FORMULARIO DE PERFIL
+//
+// Vive en Gestión —el LMS no escribe en esa base— y lleva el token en la
+// ruta: <base>/formulario/<token>. El token sale de
+// `vista_perfil_alumno.form_token`, que Gestión ya devuelve resuelto: el
+// utilizable más reciente, o NULL si no hay ninguno. Ver
+// `supabase/gestion-vista-perfil-token.sql`.
+//
+// SIN TOKEN NO HAY ENLACE, Y SIN ENLACE NO HAY BOTÓN. Devolver null aquí
+// es lo que apaga la invitación entera en las dos pantallas. De los 169
+// alumnos, 123 no tienen token utilizable: o son anteriores al 10-07-2026
+// —cuando Gestión empezó a emitirlos— o el suyo ya caducó. Enseñarles un
+// botón que abre una pantalla rota es peor que no enseñarles nada.
+//
+// LA BASE VIENE DEL ENTORNO. Hoy es un despliegue de Vercel; el día que
+// Gestión tenga dominio propio se cambia la variable y no se toca el
+// repositorio. Si no está puesta, no hay enlace: mismo camino que no
+// tener token, y por la misma razón.
+//
+// FUNCIÓN PURA, `base` ENTRA POR PARÁMETRO. Este módulo lo importan
+// componentes de cliente, y `process.env.URL_FORMULARIO_BASE` —sin
+// `NEXT_PUBLIC_`— allí valdría `undefined` en silencio: el botón
+// desaparecería para todos sin un solo error. Leyéndola en el servidor y
+// pasándola, el que no la tenga se entera al compilar.
 // ---------------------------------------------------------------
-export const URL_FORMULARIO = "https://gestion.drcacademy.es/perfil";
+export function urlFormulario(base: string | undefined, token: string | null): string | null {
+  if (!base || !token) return null;
+  return `${base.replace(/\/+$/, "")}/formulario/${encodeURIComponent(token)}`;
+}
 
 export type ModoGeneracion = "repaso" | "examen" | "contexto";
 
