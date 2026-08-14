@@ -756,19 +756,24 @@ export async function POST(peticion: Request) {
   }
 
   /**
-   * Un bloque generado por el equipo NO se guarda.
+   * Un bloque generado por el equipo SÍ se guarda, pero marcado.
    *
-   * El administrador abre la ficha de un alumno y genera un bloque para
-   * ver cómo queda. Si eso se persistiera, el alumno entraría después y
-   * se encontraría en su práctica un bloque que no pidió, quizá sobre un
-   * tema que no le toca. Se genera, se devuelve, se mira y no queda
-   * rastro.
+   * Antes no se guardaba en absoluto, y el resultado era que quien lo
+   * generaba no podía abrirlo: la ficha lo enseñaba mientras durase la
+   * visita y al pulsar «Empezar» el servidor no lo encontraba. Se
+   * generaba un bloque para revisarlo y era justo lo único que no se
+   * podía hacer con él.
    *
-   * Es el mismo criterio que en `app/api/progreso`: lo que hace el
-   * equipo mientras revisa no es actividad del alumno. La diferencia es
-   * que aquello solo ensuciaba datos y esto lo vería el alumno.
+   * Lo que se conserva del criterio anterior es el motivo real: el
+   * alumno no pidió ese bloque y no tiene por qué encontrárselo en su
+   * práctica. Eso ahora lo resuelve `generado_por_equipo`, que lo deja
+   * fuera de su lista, de su espera entre generaciones y del panel, sin
+   * dejarlo fuera de la base.
+   *
+   * Sigue siendo el mismo criterio que en `app/api/progreso`: lo que
+   * hace el equipo mientras revisa no es actividad del alumno.
    */
-  const persistir = sesion.rol === "alumno";
+  const porEquipo = sesion.rol !== "alumno";
 
   if (!esModo(datos.modo)) {
     return NextResponse.json(
@@ -868,10 +873,11 @@ export async function POST(peticion: Request) {
   // de verdad, la que aguanta una pestaña vieja o una petición a mano.
   //
   // Solo para alumnos. El rol sale de la cookie firmada —el mismo dato
-  // que decide `persistir` unas líneas más arriba— así que no hay nada
+  // que decide `porEquipo` unas líneas más arriba— así que no hay nada
   // que el cliente pueda mandar para saltárselo, y la superficie es
   // exactamente la del acceso de administrador, que ya da mucho más.
-  // Además, lo que genera el equipo no se guarda: no gasta cupo de
+  // Además, lo que genera el equipo se guarda marcado y
+  // `leerUltimaGeneracionPorModo` no lo mira: no le gasta la espera a
   // nadie ni desplaza el conteo de un alumno.
   // ---------------------------------------------------------------
   if (sesion.rol === "alumno") {
@@ -943,24 +949,26 @@ export async function POST(peticion: Request) {
         // aquí el bloque ya está generado y pagado. Perder la escritura
         // es perder el historial de un bloque; perder la respuesta es
         // dejar al alumno con el spinner después de esperarlo todo.
-        if (persistir) {
-          traza("guardado:ia");
-          emitir({ tipo: "etapa", etapa: "guardando", ms: plazoPeticion.transcurrido() });
-          await conLimiteOAlternativa(
-            // El veredicto MÁS cuántos intentos costó. Hasta ahora un
-            // bloque que salió a la primera y otro que necesitó dos
-            // quedaban los dos como "apto", indistinguibles, así que la
-            // tasa de regeneración no se podía medir. Esto empieza a
-            // contar desde el despliegue: lo anterior no se reconstruye.
-            guardarBloqueGenerado(alumnoId, bloque, modo, "ia", {
-              ...generado.revision,
-              intentos: generado.intentos,
-            }),
-            TIEMPO_BASE_MS,
-            "guardarBloqueGenerado(ia)",
-            false
-          );
-        }
+        traza("guardado:ia");
+        emitir({ tipo: "etapa", etapa: "guardando", ms: plazoPeticion.transcurrido() });
+        await conLimiteOAlternativa(
+          // El veredicto MÁS cuántos intentos costó. Hasta ahora un
+          // bloque que salió a la primera y otro que necesitó dos
+          // quedaban los dos como "apto", indistinguibles, así que la
+          // tasa de regeneración no se podía medir. Esto empieza a
+          // contar desde el despliegue: lo anterior no se reconstruye.
+          guardarBloqueGenerado(
+            alumnoId,
+            bloque,
+            modo,
+            "ia",
+            { ...generado.revision, intentos: generado.intentos },
+            porEquipo
+          ),
+          TIEMPO_BASE_MS,
+          "guardarBloqueGenerado(ia)",
+          false
+        );
         traza("salida:ia");
         emitir({ tipo: "listo", bloque, origen: "ia" });
         return;
@@ -979,14 +987,12 @@ export async function POST(peticion: Request) {
     }
 
     const bloque = conIdPropio(bloqueDeBanco(nivel, titulosExcluidos));
-    if (persistir) {
-      await conLimiteOAlternativa(
-        guardarBloqueGenerado(alumnoId, bloque, modo, "banco", null),
-        TIEMPO_BASE_MS,
-        "guardarBloqueGenerado(banco)",
-        false
-      );
-    }
+    await conLimiteOAlternativa(
+      guardarBloqueGenerado(alumnoId, bloque, modo, "banco", null, porEquipo),
+      TIEMPO_BASE_MS,
+      "guardarBloqueGenerado(banco)",
+      false
+    );
     traza("salida:banco");
     emitir({ tipo: "listo", bloque, origen: "banco" });
   });

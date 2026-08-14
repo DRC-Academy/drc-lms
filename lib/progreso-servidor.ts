@@ -139,12 +139,24 @@ export async function leerAvanceAlumno(
  * Se validan al leerlos, igual que se hacía al sacarlos de localStorage:
  * lo guardado pudo escribirse con otra versión del validador y un bloque
  * con la forma cambiada rompería la práctica a mitad.
+ *
+ * Por defecto se dejan fuera los que generó el equipo revisando: el
+ * alumno no pidió esos ejercicios y encontrárselos en su práctica sería
+ * material que no le toca. Se piden con `incluirEquipo` desde la ficha
+ * cuando quien mira es el equipo, que sí necesita verlos para abrirlos.
  */
-export async function leerBloquesGenerados(alumnoId: string): Promise<Bloque[]> {
-  const { data, error } = await baseLms()
+export async function leerBloquesGenerados(
+  alumnoId: string,
+  incluirEquipo = false
+): Promise<Bloque[]> {
+  let consulta = baseLms()
     .from("bloques_generados")
     .select("bloque_clave, contenido, generado_en")
-    .eq("alumno_id", alumnoId)
+    .eq("alumno_id", alumnoId);
+
+  if (!incluirEquipo) consulta = consulta.eq("generado_por_equipo", false);
+
+  const { data, error } = await consulta
     .order("generado_en", { ascending: false })
     .limit(20)
     .returns<FilaBloque[]>();
@@ -172,6 +184,10 @@ export async function leerBloquesGenerados(alumnoId: string): Promise<Bloque[]> 
  * delante igual. Descontarlo solo cuando la IA acierta sería cargarle
  * nuestra tasa de fallo como si fuera suya.
  *
+ * Lo que generó el equipo NO cuenta, y esto no es un detalle: sin el
+ * filtro, alguien del equipo revisando una ficha le gastaría al alumno
+ * el repaso del día sin que ninguno de los dos se enterara.
+ *
  * Va sobre `idx_bloques_generados_alumno (alumno_id, generado_en desc)`,
  * que ya estaba creado justo para esto.
  */
@@ -188,6 +204,7 @@ export async function leerUltimaGeneracionPorModo(
     .from("bloques_generados")
     .select("modo, generado_en")
     .eq("alumno_id", alumnoId)
+    .eq("generado_por_equipo", false)
     .order("generado_en", { ascending: false })
     .returns<{ modo: string; generado_en: string }[]>();
 
@@ -208,18 +225,24 @@ export async function leerUltimaGeneracionPorModo(
  * Un bloque generado concreto. Filtra por alumno además de por clave:
  * la clave es única, pero sin el `eq` de alumno bastaría con adivinarla
  * para leer el bloque de otro.
+ *
+ * `incluirEquipo` mantiene la simetría con la lista: lo que el alumno no
+ * ve entre sus bloques tampoco se le abre escribiendo la dirección.
  */
 export async function buscarBloqueGenerado(
   alumnoId: string,
-  bloqueClave: string
+  bloqueClave: string,
+  incluirEquipo = false
 ): Promise<Bloque | null> {
-  const { data, error } = await baseLms()
+  let consulta = baseLms()
     .from("bloques_generados")
     .select("bloque_clave, contenido, generado_en")
     .eq("alumno_id", alumnoId)
-    .eq("bloque_clave", bloqueClave)
-    .limit(1)
-    .returns<FilaBloque[]>();
+    .eq("bloque_clave", bloqueClave);
+
+  if (!incluirEquipo) consulta = consulta.eq("generado_por_equipo", false);
+
+  const { data, error } = await consulta.limit(1).returns<FilaBloque[]>();
 
   if (!registrar("No se pudo buscar el bloque generado", error)) return null;
 
@@ -302,13 +325,18 @@ export async function borrarAvance(alumnoId: string, bloqueClave: string): Promi
  * id no duplica: se ignora el conflicto. La generación produce un
  * sufijo aleatorio por bloque, de modo que esto solo salta si la misma
  * respuesta se guarda dos veces.
+ *
+ * `porEquipo` marca los que se generan revisando desde el panel. Se
+ * guardan igual —hay que poder abrirlos— pero quedan fuera de la
+ * práctica del alumno y de las cuentas que se hacen sobre ella.
  */
 export async function guardarBloqueGenerado(
   alumnoId: string,
   bloque: Bloque,
   modo: ModoGeneracion,
   origen: OrigenBloque,
-  revision: unknown = null
+  revision: unknown = null,
+  porEquipo = false
 ): Promise<boolean> {
   const { error } = await baseLms()
     .from("bloques_generados")
@@ -321,6 +349,7 @@ export async function guardarBloqueGenerado(
         contenido: bloque,
         revision,
         origen,
+        generado_por_equipo: porEquipo,
       },
       { onConflict: "bloque_clave", ignoreDuplicates: true }
     );

@@ -211,6 +211,14 @@ create table if not exists public.bloques_generados (
   origen        text        not null,
   generado_en   timestamptz not null default now(),
 
+  -- Lo generó el equipo desde la ficha de un alumno, para revisarlo.
+  --
+  -- Se guarda igual que el del alumno —si no, no habría forma de
+  -- abrirlo y revisarlo, que es justo para lo que se generó— pero
+  -- marcado, porque no es suyo: no sale en su práctica, no consume su
+  -- espera entre generaciones y no cuenta como adopción en el panel.
+  generado_por_equipo boolean not null default false,
+
   constraint bloques_generados_modo_valido
     -- Cuando entren los cursos de LearnDash hará falta un modo más.
     -- Es un CHECK y no un ENUM justamente por eso: añadir un valor es
@@ -233,6 +241,15 @@ create table if not exists public.bloques_generados (
 
 comment on table public.bloques_generados is
   'Bloques generados por IA o sacados del banco. Los del catálogo de lib/data.ts NO están aquí: viven en el código.';
+
+-- Para las bases que ya existen: `create table if not exists` no añade
+-- columnas a una tabla que ya está, así que la que se incorporó después
+-- se pone aquí. Es idempotente, como el resto del archivo.
+alter table public.bloques_generados
+  add column if not exists generado_por_equipo boolean not null default false;
+
+comment on column public.bloques_generados.generado_por_equipo is
+  'true = lo generó el equipo revisando. No sale en la práctica del alumno, no gasta su espera entre generaciones y no cuenta en el panel.';
 
 
 -- ===============================================================
