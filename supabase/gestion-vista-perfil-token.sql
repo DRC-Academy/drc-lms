@@ -6,9 +6,24 @@
 -- porque el LMS depende de lo que hace, y si vive en el otro lado nadie
 -- de este recuerda que existe.
 --
--- QUÉ AÑADE: una columna `form_token` al final de la vista, con el token
--- del formulario de perfil que ese alumno puede usar AHORA MISMO. NULL
--- si no tiene ninguno utilizable, que hoy son 123 de los 169.
+-- QUÉ AÑADE: dos columnas al final de la vista.
+--
+--   form_token           el token que ese alumno puede usar AHORA MISMO,
+--                        o NULL si no tiene ninguno utilizable. Hoy son
+--                        123 de los 169.
+--
+--   form_token_enviado_en  cuándo se le emitió el último token, EN EL
+--                        ESTADO QUE SEA. NULL si nunca se le emitió
+--                        ninguno: hoy, 87 de los 169.
+--
+-- LA SEGUNDA COLUMNA EXISTE PARA NO MENTIRLE AL ALUMNO. Sin ella, el
+-- LMS solo sabe "tiene token utilizable: sí o no", y el aviso que ve
+-- quien no lo tiene tendría que elegir entre dos frases que son falsas
+-- la mitad de las veces: "tu profesor te lo ENVIÓ" es mentira para los
+-- 87 que nunca recibieron nada, y "te lo ENVIARÁ" es raro para los 4 que
+-- sí lo recibieron y se les caducó. Con la fecha, cada uno lee lo suyo.
+--
+-- No es el token ni nada aprovechable: es una marca de tiempo.
 --
 -- POR QUÉ EN LA VISTA Y NO LEYENDO `form_tokens` DESDE EL LMS. El LMS
 -- entra en Gestión por `lib/supabase-server.ts`, que solo deja leer dos
@@ -90,9 +105,9 @@ begin
     from information_schema.columns
     where table_schema = 'public'
       and table_name   = 'vista_perfil_alumno'
-      and column_name  = 'form_token'
+      and column_name in ('form_token', 'form_token_enviado_en')
   ) then
-    raise notice 'vista_perfil_alumno ya tiene form_token. No se toca nada.';
+    raise notice 'vista_perfil_alumno ya tiene las columnas del formulario. No se toca nada.';
     return;
   end if;
 
@@ -125,8 +140,12 @@ begin
     create or replace view public.vista_perfil_alumno%s as
     select
       base.*,
-      tok.token as form_token
+      tok.token         as form_token,
+      ult.created_at    as form_token_enviado_en
     from (%s) as base
+
+    -- El utilizable: sin completar y sin caducar. Si hay varios, el
+    -- último emitido.
     left join lateral (
       select ft.token
       from public.form_tokens ft
@@ -136,9 +155,20 @@ begin
       order by ft.created_at desc
       limit 1
     ) as tok on true
+
+    -- El último de todos, sirva o no. Es lo que distingue "nunca se le
+    -- envió nada" de "se le envió y ya no vale", que es lo único que
+    -- necesita el aviso del LMS para no mentir.
+    left join lateral (
+      select ft.created_at
+      from public.form_tokens ft
+      where ft.student_id = base.alumno_id
+      order by ft.created_at desc
+      limit 1
+    ) as ult on true
   $consulta$, con_with, definicion);
 
-  raise notice 'vista_perfil_alumno ampliada con form_token.';
+  raise notice 'vista_perfil_alumno ampliada con form_token y form_token_enviado_en.';
 end
 $$;
 
@@ -151,6 +181,7 @@ $$;
 --   alumnos            169
 --   con_token           46
 --   veran_el_boton      45
+--   recibieron_alguno   82
 --
 -- `con_token` (46) es uno más que `veran_el_boton` (45) y está bien: hay
 -- un alumno que ya tiene ocupación rellenada y además un token vigente
@@ -163,13 +194,14 @@ $$;
 -- ---------------------------------------------------------------
 
 select
-  count(*)                                                  as alumnos,
-  count(form_token)                                         as con_token,
+  count(*)                      as alumnos,
+  count(form_token)             as con_token,
   count(*) filter (
     where form_token is not null
       and coalesce(btrim(ocupacion), '')       = ''
       and coalesce(btrim(objetivo_perfil), '') = ''
-  )                                                         as veran_el_boton
+  )                             as veran_el_boton,
+  count(form_token_enviado_en)  as recibieron_alguno
 from public.vista_perfil_alumno;
 
 

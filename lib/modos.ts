@@ -49,6 +49,51 @@ export function urlFormulario(base: string | undefined, token: string | null): s
   return `${base.replace(/\/+$/, "")}/formulario/${encodeURIComponent(token)}`;
 }
 
+// ---------------------------------------------------------------
+// Y CUANDO NO HAY ENLACE, EL AVISO
+//
+// La tarjeta del perfil no desaparece por no tener botón: son 91 de los
+// 136 alumnos sin contexto, o sea la mayoría, y dejarles el hueco en
+// blanco no explica nada. Lo que cambia es que en vez de una acción
+// suya, dice de quién depende.
+//
+// DOS FRASES PORQUE HAY DOS SITUACIONES, y la diferencia importa:
+//
+//   · 4 alumnos SÍ recibieron un formulario y se les caducó —duran 30
+//     días—. A esos el enlace del correo ya no les abre nada, así que
+//     mandarlos a buscarlo sin más sería mandarlos a una pantalla
+//     muerta. Se les nombra la fecha y se les dice que lo pidan otra vez.
+//
+//   · 87 no han recibido nunca ninguno: son anteriores al 10-07-2026,
+//     cuando Gestión empezó a emitirlos. A esos, "revisa tu correo" los
+//     manda a buscar algo que no existe.
+//
+// El texto se redacta aquí y no en el componente por lo mismo que las
+// esperas de las tarjetas: depende del profesor y de una fecha, que son
+// datos de este lado. El componente solo pinta.
+// ---------------------------------------------------------------
+
+export type AvisoFormulario = { titulo: string; cuerpo: string };
+
+export function avisoFormulario(profesor: string, enviadoEn: string | null): AvisoFormulario {
+  // Por el nombre de pila, como el saludo. Vacío en los pocos alumnos
+  // sin profesor asignado, y entonces la frase empieza por "Tu profesor".
+  const suyo = profesor.trim().split(" ")[0] ?? "";
+  const quien = suyo === "" ? "Tu profesor" : suyo;
+
+  if (enviadoEn === null) {
+    return {
+      titulo: "¿Nos cuentas a qué te dedicas?",
+      cuerpo: `${quien} te enviará por correo un formulario para conocerte mejor. Con eso preparamos también ejercicios con tus situaciones del día a día.`,
+    };
+  }
+
+  return {
+    titulo: "Busca el formulario en tu correo",
+    cuerpo: `${quien} te lo envió el ${formatearFecha(enviadoEn)}. Si no lo encuentras o el enlace ya no funciona, pídeselo otra vez.`,
+  };
+}
+
 export type ModoGeneracion = "repaso" | "examen" | "contexto";
 
 /**

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { nivelDeBloque } from "@/lib/perfil";
-import { calcularTarjetas, urlFormulario } from "@/lib/modos";
+import { avisoFormulario, calcularTarjetas, urlFormulario } from "@/lib/modos";
 import { exigirSesion } from "@/lib/sesion-servidor";
 import {
   leerAvanceAlumno,
@@ -79,6 +79,10 @@ export default async function PaginaPractica() {
           avance={avance}
           generadosIniciales={generados}
           urlFormulario={urlFormulario(process.env.URL_FORMULARIO_BASE, perfil?.formToken ?? null)}
+          avisoFormulario={avisoFormulario(
+            perfil?.profesor ?? "",
+            perfil?.formTokenEnviadoEn ?? null
+          )}
         />
 
         <p className="text-[14px] text-drc-cuerpo">

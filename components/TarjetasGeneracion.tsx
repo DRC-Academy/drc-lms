@@ -1,6 +1,6 @@
 "use client";
 
-import type { ModoGeneracion, TarjetaModo } from "@/lib/modos";
+import type { AvisoFormulario, ModoGeneracion, TarjetaModo } from "@/lib/modos";
 import type { EtapaGeneracion } from "@/lib/generacion";
 import AvanceGeneracion from "@/components/AvanceGeneracion";
 
@@ -63,33 +63,37 @@ function EnlaceFormulario({ url, className }: { url: string | null; className: s
  * ÚNICO que hay delante de un alumno sin práctica disponible. Quitarla
  * dejaría la sección en blanco, sin decir por qué.
  *
- * Así que sin token se queda el texto y se cambia el botón por quién se
- * lo va a mandar, que es la verdad: los tokens los emite Gestión, el LMS
- * no puede crearlos.
+ * Así que sin token se queda la tarjeta y el botón se cambia por el
+ * mismo aviso que enseña la del inicio: de quién depende y si ya se lo
+ * mandaron. El texto viene redactado del servidor para que las dos
+ * pantallas digan exactamente lo mismo; escrito a mano aquí, se
+ * separarían a la primera corrección de copy.
  */
-function TarjetaSinDatos({ url }: { url: string | null }) {
+function TarjetaSinDatos({ url, aviso }: { url: string | null; aviso: AvisoFormulario }) {
   return (
     <article className="tarjeta relative flex flex-col overflow-hidden">
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-marca-verde" />
       <p className="eyebrow text-drc-verde-texto">Empieza por aquí</p>
       <h3 className="mt-3 font-display text-[20px] font-semibold leading-tight text-drc-titular">
-        Cuéntanos un poco de ti
+        {url === null ? aviso.titulo : "Cuéntanos un poco de ti"}
       </h3>
-      <p className="mt-2.5 flex-1 text-pretty text-[15px] leading-[1.55] text-drc-cuerpo">
-        Con saber a qué te dedicas y qué quieres conseguir con el inglés, preparamos ejercicios
-        con tus situaciones de verdad en lugar de frases de libro. Se tarda dos minutos y lo
-        notas desde el primer bloque.
-      </p>
 
       {url === null ? (
-        <p className="mt-5 text-[14px] leading-[1.55] text-drc-cuerpo">
-          Tu profesor te enviará el enlace para completarlo.
+        <p className="mt-2.5 flex-1 text-pretty text-[15px] leading-[1.55] text-drc-cuerpo">
+          {aviso.cuerpo}
         </p>
       ) : (
-        <EnlaceFormulario
-          url={url}
-          className="btn btn-primario mt-5 min-h-[46px] w-full wide:w-auto wide:self-start"
-        />
+        <>
+          <p className="mt-2.5 flex-1 text-pretty text-[15px] leading-[1.55] text-drc-cuerpo">
+            Con saber a qué te dedicas y qué quieres conseguir con el inglés, preparamos
+            ejercicios con tus situaciones de verdad en lugar de frases de libro. Se tarda dos
+            minutos y lo notas desde el primer bloque.
+          </p>
+          <EnlaceFormulario
+            url={url}
+            className="btn btn-primario mt-5 min-h-[46px] w-full wide:w-auto wide:self-start"
+          />
+        </>
       )}
     </article>
   );
@@ -107,6 +111,7 @@ export default function TarjetasGeneracion({
   onGenerar,
   onReintentar,
   urlFormulario,
+  avisoFormulario,
 }: {
   tarjetas: TarjetaModo[];
   estado: EstadoGeneracion;
@@ -130,6 +135,8 @@ export default function TarjetasGeneracion({
    * `lib/modos.ts`.
    */
   urlFormulario: string | null;
+  /** Qué decirle cuando no hay enlace. Lo redacta el servidor. */
+  avisoFormulario: AvisoFormulario;
 }) {
   const generando = estado === "generando";
 
@@ -161,7 +168,7 @@ export default function TarjetasGeneracion({
 
       {tarjetas.length === 0 ? (
         <div className="mt-5">
-          <TarjetaSinDatos url={urlFormulario} />
+          <TarjetaSinDatos url={urlFormulario} aviso={avisoFormulario} />
         </div>
       ) : (
         <>

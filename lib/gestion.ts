@@ -51,6 +51,7 @@ function aPerfil(fila: Fila): PerfilAlumno {
     // `comoTextoOpcional` devuelve null si no es una cadena, así que
     // aguanta que la columna todavía no exista en la vista de Gestión.
     formToken: comoTextoOpcional(fila.form_token),
+    formTokenEnviadoEn: comoTextoOpcional(fila.form_token_enviado_en),
   };
 }
 

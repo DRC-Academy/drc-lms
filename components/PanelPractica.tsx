@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Bloque } from "@/lib/data";
-import type { TarjetaModo } from "@/lib/modos";
+import type { AvisoFormulario, TarjetaModo } from "@/lib/modos";
 import { usarGenerador } from "@/components/usarGenerador";
 import TarjetasGeneracion from "@/components/TarjetasGeneracion";
 import ListaBloques, {
@@ -28,6 +28,7 @@ export default function PanelPractica({
   avance,
   generadosIniciales,
   urlFormulario,
+  avisoFormulario,
 }: {
   alumnoId: string;
   tarjetas: TarjetaModo[];
@@ -37,6 +38,8 @@ export default function PanelPractica({
   generadosIniciales: Bloque[];
   /** Enlace al formulario de Gestión con el token del alumno, o null. */
   urlFormulario: string | null;
+  /** Qué decirle cuando no hay enlace. */
+  avisoFormulario: AvisoFormulario;
 }) {
   const {
     estado,
@@ -76,6 +79,7 @@ export default function PanelPractica({
         onGenerar={generar}
         onReintentar={reintentar}
         urlFormulario={urlFormulario}
+        avisoFormulario={avisoFormulario}
       />
 
       {/* `|| generando` porque el primer bloque de un alumno nace aquí: sin

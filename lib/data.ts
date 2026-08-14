@@ -731,6 +731,16 @@ export type PerfilAlumno = {
    * despliegue da igual.
    */
   formToken: string | null;
+  /**
+   * Cuándo se le emitió el último formulario, sirva o no todavía. Null
+   * si nunca se le emitió ninguno, que son 87 de los 169.
+   *
+   * Está separado de `formToken` porque responden a preguntas
+   * distintas: aquel dice si HAY a dónde mandarle, este si YA le
+   * mandaron algo. Con solo el primero, el aviso tendría que elegir
+   * entre "te lo envió" y "te lo enviará" sin saber cuál es verdad.
+   */
+  formTokenEnviadoEn: string | null;
 };
 
 /**

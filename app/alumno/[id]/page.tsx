@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { formatearFecha, nivelDeBloque } from "@/lib/perfil";
-import { calcularTarjetas, tieneContexto, urlFormulario } from "@/lib/modos";
+import { avisoFormulario, calcularTarjetas, tieneContexto, urlFormulario } from "@/lib/modos";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
 import { UMBRAL_DOMINADO, type RegistroProgreso } from "@/lib/progreso";
 import {
@@ -135,13 +135,13 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   // La invitación al perfil desaparece en cuanto hay con qué ambientar
   // los ejercicios, y entonces el banner pasa a ancho completo.
   //
-  // Y DESAPARECE TAMBIÉN SI NO HAY A DÓNDE MANDARLE. La tarjeta es un
-  // botón con una explicación alrededor: sin token utilizable el botón
-  // abriría una pantalla rota, y entonces lo que sobra es la tarjeta
-  // entera, no solo el botón. Son 123 de los 169 alumnos, así que esto
-  // no es un caso raro: es la mayoría. Ver `urlFormulario()`.
+  // LO QUE NO LA HACE DESAPARECER ES NO TENER ENLACE. Sin token la
+  // tarjeta se queda y cambia el botón por un aviso: son 91 de los 136
+  // sin perfil, la mayoría, y a esos hay que contarles que esto llega
+  // por correo en vez de dejarles el hueco vacío. Ver `TarjetaPerfil`.
+  const invitacionPerfil = !tieneContexto(perfil);
   const enlaceFormulario = urlFormulario(process.env.URL_FORMULARIO_BASE, perfil?.formToken ?? null);
-  const invitacionPerfil = !tieneContexto(perfil) && enlaceFormulario !== null;
+  const avisoPerfil = avisoFormulario(profesor, perfil?.formTokenEnviadoEn ?? null);
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
@@ -188,7 +188,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
               el alumno acaba de ver a dónde tiene que ir. */}
           {invitacionPerfil && (
             <div className="hidden lg:block">
-              <TarjetaPerfil url={enlaceFormulario} />
+              <TarjetaPerfil url={enlaceFormulario} aviso={avisoPerfil} />
             </div>
           )}
         </div>
@@ -219,7 +219,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
             acaba de elegir su práctica. */}
         {invitacionPerfil && (
           <div className="mt-3 lg:hidden">
-            <TarjetaPerfil url={enlaceFormulario} />
+            <TarjetaPerfil url={enlaceFormulario} aviso={avisoPerfil} />
           </div>
         )}
       </main>
