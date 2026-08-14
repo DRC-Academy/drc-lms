@@ -356,6 +356,11 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
       intentosDelPeriodo(desde),
     ]);
 
+  // `intentos` cuenta como las demás. Se quedó fuera de esta lista y el
+  // efecto fue el que esta bandera existe para evitar: con la tabla
+  // `intentos_acceso` sin crear, la lectura fallaba, el bloque de Acceso
+  // enseñaba cinco ceros y el panel no decía nada. Un cero y un "no lo
+  // sé" se leen igual en pantalla, y no significan lo mismo.
   const incompleto =
     sesiones === null ||
     bloques === null ||
@@ -363,6 +368,7 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
     completaron === null ||
     generaronNunca === null ||
     filasSesion === null ||
+    intentos === null ||
     alumnos.length === 0;
 
   // Las fichas: el perfil de Gestión más lo que decide elegibilidad.

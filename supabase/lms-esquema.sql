@@ -398,6 +398,58 @@ comment on table public.reportes_ejercicio is
 
 
 -- ===============================================================
+-- 8. intentos_acceso
+--
+-- Qué pasa cuando alguien intenta entrar y NO acaba en sesión.
+--
+-- `sesiones` solo guarda los finales felices, así que hasta ahora la
+-- pregunta "¿funciona el enlace mágico?" no se podía contestar: si de
+-- 172 invitaciones entran 20, sin esta tabla los otros 152 son silencio.
+-- Aquí se anota cada desenlace, y el panel compara enlaces enviados con
+-- sesiones abiertas.
+--
+-- SIN EMAIL, A PROPÓSITO. `app/acceso/acciones.ts` se sostiene sobre no
+-- revelar quién está registrado; guardar aquí las direcciones que se
+-- prueban crearía justo la lista que ese fichero evita. Se guarda el
+-- `alumno_id` cuando se sabe —que ya está en Gestión— y para el resto
+-- solo el recuento.
+-- ===============================================================
+
+create table if not exists public.intentos_acceso (
+  id            uuid        primary key default gen_random_uuid(),
+
+  -- Null cuando el email no correspondía a ningún alumno, o cuando era
+  -- del equipo: ahí no hay ficha que señalar.
+  alumno_id     text,
+  rol           text        not null,
+  resultado     text        not null,
+  origen        text        not null default 'magic_link',
+  creado_en     timestamptz not null default now(),
+
+  constraint intentos_acceso_rol_valido
+    check (rol in ('alumno', 'admin', 'desconocido')),
+
+  constraint intentos_acceso_origen_valido
+    check (origen in ('magic_link', 'woocommerce')),
+
+  -- Los seis finales que no son una sesión, más el enlace enviado, que
+  -- es el denominador con el que se comparan las sesiones.
+  constraint intentos_acceso_resultado_valido
+    check (resultado in (
+      'enlace_enviado',    -- salió el correo
+      'envio_fallido',     -- Resend lo rechazó
+      'sin_cuenta',        -- email bien escrito, sin ficha ni equipo
+      'email_invalido',    -- ni siquiera parecía un email
+      'enlace_caducado',   -- pulsó tarde, o el token venía roto
+      'sin_ficha'          -- pidió el enlace y para cuando lo pulsó ya no estaba en Gestión
+    ))
+);
+
+comment on table public.intentos_acceso is
+  'Intentos de acceso que no acabaron en sesión, más los enlaces enviados. Sin emails: solo alumno_id cuando se conoce.';
+
+
+-- ===============================================================
 -- ÍNDICES
 --
 -- `alumno_id` en todas: cada consulta del LMS empieza por «lo de este
@@ -455,6 +507,10 @@ create index if not exists idx_reportes_pendientes
   on public.reportes_ejercicio (reportado_en desc)
   where revisado_en is null;
 
+-- intentos_acceso: el panel siempre pregunta por una ventana de tiempo.
+create index if not exists idx_intentos_acceso_fecha
+  on public.intentos_acceso (creado_en desc);
+
 
 -- ===============================================================
 -- RLS
@@ -480,6 +536,7 @@ alter table public.progreso_bloques     enable row level security;
 alter table public.avance_bloques       enable row level security;
 alter table public.respuestas_produccion enable row level security;
 alter table public.reportes_ejercicio   enable row level security;
+alter table public.intentos_acceso      enable row level security;
 
 
 -- ===============================================================
@@ -500,6 +557,7 @@ revoke all on public.progreso_bloques      from anon, authenticated;
 revoke all on public.avance_bloques        from anon, authenticated;
 revoke all on public.respuestas_produccion from anon, authenticated;
 revoke all on public.reportes_ejercicio    from anon, authenticated;
+revoke all on public.intentos_acceso       from anon, authenticated;
 
 -- Y lo mismo para las tablas que se creen a partir de ahora, que si no
 -- nacen con los permisos por defecto de Supabase. Importa para los
@@ -530,8 +588,13 @@ alter default privileges in schema public
 -- ===============================================================
 -- COMPROBACIÓN
 --
--- Tras ejecutar, esto tiene que devolver las 7 tablas con rls = true y
+-- Tras ejecutar, esto tiene que devolver las 8 tablas con rls = true y
 -- politicas = 0.
+--
+-- Si alguna sale con rls = false, es que se creó fuera de este archivo o
+-- por debajo de la sección de RLS. Le pasó a `intentos_acceso`, que
+-- estuvo un tiempo escrita detrás del ROLLBACK: se creaba —cuando se
+-- creaba— sin pasar por RLS ni por los revoke.
 -- ===============================================================
 
 select
@@ -559,6 +622,7 @@ order by c.relname;
 -- al de creación por costumbre.
 -- ===============================================================
 
+-- drop table if exists public.intentos_acceso;
 -- drop table if exists public.reportes_ejercicio;
 -- drop table if exists public.respuestas_produccion;
 -- drop table if exists public.avance_bloques;
@@ -575,59 +639,3 @@ order by c.relname;
 --   grant all on tables to anon, authenticated;
 -- alter default privileges in schema public
 --   grant all on sequences to anon, authenticated;
-
-
--- ===============================================================
--- 8. intentos_acceso
---
--- Qué pasa cuando alguien intenta entrar y NO acaba en sesión.
---
--- `sesiones` solo guarda los finales felices, así que hasta ahora la
--- pregunta "¿funciona el enlace mágico?" no se podía contestar: si de
--- 172 invitaciones entran 20, sin esta tabla los otros 152 son silencio.
--- Aquí se anota cada desenlace, y el panel compara enlaces enviados con
--- sesiones abiertas.
---
--- SIN EMAIL, A PROPÓSITO. `app/acceso/acciones.ts` se sostiene sobre no
--- revelar quién está registrado; guardar aquí las direcciones que se
--- prueban crearía justo la lista que ese fichero evita. Se guarda el
--- `alumno_id` cuando se sabe —que ya está en Gestión— y para el resto
--- solo el recuento.
--- ===============================================================
-
-create table if not exists public.intentos_acceso (
-  id            uuid        primary key default gen_random_uuid(),
-
-  -- Null cuando el email no correspondía a ningún alumno, o cuando era
-  -- del equipo: ahí no hay ficha que señalar.
-  alumno_id     text,
-  rol           text        not null,
-  resultado     text        not null,
-  origen        text        not null default 'magic_link',
-  creado_en     timestamptz not null default now(),
-
-  constraint intentos_acceso_rol_valido
-    check (rol in ('alumno', 'admin', 'desconocido')),
-
-  constraint intentos_acceso_origen_valido
-    check (origen in ('magic_link', 'woocommerce')),
-
-  -- Los seis finales que no son una sesión, más el enlace enviado, que
-  -- es el denominador con el que se comparan las sesiones.
-  constraint intentos_acceso_resultado_valido
-    check (resultado in (
-      'enlace_enviado',    -- salió el correo
-      'envio_fallido',     -- Resend lo rechazó
-      'sin_cuenta',        -- email bien escrito, sin ficha ni equipo
-      'email_invalido',    -- ni siquiera parecía un email
-      'enlace_caducado',   -- pulsó tarde, o el token venía roto
-      'sin_ficha'          -- pidió el enlace y para cuando lo pulsó ya no estaba en Gestión
-    ))
-);
-
-comment on table public.intentos_acceso is
-  'Intentos de acceso que no acabaron en sesión, más los enlaces enviados. Sin emails: solo alumno_id cuando se conoce.';
-
--- El panel siempre pregunta por una ventana de tiempo.
-create index if not exists idx_intentos_acceso_fecha
-  on public.intentos_acceso (creado_en desc);
