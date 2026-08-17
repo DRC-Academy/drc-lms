@@ -83,7 +83,7 @@ export default function Cargando() {
         {/* ---------------------------- LATERAL ----------------------------
             La misma columna de 300px, con su cabecera de módulo, su lista
             y su pie. Antes era un rectángulo blanco sin nada dentro. */}
-        <aside className="sticky top-16 hidden h-[calc(100vh-64px)] flex-col border-r border-marca-borde bg-white min-[1100px]:flex">
+        <aside className="sticky top-[68px] hidden h-[calc(100dvh-68px)] flex-col border-r border-marca-borde bg-white min-[1100px]:flex">
           <div className="border-b border-marca-nieblaOscura px-[22px] pb-4 pt-[22px]">
             <Linea ancho="w-[92px]" alto="h-[10px]" />
             <div className="mt-[13px] flex flex-col gap-2">

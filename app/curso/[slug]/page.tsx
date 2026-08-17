@@ -6,7 +6,6 @@ import { arbolDelCurso, cursoPorSlug, cursosAsignados } from "@/lib/cursos-servi
 import { sinDripEn } from "@/lib/accesos-manuales";
 import { construirTemario } from "@/lib/temario";
 import { comoFecha } from "@/lib/fechas";
-import { CabeceraMovil } from "@/components/leccion/CabeceraLeccion";
 import Temario from "@/components/curso/Temario";
 
 export const dynamic = "force-dynamic";
@@ -62,13 +61,11 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
   const inicio = sesion.rol === "alumno" ? `/alumno/${sesion.alumnoId}` : "/";
 
   return (
-    // La cabecera de escritorio la pone el layout del curso: es la misma
-    // que en la lección, así que al ir del temario a una lección y volver
-    // no se re-renderiza. Aquí solo queda la de móvil, que lleva la
-    // flecha de atrás.
+    // La cabecera entera —navegación incluida— la pone el layout del
+    // curso, y es la misma que en el resto de las pantallas del alumno.
+    // Aquí ya no se pinta ninguna: la segunda que había era justo lo que
+    // hacía desaparecer Inicio, Mi curso y Práctica al entrar.
     <div className="flex-1 bg-temario-fondo text-temario-tinta">
-      <CabeceraMovil cursoTitulo={curso.titulo} cursoSlug={curso.slug} volverA={inicio} />
-
       <main className="mx-auto w-full max-w-[1240px] px-4 pb-14 pt-6 min-[900px]:px-11 min-[900px]:pb-16 min-[900px]:pt-10">
         <Link
           href={arbol.leccionActual ? `/curso/${curso.slug}/${arbol.leccionActual}` : inicio}

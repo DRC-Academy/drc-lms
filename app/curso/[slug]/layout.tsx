@@ -2,7 +2,8 @@ import { Suspense } from "react";
 import { sesionActual } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { cursoPorSlug, progresoDelCurso } from "@/lib/cursos-servidor";
-import { CabeceraCargando, CabeceraEscritorio } from "@/components/leccion/CabeceraLeccion";
+import Cabecera from "@/components/Cabecera";
+import { CabeceraCargando } from "@/components/leccion/CabeceraLeccion";
 
 /**
  * El marco del curso: la cabecera, y debajo lo que toque.
@@ -78,13 +79,21 @@ async function CabeceraDelCurso({ slug }: { slug: string }) {
   const { completadas, total } = await progresoDelCurso(alumnoId, curso.id);
   const nombre = perfil?.nombre.trim() ?? "";
 
+  // LA MISMA `Cabecera` QUE EL RESTO DE LAS PANTALLAS DEL ALUMNO, con el
+  // curso añadido. Antes aquí vivía una cabecera distinta y esa era la
+  // causa del fallo: al entrar en el curso desaparecían Inicio, Mi curso
+  // y Práctica, y no había forma de salir salvo el botón del navegador.
+  //
+  // `seccion="curso"` marca la pestaña activa, y `cursoSlug` es lo que
+  // hace que el enlace "Mi curso" exista: aquí siempre lo hay, porque
+  // estamos dentro de uno.
   return (
-    <CabeceraEscritorio
-      cursoTitulo={curso.titulo}
+    <Cabecera
+      nombre={nombre || undefined}
+      alumnoId={sesion.rol === "alumno" ? sesion.alumnoId : null}
       cursoSlug={curso.slug}
-      completadas={completadas}
-      total={total}
-      inicial={nombre[0]?.toUpperCase() ?? ""}
+      seccion="curso"
+      contexto={{ titulo: curso.titulo, completadas, total }}
     />
   );
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { LeccionIndice } from "@/lib/cursos-servidor";
 import type { TituloLeccion } from "@/lib/leccion-html";
 import type { EjercicioVista } from "@/lib/ejercicios";
-import { CabeceraMovil, TiraProgreso } from "@/components/leccion/CabeceraLeccion";
+import { TiraProgreso } from "@/components/leccion/CabeceraLeccion";
 import LateralLecciones, { ItemLeccion } from "@/components/leccion/LateralLecciones";
 import IndiceLeccion from "@/components/leccion/IndiceLeccion";
 import FlujoEjercicios from "@/components/leccion/FlujoEjercicios";
@@ -23,7 +23,6 @@ import BotonCompletar from "@/components/leccion/BotonCompletar";
  * se enlaza desde tres sitios y tiene que poder abrirse sola.
  */
 export default function VistaLeccion({
-  cursoTitulo,
   cursoSlug,
   cursoCompletadas,
   cursoTotal,
@@ -40,9 +39,7 @@ export default function VistaLeccion({
   esUltimaDelModulo,
   registrarIntentos,
   profesor,
-  volverA,
 }: {
-  cursoTitulo: string;
   cursoSlug: string;
   cursoCompletadas: number;
   cursoTotal: number;
@@ -59,7 +56,6 @@ export default function VistaLeccion({
   esUltimaDelModulo: boolean;
   registrarIntentos: boolean;
   profesor: string;
-  volverA: string;
 }) {
   const hayTeoria = contenidoHtml.trim() !== "";
   const hayEjercicios = ejercicios.length > 0;
@@ -101,14 +97,28 @@ export default function VistaLeccion({
     // es lo que deja la barra de acciones pegada al fondo de la ventana
     // cuando la lección es corta.
     <div className="flex flex-1 flex-col bg-marca-niebla">
-      {/* Solo la de móvil: la de escritorio la pinta el layout y por eso
-          no parpadea al cambiar de lección. Ver la nota en
-          `CabeceraLeccion.tsx` sobre por qué la de móvil se queda aquí. */}
-      <CabeceraMovil
-        cursoTitulo={cursoTitulo}
-        cursoSlug={cursoSlug}
-        volverA={volverA}
-        derecha={
+      {/* LA BARRA DE LA LECCIÓN, EN MÓVIL. Ya no es una cabecera: la
+          cabecera —con el logotipo, la navegación y el curso— la pone el
+          layout, y esto es lo que solo sabe la lección: en cuál del
+          módulo estás y cómo abrir la lista de hermanas.
+
+          No es `sticky`. Antes lo era porque formaba parte de la
+          cabecera; ahora encima hay dos filas pegajosas y una tercera se
+          comería un tercio de una pantalla de 375px. La orientación
+          constante en móvil la da la barra de navegación de abajo. */}
+      <div className="border-b border-marca-borde bg-white px-3.5 py-2.5 min-[1100px]:hidden">
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            {enEjercicios ? (
+              <TiraProgreso texto="Ejercicios" hechos={hechasModulo} total={hermanas.length} />
+            ) : (
+              <TiraProgreso
+                texto={`Lección ${posicion + 1} de ${hermanas.length}`}
+                hechos={hechasModulo}
+                total={hermanas.length}
+              />
+            )}
+          </div>
           <button
             type="button"
             onClick={() => setPanel((v) => !v)}
@@ -116,19 +126,8 @@ export default function VistaLeccion({
           >
             {panel ? "Cerrar" : "Lecciones"}
           </button>
-        }
-        tira={
-          enEjercicios ? (
-            <TiraProgreso texto="Ejercicios" hechos={hechasModulo} total={hermanas.length} />
-          ) : (
-            <TiraProgreso
-              texto={`Lección ${posicion + 1} de ${hermanas.length}`}
-              hechos={hechasModulo}
-              total={hermanas.length}
-            />
-          )
-        }
-      />
+        </div>
+      </div>
 
       <div className={`grid flex-1 grid-cols-1 ${columnas}`}>
         <LateralLecciones

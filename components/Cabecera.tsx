@@ -46,11 +46,24 @@ const LOGO = { ancho: 121, alto: 32 };
  * —que es el destino de la pantalla— fuera de la primera pantalla. Abajo
  * está donde llega el pulgar y no le quita sitio a nada.
  */
+/**
+ * El curso en el que está el alumno ahora mismo, si está en uno.
+ *
+ * Es lo que antes justificaba una cabecera aparte dentro del curso. Ya
+ * no: se añade a esta, que es la única.
+ */
+export type ContextoCurso = {
+  titulo: string;
+  completadas: number;
+  total: number;
+};
+
 export default function Cabecera({
   nombre,
   alumnoId,
   cursoSlug,
   seccion,
+  contexto,
 }: {
   nombre?: string;
   /** El alumno de la sesión. null en el equipo: no navega por secciones. */
@@ -58,6 +71,12 @@ export default function Cabecera({
   /** El curso que abre "Mi curso". Sin él, el enlace no se pinta. */
   cursoSlug?: string | null;
   seccion?: SeccionActiva;
+  /**
+   * Nombre y progreso del curso, solo dentro de él. Se AÑADE a la
+   * navegación, nunca la sustituye: perderla al entrar en el curso es el
+   * fallo que esto viene a arreglar.
+   */
+  contexto?: ContextoCurso | null;
 }) {
   const enlaces =
     alumnoId != null
@@ -74,7 +93,12 @@ export default function Cabecera({
 
   return (
     <>
-      <header className="border-b border-marca-borde bg-white">
+      {/* PEGAJOSA. Lo era ya dentro del curso —la barra vieja llevaba
+          `sticky top-0`— y el lateral de lecciones cuenta con ello para
+          calcular su altura. Al unificar, lo hereda el resto de
+          pantallas del alumno, que es lo coherente: si la navegación
+          tiene que estar siempre, que esté también después de bajar. */}
+      <header className="sticky top-0 z-30 border-b border-marca-borde bg-white/[0.96] backdrop-blur-md">
         <div className="mx-auto flex h-[60px] max-w-contenido items-center gap-4 px-4 sm:h-[68px] sm:gap-10 sm:px-9">
           <Link
             href={alumnoId != null ? `/alumno/${alumnoId}` : "/"}
@@ -110,7 +134,33 @@ export default function Cabecera({
             </nav>
           )}
 
-          <div className="ml-auto flex shrink-0 items-center gap-3 sm:gap-4">
+          {/* EL CONTEXTO DEL CURSO, EN ESCRITORIO.
+              Va después de la navegación y antes de la identidad, que es
+              el orden en el que se lee: dónde puedo ir, dónde estoy,
+              quién soy. `min-w-0` + `truncate` para que un título largo
+              se recorte en vez de empujar la navegación fuera. */}
+          {contexto && (
+            <div className="ml-auto hidden min-w-0 items-center gap-3 lg:flex">
+              <Link
+                href={cursoSlug ? `/curso/${cursoSlug}` : "#"}
+                className="min-w-0 truncate text-[13.5px] font-medium text-marca-tinta transition-colors hover:text-marca-verdeOsc"
+                title={contexto.titulo}
+              >
+                {contexto.titulo}
+              </Link>
+              <BarraCurso contexto={contexto} />
+            </div>
+          )}
+
+          {/* `ml-auto` SIEMPRE: en móvil el bloque del contexto está
+              oculto, así que si el empuje a la derecha viviera solo allí,
+              el avatar se pegaría al logotipo. En escritorio con contexto
+              el `lg:ml-3` lo desactiva y empuja el de arriba. */}
+          <div
+            className={`ml-auto flex shrink-0 items-center gap-3 sm:gap-4 ${
+              contexto ? "lg:ml-3" : ""
+            }`}
+          >
             {nombre && (
               <form action="/salir" method="post">
                 <button
@@ -138,10 +188,73 @@ export default function Cabecera({
             )}
           </div>
         </div>
+
+        {/* EL CONTEXTO DEL CURSO, EN MÓVIL: SEGUNDA LÍNEA.
+            A 375px no caben el logotipo, el nombre del curso, el progreso
+            y el avatar en una sola fila sin que algo se rompa. La
+            navegación no se toca —está abajo, fija— así que lo que baja
+            es el contexto, que es lo que admite bajar.
+
+            El nombre se trunca y el progreso se reduce a la barra con el
+            porcentaje: el "12 de 191" de escritorio no cabe y el
+            porcentaje dice lo mismo en tres caracteres. */}
+        {contexto && (
+          <div className="border-t border-marca-borde bg-marca-niebla px-4 py-[7px] lg:hidden">
+            <div className="mx-auto flex max-w-contenido items-center gap-2.5">
+              <Link
+                href={cursoSlug ? `/curso/${cursoSlug}` : "#"}
+                className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-marca-tinta"
+              >
+                {contexto.titulo}
+              </Link>
+              <BarraCurso contexto={contexto} compacto />
+            </div>
+          </div>
+        )}
       </header>
 
       {enlaces.length > 0 && <NavegacionInferior enlaces={enlaces} seccion={seccion} />}
     </>
+  );
+}
+
+/**
+ * El progreso del curso: barra y cifra.
+ *
+ * En escritorio la cifra es "12 de 191 lecciones", que es lo que de
+ * verdad orienta. En móvil no cabe y se reduce al porcentaje, que ocupa
+ * tres caracteres y dice lo mismo con menos precisión. La barra es la
+ * misma en los dos: es la que se lee de un vistazo.
+ */
+function BarraCurso({ contexto, compacto }: { contexto: ContextoCurso; compacto?: boolean }) {
+  const porcentaje =
+    contexto.total > 0 ? Math.round((contexto.completadas / contexto.total) * 100) : 0;
+
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <div
+        className={`overflow-hidden rounded-[3px] bg-marca-pista ${
+          compacto ? "h-[5px] w-16" : "h-[5px] w-[120px]"
+        }`}
+        role="progressbar"
+        aria-valuenow={porcentaje}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Progreso en ${contexto.titulo}`}
+      >
+        <div className="h-full rounded-[3px] bg-marca-verde" style={{ width: `${porcentaje}%` }} />
+      </div>
+
+      {compacto ? (
+        <span className="text-[11.5px] font-semibold text-marca-gris tabular-nums">
+          {porcentaje}%
+        </span>
+      ) : (
+        <span className="whitespace-nowrap text-[13px] text-marca-grisSuave tabular-nums">
+          {contexto.completadas} de {contexto.total} lecciones
+        </span>
+      )}
+    </div>
   );
 }
 

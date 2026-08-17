@@ -42,7 +42,7 @@ export default function LateralLecciones({
 
   if (replegado) {
     return (
-      <aside className="sticky top-16 hidden h-[calc(100vh-64px)] flex-col items-center gap-[18px] border-r border-marca-borde bg-white px-0 pb-5 pt-[18px] min-[1100px]:flex">
+      <aside className="sticky top-[68px] hidden h-[calc(100dvh-68px)] flex-col items-center gap-[18px] border-r border-marca-borde bg-white px-0 pb-5 pt-[18px] min-[1100px]:flex">
         <button
           type="button"
           onClick={alVolver}
@@ -86,7 +86,7 @@ export default function LateralLecciones({
   }
 
   return (
-    <aside className="sticky top-16 hidden h-[calc(100vh-64px)] flex-col border-r border-marca-borde bg-white min-[1100px]:flex">
+    <aside className="sticky top-[68px] hidden h-[calc(100dvh-68px)] flex-col border-r border-marca-borde bg-white min-[1100px]:flex">
       <div className="border-b border-marca-nieblaOscura px-[22px] pb-4 pt-[22px]">
         <p className="text-[11px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
           {etiquetaModulo}

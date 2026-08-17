@@ -45,18 +45,19 @@ export default async function PaginaLeccion({
 
   if (!curso) notFound();
 
-  // SE PIDE LA LECCIÓN ANTES DE SABER SI ES SUYA, y es deliberado. El
-  // guard sigue decidiendo igual y unas líneas más abajo: lo único que
-  // cambia es que, cuando no lo es, se ha leído contenido que se tira sin
-  // salir del servidor. A cambio, el caso normal —que es que sí sea suya—
-  // se ahorra una espera entera. Nada de esto llega al navegador antes
-  // del `redirect`.
   // Si el equipo le abrió este curso entero, el drip no se aplica. Se
   // consigue pasando `null` como fecha de inicio, que es lo que
   // `lib/drip.ts` ya entiende como "abierto desde el principio": ni una
   // línea de las reglas de apertura cambia por esto.
   const abiertoEntero = await sinDripEn(alumnoId, curso.id);
   const fechaDrip = abiertoEntero ? null : comoFecha(perfil?.fechaInicio);
+
+  // SE PIDE LA LECCIÓN ANTES DE SABER SI ES SUYA, y es deliberado. El
+  // guard sigue decidiendo igual y unas líneas más abajo: lo único que
+  // cambia es que, cuando no lo es, se ha leído contenido que se tira sin
+  // salir del servidor. A cambio, el caso normal —que es que sí sea suya—
+  // se ahorra una espera entera. Nada de esto llega al navegador antes
+  // del `redirect`.
 
   const [suyos, vista] = await Promise.all([
     sesion.rol === "alumno" && perfil
@@ -113,7 +114,6 @@ export default async function PaginaLeccion({
 
   return (
     <VistaLeccion
-      cursoTitulo={curso.titulo}
       cursoSlug={curso.slug}
       cursoCompletadas={cursoCompletadas}
       cursoTotal={cursoTotal}
@@ -134,7 +134,6 @@ export default async function PaginaLeccion({
       esUltimaDelModulo={posicion === hermanas.length - 1}
       registrarIntentos={sesion.rol === "alumno"}
       profesor={perfil?.profesor.trim() ?? ""}
-      volverA={sesion.rol === "alumno" ? `/alumno/${sesion.alumnoId}` : "/"}
     />
   );
 }

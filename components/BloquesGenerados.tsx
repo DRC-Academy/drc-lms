@@ -35,12 +35,17 @@ const FASES = ["Reconocer", "Transformar", "Producir"];
 /**
  * Cuántos caben en el inicio.
  *
- * Tres: los suficientes para que se vea que hay historial y que nada se
- * ha perdido, sin que la sección se coma la pantalla. Con el hueco
- * animado durante una generación son cuatro filas, que sigue siendo
- * hojeable de un vistazo.
+ * Cinco: los suficientes para ver de un vistazo lo que se lleva hecho
+ * sin que la sección se coma la pantalla. El tope no sobra aunque hoy
+ * nadie llegue a él —con 40 bloques esto sería una lista infinita con el
+ * banner del curso enterrado al fondo—, y el resto siguen en
+ * `/practica`, adonde lleva el enlace de abajo.
+ *
+ * Con el hueco animado durante una generación son cinco filas igual: se
+ * enseña uno menos para hacerle sitio, y así al empezar a generar no
+ * desaparece de golpe el último de la lista.
  */
-export const MAXIMO_EN_INICIO = 3;
+export const MAXIMO_EN_INICIO = 5;
 
 /**
  * El hueco que ocupa el bloque mientras se genera.
@@ -107,6 +112,11 @@ export default function BloquesGenerados({
   // el último bloque de la lista para hacerle hueco.
   const visibles = bloques.slice(0, generando ? MAXIMO_EN_INICIO - 1 : MAXIMO_EN_INICIO);
   const nuevos = new Set(idsNuevos);
+
+  // Si el tope deja fuera generados suyos hay que decirlo. No cuenta el
+  // hueco animado: ese bloque todavía no existe y anunciarlo como
+  // "oculto" sería contar una tarjeta que nadie tiene.
+  const hayOcultos = bloques.length > visibles.length;
 
   return (
     <div ref={zonaRef} className="mt-3.5 scroll-mt-24 lg:mt-4">
@@ -182,17 +192,31 @@ export default function BloquesGenerados({
         })}
       </ol>
 
-      {/* Que quede claro que no se pierde nada: está guardado, hay un
-          sitio donde vive y aquí solo se ve la punta. Es también la
-          salida para los que no caben arriba. */}
+      {/* EL RECUENTO CUENTA DOS COSAS DISTINTAS, Y ANTES LAS MEZCLABA.
+          Arriba solo se pintan los bloques GENERADOS por el alumno; en
+          `/practica` están además los del catálogo de su nivel. Decir
+          "tienes 4 bloques" encima de una lista de uno se leía como que
+          faltaban tres: el alumno con 1 generado y 3 de nivel veía el 4 y
+          contaba una sola tarjeta.
+
+          Ahora la frase habla de lo que se ve —cuántos de cuántos
+          generados— y el número grande viaja en el enlace, que es lo que
+          promete el sitio donde están todos. */}
       {totalPractica > 0 && (
         <p className="mt-3.5 text-[13.5px] leading-[1.45] text-marca-gris lg:text-[14px]">
-          Tienes {totalPractica} {totalPractica === 1 ? "bloque" : "bloques"} en tu práctica.{" "}
+          {hayOcultos && (
+            <>
+              Se muestran los {visibles.length} más recientes de tus {bloques.length} bloques
+              generados.{" "}
+            </>
+          )}
           <Link
             href="/practica"
             className="font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
           >
-            Verlos todos
+            {totalPractica === 1
+              ? "Ver tu bloque en la práctica"
+              : `Ver los ${totalPractica} bloques de tu práctica`}
           </Link>
         </p>
       )}
