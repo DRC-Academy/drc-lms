@@ -13,6 +13,7 @@
 // ---------------------------------------------------------------
 
 import "server-only";
+import { cache } from "react";
 import { soloLectura } from "@/lib/supabase-server";
 import {
   asGuiaProxima,
@@ -92,8 +93,16 @@ function deduplicar(filas: Fila[]): Fila[] {
 // CONSULTAS
 // ---------------------------------------------------------------
 
-/** Perfil de un alumno, o null si ese id no existe en la vista. */
-export async function obtenerPerfil(alumnoId: string): Promise<PerfilAlumno | null> {
+/**
+ * Perfil de un alumno, o null si ese id no existe en la vista.
+ *
+ * Envuelto en `cache()` de React, que deduplica dentro de una misma
+ * petición. Hace falta desde que la cabecera del curso vive en un layout:
+ * el layout necesita el nombre para el avatar y la página necesita el
+ * plan y la fecha de inicio, y son dos componentes distintos preguntando
+ * lo mismo. Sin esto serían dos viajes a Gestión por página.
+ */
+export const obtenerPerfil = cache(async (alumnoId: string): Promise<PerfilAlumno | null> => {
   const { data, error } = await soloLectura("vista_perfil_alumno")
     .select("*")
     .eq("alumno_id", alumnoId)
@@ -107,7 +116,7 @@ export async function obtenerPerfil(alumnoId: string): Promise<PerfilAlumno | nu
 
   const filas = deduplicar(data ?? []);
   return filas.length > 0 ? aPerfil(filas[0]) : null;
-}
+});
 
 /**
  * Última clase analizada de un alumno, o null si todavía no tiene ninguna.

@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { LeccionIndice } from "@/lib/cursos-servidor";
 import type { TituloLeccion } from "@/lib/leccion-html";
 import type { EjercicioVista } from "@/lib/ejercicios";
-import CabeceraLeccion, { TiraProgreso } from "@/components/leccion/CabeceraLeccion";
+import { CabeceraMovil, TiraProgreso } from "@/components/leccion/CabeceraLeccion";
 import LateralLecciones, { ItemLeccion } from "@/components/leccion/LateralLecciones";
 import IndiceLeccion from "@/components/leccion/IndiceLeccion";
 import FlujoEjercicios from "@/components/leccion/FlujoEjercicios";
@@ -40,7 +40,6 @@ export default function VistaLeccion({
   esUltimaDelModulo,
   registrarIntentos,
   profesor,
-  inicial,
   volverA,
 }: {
   cursoTitulo: string;
@@ -60,7 +59,6 @@ export default function VistaLeccion({
   esUltimaDelModulo: boolean;
   registrarIntentos: boolean;
   profesor: string;
-  inicial: string;
   volverA: string;
 }) {
   const hayTeoria = contenidoHtml.trim() !== "";
@@ -98,18 +96,17 @@ export default function VistaLeccion({
     : "min-[1100px]:grid-cols-[300px_minmax(0,1fr)]";
 
   return (
-    // Columna de altura completa: la cabecera arriba y la rejilla
-    // ocupando lo que sobra. Es lo que deja la barra de acciones pegada
-    // al fondo de la ventana cuando la lección es corta, sin tener que
-    // restar a mano la altura de la cabecera —que además no mide igual
-    // en móvil, donde lleva la tira de progreso debajo.
-    <div className="flex min-h-dvh flex-col bg-marca-niebla">
-      <CabeceraLeccion
+    // La columna de altura completa la pone ahora el layout del curso,
+    // que es quien tiene la cabecera. Aquí basta con ocupar lo que sobra:
+    // es lo que deja la barra de acciones pegada al fondo de la ventana
+    // cuando la lección es corta.
+    <div className="flex flex-1 flex-col bg-marca-niebla">
+      {/* Solo la de móvil: la de escritorio la pinta el layout y por eso
+          no parpadea al cambiar de lección. Ver la nota en
+          `CabeceraLeccion.tsx` sobre por qué la de móvil se queda aquí. */}
+      <CabeceraMovil
         cursoTitulo={cursoTitulo}
         cursoSlug={cursoSlug}
-        completadas={cursoCompletadas}
-        total={cursoTotal}
-        inicial={inicial}
         volverA={volverA}
         derecha={
           <button

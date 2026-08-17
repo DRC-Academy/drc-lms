@@ -16,6 +16,7 @@
 // ---------------------------------------------------------------
 
 import "server-only";
+import { cache } from "react";
 import { aperturaDeLeccion, calcularApertura } from "@/lib/drip";
 import { baseLms } from "@/lib/supabase-lms";
 import { claveCoincide, cursosDelAlumno } from "@/lib/cursos";
@@ -222,7 +223,11 @@ export type ArbolCurso = {
   leccionActual: string | null;
 };
 
-export async function cursoPorSlug(slug: string): Promise<CursoFila | null> {
+/**
+ * Va por `cache()` porque ahora lo piden dos: la cabecera del layout y la
+ * página que cuelga de él. Dentro de una petición es un solo viaje.
+ */
+export const cursoPorSlug = cache(async (slug: string): Promise<CursoFila | null> => {
   const { data, error } = await baseLms()
     .from("cursos")
     .select("id, slug, titulo, nivel, tipo, examen")
@@ -233,7 +238,7 @@ export async function cursoPorSlug(slug: string): Promise<CursoFila | null> {
 
   if (!registrar("No se pudo leer el curso", error)) return null;
   return (data ?? [])[0] ?? null;
-}
+});
 
 /**
  * El árbol entero del curso para el índice: 48 módulos y hasta 169
@@ -401,20 +406,119 @@ export type LeccionCompleta = {
   cursoTotal: number;
 };
 
-type FilaLeccionCompleta = {
+/**
+ * La lección con su módulo colgando, y del módulo sus lecciones.
+ *
+ * Es un embed anidado de PostgREST sobre las dos claves ajenas que ya
+ * existen (`lecciones.modulo_id` → `modulos.id`). En un solo viaje trae
+ * lo que antes eran tres en fila: la lección, a qué módulo pertenece
+ * —incluido `curso_id`, que es con lo que se comprueba que la URL no
+ * miente— y las hermanas que van en la barra lateral.
+ *
+ * Las hermanas vienen SIN `contenido`: son cinco lecciones, pero su HTML
+ * sumaba 26 KB que nadie llegaba a pintar.
+ */
+type FilaLeccionConModulo = {
   id: string;
   titulo: string;
   contenido: string;
   video_url: string | null;
   orden: number;
   modulo_id: string;
+  modulos: {
+    id: string;
+    titulo: string;
+    orden: number;
+    visible_after: number;
+    curso_id: string;
+    lecciones: { id: string; titulo: string; orden: number }[];
+  } | null;
 };
 
 /**
- * Todo lo que necesita la vista de una lección.
+ * El curso entero, pero solo para ordenarlo: id, sitio en el módulo y
+ * sitio del módulo en el curso. SIN TÍTULOS, que era la mitad del peso.
  *
- * Aquí SÍ se trae `contenido`, pero solo el de esta lección. La barra
- * lateral usa los títulos de las hermanas, sin su HTML.
+ * De estas 191 filas se pintan cero: sirven para saber cuál es la
+ * lección siguiente y la anterior —que pueden estar en otro módulo— y
+ * para contar el progreso del curso en la cabecera.
+ */
+type FilaOrdenCurso = {
+  id: string;
+  orden: number;
+  modulo_id: string;
+  modulos: { orden: number } | null;
+};
+
+// ---------------------------------------------------------------
+// LAS DOS LECTURAS QUE COMPARTEN LA CABECERA Y LA PÁGINA
+//
+// Desde que la cabecera vive en el layout, dos componentes distintos
+// necesitan lo mismo: cuántas lecciones tiene el curso y cuáles lleva
+// hechas el alumno. `cache()` de React las deduplica DENTRO DE UNA
+// PETICIÓN, así que el layout y la página se reparten el mismo viaje en
+// vez de hacer dos.
+//
+// Ojo con lo que NO es: no es una caché entre peticiones. Cada carga
+// vuelve a preguntar, que es lo que queremos —el progreso cambia al
+// completar una lección—.
+// ---------------------------------------------------------------
+
+/** Las lecciones del curso en bruto, sin ordenar. Ver `FilaOrdenCurso`. */
+const ordenDelCurso = cache(async (cursoId: string): Promise<FilaOrdenCurso[] | null> => {
+  const { data, error } = await baseLms()
+    .from("lecciones")
+    .select("id, orden, modulo_id, modulos!inner(orden)")
+    .eq("modulos.curso_id", cursoId)
+    .order("orden")
+    .returns<FilaOrdenCurso[]>();
+
+  if (!registrar("No se pudo leer el orden del curso", error)) return null;
+  return data ?? [];
+});
+
+/** Lo que este alumno lleva completado, en todos sus cursos. */
+const leccionesHechas = cache(async (alumnoId: string): Promise<Set<string>> => {
+  const { data, error } = await baseLms()
+    .from("progreso_lecciones")
+    .select("leccion_id, completada_en")
+    .eq("alumno_id", alumnoId)
+    .returns<FilaProgreso[]>();
+
+  registrar("No se pudo leer el progreso de lecciones", error);
+  return new Set((data ?? []).map((p) => p.leccion_id));
+});
+
+/**
+ * Cuántas lecciones del curso lleva hechas el alumno.
+ *
+ * Es lo único que la cabecera necesita de la base además del título del
+ * curso, y sale de las dos lecturas de arriba, así que cuando la página
+ * de lección ya las ha pedido esto no cuesta ningún viaje.
+ */
+export async function progresoDelCurso(
+  alumnoId: string,
+  cursoId: string
+): Promise<{ completadas: number; total: number }> {
+  const [orden, hechas] = await Promise.all([ordenDelCurso(cursoId), leccionesHechas(alumnoId)]);
+  const lecciones = orden ?? [];
+
+  return {
+    total: lecciones.length,
+    completadas: lecciones.filter((l) => hechas.has(l.id)).length,
+  };
+}
+
+/**
+ * Todo lo que necesita la vista de una lección, en UNA sola ola.
+ *
+ * Antes eran tres esperas encadenadas —lección, luego módulos, luego el
+ * resto— porque cada consulta necesitaba los ids de la anterior. Con los
+ * embeds esa cadena desaparece: las cinco consultas de abajo solo
+ * dependen de lo que ya se sabe al entrar (el id de la lección, el del
+ * curso y el del alumno), así que salen todas a la vez.
+ *
+ * Aquí SÍ se trae `contenido`, pero solo el de esta lección.
  */
 export async function leccionParaVer(
   alumnoId: string,
@@ -425,55 +529,31 @@ export async function leccionParaVer(
 ): Promise<LeccionCompleta | null> {
   const cliente = baseLms();
 
-  const { data: leccionData, error: e1 } = await cliente
-    .from("lecciones")
-    .select("id, titulo, contenido, video_url, orden, modulo_id")
-    .eq("id", leccionId)
-    .limit(1)
-    .returns<FilaLeccionCompleta[]>();
-
-  if (!registrar("No se pudo leer la lección", e1)) return null;
-  const leccion = (leccionData ?? [])[0];
-  if (!leccion) return null;
-
-  // Los módulos del curso: hacen falta para comprobar que la lección es
-  // de este curso y para saber cuál es la siguiente al saltar de módulo.
-  const { data: modulos, error: e2 } = await cliente
-    .from("modulos")
-    .select("id, titulo, orden")
-    .eq("curso_id", curso.id)
-    .order("orden")
-    .returns<FilaModulo[]>();
-
-  if (!registrar("No se pudieron leer los módulos", e2)) return null;
-  const listaModulos = modulos ?? [];
-
-  // Una lección de otro curso no se sirve desde esta URL: si no, el slug
-  // sería decorativo y bastaría con adivinar un uuid.
-  const modulo = listaModulos.find((m) => m.id === leccion.modulo_id);
-  if (!modulo) return null;
-
-  const idsModulo = listaModulos.map((m) => m.id);
-
-  const [todas, soloEjercicios, progreso, ejercicios] = await Promise.all([
+  const [conModulo, ordenCurso, hechas, soloEjercicios, ejercicios] = await Promise.all([
     cliente
       .from("lecciones")
-      .select("id, titulo, orden, modulo_id")
-      .in("modulo_id", idsModulo)
-      .order("orden")
-      .returns<FilaLeccion[]>(),
+      .select(
+        "id, titulo, contenido, video_url, orden, modulo_id," +
+          " modulos!inner(id, titulo, orden, visible_after, curso_id," +
+          " lecciones(id, titulo, orden))"
+      )
+      .eq("id", leccionId)
+      .limit(1)
+      .returns<FilaLeccionConModulo[]>(),
+    // Estas dos las comparte con la cabecera del layout: van por
+    // `cache()`, así que quien llegue segundo se engancha al mismo viaje.
+    ordenDelCurso(curso.id),
+    leccionesHechas(alumnoId),
+    // Las de solo ejercicios de TODO el curso, no solo las del módulo:
+    // son 3 ids y 139 bytes, y pedirlas por curso las saca de la cadena
+    // de dependencias —no hace falta saber el módulo para pedirlas—.
     cliente
       .from("lecciones")
-      .select("id")
-      .in("modulo_id", idsModulo)
+      .select("id, modulos!inner(curso_id)")
+      .eq("modulos.curso_id", curso.id)
       .eq("contenido", "")
       .is("video_url", null)
       .returns<{ id: string }[]>(),
-    cliente
-      .from("progreso_lecciones")
-      .select("leccion_id, completada_en")
-      .eq("alumno_id", alumnoId)
-      .returns<FilaProgreso[]>(),
     cliente
       .from("ejercicios_leccion")
       .select("id, tipo, enunciado, opciones, correcta, explicacion, orden")
@@ -482,14 +562,24 @@ export async function leccionParaVer(
       .returns<EjercicioFila[]>(),
   ]);
 
-  if (!registrar("No se pudieron leer las lecciones del curso", todas.error)) return null;
+  if (!registrar("No se pudo leer la lección", conModulo.error)) return null;
+  if (ordenCurso === null) return null;
+
+  const leccion = (conModulo.data ?? [])[0];
+  if (!leccion) return null;
+
+  const modulo = leccion.modulos;
+
+  // Una lección de otro curso no se sirve desde esta URL: si no, el slug
+  // sería decorativo y bastaría con adivinar un uuid. Antes se comprobaba
+  // buscándola entre los módulos del curso; ahora el propio embed dice de
+  // qué curso cuelga y basta con compararlo.
+  if (!modulo || modulo.curso_id !== curso.id) return null;
 
   const sinTeoria = new Set((soloEjercicios.data ?? []).map((l) => l.id));
-  const hechas = new Set((progreso.data ?? []).map((p) => p.leccion_id));
-  const ordenModulo = new Map(listaModulos.map((m) => [m.id, m.orden]));
 
-  const ordenadas = (todas.data ?? []).slice().sort((a, b) => {
-    const dm = (ordenModulo.get(a.modulo_id) ?? 0) - (ordenModulo.get(b.modulo_id) ?? 0);
+  const ordenadas = ordenCurso.slice().sort((a, b) => {
+    const dm = (a.modulos?.orden ?? 0) - (b.modulos?.orden ?? 0);
     return dm !== 0 ? dm : a.orden - b.orden;
   });
 
@@ -498,10 +588,19 @@ export async function leccionParaVer(
   const anterior = posicion > 0 ? ordenadas[posicion - 1] : undefined;
 
   const ahora = new Date();
+
+  // ESTO ANTES ERA SIEMPRE 0. El `select` de los módulos no pedía
+  // `visible_after`, así que la propiedad llegaba `undefined`, el `?? 0`
+  // la daba por abierta y el drip de esta pantalla no cerraba nada: 43
+  // de los 45 módulos del FCE tienen espera y ninguna se aplicaba aquí.
+  // El índice del curso sí la aplicaba —`arbolDelCurso` sí lo pide—, con
+  // lo que la fila salía bloqueada en el temario y la URL directa
+  // entraba igual.
   const visibleAfter = modulo.visible_after ?? 0;
 
-  const hermanas: LeccionIndice[] = ordenadas
-    .filter((l) => l.modulo_id === modulo.id)
+  const hermanas: LeccionIndice[] = (modulo.lecciones ?? [])
+    .slice()
+    .sort((a, b) => a.orden - b.orden)
     .map((l) => {
       const completada = hechas.has(l.id);
       return {

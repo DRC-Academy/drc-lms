@@ -5,7 +5,7 @@ import { obtenerPerfil } from "@/lib/gestion";
 import { arbolDelCurso, cursoPorSlug, cursosAsignados } from "@/lib/cursos-servidor";
 import { construirTemario } from "@/lib/temario";
 import { comoFecha } from "@/lib/fechas";
-import CabeceraLeccion from "@/components/leccion/CabeceraLeccion";
+import { CabeceraMovil } from "@/components/leccion/CabeceraLeccion";
 import Temario from "@/components/curso/Temario";
 
 export const dynamic = "force-dynamic";
@@ -53,18 +53,14 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
   const temario = construirTemario(arbol);
 
   const inicio = sesion.rol === "alumno" ? `/alumno/${sesion.alumnoId}` : "/";
-  const nombre = perfil?.nombre.trim() ?? "";
 
   return (
-    <div className="min-h-screen bg-temario-fondo text-temario-tinta">
-      <CabeceraLeccion
-        cursoTitulo={curso.titulo}
-        cursoSlug={curso.slug}
-        completadas={arbol.completadas}
-        total={arbol.total}
-        inicial={nombre[0]?.toUpperCase() ?? ""}
-        volverA={inicio}
-      />
+    // La cabecera de escritorio la pone el layout del curso: es la misma
+    // que en la lección, así que al ir del temario a una lección y volver
+    // no se re-renderiza. Aquí solo queda la de móvil, que lleva la
+    // flecha de atrás.
+    <div className="flex-1 bg-temario-fondo text-temario-tinta">
+      <CabeceraMovil cursoTitulo={curso.titulo} cursoSlug={curso.slug} volverA={inicio} />
 
       <main className="mx-auto w-full max-w-[1240px] px-4 pb-14 pt-6 min-[900px]:px-11 min-[900px]:pb-16 min-[900px]:pt-10">
         <Link

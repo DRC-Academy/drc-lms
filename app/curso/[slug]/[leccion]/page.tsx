@@ -18,23 +18,49 @@ export default async function PaginaLeccion({
   params: { slug: string; leccion: string };
 }) {
   const sesion = await exigirSesion();
-
-  const curso = await cursoPorSlug(params.slug);
-  if (!curso) notFound();
-
   const alumnoId = sesion.rol === "alumno" ? sesion.alumnoId : "";
+
+  // ---------------------------------------------------------------
+  // DOS OLAS, NO SIETE ESPERAS
+  //
+  // Esto era una cascada: cada consulta empezaba cuando la anterior
+  // había vuelto, aunque no necesitara nada de ella. El curso no depende
+  // del perfil, y la lección no depende de si el alumno está matriculado.
+  // Encadenarlas sumaba siete viajes de ida y vuelta en fila, y eso —no
+  // el tamaño de los datos— era casi toda la espera.
+  //
+  // Ahora solo hay dos niveles de dependencia reales: lo que sale de la
+  // URL y de la cookie va en la primera ola, y lo que necesita el curso
+  // o el perfil va en la segunda.
+  // ---------------------------------------------------------------
 
   // El perfil hace dos cosas aquí: es el guard —un alumno solo entra en
   // los cursos de su plan— y de él sale el nombre del profesor, que
   // aparece en el cierre de los ejercicios.
-  const perfil = sesion.rol === "alumno" ? await obtenerPerfil(sesion.alumnoId) : null;
+  const [curso, perfil] = await Promise.all([
+    cursoPorSlug(params.slug),
+    sesion.rol === "alumno" ? obtenerPerfil(sesion.alumnoId) : Promise.resolve(null),
+  ]);
 
-  if (sesion.rol === "alumno") {
-    const suyos = perfil ? await cursosAsignados(perfil.plan, perfil.nivel) : [];
-    if (!suyos.some((c) => c.id === curso.id)) redirect(`/alumno/${sesion.alumnoId}`);
+  if (!curso) notFound();
+
+  // SE PIDE LA LECCIÓN ANTES DE SABER SI ES SUYA, y es deliberado. El
+  // guard sigue decidiendo igual y unas líneas más abajo: lo único que
+  // cambia es que, cuando no lo es, se ha leído contenido que se tira sin
+  // salir del servidor. A cambio, el caso normal —que es que sí sea suya—
+  // se ahorra una espera entera. Nada de esto llega al navegador antes
+  // del `redirect`.
+  const [suyos, vista] = await Promise.all([
+    sesion.rol === "alumno" && perfil
+      ? cursosAsignados(perfil.plan, perfil.nivel)
+      : Promise.resolve([]),
+    leccionParaVer(alumnoId, curso, params.leccion, comoFecha(perfil?.fechaInicio)),
+  ]);
+
+  if (sesion.rol === "alumno" && !suyos.some((c) => c.id === curso.id)) {
+    redirect(`/alumno/${sesion.alumnoId}`);
   }
 
-  const vista = await leccionParaVer(alumnoId, curso, params.leccion, comoFecha(perfil?.fechaInicio));
   if (!vista) notFound();
 
   // La lección existe y es suya, pero su módulo todavía no se ha abierto.
@@ -76,7 +102,6 @@ export default async function PaginaLeccion({
 
   const partido = partirModulo(moduloTitulo, moduloOrden);
   const posicion = hermanas.findIndex((h) => h.id === leccion.id);
-  const nombre = perfil?.nombre.trim() ?? "";
 
   return (
     <VistaLeccion
@@ -101,7 +126,6 @@ export default async function PaginaLeccion({
       esUltimaDelModulo={posicion === hermanas.length - 1}
       registrarIntentos={sesion.rol === "alumno"}
       profesor={perfil?.profesor.trim() ?? ""}
-      inicial={nombre[0]?.toUpperCase() ?? ""}
       volverA={sesion.rol === "alumno" ? `/alumno/${sesion.alumnoId}` : "/"}
     />
   );
