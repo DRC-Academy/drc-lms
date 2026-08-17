@@ -155,14 +155,32 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
       <main className="mx-auto w-full max-w-contenido flex-1 px-4 pb-8 pt-[18px] lg:px-9 lg:pb-11 lg:pt-8">
         {/* Control del equipo, no del alumno: va arriba del todo y fuera
             del contenido. En medio de la página partía el hilo entre el
-            banner y la práctica. */}
+            banner y la práctica.
+
+            AQUÍ ES DONDE VIVE EL EMAIL, y en ningún otro sitio de la
+            interfaz. El listado del panel dejó de enseñarlo: 20 correos
+            por pantalla y 172 detrás del buscador convertían cualquier
+            captura en una fuga. Aquí es una ficha abierta a propósito, de
+            una en una, y solo para el equipo —el alumno ya sabe su
+            correo, así que enseñárselo sería ruido—. */}
         {sesion.rol === "admin" && (
-          <Link
-            href="/"
-            className="mb-4 inline-block text-[14px] text-marca-gris transition-colors hover:text-marca-tinta"
-          >
-            ← Cambiar de alumno
-          </Link>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+            <Link
+              href="/"
+              className="text-[14px] text-marca-gris transition-colors hover:text-marca-tinta"
+            >
+              ← Cambiar de alumno
+            </Link>
+
+            {perfil?.email && (
+              <a
+                href={`mailto:${perfil.email}`}
+                className="max-w-full truncate text-[13px] text-marca-grisSuave underline-offset-4 transition-colors hover:text-marca-tinta hover:underline"
+              >
+                {perfil.email}
+              </a>
+            )}
+          </div>
         )}
 
         <div className="mb-4 lg:mb-[22px]">

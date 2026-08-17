@@ -13,16 +13,27 @@ const POR_PAGINA = 20;
 /**
  * La pantalla del equipo.
  *
- * ANTES ERA SOLO UN BUSCADOR: servía para entrar en una ficha y nada
- * más. No había forma de saber si la plataforma se usaba, qué modo de
- * generación tiraba ni a quién había que ir a buscar. Ahora el panel va
- * arriba —que es la pregunta urgente— y el listado de alumnos baja a ser
- * una sección más.
+ * EL ORDEN ES POR FRECUENCIA DE USO, NO POR IMPORTANCIA. Primero fue
+ * solo un buscador; después el panel de métricas se puso arriba porque
+ * era la pregunta urgente del lanzamiento. Pasado el lanzamiento, la
+ * pregunta urgente se hace una vez al día y buscar a un alumno, veinte:
+ * la lista vuelve a ir primero y las métricas debajo. Siguen siendo
+ * útiles, pero no son lo que se viene a hacer aquí.
  *
- * El índice de secciones vive aquí y no en `Cabecera`: esa barra es la
- * navegación DEL ALUMNO —inicio, curso, práctica— y al equipo se le
- * enseña vacía a propósito. Meterle secciones de admin la convertiría en
- * dos componentes disfrazados de uno.
+ * El índice de anclas es lo que hace que ese orden no cueste nada: las
+ * métricas están a un clic desde arriba, sin scroll.
+ *
+ * El índice vive aquí y no en `Cabecera`: esa barra es la navegación DEL
+ * ALUMNO —inicio, curso, práctica— y al equipo se le enseña vacía a
+ * propósito. Meterle secciones de admin la convertiría en dos
+ * componentes disfrazados de uno.
+ *
+ * NO SE PINTA NINGÚN EMAIL. En una lista de 20 tarjetas, y con 172
+ * alumnos detrás del buscador, el correo convierte cualquier captura de
+ * pantalla en una fuga. Con nombre, nivel y profesor se identifica a
+ * cualquiera; el correo concreto está en la ficha, que se abre de una en
+ * una. El buscador SÍ sigue mirando el campo email —ver `listarAlumnos`—
+ * porque buscar por correo es útil y enseñarlo todo el rato no.
  *
  * El guard es `exigirAdministrador`, que lee el rol de la cookie firmada
  * en el servidor: un alumno que escriba esta URL acaba en su ficha antes
@@ -61,14 +72,17 @@ export default async function Home({
         </p>
 
         {/* Anclas, no rutas: el panel entero es una sola página y el
-            equipo salta entre bloques sin recargar ni perder el periodo. */}
-        <nav aria-label="Secciones del panel" className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+            equipo salta entre bloques sin recargar ni perder el periodo.
+            Ya no está "Alumnos" en la lista: es la sección que viene
+            justo debajo, así que un enlace para bajar tres centímetros
+            solo ensuciaría el índice. Estas cuatro son las que ahorran
+            scroll de verdad. */}
+        <nav aria-label="Ir a las métricas" className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
           {[
             { texto: "Acceso", ancla: "#acceso" },
             { texto: "Adopción", ancla: "#adopcion" },
             { texto: "Uso por modo", ancla: "#modos" },
             { texto: "Requieren atención", ancla: "#atencion" },
-            { texto: "Alumnos", ancla: "#alumnos" },
           ].map(({ texto, ancla }) => (
             <a
               key={ancla}
@@ -80,10 +94,11 @@ export default async function Home({
           ))}
         </nav>
 
-        <PanelAdmin datos={datos} />
-
-        {/* ------------------------------- ALUMNOS ------------------------------- */}
-        <section id="alumnos" className="mt-10 scroll-mt-6 lg:mt-14">
+        {/* ------------------------------- ALUMNOS -------------------------------
+            Primera sección: es lo que se usa a diario. Conserva su `id`
+            aunque ya no esté en el índice, para que los enlaces viejos a
+            `/#alumnos` sigan llevando a algún sitio. */}
+        <section id="alumnos" className="mt-7 scroll-mt-6 lg:mt-9">
           <h2 className="font-display text-[21px] font-bold leading-[1.15] text-marca-tinta lg:text-[26px]">
             Alumnos
           </h2>
@@ -154,17 +169,11 @@ export default async function Home({
                       <span className="block truncate font-display text-[15px] font-bold text-marca-tinta">
                         {alumno.nombre} · {alumno.nivel}
                       </span>
+                      {/* Nombre, nivel y profesor. NADA MÁS: ver la nota
+                          sobre el email en la cabecera del archivo. */}
                       <span className="mt-0.5 block truncate text-[12.5px] text-marca-gris">
                         Clases con {alumno.profesor}
                       </span>
-                      {/* Se enseña el correo porque ahora también se busca
-                          por él: si alguien pega una dirección y salen dos
-                          fichas parecidas, esto es lo que las distingue. */}
-                      {alumno.email !== "" && (
-                        <span className="mt-0.5 block truncate text-[12px] text-marca-grisSuave">
-                          {alumno.email}
-                        </span>
-                      )}
                     </span>
                     <span aria-hidden className="shrink-0 text-[16px] text-marca-grisTenue">
                       →
@@ -175,6 +184,14 @@ export default async function Home({
             </ul>
           )}
         </section>
+
+        {/* ------------------------------- MÉTRICAS -------------------------------
+            Debajo de la lista desde que el lanzamiento pasó. La línea de
+            arriba no es adorno: sin ella el selector de periodo con el
+            que abre `PanelAdmin` se lee como si fuera del buscador. */}
+        <div className="mt-12 border-t border-marca-borde pt-2 lg:mt-16">
+          <PanelAdmin datos={datos} />
+        </div>
       </main>
     </>
   );
