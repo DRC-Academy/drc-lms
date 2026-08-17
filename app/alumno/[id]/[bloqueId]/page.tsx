@@ -76,10 +76,23 @@ export default async function PaginaBloque({
     );
   }
 
+  // La columna de altura completa, igual que en el layout del curso: es
+  // lo que deja la barra de acciones pegada al fondo de la ventana
+  // cuando el ejercicio es corto.
+  //
+  // Y la cabecera va CON NAVEGACIÓN. Antes era `<Cabecera nombre={...} />`
+  // a secas —sin `alumnoId` ni `seccion`—, así que dentro de un bloque
+  // desaparecían Inicio, Mi curso y Práctica: el mismo agujero que había
+  // en el curso, en la única pantalla que se había quedado sin arreglar.
   return (
-    <>
-      <Cabecera nombre={nombre} />
+    <div className="flex min-h-dvh flex-col">
+      <Cabecera
+        nombre={nombre}
+        alumnoId={sesion.alumnoId}
+        cursoSlug={cursoSlug}
+        seccion="practica"
+      />
       <Practica bloque={bloque} alumnoId={params.id} profesor={datos.perfil?.profesor ?? ""} />
-    </>
+    </div>
   );
 }

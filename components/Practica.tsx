@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { Bloque } from "@/lib/data";
 import { UMBRAL_DOMINADO } from "@/lib/progreso";
 import { desdePractica } from "@/lib/ejercicio-unificado";
-import { TarjetaFases } from "@/components/TarjetaFases";
+import LateralFases from "@/components/ejercicios/LateralFases";
 import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
 
 /**
@@ -99,9 +99,12 @@ export default function Practica({
   }
 
   return (
-    <VisorEjercicios
-      ejercicios={unificados}
-      textoSalir="Salir"
+    // El mismo fondo y la misma columna que la lección del curso. El
+    // visor pone dentro la rejilla de 300px + contenido.
+    <div className="flex flex-1 flex-col bg-marca-niebla">
+      <VisorEjercicios
+        ejercicios={unificados}
+        textoSalir="Salir"
       alSalir={() => router.push(`/alumno/${alumnoId}`)}
       alSuceso={alSuceso}
       // Ancla el ejercicio a la clase de la que salió. Dato secundario:
@@ -114,11 +117,13 @@ export default function Practica({
           </p>
         ) : null
       }
-      lateral={(indice) => (
-        <TarjetaFases
+      lateral={({ indice, respondido, acertado }) => (
+        <LateralFases
           titulo={bloque.titulo}
+          ejercicios={unificados}
           indice={indice}
-          ejercicios={bloque.ejercicios}
+          respondido={respondido}
+          acertado={acertado}
           profesor={profesor}
         />
       )}
@@ -159,7 +164,8 @@ export default function Practica({
             </div>
           </div>
         );
-      }}
-    />
+        }}
+      />
+    </div>
   );
 }

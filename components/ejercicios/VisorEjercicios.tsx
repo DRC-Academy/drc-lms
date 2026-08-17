@@ -99,12 +99,17 @@ export default function VisorEjercicios({
 }: {
   ejercicios: EjercicioUnificado[];
   /**
-   * El lateral de fases. Solo lo trae la práctica generada.
+   * El lateral de fases. Solo lo trae la práctica generada; en la
+   * lección del curso el carril lo pone `VistaLeccion` desde fuera.
    *
-   * Es una función y no un nodo porque necesita saber por dónde va el
-   * alumno para marcar el paso actual, y el índice vive aquí dentro.
+   * Es una función y no un nodo porque necesita el estado del visor para
+   * marcar el paso actual y los ya hechos, y ese estado vive aquí.
    */
-  lateral?: (indice: number) => ReactNode;
+  lateral?: (estado: {
+    indice: number;
+    respondido: (i: number) => boolean;
+    acertado: (i: number) => boolean;
+  }) => ReactNode;
   /** La pantalla de cierre, que es distinta en cada fuente. */
   cierre: (datos: {
     aciertos: number;
@@ -300,9 +305,35 @@ export default function VisorEjercicios({
 
   if (ejercicios.length === 0) return null;
 
+  /**
+   * El marco: rejilla de 300px + resto cuando hay lateral, y nada cuando
+   * no lo hay.
+   *
+   * Es la MISMA rejilla que usa la lección del curso en `VistaLeccion`.
+   * Con lateral la pinta este componente —es el caso de la práctica—; sin
+   * él, la pinta quien lo envuelve, que es lo que hace la lección, donde
+   * el carril replegado de 72px ya viene de fuera.
+   *
+   * No hay tercera columna: el bloque no tiene teoría, así que no hay
+   * índice de títulos al que saltar. Ese ancho se lo queda el contenido.
+   */
+  const conMarco = (dentro: ReactNode) =>
+    lateral ? (
+      <div className="grid flex-1 grid-cols-1 min-[1100px]:grid-cols-[300px_minmax(0,1fr)]">
+        {lateral({ indice, respondido, acertado })}
+        {dentro}
+      </div>
+    ) : (
+      <>{dentro}</>
+    );
+
   if (cerrado) {
     const aciertos = ejercicios.filter((_, i) => acertado(i)).length;
-    return <>{cierre({ aciertos, total: ejercicios.length, repetir, verEjercicio, acertado })}</>;
+    return conMarco(
+      <div className="flex min-w-0 flex-1 flex-col">
+        {cierre({ aciertos, total: ejercicios.length, repetir, verEjercicio, acertado })}
+      </div>
+    );
   }
 
   // ---------------------------------------------------------------
@@ -322,9 +353,13 @@ export default function VisorEjercicios({
   const pendienteEscritura = esEscritura && !estado.resuelto;
   const puedeComprobarEscritura = pendienteEscritura && estado.texto.trim() !== "";
 
-  return (
-    <div className="mx-auto flex w-full max-w-[calc(760px+7rem)] flex-1 flex-col px-4 pb-6 pt-6 min-[1100px]:px-14 min-[1100px]:pb-6 min-[1100px]:pt-[34px]">
-      {/* ------------------------------ PROGRESO ------------------------------ */}
+  return conMarco(
+    <div className="flex min-w-0 flex-1 flex-col">
+      {/* El mismo ancho, el mismo padding y la misma tipografía que la
+          columna de texto de la lección: el `7rem` que se suma es el
+          padding lateral, para que la caja mida de verdad sus 760px. */}
+      <div className="mx-auto flex w-full max-w-[calc(760px+7rem)] flex-1 flex-col px-4 pb-6 pt-6 min-[1100px]:px-14 min-[1100px]:pt-[34px]">
+        {/* ------------------------------ PROGRESO ------------------------------ */}
       <div className="flex items-center gap-4 min-[1100px]:gap-5">
         <span className="shrink-0 text-[13px] font-semibold text-marca-gris tabular-nums">
           Ejercicio {indice + 1} de {ejercicios.length}
@@ -354,12 +389,8 @@ export default function VisorEjercicios({
         </button>
       </div>
 
-      {/* El lateral solo existe en la práctica generada: son sus fases.
-          `items-start` para que no se estire a la altura del ejercicio. */}
-      <div className={lateral ? "mt-7 flex items-start gap-7" : "flex flex-1 flex-col"}>
-        {lateral?.(indice)}
-
-        <div className={lateral ? "flex min-w-0 flex-1 flex-col" : "flex flex-1 flex-col"}>
+      <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col">
           {/* --------------------------- FASE --------------------------- */}
           {ejercicio.fase && (
             <p className="mb-3 text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-verde">
@@ -514,14 +545,31 @@ export default function VisorEjercicios({
 
           {notaAlPie?.(ejercicio)}
 
-          {/* ------------------------------- CTA ------------------------------- */}
-          <div className="mt-auto flex justify-end pt-8 min-[1100px]:pt-9">
+        </div>
+      </div>
+      </div>
+
+      {/* --------------------------- BARRA DE ACCIONES ---------------------------
+          El mismo tratamiento que la de la lección: pegada al fondo de la
+          ventana, con borde arriba y fondo translúcido, la flecha de
+          volver a la izquierda y el botón principal ocupando el resto.
+
+          La flecha retrocede AL EJERCICIO ANTERIOR, no a la pantalla
+          anterior. El estado de cada uno se conserva, así que volver
+          atrás enseña lo ya respondido sin perder nada. En el primero no
+          hay destino y el hueco se queda: quitarlo movería el botón
+          principal de sitio al pasar del primero al segundo. */}
+      <div className="sticky bottom-0 border-t border-marca-borde bg-white/[0.94] backdrop-blur-md">
+        <div className="mx-auto w-full max-w-[calc(760px+7rem)] px-3.5 pb-4 pt-3 min-[1100px]:px-14 min-[1100px]:py-3.5">
+          <div className="flex items-center gap-3 min-[1100px]:gap-4">
+            <FlechaAtras alPulsar={indice > 0 ? () => verEjercicio(indice - 1) : null} />
+
             {pendienteVarias || pendienteEscritura ? (
               <button
                 type="button"
                 onClick={pendienteVarias ? comprobarVarias : comprobarEscritura}
                 disabled={!(puedeComprobarVarias || puedeComprobarEscritura)}
-                className={`w-full rounded-full px-8 py-[15px] text-[16px] font-semibold transition-colors min-[1100px]:w-auto ${
+                className={`flex-1 rounded-full px-6 py-[13px] text-center text-[15px] font-semibold transition-colors min-[1100px]:py-3.5 min-[1100px]:text-[15.5px] ${
                   puedeComprobarVarias || puedeComprobarEscritura
                     ? "bg-marca-verde text-white hover:bg-marca-verdeOsc"
                     : "cursor-not-allowed bg-marca-pista text-marca-grisInactivo"
@@ -538,7 +586,7 @@ export default function VisorEjercicios({
                 type="button"
                 onClick={avanzar}
                 disabled={!yaRespondido}
-                className={`w-full rounded-full px-8 py-[15px] text-[16px] font-semibold transition-colors min-[1100px]:w-auto ${
+                className={`flex-1 rounded-full px-6 py-[13px] text-center text-[15px] font-semibold transition-colors min-[1100px]:py-3.5 min-[1100px]:text-[15.5px] ${
                   yaRespondido
                     ? "bg-marca-verde text-white hover:bg-marca-verdeOsc"
                     : "cursor-not-allowed bg-marca-pista text-marca-grisInactivo"
@@ -559,6 +607,27 @@ export default function VisorEjercicios({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Volver al ejercicio anterior. En el primero no hay destino y el hueco
+ * se conserva, igual que en la barra de la lección: sin él, el botón
+ * principal daría un salto al pasar del primer ejercicio al segundo.
+ */
+function FlechaAtras({ alPulsar }: { alPulsar: (() => void) | null }) {
+  const clase =
+    "grid h-11 w-11 shrink-0 place-items-center rounded-full border border-marca-borde text-[15px] leading-none text-marca-tinta transition-colors hover:bg-marca-niebla min-[1100px]:h-auto min-[1100px]:w-auto min-[1100px]:px-[18px] min-[1100px]:py-[11px] min-[1100px]:text-[14.5px] min-[1100px]:font-medium";
+
+  if (!alPulsar) {
+    return <span aria-hidden className={`${clase} pointer-events-none opacity-0`} />;
+  }
+
+  return (
+    <button type="button" onClick={alPulsar} className={clase}>
+      <span className="min-[1100px]:hidden">←</span>
+      <span className="hidden min-[1100px]:inline">← Anterior</span>
+    </button>
   );
 }
 
