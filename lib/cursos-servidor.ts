@@ -20,6 +20,7 @@ import { cache } from "react";
 import { aperturaDeLeccion, calcularApertura } from "@/lib/drip";
 import { baseLms } from "@/lib/supabase-lms";
 import { claveCoincide, cursosDelAlumno } from "@/lib/cursos";
+import { excepcionesDelAlumno } from "@/lib/accesos-manuales";
 
 export type CursoFila = {
   id: string;
@@ -67,14 +68,35 @@ function registrar(donde: string, error: { message: string } | null): boolean {
  * más de leer que de ejecutar, y la tabla no va a crecer: son los
  * cursos de la academia, no un catálogo abierto.
  */
-export async function cursosAsignados(plan: string, nivel: string): Promise<CursoFila[]> {
-  const { data, error } = await baseLms()
-    .from("cursos")
-    .select("id, slug, titulo, nivel, tipo, examen")
-    .eq("activo", true)
-    .order("orden")
-    .returns<CursoFila[]>();
+export async function cursosAsignados(
+  plan: string,
+  nivel: string,
+  /**
+   * Con quién comprobar las excepciones manuales. ADITIVO Y OPCIONAL: sin
+   * este argumento la función devuelve exactamente lo mismo que devolvía
+   * antes de que existieran, que es lo que permitió añadirlas sin tocar
+   * ninguna de las llamadas que ya había.
+   *
+   * Quien lo pasa recibe además los cursos concedidos a mano. Nunca
+   * recibe menos: lo manual se suma al plan, nunca lo sustituye.
+   */
+  alumnoId = ""
+): Promise<CursoFila[]> {
+  // Las dos a la vez: las excepciones solo dependen del alumno, así que
+  // no tienen por qué esperar a la lista de cursos. Y como
+  // `excepcionesDelAlumno` va por `cache()`, si algo más de esta misma
+  // petición ya la pidió, esto no cuesta ningún viaje.
+  const [respuesta, excepciones] = await Promise.all([
+    baseLms()
+      .from("cursos")
+      .select("id, slug, titulo, nivel, tipo, examen")
+      .eq("activo", true)
+      .order("orden")
+      .returns<CursoFila[]>(),
+    excepcionesDelAlumno(alumnoId),
+  ]);
 
+  const { data, error } = respuesta;
   if (!registrar("No se pudieron leer los cursos", error)) return [];
 
   const disponibles = data ?? [];
@@ -85,6 +107,16 @@ export async function cursosAsignados(plan: string, nivel: string): Promise<Curs
   for (const clave of cursosDelAlumno(plan, nivel)) {
     const encontrado = disponibles.find((curso) => claveCoincide(clave, curso));
     if (encontrado && !salida.some((c) => c.id === encontrado.id)) salida.push(encontrado);
+  }
+
+  // Y detrás los concedidos a mano, que por definición no están en las
+  // claves del plan. Van al final a propósito: delante quedan los del
+  // producto que el alumno compró, que es el orden de relevancia que usa
+  // el banner cuando todavía no hay actividad de la que fiarse.
+  for (const curso of disponibles) {
+    if (!excepciones.has(curso.id)) continue;
+    if (salida.some((c) => c.id === curso.id)) continue;
+    salida.push(curso);
   }
 
   return salida;
@@ -698,7 +730,7 @@ export async function cursosDelInicio(
   plan: string,
   nivel: string
 ): Promise<EstadoCurso[]> {
-  const cursos = await cursosAsignados(plan, nivel);
+  const cursos = await cursosAsignados(plan, nivel, alumnoId);
   if (cursos.length === 0) return [];
 
   const estados = await Promise.all(cursos.map((curso) => estadoDelCurso(alumnoId, curso)));

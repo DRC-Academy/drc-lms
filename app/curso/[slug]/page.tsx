@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { exigirSesion } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { arbolDelCurso, cursoPorSlug, cursosAsignados } from "@/lib/cursos-servidor";
+import { sinDripEn } from "@/lib/accesos-manuales";
 import { construirTemario } from "@/lib/temario";
 import { comoFecha } from "@/lib/fechas";
 import { CabeceraMovil } from "@/components/leccion/CabeceraLeccion";
@@ -43,13 +44,19 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
   // Un alumno solo abre los cursos de su plan. Sin esto, el slug sería
   // decorativo y cualquiera se leería el temario de los otros niveles.
   if (sesion.rol === "alumno") {
-    const suyos = perfil ? await cursosAsignados(perfil.plan, perfil.nivel) : [];
+    const suyos = perfil ? await cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : [];
     if (!suyos.some((c) => c.id === curso.id)) redirect(`/alumno/${sesion.alumnoId}`);
   }
 
   // El equipo no es alumno de nada: sin fecha, ve el curso entero. Es
-  // justo lo que necesita para revisarlo.
-  const arbol = await arbolDelCurso(alumnoId, curso, comoFecha(perfil?.fechaInicio));
+  // justo lo que necesita para revisarlo. Y un alumno al que le hayan
+  // abierto este curso entero llega aquí por el mismo camino: `null`
+  // como fecha es lo que `lib/drip.ts` entiende por "sin espera".
+  const fechaDrip = (await sinDripEn(alumnoId, curso.id))
+    ? null
+    : comoFecha(perfil?.fechaInicio);
+
+  const arbol = await arbolDelCurso(alumnoId, curso, fechaDrip);
   const temario = construirTemario(arbol);
 
   const inicio = sesion.rol === "alumno" ? `/alumno/${sesion.alumnoId}` : "/";

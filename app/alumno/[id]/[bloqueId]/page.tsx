@@ -39,7 +39,7 @@ export default async function PaginaBloque({
   // El curso principal, solo para que la cabecera pueda pintar "Mi curso".
   // Son 7 filas y evita que la navegación cambie de forma entre pantallas.
   const cursos = datos.perfil
-    ? await cursosAsignados(datos.perfil.plan, datos.perfil.nivel)
+    ? await cursosAsignados(datos.perfil.plan, datos.perfil.nivel, params.id)
     : [];
   const cursoSlug = cursos[0]?.slug ?? null;
 

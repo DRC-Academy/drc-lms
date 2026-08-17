@@ -4,6 +4,7 @@ import { exigirAdministrador } from "@/lib/sesion-servidor";
 import { cargarPanel, esPeriodo, type Periodo } from "@/lib/admin-servidor";
 import Cabecera from "@/components/Cabecera";
 import PanelAdmin from "@/components/admin/PanelAdmin";
+import GestorAccesos from "@/components/admin/GestorAccesos";
 
 // Lee la cookie de sesión y datos de Gestión: nada que prerenderizar.
 export const dynamic = "force-dynamic";
@@ -154,10 +155,14 @@ export default async function Home({
           ) : (
             <ul className="mt-4 grid grid-cols-1 gap-2.5 lg:grid-cols-2">
               {alumnos.map((alumno) => (
-                <li key={alumno.alumnoId}>
+                // `relative` para el menú de accesos, que va encima de la
+                // tarjeta y no dentro del enlace: un botón dentro de un
+                // `<a>` no es HTML válido y el clic se lo comería el
+                // enlace. El `pr-12` del enlace es el hueco que le deja.
+                <li key={alumno.alumnoId} className="relative">
                   <Link
                     href={`/alumno/${alumno.alumnoId}`}
-                    className="flex items-center gap-3.5 rounded-[14px] border border-marca-borde bg-white p-3.5 transition-colors hover:border-marca-verde hover:bg-marca-verdeFondo"
+                    className="flex items-center gap-3.5 rounded-[14px] border border-marca-borde bg-white p-3.5 pr-12 transition-colors hover:border-marca-verde hover:bg-marca-verdeFondo"
                   >
                     <span
                       aria-hidden
@@ -179,6 +184,12 @@ export default async function Home({
                       →
                     </span>
                   </Link>
+
+                  <GestorAccesos
+                    alumnoId={alumno.alumnoId}
+                    nombre={alumno.nombre}
+                    nivel={alumno.nivel}
+                  />
                 </li>
               ))}
             </ul>

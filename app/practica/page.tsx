@@ -49,7 +49,7 @@ export default async function PaginaPractica() {
 
   // Solo para que la cabecera pueda pintar "Mi curso" sin cambiar de
   // forma entre pantallas.
-  const cursos = perfil ? await cursosAsignados(perfil.plan, perfil.nivel) : [];
+  const cursos = perfil ? await cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : [];
 
   return (
     <>

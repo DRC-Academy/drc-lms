@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { exigirSesion } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { cursoPorSlug, cursosAsignados, leccionParaVer } from "@/lib/cursos-servidor";
+import { sinDripEn } from "@/lib/accesos-manuales";
 import { comoFecha } from "@/lib/fechas";
 import { sanearHtml, tieneContenido } from "@/lib/sanear-html";
 import { prepararLeccion } from "@/lib/leccion-html";
@@ -50,11 +51,18 @@ export default async function PaginaLeccion({
   // salir del servidor. A cambio, el caso normal —que es que sí sea suya—
   // se ahorra una espera entera. Nada de esto llega al navegador antes
   // del `redirect`.
+  // Si el equipo le abrió este curso entero, el drip no se aplica. Se
+  // consigue pasando `null` como fecha de inicio, que es lo que
+  // `lib/drip.ts` ya entiende como "abierto desde el principio": ni una
+  // línea de las reglas de apertura cambia por esto.
+  const abiertoEntero = await sinDripEn(alumnoId, curso.id);
+  const fechaDrip = abiertoEntero ? null : comoFecha(perfil?.fechaInicio);
+
   const [suyos, vista] = await Promise.all([
     sesion.rol === "alumno" && perfil
-      ? cursosAsignados(perfil.plan, perfil.nivel)
+      ? cursosAsignados(perfil.plan, perfil.nivel, alumnoId)
       : Promise.resolve([]),
-    leccionParaVer(alumnoId, curso, params.leccion, comoFecha(perfil?.fechaInicio)),
+    leccionParaVer(alumnoId, curso, params.leccion, fechaDrip),
   ]);
 
   if (sesion.rol === "alumno" && !suyos.some((c) => c.id === curso.id)) {
