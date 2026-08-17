@@ -78,6 +78,13 @@ type Resultado<T> = { data: T | null; error: { message: string } | null };
 type Consulta = {
   eq(columna: string, valor: string): Consulta;
   ilike(columna: string, patron: string): Consulta;
+  /**
+   * Condiciones alternativas, en la sintaxis de PostgREST:
+   * `"nombre.ilike.\"%ana%\",email.ilike.\"%ana%\""`. Sigue siendo un
+   * filtro de lectura —acota el SELECT, no escribe nada—, y evita tener
+   * que lanzar una consulta por columna cuando el buscador mira varias.
+   */
+  or(filtros: string): Consulta;
   order(columna: string, opciones: { ascending: boolean }): Consulta;
   returns<T>(): PromiseLike<Resultado<T>>;
 };

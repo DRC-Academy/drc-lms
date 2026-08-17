@@ -98,14 +98,14 @@ export default async function Home({
           <form method="get" className="mt-4 flex flex-col gap-2.5 sm:flex-row">
             <input type="hidden" name="periodo" value={periodo} />
             <label htmlFor="q" className="sr-only">
-              Buscar por nombre
+              Buscar por nombre o correo
             </label>
             <input
               id="q"
               name="q"
               type="search"
               defaultValue={busqueda}
-              placeholder="Busca por nombre…"
+              placeholder="Busca por nombre o correo…"
               className="min-h-[46px] w-full flex-1 rounded-full border border-marca-borde bg-white px-5 text-[15px] text-marca-tinta outline-none transition-colors placeholder:text-marca-grisTenue focus:border-marca-verde"
             />
             <button
@@ -119,7 +119,7 @@ export default async function Home({
           {busqueda !== "" && (
             <p className="mt-3.5 text-[13.5px] text-marca-gris">
               {alumnos.length === 0
-                ? `No encontramos a nadie que se llame «${busqueda}».`
+                ? `Ningún alumno con «${busqueda}» en el nombre ni en el correo.`
                 : `${alumnos.length} ${alumnos.length === 1 ? "alumno" : "alumnos"} para «${busqueda}».`}{" "}
               <Link
                 href={`/?periodo=${periodo}`}
@@ -157,6 +157,14 @@ export default async function Home({
                       <span className="mt-0.5 block truncate text-[12.5px] text-marca-gris">
                         Clases con {alumno.profesor}
                       </span>
+                      {/* Se enseña el correo porque ahora también se busca
+                          por él: si alguien pega una dirección y salen dos
+                          fichas parecidas, esto es lo que las distingue. */}
+                      {alumno.email !== "" && (
+                        <span className="mt-0.5 block truncate text-[12px] text-marca-grisSuave">
+                          {alumno.email}
+                        </span>
+                      )}
                     </span>
                     <span aria-hidden className="shrink-0 text-[16px] text-marca-grisTenue">
                       →

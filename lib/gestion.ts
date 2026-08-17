@@ -240,10 +240,13 @@ export async function clasesDelPanel(): Promise<ClasePanel[]> {
   return salida;
 }
 
+const CAMPOS_RESUMEN = "alumno_id, nombre, email, nivel, profesor";
+
 function aResumen(fila: Fila): ResumenAlumno {
   return {
     alumnoId: comoTexto(fila.alumno_id),
     nombre: comoTexto(fila.nombre),
+    email: comoTexto(fila.email),
     nivel: comoTexto(fila.nivel),
     profesor: comoTexto(fila.profesor),
   };
@@ -255,6 +258,19 @@ function aResumen(fila: Fila): ResumenAlumno {
  */
 function escaparLike(texto: string): string {
   return texto.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/**
+ * Prepara un patrón de LIKE para meterlo dentro de un `or(...)`.
+ *
+ * Ahí dentro la coma y el paréntesis separan condiciones, así que el
+ * valor va entrecomillado o un alumno apellidado "Ruiz, Ana" partiría el
+ * filtro en dos. Y entre comillas PostgREST se queda con el carácter que
+ * sigue a cada barra: las que puso `escaparLike` hay que duplicarlas para
+ * que lleguen enteras a LIKE y sigan escapando el comodín.
+ */
+function valorEnOr(patron: string): string {
+  return `"${patron.replace(/[\\"]/g, (c) => `\\${c}`)}"`;
 }
 
 /**
@@ -276,7 +292,7 @@ export async function buscarAlumnoPorEmail(email: string): Promise<ResumenAlumno
   if (limpio === "") return null;
 
   const { data, error } = await soloLectura("vista_perfil_alumno")
-    .select("alumno_id, nombre, nivel, profesor")
+    .select(CAMPOS_RESUMEN)
     .ilike("email", escaparLike(limpio))
     .order("alumno_id", { ascending: true })
     .returns<Fila[]>();
@@ -296,18 +312,28 @@ export async function buscarAlumnoPorEmail(email: string): Promise<ResumenAlumno
  * Listado para la home del equipo. Deduplica antes de recortar, para que
  * el límite cuente alumnos y no filas.
  *
- * Con `busqueda` filtra por nombre sobre los 174 alumnos, no solo sobre
- * los 20 que se ven: un buscador que solo mira la primera página no sirve
- * para encontrar a nadie.
+ * Con `busqueda` filtra por nombre O POR CORREO sobre los 174 alumnos, no
+ * solo sobre los 20 que se ven: un buscador que solo mira la primera
+ * página no sirve para encontrar a nadie.
+ *
+ * Las dos columnas van en el mismo `or` y con el mismo trozo de texto, sin
+ * adivinar de antemano qué se ha escrito. Al equipo le llegan incidencias
+ * con el correo delante —es lo que trae el email del alumno o el pedido de
+ * WooCommerce—, y con el nombre a veces no coincide: en Gestión está el
+ * nombre completo y quien pregunta escribe solo uno. Como es un `contiene`,
+ * también vale el dominio suelto o la parte de antes de la arroba.
  */
 export async function listarAlumnos(busqueda = "", limite = 20): Promise<ResumenAlumno[]> {
   const termino = busqueda.trim();
 
   let consulta = soloLectura("vista_perfil_alumno")
-    .select("alumno_id, nombre, nivel, profesor")
+    .select(CAMPOS_RESUMEN)
     .order("nombre", { ascending: true });
 
-  if (termino !== "") consulta = consulta.ilike("nombre", `%${escaparLike(termino)}%`);
+  if (termino !== "") {
+    const patron = valorEnOr(`%${escaparLike(termino)}%`);
+    consulta = consulta.or(`nombre.ilike.${patron},email.ilike.${patron}`);
+  }
 
   const { data, error } = await consulta.returns<Fila[]>();
 

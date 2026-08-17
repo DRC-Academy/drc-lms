@@ -774,6 +774,8 @@ export type UltimaClase = {
 export type ResumenAlumno = {
   alumnoId: string;
   nombre: string;
+  /** Tal y como está escrito en Gestión: es la clave con la que entra. */
+  email: string;
   nivel: string;
   profesor: string;
 };
