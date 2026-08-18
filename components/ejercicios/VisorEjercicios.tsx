@@ -571,7 +571,7 @@ export default function VisorEjercicios({
                 disabled={!(puedeComprobarVarias || puedeComprobarEscritura)}
                 className={`flex-1 rounded-full px-6 py-[13px] text-center text-[15px] font-semibold transition-colors min-[1100px]:py-3.5 min-[1100px]:text-[15.5px] ${
                   puedeComprobarVarias || puedeComprobarEscritura
-                    ? "bg-marca-verde text-white hover:bg-marca-verdeOsc"
+                    ? "btn-verde"
                     : "cursor-not-allowed bg-marca-pista text-marca-grisInactivo"
                 }`}
               >
@@ -588,7 +588,7 @@ export default function VisorEjercicios({
                 disabled={!yaRespondido}
                 className={`flex-1 rounded-full px-6 py-[13px] text-center text-[15px] font-semibold transition-colors min-[1100px]:py-3.5 min-[1100px]:text-[15.5px] ${
                   yaRespondido
-                    ? "bg-marca-verde text-white hover:bg-marca-verdeOsc"
+                    ? "btn-verde"
                     : "cursor-not-allowed bg-marca-pista text-marca-grisInactivo"
                 }`}
               >
@@ -821,7 +821,7 @@ function Produccion({
           disabled={estado.texto.trim() === ""}
           className={`mt-4 w-full rounded-full px-8 py-[15px] text-[16px] font-semibold transition-colors min-[1100px]:w-auto min-[1100px]:self-start ${
             estado.texto.trim() !== ""
-              ? "bg-marca-verde text-white hover:bg-marca-verdeOsc"
+              ? "btn-verde"
               : "cursor-not-allowed bg-marca-pista text-marca-grisInactivo"
           }`}
         >

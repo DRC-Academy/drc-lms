@@ -27,23 +27,20 @@ export type EstadoGeneracion = "listo" | "generando" | "error";
  * que quien va más despacio lo lea como un suspenso.
  */
 
-/** El acento de cada modo: fondo de la tarjeta, punto y botón. */
-const ESTILO: Record<ModoGeneracion, { tarjeta: string; punto: string; boton: string }> = {
-  repaso: {
-    tarjeta: "border-marca-borde bg-white",
-    punto: "bg-marca-verde",
-    boton: "bg-marca-verde text-white hover:bg-marca-verdeOsc",
-  },
-  examen: {
-    tarjeta: "border-marca-examenBorde bg-marca-examen",
-    punto: "bg-marca-amarillo",
-    boton: "bg-marca-verdeOsc text-white hover:bg-marca-tinta",
-  },
-  contexto: {
-    tarjeta: "border-marca-contextoBorde bg-marca-contexto",
-    punto: "bg-marca-tinta",
-    boton: "bg-marca-tinta text-white hover:bg-marca-verdeOsc",
-  },
+/**
+ * El acento de cada modo: fondo de la tarjeta y punto.
+ *
+ * EL BOTÓN NO ESTÁ AQUÍ, y es lo que se acaba de arreglar. Cada modo
+ * tenía el suyo —verde el de clase, verde profundo el de examen, tinta
+ * el de contexto— y las tres tarjetas de una misma fila se leían como
+ * tres controles distintos haciendo lo mismo. El botón es `.btn-verde`
+ * en los tres; lo que distingue el modo es el punto y el fondo, que es
+ * donde el color informa sin competir.
+ */
+const ESTILO: Record<ModoGeneracion, { tarjeta: string; punto: string }> = {
+  repaso: { tarjeta: "border-marca-borde bg-white", punto: "bg-marca-verde" },
+  examen: { tarjeta: "border-marca-examenBorde bg-marca-examen", punto: "bg-marca-amarillo" },
+  contexto: { tarjeta: "border-marca-contextoBorde bg-marca-contexto", punto: "bg-marca-tinta" },
 };
 
 function IconoGirando() {
@@ -115,7 +112,7 @@ function TarjetaSinDatos({ url, aviso }: { url: string | null; aviso: AvisoFormu
           </p>
           <EnlaceFormulario
             url={url}
-            className="mt-5 flex min-h-[46px] w-full items-center justify-center rounded-full bg-marca-verde px-7 text-[15px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc min-[900px]:w-auto min-[900px]:self-start"
+            className="mt-5 flex min-h-[46px] w-full items-center justify-center rounded-full btn-verde px-7 text-[15px] font-semibold min-[900px]:w-auto min-[900px]:self-start"
           />
         </>
       )}
@@ -250,7 +247,7 @@ export default function TarjetasGeneracion({
                       className={`mt-5 flex min-h-[46px] w-full items-center justify-center rounded-full px-6 text-[15px] font-semibold leading-[1.1] transition-colors disabled:cursor-default min-[900px]:mt-auto ${
                         tarjeta.espera
                           ? "bg-marca-pista text-marca-grisInactivo"
-                          : `disabled:cursor-wait disabled:opacity-60 ${estilo.boton}`
+                          : "btn-verde disabled:cursor-wait disabled:opacity-60"
                       }`}
                     >
                       {activa && <IconoGirando />}
@@ -295,7 +292,7 @@ export default function TarjetasGeneracion({
             <button
               type="button"
               onClick={onReintentar}
-              className="mt-4 flex min-h-[44px] w-full items-center justify-center rounded-full bg-marca-verde px-7 text-[15px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc min-[900px]:w-auto"
+              className="mt-4 flex min-h-[44px] w-full items-center justify-center rounded-full btn-verde px-7 text-[15px] font-semibold min-[900px]:w-auto"
             >
               Volver a intentarlo
             </button>

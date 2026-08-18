@@ -126,7 +126,7 @@ export default async function Home({
             />
             <button
               type="submit"
-              className="inline-flex min-h-[46px] items-center justify-center rounded-full bg-marca-verde px-7 text-[14px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc"
+              className="inline-flex min-h-[46px] items-center justify-center rounded-full btn-verde px-7 text-[14px] font-semibold"
             >
               Buscar
             </button>

@@ -157,7 +157,7 @@ export default function Practica({
               </p>
               <Link
                 href={`/alumno/${alumnoId}`}
-                className="btn btn-primario mt-8 min-h-[50px] w-full text-[15px]"
+                className="btn btn-verde mt-8 min-h-[50px] w-full text-[15px]"
               >
                 Volver a mis bloques
               </Link>

@@ -128,7 +128,7 @@ export default function FlujoEjercicios({
               leccionId={leccionId}
               cursoSlug={cursoSlug}
               siguienteId={siguienteId}
-              className="w-full rounded-full bg-marca-verde px-8 py-[15px] text-[16px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc min-[1100px]:order-2 min-[1100px]:w-auto"
+              className="w-full rounded-full btn-verde px-8 py-[15px] text-[16px] font-semibold min-[1100px]:order-2 min-[1100px]:w-auto"
             >
               Completar y seguir
             </BotonCompletar>
@@ -136,7 +136,7 @@ export default function FlujoEjercicios({
             <button
               type="button"
               onClick={repetir}
-              className="w-full rounded-full border-[1.5px] border-marca-verde px-8 py-[13.5px] text-[16px] font-semibold text-marca-verdeOsc transition-colors hover:bg-marca-verde hover:text-white min-[1100px]:order-1 min-[1100px]:w-auto"
+              className="w-full rounded-full btn-verde-linea px-8 py-[13.5px] text-[16px] font-semibold min-[1100px]:order-1 min-[1100px]:w-auto"
             >
               Repetir los ejercicios
             </button>

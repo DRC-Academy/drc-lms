@@ -182,7 +182,7 @@ export default function BloquesGenerados({
 
             <Link
               href={`/alumno/${alumnoId}/${bloque.id}`}
-              className="mt-3.5 flex min-h-[44px] w-full items-center justify-center rounded-full bg-marca-verde px-6 py-[13px] text-[15px] font-semibold leading-[1.1] text-white transition-colors hover:bg-marca-verdeOsc lg:w-auto lg:self-start lg:px-8"
+              className="mt-3.5 flex min-h-[44px] w-full items-center justify-center rounded-full btn-verde px-6 py-[13px] text-[15px] font-semibold leading-[1.1] lg:w-auto lg:self-start lg:px-8"
             >
               Empezar
               <span className="sr-only"> {bloque.titulo}</span>

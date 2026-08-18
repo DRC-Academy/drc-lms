@@ -21,7 +21,6 @@ const config: Config = {
           verde: "#04A749", // solo rellenos y elementos gráficos, nunca texto
           "verde-texto": "#02662E",
           "verde-solido": "#037A36",
-          "verde-solido-hover": "#025C29",
           amarillo: "#F9BE00",
           "amarillo-hover": "#FFD23F",
           // Neutros
@@ -31,7 +30,6 @@ const config: Config = {
           suave: "#F1EFE7",
           discontinuo: "#DFDBD0",
           numeral: "#CFCABC",
-          hairline: "#CBD3CB",
           flecha: "#B4BDB5",
           // Tinta
           titular: "#0E2A19",
@@ -43,7 +41,6 @@ const config: Config = {
           "chip-verde": "#E4F6EA",
           // Interacción
           "enlace-hover": "#014D22",
-          "fantasma-hover": "#F1F6F2",
         },
         // ---------------------------------------------------------------
         // EL TEMARIO MES A MES (/curso/[slug])
@@ -66,7 +63,6 @@ const config: Config = {
           oscuro: "#10221A",
           // Acción
           verde: "#1DA34B",
-          verdeHover: "#17853D",
           verdeTexto: "#14603A",
           tinte: "#E4F3EA",
           // El módulo en curso

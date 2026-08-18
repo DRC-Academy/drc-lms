@@ -118,12 +118,51 @@
     @apply cursor-not-allowed opacity-45;
   }
 
-  .btn-primario {
-    @apply bg-drc-verde-solido text-white hover:bg-drc-verde-solido-hover;
+  /* ---------------------------------------------------------------
+     EL BOTÓN VERDE
+
+     UNO SOLO PARA TODA LA APLICACIÓN. Había tres verdes distintos
+     haciendo de botón principal —#037A36 en el viejo `.btn-primario`,
+     #1E9E3A suelto por el JSX y #14722A en la tarjeta de examen— y
+     ninguno llevaba sombra. Puestos en la misma pantalla no se leían
+     como el mismo control, sino como tres controles parecidos.
+
+     LA SOMBRA ES LA MISMA QUE LA DEL BOTÓN DEL BANNER. Son el mismo
+     objeto sobre dos fondos distintos: uno amarillo porque está dentro
+     del verde y otro verde porque está fuera. Si se levantan igual, se
+     reconocen igual.
+
+     La regla completa, en una línea: dentro de un banner el botón es
+     `.banner-cta`; fuera, `.btn-verde`.
+     --------------------------------------------------------------- */
+  .btn-verde {
+    background: theme("colors.marca.verde");
+    color: #FFFFFF;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transition: background-color 0.18s ease, box-shadow 0.18s ease;
   }
 
-  .btn-secundario {
-    @apply border-drc-hairline text-drc-verde-texto hover:border-drc-verde-solido hover:bg-drc-fantasma-hover;
+  .btn-verde:hover:not(:disabled) {
+    background: theme("colors.marca.verdeOsc");
+  }
+
+  /* Sin sombra mientras no se puede pulsar: la sombra es lo que lo
+     levanta de la página, y lo que no responde no está levantado. */
+  .btn-verde:disabled {
+    box-shadow: none;
+  }
+
+  /* La versión de contorno, para la acción secundaria. Mismo verde y
+     misma familia; sin sombra, porque no hay superficie que levantar. */
+  .btn-verde-linea {
+    border: 1.5px solid theme("colors.marca.verde");
+    color: theme("colors.marca.verdeOsc");
+    transition: background-color 0.18s ease, color 0.18s ease;
+  }
+
+  .btn-verde-linea:hover {
+    background: theme("colors.marca.verde");
+    color: #FFFFFF;
   }
 
   /* ---------------------------------------------------------------

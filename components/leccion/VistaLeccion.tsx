@@ -260,7 +260,7 @@ export default function VistaLeccion({
                       leccionId={leccion.id}
                       cursoSlug={cursoSlug}
                       siguienteId={siguienteId}
-                      className="flex-1 rounded-full bg-marca-verde px-6 py-[13px] text-center text-[15px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc min-[1100px]:py-3.5 min-[1100px]:text-[15.5px]"
+                      className="flex-1 rounded-full btn-verde px-6 py-[13px] text-center text-[15px] font-semibold min-[1100px]:py-3.5 min-[1100px]:text-[15.5px]"
                     >
                       <span className="min-[1100px]:hidden">
                         {completada ? "Continuar" : "Completada y continuar"}

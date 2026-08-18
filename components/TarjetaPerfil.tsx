@@ -64,7 +64,7 @@ export default function TarjetaPerfil({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 block rounded-full border-[1.5px] border-marca-verde px-[18px] py-3 text-center text-[14.5px] font-semibold text-marca-verdeOsc transition-colors hover:bg-marca-verde hover:text-white lg:mt-3.5 lg:inline-block lg:py-[9px] lg:text-[14px]"
+            className="mt-3 block rounded-full btn-verde-linea px-[18px] py-3 text-center text-[14.5px] font-semibold lg:mt-3.5 lg:inline-block lg:py-[9px] lg:text-[14px]"
           >
             Completar mi perfil
           </a>

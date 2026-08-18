@@ -94,7 +94,7 @@ export default function FormularioAcceso({ aviso }: { aviso: string | null }) {
           placeholder="tucorreo@ejemplo.com"
           className="min-h-[48px] w-full rounded-full border-2 border-drc-borde bg-drc-superficie px-5 text-[16px] text-drc-texto outline-none transition-colors placeholder:text-drc-apagado focus:border-drc-verde-solido disabled:opacity-60"
         />
-        <button type="submit" disabled={enviando} className="btn btn-primario min-h-[48px]">
+        <button type="submit" disabled={enviando} className="btn btn-verde min-h-[48px]">
           {enviando ? "Enviando…" : "Enviarme el enlace"}
         </button>
       </form>

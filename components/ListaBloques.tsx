@@ -260,7 +260,7 @@ export default function ListaBloques({
                   href={`/alumno/${alumnoId}/${bloque.id}`}
                   className={`flex min-h-[46px] w-full items-center justify-center rounded-full px-6 text-[15px] font-semibold transition-colors min-[900px]:min-h-[42px] min-[900px]:w-auto min-[900px]:min-w-[150px] min-[900px]:text-[14px] ${
                     primario
-                      ? "bg-marca-verde text-white hover:bg-marca-verdeOsc"
+                      ? "btn-verde"
                       : "border border-marca-bordeSuave bg-white text-marca-tinta hover:border-marca-tinta"
                   }`}
                 >

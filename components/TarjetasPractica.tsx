@@ -164,7 +164,7 @@ export default function TarjetasPractica({
                     className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-6 py-[13px] text-[15px] font-semibold leading-[1.1] transition-colors disabled:cursor-default ${
                       tarjeta.espera
                         ? "bg-marca-pista text-marca-grisInactivo"
-                        : "bg-marca-verde text-white hover:bg-marca-verdeOsc disabled:cursor-wait disabled:opacity-60"
+                        : "btn-verde disabled:cursor-wait disabled:opacity-60"
                     } ${horizontal ? "mt-3.5 lg:mt-0 lg:w-auto lg:shrink-0" : "mt-3.5 lg:mt-auto"}`}
                   >
                     {activa && <IconoGirando />}
@@ -216,7 +216,7 @@ export default function TarjetasPractica({
             <button
               type="button"
               onClick={onReintentar}
-              className="btn btn-primario mt-4 min-h-[42px] w-full wide:w-auto"
+              className="btn btn-verde mt-4 min-h-[42px] w-full wide:w-auto"
             >
               Volver a intentarlo
             </button>

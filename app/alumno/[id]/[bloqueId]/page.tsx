@@ -67,7 +67,7 @@ export default async function PaginaBloque({
                 ? "Los bloques que el equipo generaba antes no llegaban a guardarse, así que no hay nada que abrir. Genera uno nuevo desde la ficha y ese sí se puede revisar entero."
                 : "No encontramos este bloque entre los tuyos. Genera uno nuevo y seguimos donde lo dejaste."}
             </p>
-            <Link href={`/alumno/${params.id}`} className="btn btn-primario mt-7 min-h-[48px] w-full">
+            <Link href={`/alumno/${params.id}`} className="btn btn-verde mt-7 min-h-[48px] w-full">
               {sesion.rol === "admin" ? "Volver a la ficha" : "Volver a mis bloques"}
             </Link>
           </div>
