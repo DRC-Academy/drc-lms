@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import type { Bloque } from "@/lib/data";
 import type { AvisoFormulario, TarjetaModo } from "@/lib/modos";
 import { numerosDePractica } from "@/lib/progreso";
@@ -12,6 +11,7 @@ import ListaBloques, {
 } from "@/components/ListaBloques";
 import FilaDestacada from "@/components/practica/FilaDestacada";
 import SesionPractica from "@/components/practica/SesionPractica";
+import Banner from "@/components/Banner";
 
 /**
  * La sección de práctica entera.
@@ -228,36 +228,24 @@ export default function PanelPractica({
           ninguno no desaparece: lo dice, que es la única forma de cerrar
           la sesión con algo en lugar de con un hueco.
 
-          `bottom` no es 0 en móvil: ahí abajo está la navegación de
-          secciones —`nav[data-nav-inferior]`, fija y con más z— y una
-          barra a ras del suelo se le metía debajo. Se sube por encima de
-          ella y en escritorio, donde esa navegación no existe, baja a su
-          sitio. El envoltorio no recibe clics para no comerse el scroll. */}
+          Es el mismo banner que abre la pantalla, en su variante
+          compacta: dónde se coloca y cómo se pinta lo resuelve
+          `components/Banner.tsx`. */}
       {total > 0 && !generando && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-[86px] z-30 px-4 lg:bottom-6 lg:px-9">
-          <div className="mx-auto w-full max-w-contenido">
-            <div className="pointer-events-auto flex items-center gap-4 rounded-[12px] bg-marca-tinta py-3 pl-5 pr-3 shadow-[0_10px_30px_-12px_rgba(18,33,26,0.45)]">
-              <div className="min-w-0 flex-1">
-                <p className="text-[10.5px] font-bold uppercase leading-none tracking-[0.14em] text-marca-amarillo">
-                  {enCurso ? "Sigue por aquí" : "Por hoy, hecho"}
-                </p>
-                <p className="mt-1.5 truncate font-display text-[15px] font-bold text-white lg:text-[17px]">
-                  {enCurso ? enCurso.titulo : "Has terminado tu práctica de hoy"}
-                </p>
-              </div>
-
-              {enCurso && (
-                <Link
-                  href={`/alumno/${alumnoId}/${enCurso.id}`}
-                  className="flex min-h-[44px] shrink-0 items-center justify-center rounded-full bg-marca-verde px-6 text-[15px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc"
-                >
-                  Continuar
-                  <span className="sr-only"> {enCurso.titulo}</span>
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
+        <Banner
+          size="bar"
+          eyebrow={enCurso ? "Sigue por aquí" : "Por hoy, hecho"}
+          title={enCurso ? enCurso.titulo : "Has terminado tu práctica de hoy"}
+          action={
+            enCurso
+              ? {
+                  label: "Continuar",
+                  href: `/alumno/${alumnoId}/${enCurso.id}`,
+                  srSuffix: enCurso.titulo,
+                }
+              : undefined
+          }
+        />
       )}
     </>
   );

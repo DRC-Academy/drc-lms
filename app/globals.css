@@ -126,10 +126,6 @@
     @apply border-drc-hairline text-drc-verde-texto hover:border-drc-verde-solido hover:bg-drc-fantasma-hover;
   }
 
-  .btn-amarillo {
-    @apply bg-drc-amarillo text-drc-titular hover:bg-drc-amarillo-hover;
-  }
-
   /* ---------------------------------------------------------------
      CONTENIDO DE LAS LECCIONES
 
@@ -221,15 +217,60 @@
   .leccion iframe { @apply aspect-video h-auto w-full rounded-xl; }
   .leccion iframe[src*="podbean.com"] { @apply aspect-auto h-[150px] rounded-xl; }
 
-  /* Disuelve el contenido por detrás de la barra fija. */
-  .fondo-fundido {
-    background: linear-gradient(
-      to top,
-      #F4F3EF 0%,
-      #F4F3EF 60%,
-      rgba(244, 243, 239, 0.9) 78%,
-      rgba(244, 243, 239, 0) 100%
-    );
+  /* ---------------------------------------------------------------
+     EL BANNER
+
+     El fondo, la sombra y el botón viven aquí y no en clases sueltas
+     por el JSX: son lo que hace que las cinco franjas de la aplicación
+     —el curso del inicio, la práctica, el plan, los ejercicios de la
+     lección y la barra de continuar— se lean como la misma pieza. Si
+     algún día cambia el verde, cambia en este bloque y en ningún sitio
+     más.
+
+     Todo lo aplica `components/Banner.tsx`. Ninguna página define su
+     propio fondo, radio o sombra de banner.
+     --------------------------------------------------------------- */
+  .banner {
+    background: linear-gradient(180deg, theme("colors.banner.alto") 0%, theme("colors.banner.bajo") 100%);
+    box-shadow: 0 16px 34px rgba(15, 122, 55, 0.18);
+  }
+
+  /* El verde de marca no se ve sobre el verde del banner: el anillo de
+     foco pasa a blanco mientras se está dentro de uno. */
+  .banner :focus-visible {
+    outline: 2px solid #FFFFFF;
+    outline-offset: 2px;
+  }
+
+  /* Segunda acción de un banner: enlace blanco subrayado, nunca un
+     segundo botón. Un solo amarillo por franja. */
+  .banner a:not(.banner-cta) {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .banner a:not(.banner-cta):hover {
+    color: theme("colors.banner.ambar");
+  }
+
+  /* ---------------------------------------------------------------
+     EL BOTÓN DEL BANNER
+
+     Amarillo, y solo dentro del verde. El color del texto es una
+     variable a propósito: la marca lo quiere blanco, pero blanco sobre
+     este amarillo da 1,9:1 y no pasa AA ni de lejos. El verde profundo
+     da 6,2:1 y sigue leyéndose como el botón amarillo de siempre. Para
+     volver al blanco se cambia esta línea y nada más.
+     --------------------------------------------------------------- */
+  .banner-cta {
+    --banner-cta-fg: theme("colors.banner.ctaTexto");
+    background: theme("colors.banner.cta");
+    color: var(--banner-cta-fg);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .banner-cta:hover {
+    background: theme("colors.banner.ctaHover");
   }
 }
 

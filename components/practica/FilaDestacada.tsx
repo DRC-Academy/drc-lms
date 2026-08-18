@@ -1,15 +1,14 @@
-import Link from "next/link";
 import type { Bloque } from "@/lib/data";
+import Banner from "@/components/Banner";
 
 /**
  * La fila que abre `/practica`: por dónde seguir y qué pasó en clase.
  *
- * ES LA MISMA PIEZA QUE EL BANNER DEL INICIO, con otro contenido dentro.
- * Fondo `marca-tinta`, etiqueta ámbar con punto, titular blanco grande,
- * botón verde y una columna a la derecha con la cifra y el progreso
- * marcado pieza a pieza. Quien llega desde el inicio reconoce el mueble
- * antes de leer nada, que es justo lo que se venía a arreglar: aquí
- * había otra paleta y la práctica parecía de otro producto.
+ * DOS PIEZAS QUE NO SON LA MISMA COSA. A la izquierda el banner, que es
+ * la franja destacada de la aplicación y se ve igual aquí que en el
+ * inicio o en el curso. A la derecha una TARJETA crema, que no es un
+ * banner: no lleva verde ni amarillo y su sitio es contar de qué
+ * depende lo que aún no ha pasado.
  *
  * LO QUE MANDA ES EL BLOQUE EN CURSO, no la lista. La pregunta que trae
  * al alumno es "¿por dónde iba?", y responderla arriba del todo le
@@ -42,8 +41,8 @@ export default function FilaDestacada({
   /** Qué contarle de su última clase. Lo redacta quien llama. */
   ultimaClase: { titulo: string; cuerpo: string };
 }) {
-  // Sin bloques no hay tarjeta oscura: quedaría un titular hablando de
-  // algo que no existe. La de la clase se queda sola a ancho completo y
+  // Sin bloques no hay banner: quedaría un titular hablando de algo que
+  // no existe. La tarjeta de la clase se queda sola a ancho completo y
   // es la que explica de qué depende que aparezca la práctica.
   const hayPractica = total > 0;
   const empezado = enCurso !== null && segmentos[posicion - 1] === true;
@@ -55,78 +54,59 @@ export default function FilaDestacada({
       }`}
     >
       {hayPractica && (
-        <section className="grid rounded-[18px] bg-marca-tinta p-5 lg:min-h-[264px] lg:grid-cols-[minmax(0,1fr)_210px] lg:items-end lg:gap-9 lg:rounded-[20px] lg:p-8">
-          <div className="flex flex-col lg:h-full">
-            <p className="mb-3 flex items-center gap-2 lg:mb-4">
-              <span aria-hidden className="h-[5px] w-[5px] rounded-full bg-marca-amarillo lg:h-1.5 lg:w-1.5" />
-              <span className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-amarillo lg:text-[12px]">
-                {enCurso ? "Sigue por aquí" : "Por hoy, hecho"}
-              </span>
-            </p>
-
-            <h2 className="text-pretty font-display text-[22px] font-bold leading-[1.2] text-white lg:max-w-[560px] lg:text-[34px] lg:leading-[1.16]">
-              {enCurso ? enCurso.titulo : "Has terminado tu práctica de hoy"}
-            </h2>
-
-            <p className="mt-2 text-[13px] leading-[1.4] text-white/55 lg:mt-3 lg:text-[15px] lg:leading-[1.45]">
-              {enCurso
-                ? `${enCurso.area} · Bloque ${posicion} de ${total}`
-                : `Los ${total} bloques, terminados`}
-            </p>
-
-            <p className="mt-3 text-pretty text-[14px] leading-[1.5] text-white/[0.76] lg:mt-3.5 lg:max-w-[560px] lg:text-[15px] lg:leading-[1.55]">
-              {enCurso
-                ? enCurso.intro
-                : "Tu práctica se vuelve a generar con lo de tu siguiente clase. Mientras tanto, puedes repasar cualquiera de los bloques de abajo."}
-            </p>
-
-            {enCurso && (
-              <div className="mt-[18px] lg:mt-auto lg:flex lg:items-center lg:gap-[18px] lg:pt-[26px]">
-                <Link
-                  href={`/alumno/${alumnoId}/${enCurso.id}`}
-                  className="block rounded-full bg-marca-verde px-8 py-[15px] text-center text-[16px] font-semibold leading-none text-white transition-colors hover:bg-marca-verdeOsc lg:inline-block lg:py-[14px]"
-                >
-                  {empezado ? "Continuar" : "Empezar"}
-                  <span className="sr-only"> {enCurso.titulo}</span>
-                </Link>
-                <span className="mt-3 block text-center text-[12.5px] text-white/45 lg:mt-0 lg:inline lg:text-[14px] lg:text-white/55">
-                  {empezado ? "Lo dejaste a medias" : "Es por donde toca seguir"}
+        <Banner
+          eyebrow={enCurso ? "Sigue por aquí" : "Por hoy, hecho"}
+          title={enCurso ? enCurso.titulo : "Has terminado tu práctica de hoy"}
+          meta={
+            enCurso ? `${enCurso.area} · Bloque ${posicion} de ${total}` : `Los ${total} bloques, terminados`
+          }
+          subtitle={
+            enCurso
+              ? enCurso.intro
+              : "Tu práctica se vuelve a generar con lo de tu siguiente clase. Mientras tanto, puedes repasar cualquiera de los bloques de abajo."
+          }
+          action={
+            enCurso
+              ? {
+                  label: empezado ? "Continuar" : "Empezar",
+                  href: `/alumno/${alumnoId}/${enCurso.id}`,
+                  srSuffix: enCurso.titulo,
+                }
+              : undefined
+          }
+          secondaryText={enCurso ? (empezado ? "Lo dejaste a medias" : "Es por donde toca seguir") : undefined}
+          aside={
+            <>
+              <p className="flex items-baseline gap-[7px]">
+                <span className="font-display text-[40px] font-extrabold leading-none text-white tabular-nums">
+                  {total}
                 </span>
+                <span className="text-[14px] font-semibold text-white/[0.82]">
+                  {total === 1 ? "bloque" : "bloques"}
+                </span>
+              </p>
+              <p className="mt-1 text-[13px] text-white/[0.82]">preparados para ti</p>
+
+              {/* Una marca por bloque, igual que el banner del curso marca
+                  una por lección: lo empezado en blanco, lo que queda
+                  apagado. */}
+              <div aria-hidden className="mt-[18px] flex gap-[3px]">
+                {segmentos.map((tocado, i) => (
+                  <span
+                    key={i}
+                    className={`h-[11px] flex-1 rounded-[1.5px] ${tocado ? "bg-white" : "bg-white/[0.32]"}`}
+                  />
+                ))}
               </div>
-            )}
-          </div>
 
-          {/* La columna de la derecha: cuántos hay y cuáles se han tocado.
-              Una marca por bloque, igual que el banner del curso marca una
-              por lección. Separada por una línea y no por un hueco: es otro
-              dato, no la continuación del titular. */}
-          <div className="mt-5 border-t border-white/[0.14] pt-5 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
-            <p className="flex items-baseline gap-[7px]">
-              <span className="font-display text-[32px] font-bold leading-none text-white tabular-nums lg:text-[40px]">
-                {total}
-              </span>
-              <span className="text-[15px] font-semibold text-white/50 lg:text-[16px]">
-                {total === 1 ? "bloque" : "bloques"}
-              </span>
-            </p>
-            <p className="mt-1 text-[13px] text-white/50">preparados para ti</p>
-
-            <div aria-hidden className="mt-[18px] flex gap-[3px]">
-              {segmentos.map((tocado, i) => (
-                <span
-                  key={i}
-                  className={`h-[11px] flex-1 rounded-[1.5px] ${tocado ? "bg-marca-verdeClaro" : "bg-white/[0.13]"}`}
-                />
-              ))}
-            </div>
-
-            <p className="mt-3.5 text-[13px] text-white/[0.62]">
-              {empezados === 0
-                ? "ninguno empezado todavía"
-                : `${empezados} ya ${empezados === 1 ? "empezado" : "empezados"}`}
-            </p>
-          </div>
-        </section>
+              <p className="mt-3.5 text-[13px] text-white/[0.82]">
+                {empezados === 0
+                  ? "ninguno empezado todavía"
+                  : `${empezados} ya ${empezados === 1 ? "empezado" : "empezados"}`}
+              </p>
+            </>
+          }
+        />
       )}
 
       {/* La tarjeta de la clase. Discontinua como la invitación al perfil

@@ -22,8 +22,6 @@ const config: Config = {
           "verde-texto": "#02662E",
           "verde-solido": "#037A36",
           "verde-solido-hover": "#025C29",
-          banner: "#046B31",
-          "banner-texto": "#05411F",
           amarillo: "#F9BE00",
           "amarillo-hover": "#FFD23F",
           // Neutros
@@ -63,16 +61,9 @@ const config: Config = {
           bordeFila: "#E7E9E4",
           bordeHover: "#C5D2C8",
           filaHover: "#FCFDFB",
-          // Panel oscuro del plan
+          /** Mes en curso en la lista del temario. Ya no hay panel oscuro:
+           *  el plan lo pinta ahora `Banner`. */
           oscuro: "#10221A",
-          oscuroLinea: "#23342B",
-          oscuroTexto: "#9BAAA1",
-          oscuroTenue: "#7F8F86",
-          oscuroClaro: "#E4E9E5",
-          /** Lección hecha en la rejilla de puntos. */
-          punto: "#2FB35B",
-          /** Lección pendiente, sobre el panel oscuro. */
-          puntoOff: "#2A3A31",
           // Acción
           verde: "#1DA34B",
           verdeHover: "#17853D",
@@ -98,6 +89,36 @@ const config: Config = {
           pillHover: "#A9BFB0",
           /** Fondo del círculo de mes pendiente, solo en móvil. */
           mesPendiente: "#F3F5F1",
+        },
+        // ---------------------------------------------------------------
+        // EL BANNER, Y SOLO EL BANNER
+        //
+        // Una franja destacada es la única superficie de la aplicación con
+        // fondo verde de marca, y por eso tiene paleta propia: estos seis
+        // valores no deben aparecer fuera de `components/Banner.tsx`. El
+        // resto de la pantalla —tarjetas blancas y crema— sigue con
+        // `marca-*` y con el botón verde de siempre.
+        //
+        // EL AMARILLO SOLO EXISTE DENTRO DEL VERDE. Fuera de un banner un
+        // botón amarillo compite con el verde de acción y la pantalla
+        // acaba con dos llamadas discutiendo; dentro, es lo único que
+        // destaca sobre el fondo sin ser otra vez verde sobre verde.
+        //
+        // El texto del CTA es verde profundo y no blanco: blanco sobre
+        // este amarillo da 1,9:1 y no llega ni de lejos a AA. Se cambia en
+        // `--banner-cta-fg` (ver `globals.css`), no aquí.
+        // ---------------------------------------------------------------
+        banner: {
+          /** Arranque del degradado, arriba. */
+          alto: "#23A44E",
+          /** Final del degradado, abajo. */
+          bajo: "#0F9A3E",
+          /** Etiqueta de sección sobre el verde. */
+          ambar: "#FFD54A",
+          cta: "#F7C500",
+          ctaHover: "#E6B800",
+          /** Texto sobre el amarillo: 6,2:1. */
+          ctaTexto: "#0D5C2F",
         },
         // La paleta del inicio del alumno y del visor de curso. La usaba
         // ya media aplicación con seis tokens; el rediseño del inicio

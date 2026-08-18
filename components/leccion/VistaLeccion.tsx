@@ -10,6 +10,7 @@ import LateralLecciones, { ItemLeccion } from "@/components/leccion/LateralLecci
 import IndiceLeccion from "@/components/leccion/IndiceLeccion";
 import FlujoEjercicios from "@/components/leccion/FlujoEjercicios";
 import BotonCompletar from "@/components/leccion/BotonCompletar";
+import Banner from "@/components/Banner";
 
 /**
  * La pantalla de lección entera: teoría, ejercicios y cierre.
@@ -209,31 +210,30 @@ export default function VistaLeccion({
                   />
                 )}
 
+                {/* La franja de los ejercicios. Es el mismo banner que el
+                    del curso en el inicio o el de la práctica, en su
+                    variante compacta: aquí vive dentro de la columna de
+                    la lección, así que no lleva cifra al lado. */}
                 {hayEjercicios && (
-                  <div className="mt-9 flex flex-col gap-5 rounded-[16px] bg-marca-tinta px-6 py-6 min-[1100px]:mt-[38px] min-[1100px]:flex-row min-[1100px]:items-center min-[1100px]:gap-6 min-[1100px]:px-[26px]">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-amarillo">
-                        Ejercicios
-                      </p>
-                      <p className="mt-2.5 text-pretty font-display text-[19px] font-bold leading-[1.25] text-white min-[1100px]:text-[20px]">
-                        {ejercicios.length === 1
+                  <div className="mt-9 min-[1100px]:mt-[38px]">
+                    <Banner
+                      size="md"
+                      eyebrow="Ejercicios"
+                      title={
+                        ejercicios.length === 1
                           ? "Un ejercicio para fijar lo de arriba"
-                          : `${ejercicios.length} ejercicios para fijar lo de arriba`}
-                      </p>
-                      <p className="mt-1.5 text-[14.5px] text-white/60">
-                        De uno en uno. Se corrigen al momento.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEnEjercicios(true);
-                        window.scrollTo({ top: 0 });
+                          : `${ejercicios.length} ejercicios para fijar lo de arriba`
+                      }
+                      subtitle="De uno en uno. Se corrigen al momento."
+                      action={{
+                        label: "Empezar",
+                        srSuffix: "los ejercicios de esta lección",
+                        onClick: () => {
+                          setEnEjercicios(true);
+                          window.scrollTo({ top: 0 });
+                        },
                       }}
-                      className="shrink-0 rounded-full bg-marca-verde px-[26px] py-3.5 text-[15.5px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc"
-                    >
-                      Empezar
-                    </button>
+                    />
                   </div>
                 )}
 
