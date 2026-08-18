@@ -559,7 +559,7 @@ export default function VisorEjercicios({
           atrás enseña lo ya respondido sin perder nada. En el primero no
           hay destino y el hueco se queda: quitarlo movería el botón
           principal de sitio al pasar del primero al segundo. */}
-      <div className="sticky bottom-0 border-t border-marca-borde bg-white/[0.94] backdrop-blur-md">
+      <div data-barra-inferior className="sticky bottom-0 border-t border-marca-borde bg-white/[0.94] backdrop-blur-md">
         <div className="mx-auto w-full max-w-[calc(760px+7rem)] px-3.5 pb-4 pt-3 min-[1100px]:px-14 min-[1100px]:py-3.5">
           <div className="flex items-center gap-3 min-[1100px]:gap-4">
             <FlechaAtras alPulsar={indice > 0 ? () => verEjercicio(indice - 1) : null} />

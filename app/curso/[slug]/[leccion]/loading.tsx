@@ -149,7 +149,7 @@ export default function Cargando() {
           {/* La barra de acciones no depende de ningún dato: es la misma
               flecha y el mismo botón verde en el mismo sitio, siempre. Se
               pinta entera y sin texto, para que no aparezca de golpe. */}
-          <div className="sticky bottom-0 border-t border-marca-borde bg-white/[0.94] backdrop-blur-md">
+          <div data-barra-inferior className="sticky bottom-0 border-t border-marca-borde bg-white/[0.94] backdrop-blur-md">
             <div className="mx-auto w-full max-w-[calc(680px+7rem)] px-3.5 pb-4 pt-3 min-[1100px]:px-14 min-[1100px]:py-3.5">
               <div className="flex items-center gap-3 min-[1100px]:gap-4">
                 <div className="h-11 w-11 shrink-0 rounded-full border border-marca-borde min-[1100px]:h-[43px] min-[1100px]:w-[104px]" />

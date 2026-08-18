@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import ChatAyuda from "@/components/ChatAyuda";
 
 export type SeccionActiva = "inicio" | "curso" | "practica";
 
@@ -214,6 +215,14 @@ export default function Cabecera({
       </header>
 
       {enlaces.length > 0 && <NavegacionInferior enlaces={enlaces} seccion={seccion} />}
+
+      {/* LA AYUDA VIVE AQUÍ Y NO EN EL LAYOUT porque su condición es la
+          misma que la de la navegación: hay alumno. El equipo entra por
+          el buscador y su soporte no es un WhatsApp, y la pantalla de
+          acceso no tiene ni cabecera. Montándola en esta barra sale en
+          las tres pantallas del alumno sin que ninguna se acuerde de
+          ponerla. */}
+      {enlaces.length > 0 && <ChatAyuda nombre={nombre?.trim() ?? ""} />}
     </>
   );
 }

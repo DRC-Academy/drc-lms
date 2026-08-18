@@ -311,6 +311,49 @@
   .banner-cta:hover {
     background: theme("colors.banner.ctaHover");
   }
+
+  /* ---------------------------------------------------------------
+     LA ESQUINA DE LA AYUDA
+
+     Abajo a la derecha es zona disputada. Ahí puede haber, a la vez, la
+     navegación inferior de móvil y la barra fija de continuar, y un
+     botón de ayuda a ras del suelo se mete debajo de las dos.
+
+     Que cada pantalla se acordara de empujarlo era pedir que la próxima
+     se olvidara. Se resuelve una vez, aquí, mirando qué hay puesto:
+     `nav[data-nav-inferior]` la pone `Cabecera` y `[data-barra-inferior]`
+     la variante `bar` de `Banner`. Mismo truco que el hueco del final de
+     la página, unas líneas más arriba.
+     --------------------------------------------------------------- */
+  .zona-ayuda {
+    position: fixed;
+    right: 16px;
+    bottom: 24px;
+  }
+
+  @media (min-width: 640px) {
+    .zona-ayuda {
+      right: 24px;
+    }
+  }
+
+  /* Con barra de continuar, por encima de ella. */
+  body:has([data-barra-inferior]) .zona-ayuda {
+    bottom: 96px;
+  }
+
+  @media (max-width: 1023px) {
+    /* La navegación de secciones solo existe en móvil. */
+    body:has(nav[data-nav-inferior]) .zona-ayuda {
+      bottom: 90px;
+    }
+
+    /* Y en móvil las dos pueden coincidir: la barra va sobre la
+       navegación, y la ayuda sobre la barra. */
+    body:has(nav[data-nav-inferior]):has([data-barra-inferior]) .zona-ayuda {
+      bottom: 162px;
+    }
+  }
 }
 
 @layer utilities {
