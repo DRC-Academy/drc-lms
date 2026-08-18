@@ -7,23 +7,42 @@ import AvanceGeneracion from "@/components/AvanceGeneracion";
 export type EstadoGeneracion = "listo" | "generando" | "error";
 
 /**
- * El acento de cada modo.
+ * "Tu práctica de hoy": de dónde puede salir el próximo bloque.
  *
- * El amarillo se queda en la BARRA, que es donde distingue un modo de
- * otro, y no pasa al botón: el amarillo es acento —etiquetas, chips,
- * barras— y las acciones son verdes. Con un botón amarillo, la tarjeta
- * de examen competía con el verde del banner de curso y la página tenía
- * dos llamadas a la acción discutiendo.
+ * MISMA TARJETA QUE EN EL INICIO. Estas dos pantallas ofrecen lo mismo y
+ * hasta ahora lo pintaban con dos paletas distintas —el inicio con
+ * `marca-*` y esto con `drc-*`—, así que la práctica parecía de otro
+ * producto. Ahora el punto de color, el fondo de cada modo y el botón
+ * son los del inicio; lo único que cambia es que aquí las tarjetas
+ * tienen la pantalla entera para ellas.
  *
- * Sobre blanco el amarillo tampoco llega al contraste mínimo, así que
- * como texto no se usa en ningún caso.
+ * EL COLOR DISTINGUE EL MODO, no la urgencia: el punto verde es lo de
+ * clase, el ámbar el examen y el de tinta su día a día. Los botones son
+ * verdes en los tres —el ámbar no llega al contraste como fondo de texto
+ * blanco y, sobre todo, tres llamadas de tres colores no se ordenan.
+ *
+ * SIN MINUTOS EN NINGUNA PARTE. El subtítulo decía "cada bloque son
+ * cinco minutos" y era una promesa que no depende de nosotros: cada
+ * alumno tarda lo suyo, y ponerle reloj a la práctica solo sirve para
+ * que quien va más despacio lo lea como un suspenso.
  */
-const ACENTO: Record<ModoGeneracion, { barra: string; boton: string }> = {
-  repaso: { barra: "bg-marca-verde", boton: "btn-primario" },
-  examen: { barra: "bg-marca-amarillo", boton: "btn-primario" },
+
+/** El acento de cada modo: fondo de la tarjeta, punto y botón. */
+const ESTILO: Record<ModoGeneracion, { tarjeta: string; punto: string; boton: string }> = {
+  repaso: {
+    tarjeta: "border-marca-borde bg-white",
+    punto: "bg-marca-verde",
+    boton: "bg-marca-verde text-white hover:bg-marca-verdeOsc",
+  },
+  examen: {
+    tarjeta: "border-marca-examenBorde bg-marca-examen",
+    punto: "bg-marca-amarillo",
+    boton: "bg-marca-verdeOsc text-white hover:bg-marca-tinta",
+  },
   contexto: {
-    barra: "bg-marca-tinta",
-    boton: "bg-marca-tinta text-white hover:bg-drc-titular",
+    tarjeta: "border-marca-contextoBorde bg-marca-contexto",
+    punto: "bg-marca-tinta",
+    boton: "bg-marca-tinta text-white hover:bg-marca-verdeOsc",
   },
 };
 
@@ -71,27 +90,32 @@ function EnlaceFormulario({ url, className }: { url: string | null; className: s
  */
 function TarjetaSinDatos({ url, aviso }: { url: string | null; aviso: AvisoFormulario }) {
   return (
-    <article className="tarjeta relative flex flex-col overflow-hidden">
-      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-marca-verde" />
-      <p className="eyebrow text-drc-verde-texto">Empieza por aquí</p>
-      <h3 className="mt-3 font-display text-[20px] font-semibold leading-tight text-drc-titular">
+    <article className="flex flex-col rounded-[16px] border-[1.5px] border-dashed border-marca-perfilBorde bg-marca-perfil p-[18px] lg:p-6">
+      <p className="flex items-center gap-2">
+        <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-marca-verde" />
+        <span className="text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-marca-gris">
+          Empieza por aquí
+        </span>
+      </p>
+
+      <h3 className="mt-3 text-pretty font-display text-[20px] font-bold leading-[1.2] text-marca-tinta">
         {url === null ? aviso.titulo : "Cuéntanos un poco de ti"}
       </h3>
 
       {url === null ? (
-        <p className="mt-2.5 flex-1 text-pretty text-[15px] leading-[1.55] text-drc-cuerpo">
+        <p className="mt-2 text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia">
           {aviso.cuerpo}
         </p>
       ) : (
         <>
-          <p className="mt-2.5 flex-1 text-pretty text-[15px] leading-[1.55] text-drc-cuerpo">
-            Con saber a qué te dedicas y qué quieres conseguir con el inglés, preparamos
-            ejercicios con tus situaciones de verdad en lugar de frases de libro. Se tarda dos
-            minutos y lo notas desde el primer bloque.
+          <p className="mt-2 flex-1 text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia">
+            Con saber a qué te dedicas y qué quieres conseguir con el inglés, preparamos ejercicios
+            con tus situaciones de verdad en lugar de frases de libro. Lo notas desde el primer
+            bloque.
           </p>
           <EnlaceFormulario
             url={url}
-            className="btn btn-primario mt-5 min-h-[46px] w-full wide:w-auto wide:self-start"
+            className="mt-5 flex min-h-[46px] w-full items-center justify-center rounded-full bg-marca-verde px-7 text-[15px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc min-[900px]:w-auto min-[900px]:self-start"
           />
         </>
       )}
@@ -150,47 +174,61 @@ export default function TarjetasGeneracion({
     tarjetas.length > 0 &&
     !tarjetas.some((tarjeta) => tarjeta.modo === "contexto");
 
+  // Dos tarjetas al 50%; con la tercera, tres calles cuando hay sitio.
+  const columnas =
+    tarjetas.length >= 3
+      ? "min-[900px]:grid-cols-2 min-[1200px]:grid-cols-3"
+      : tarjetas.length === 2
+        ? "min-[900px]:grid-cols-2"
+        : "grid-cols-1";
+
   return (
     <section aria-labelledby="titulo-practica">
-      <div className="border-b border-drc-borde pb-5">
+      <div className="lg:flex lg:items-baseline lg:gap-3.5">
         <h2
           id="titulo-practica"
-          className="font-display text-[30px] font-semibold leading-[1.1] text-drc-titular"
+          className="shrink-0 font-display text-[17px] font-bold text-marca-tinta lg:text-[19px]"
         >
           Tu práctica de hoy
         </h2>
-        <p className="mt-2 max-w-[52ch] text-pretty text-[15px] leading-[1.55] text-drc-cuerpo">
+        <p className="mt-1 text-pretty text-[14px] leading-[1.4] text-marca-gris lg:mt-0 lg:text-[15px]">
           {tarjetas.length > 0
-            ? "Elige por dónde quieres tirar hoy. Cada bloque son cinco minutos."
+            ? "Elige por dónde quieres tirar hoy."
             : "En cuanto sepamos un poco más de ti, esto se llena de práctica hecha para ti."}
         </p>
       </div>
 
       {tarjetas.length === 0 ? (
-        <div className="mt-5">
+        <div className="mt-4">
           <TarjetaSinDatos url={urlFormulario} aviso={avisoFormulario} />
         </div>
       ) : (
         <>
-          {/* Apiladas en móvil, dos columnas desde `wide`. `items-stretch`
-              y la descripción en `flex-1` dejan los botones a la misma altura. */}
-          <ul className="mt-5 grid grid-cols-1 items-stretch gap-4 wide:grid-cols-2">
+          {/* `items-stretch` y la descripción en `flex-1` dejan los botones
+              a la misma altura: los textos vienen de la API y tienen dos,
+              tres o cuatro líneas según el alumno. */}
+          <ul className={`mt-4 grid grid-cols-1 items-stretch gap-3 lg:gap-5 ${columnas}`}>
             {tarjetas.map((tarjeta) => {
-              const acento = ACENTO[tarjeta.modo];
+              const estilo = ESTILO[tarjeta.modo];
               const activa = generando && modoActivo === tarjeta.modo;
 
               return (
                 <li key={tarjeta.modo} className="flex">
-                  <article className="tarjeta relative flex w-full flex-col overflow-hidden">
-                    <span aria-hidden className={`absolute inset-y-0 left-0 w-[3px] ${acento.barra}`} />
+                  <article
+                    className={`flex w-full flex-col rounded-[14px] border p-[18px] lg:p-6 ${estilo.tarjeta}`}
+                  >
+                    <p className="flex items-center gap-2">
+                      <span aria-hidden className={`h-[7px] w-[7px] rounded-full ${estilo.punto}`} />
+                      <span className="text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-marca-gris">
+                        {tarjeta.etiqueta}
+                      </span>
+                    </p>
 
-                    <p className="eyebrow text-drc-cuerpo">{tarjeta.etiqueta}</p>
-
-                    <h3 className="mt-3 text-balance font-display text-[20px] font-semibold leading-tight text-drc-titular">
+                    <h3 className="mt-3 text-pretty font-display text-[20px] font-bold leading-[1.2] text-marca-tinta">
                       {tarjeta.titulo}
                     </h3>
 
-                    <p className="mt-2.5 flex-1 text-pretty text-[15px] leading-[1.55] text-drc-cuerpo">
+                    <p className="mt-2 text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia">
                       {tarjeta.descripcion}
                     </p>
 
@@ -198,7 +236,7 @@ export default function TarjetasGeneracion({
                         Va antes del botón para que se lea primero el porqué
                         y después el botón apagado, y no al revés. */}
                     {tarjeta.espera && (
-                      <p className="mt-3 text-[13.5px] leading-[1.5] text-drc-cuerpo">
+                      <p className="mt-2.5 text-[13.5px] leading-[1.5] text-marca-gris">
                         {tarjeta.espera.nota}
                       </p>
                     )}
@@ -207,18 +245,17 @@ export default function TarjetasGeneracion({
                       type="button"
                       onClick={() => onGenerar(tarjeta.modo)}
                       disabled={generando || tarjeta.espera !== null}
+                      aria-disabled={tarjeta.espera !== null}
                       aria-live="polite"
-                      className={`btn mt-5 min-h-[46px] w-full ${
+                      className={`mt-5 flex min-h-[46px] w-full items-center justify-center rounded-full px-6 text-[15px] font-semibold leading-[1.1] transition-colors disabled:cursor-default min-[900px]:mt-auto ${
                         tarjeta.espera
-                          ? "cursor-default bg-drc-suave text-drc-cuerpo"
-                          : `disabled:cursor-wait ${acento.boton}`
+                          ? "bg-marca-pista text-marca-grisInactivo"
+                          : `disabled:cursor-wait disabled:opacity-60 ${estilo.boton}`
                       }`}
                     >
                       {activa && <IconoGirando />}
                       <span className={activa ? "ml-2" : ""}>
-                        {activa
-                          ? "Preparando…"
-                          : (tarjeta.espera?.etiquetaBoton ?? tarjeta.llamada)}
+                        {activa ? "Preparando…" : (tarjeta.espera?.etiquetaBoton ?? tarjeta.llamada)}
                       </span>
                     </button>
                   </article>
@@ -228,12 +265,12 @@ export default function TarjetasGeneracion({
           </ul>
 
           {puedeSumarContexto && (
-            <p className="mt-4 text-[14px] leading-[1.55] text-drc-cuerpo">
+            <p className="mt-3.5 text-[14px] leading-[1.5] text-marca-gris">
               ¿Nos cuentas a qué te dedicas? Con eso te preparamos también ejercicios con tus
               situaciones del día a día.{" "}
               <EnlaceFormulario
                 url={urlFormulario}
-                className="font-medium text-drc-verde-texto underline underline-offset-2 transition-colors hover:text-drc-enlace-hover"
+                className="font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
               />
             </p>
           )}
@@ -241,20 +278,15 @@ export default function TarjetasGeneracion({
       )}
 
       {generando && modoActivo && (
-        <AvanceGeneracion
-          modo={modoActivo}
-          etapa={etapa}
-          progreso={progreso}
-          tardando={tardando}
-        />
+        <AvanceGeneracion modo={modoActivo} etapa={etapa} progreso={progreso} tardando={tardando} />
       )}
 
       {estado === "error" && (
-        <div className="aparece mt-4 rounded-[18px] bg-[#FFF7E0] px-5 py-4">
-          <p className="font-display text-[15px] font-semibold text-drc-titular">
+        <div className="aparece mt-4 rounded-[14px] border border-marca-examenBorde bg-marca-examen px-5 py-4">
+          <p className="font-display text-[15px] font-bold text-marca-tinta">
             {esEspera ? "Por ahora, ya está" : "Esta vez no ha salido."}
           </p>
-          <p className="mt-1 text-[14px] leading-[1.5] text-drc-cuerpo">{mensajeError}</p>
+          <p className="mt-1 text-[14px] leading-[1.5] text-marca-gris">{mensajeError}</p>
           {/* Sin botón cuando es una espera: reintentar daría lo mismo.
               El reintento vuelve al mismo modo que falló, que obligar a
               buscar otra vez la tarjeta convierte un fallo nuestro en
@@ -263,7 +295,7 @@ export default function TarjetasGeneracion({
             <button
               type="button"
               onClick={onReintentar}
-              className="btn btn-primario mt-4 min-h-[42px] w-full wide:w-auto"
+              className="mt-4 flex min-h-[44px] w-full items-center justify-center rounded-full bg-marca-verde px-7 text-[15px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc min-[900px]:w-auto"
             >
               Volver a intentarlo
             </button>

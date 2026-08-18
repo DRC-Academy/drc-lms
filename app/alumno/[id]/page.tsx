@@ -5,7 +5,7 @@ import { obtenerAlumno } from "@/lib/gestion";
 import { formatearFecha, nivelDeBloque } from "@/lib/perfil";
 import { avisoFormulario, calcularTarjetas, tieneContexto, urlFormulario } from "@/lib/modos";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
-import { UMBRAL_DOMINADO, type RegistroProgreso } from "@/lib/progreso";
+import { numerosDePractica } from "@/lib/progreso";
 import {
   leerBloquesGenerados,
   leerProgresoAlumno,
@@ -21,46 +21,6 @@ import PanelAlumno from "@/components/PanelAlumno";
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
 // prerenderizar y los datos cambian en cuanto se analiza una clase nueva.
 export const dynamic = "force-dynamic";
-
-/**
- * Los números de práctica de la tira de estadísticas.
- *
- * Se calculan sobre el MEJOR intento de cada bloque, que es lo que
- * devuelve `leerProgresoAlumno`, y sobre todos los bloques que el alumno
- * haya hecho alguna vez, no solo los que hoy se le enseñan. Es una cifra
- * de trayectoria, no del catálogo de esta semana.
- *
- * `practicados` es el denominador de los dominados: la tarjeta dice
- * "18 de 42 · de los que has practicado", así que la escala tiene que
- * medirse sobre lo practicado y no sobre el catálogo entero, que es una
- * cifra que el alumno no reconoce.
- *
- * Devuelve null cuando no ha practicado nunca: la tira lo usa para
- * esconderse en vez de enseñar ceros.
- */
-function numerosDePractica(progreso: Record<string, RegistroProgreso>): {
-  dominados: number | null;
-  aciertos: number | null;
-  practicados: number;
-} {
-  const registros = Object.values(progreso).filter((r) => r.total > 0);
-  if (registros.length === 0) return { dominados: null, aciertos: null, practicados: 0 };
-
-  let dominados = 0;
-  let suma = 0;
-
-  for (const registro of registros) {
-    const porcentaje = Math.round((registro.aciertos / registro.total) * 100);
-    if (porcentaje >= UMBRAL_DOMINADO) dominados++;
-    suma += porcentaje;
-  }
-
-  return {
-    dominados,
-    aciertos: Math.round(suma / registros.length),
-    practicados: registros.length,
-  };
-}
 
 export default async function PerfilAlumno({ params }: { params: { id: string } }) {
   // Antes de leer nada: un alumno solo abre su propia ficha, aunque

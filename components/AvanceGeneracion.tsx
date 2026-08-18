@@ -35,16 +35,18 @@ export default function AvanceGeneracion({
   const texto = textoDeEtapa(modo, etapa);
 
   return (
-    <div className="aparece mt-4 rounded-[18px] border border-drc-borde bg-drc-superficie px-[26px] py-5">
-      <p className="eyebrow text-drc-verde-texto">Preparando tu bloque</p>
+    <div className="aparece mt-4 rounded-[14px] border border-marca-borde bg-white px-5 py-5 lg:px-6">
+      <p className="text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-marca-verdeOsc">
+        Preparando tu bloque
+      </p>
 
       <div className="mt-3 flex items-baseline justify-between gap-4">
         {/* `aria-live` y no `role="status"` en el contenedor: así el lector
             de pantalla anuncia el cambio de etapa sin repetir el resto. */}
-        <p aria-live="polite" className="font-display text-[17px] font-semibold text-drc-titular">
+        <p aria-live="polite" className="font-display text-[17px] font-bold text-marca-tinta">
           {texto}
         </p>
-        <span aria-hidden className="shrink-0 text-[13px] tabular-nums text-drc-cuerpo">
+        <span aria-hidden className="shrink-0 text-[13px] tabular-nums text-marca-gris">
           {progreso}%
         </span>
       </div>
@@ -55,7 +57,7 @@ export default function AvanceGeneracion({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label="Progreso de la preparación"
-        className="mt-3.5 h-2 w-full overflow-hidden rounded-full bg-drc-suave"
+        className="mt-3.5 h-2 w-full overflow-hidden rounded-full bg-marca-pista"
       >
         <div
           className="h-full rounded-full bg-marca-verde"
@@ -63,10 +65,10 @@ export default function AvanceGeneracion({
         />
       </div>
 
-      <p className="mt-3 text-[14px] leading-[1.5] text-drc-cuerpo">
+      <p className="mt-3 text-[14px] leading-[1.5] text-marca-gris">
         {tardando
-          ? "Está tardando un poco más de lo normal, seguimos en ello."
-          : "Tarda algo menos de un minuto. Puedes quedarte aquí."}
+          ? "Se está haciendo de rogar, pero seguimos en ello."
+          : "Puedes quedarte aquí mientras lo preparamos."}
       </p>
     </div>
   );

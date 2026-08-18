@@ -68,3 +68,47 @@ export function estadoDeBloque(
 
   return { estado: esGenerado ? "nuevo" : "sin-empezar", porcentaje: null, fases: 0 };
 }
+
+/**
+ * Los números de práctica que enseñan el inicio y `/practica`.
+ *
+ * Se calculan sobre el MEJOR intento de cada bloque, que es lo que
+ * devuelve `leerProgresoAlumno`, y sobre todos los bloques que el alumno
+ * haya hecho alguna vez, no solo los que hoy se le enseñan. Es una cifra
+ * de trayectoria, no del catálogo de esta semana.
+ *
+ * `practicados` es el denominador de los dominados: la tarjeta dice
+ * "18 de 42 · de los que has practicado", así que la escala tiene que
+ * medirse sobre lo practicado y no sobre el catálogo entero, que es una
+ * cifra que el alumno no reconoce.
+ *
+ * Devuelve null cuando no ha practicado nunca: el inicio lo usa para
+ * esconder la tira en vez de enseñar ceros.
+ *
+ * Vive aquí y no en la página del inicio desde que `/practica` enseña
+ * también sus dominados: dos copias de esta cuenta se separan a la
+ * primera vez que cambie el umbral.
+ */
+export function numerosDePractica(progreso: Record<string, RegistroProgreso>): {
+  dominados: number | null;
+  aciertos: number | null;
+  practicados: number;
+} {
+  const registros = Object.values(progreso).filter((r) => r.total > 0);
+  if (registros.length === 0) return { dominados: null, aciertos: null, practicados: 0 };
+
+  let dominados = 0;
+  let suma = 0;
+
+  for (const registro of registros) {
+    const porcentaje = Math.round((registro.aciertos / registro.total) * 100);
+    if (porcentaje >= UMBRAL_DOMINADO) dominados++;
+    suma += porcentaje;
+  }
+
+  return {
+    dominados,
+    aciertos: Math.round(suma / registros.length),
+    practicados: registros.length,
+  };
+}

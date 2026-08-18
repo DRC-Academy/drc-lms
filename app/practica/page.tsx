@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
@@ -24,6 +23,17 @@ export const dynamic = "force-dynamic";
  * la práctica se genera del perfil y la última clase de quien entra, y
  * no tiene sentido "ver la práctica de otro". El equipo, que no es
  * alumno de nada, se va al buscador.
+ *
+ * MISMO MARCO QUE EL INICIO: fondo `marca-niebla`, columna
+ * `max-w-contenido` y los mismos márgenes laterales. Esta pantalla vivía
+ * en una columna de 720px con otra paleta, y llegar aquí desde el inicio
+ * se sentía como salir de la aplicación. Lo que cambia entre las dos es
+ * el contenido, no el mueble.
+ *
+ * El enlace de "volver al inicio" que cerraba la página se ha ido: la
+ * navegación ya lleva a Inicio —arriba en escritorio, abajo en móvil— y
+ * repetirlo al final solo añadía una salida justo donde el alumno acaba
+ * de elegir por dónde seguir.
  */
 export default async function PaginaPractica() {
   const sesion = await exigirSesion();
@@ -52,7 +62,7 @@ export default async function PaginaPractica() {
   const cursos = perfil ? await cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : [];
 
   return (
-    <>
+    <div className="flex min-h-screen flex-col bg-marca-niebla">
       <Cabecera
         nombre={perfil?.nombre.trim() || undefined}
         alumnoId={alumnoId}
@@ -60,12 +70,16 @@ export default async function PaginaPractica() {
         seccion="practica"
       />
 
-      <main className="mx-auto flex max-w-columna flex-col gap-10 px-6 pb-[140px] pt-7">
+      {/* El hueco de abajo es para la barra fija: 120px es lo que mide con
+          su margen, así que la última tarjeta nunca queda debajo. En
+          móvil se suma el que `globals.css` reserva para la navegación
+          inferior. */}
+      <main className="mx-auto flex w-full max-w-contenido flex-1 flex-col gap-7 px-4 pb-[120px] pt-[18px] lg:gap-9 lg:px-9 lg:pt-8">
         <header>
-          <h1 className="text-balance font-display text-[32px] font-semibold leading-[1.1] tracking-[-0.01em] text-marca-tinta sm:text-[38px]">
+          <h1 className="font-display text-[24px] font-extrabold leading-[1.15] tracking-[-0.02em] text-marca-tinta lg:text-[30px]">
             Tu práctica
           </h1>
-          <p className="mt-3 max-w-[52ch] text-pretty text-[16px] leading-[1.55] text-drc-cuerpo">
+          <p className="mt-[5px] max-w-[720px] text-pretty text-[14px] leading-[1.45] text-marca-gris lg:mt-1.5 lg:text-[15px]">
             Ejercicios hechos para ti a partir de tu perfil y de lo último que diste en clase. No es
             el curso: es lo que te toca a ti hoy.
           </p>
@@ -78,22 +92,14 @@ export default async function PaginaPractica() {
           progreso={progreso}
           avance={avance}
           generadosIniciales={generados}
+          nivel={perfil?.nivel ?? ""}
           urlFormulario={urlFormulario(process.env.URL_FORMULARIO_BASE, perfil?.formToken ?? null)}
           avisoFormulario={avisoFormulario(
             perfil?.profesor ?? "",
             perfil?.formTokenEnviadoEn ?? null
           )}
         />
-
-        <p className="text-[14px] text-drc-cuerpo">
-          <Link
-            href={`/alumno/${alumnoId}`}
-            className="transition-colors hover:text-drc-verde-texto"
-          >
-            ← Volver al inicio
-          </Link>
-        </p>
       </main>
-    </>
+    </div>
   );
 }
