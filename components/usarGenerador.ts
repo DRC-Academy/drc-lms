@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Bloque } from "@/lib/data";
-import type { ModoGeneracion } from "@/lib/modos";
 import { validarBloque } from "@/lib/validarBloque";
 import type { EstadoGeneracion } from "@/components/TarjetasGeneracion";
 import {
@@ -14,9 +13,9 @@ import {
 } from "@/lib/generacion";
 
 /**
- * Un poco por encima del `maxDuration` de `app/api/generar-bloque`, para
- * que gane siempre el error del servidor —que sabe qué pasó— y este solo
- * actúe cuando la respuesta no llega en absoluto.
+ * Un poco por encima del `maxDuration` de `app/api/generar-bloque`, que
+ * son 60 segundos. Así gana siempre el error del servidor —que sabe qué
+ * pasó— y este solo actúa cuando la respuesta no llega en absoluto.
  */
 const TIEMPO_MAXIMO_MS = 70_000;
 
@@ -42,9 +41,15 @@ const MENSAJE_GENERICO = "A veces la conexión se hace la remolona. Vuelve a dar
  * SOBRE LA ESPERA. La ruta responde en NDJSON y va diciendo por dónde
  * va. Aquí se traduce a dos cosas: la etapa, que solo cambia cuando el
  * servidor lo dice, y la barra, que además avanza con el reloj para que
- * no se quede congelada durante los treinta segundos que tarda el
+ * no se quede congelada durante los cincuenta segundos que tarda el
  * modelo. La etapa nunca se adivina; la barra nunca llega al 100% sin
  * bloque.
+ *
+ * UN SOLO BOTÓN. `generar()` ya no recibe modo, porque ya no hay tres:
+ * el bloque combina la última clase, los patrones de las anteriores, el
+ * perfil y el examen dentro de un mismo prompt. Lo que se ha ido con el
+ * modo es `modoActivo`, que solo servía para saber cuál de las tres
+ * tarjetas tenía que girar.
  */
 export function usarGenerador({
   alumnoId,
@@ -56,7 +61,6 @@ export function usarGenerador({
   generadosIniciales: Bloque[];
 }) {
   const [estado, setEstado] = useState<EstadoGeneracion>("listo");
-  const [modoActivo, setModoActivo] = useState<ModoGeneracion | null>(null);
   const [etapa, setEtapa] = useState<EtapaGeneracion>("preparando");
   const [progreso, setProgreso] = useState(0);
   const [tardando, setTardando] = useState(false);
@@ -78,7 +82,6 @@ export function usarGenerador({
   // debe reiniciarse cada vez que cambia la etapa.
   const arranque = useRef(0);
   const etapaViva = useRef<EtapaGeneracion>("preparando");
-  const ultimoModo = useRef<ModoGeneracion | null>(null);
 
   /**
    * La lista del servidor manda. Lo generado ahora se antepone solo
@@ -99,7 +102,7 @@ export function usarGenerador({
   //
   // Solo aporta movimiento continuo. Los saltos verificados los da el
   // servidor al cambiar `etapaViva`; aquí únicamente se deja correr el
-  // tiempo contra el presupuesto real de 45 segundos.
+  // tiempo contra el presupuesto real, que son 52 segundos.
   // ---------------------------------------------------------------
   useEffect(() => {
     if (estado !== "generando") return;
@@ -120,86 +123,74 @@ export function usarGenerador({
     setProgreso((previo) => calcularProgreso(nueva, Date.now() - arranque.current, previo));
   }, []);
 
-  const generar = useCallback(
-    async (modo: ModoGeneracion) => {
-      ultimoModo.current = modo;
-      arranque.current = Date.now();
-      etapaViva.current = "preparando";
+  const generar = useCallback(async () => {
+    arranque.current = Date.now();
+    etapaViva.current = "preparando";
 
-      setEstado("generando");
-      setModoActivo(modo);
-      setEsEspera(false);
-      setEtapa("preparando");
-      setProgreso(0);
-      setTardando(false);
+    setEstado("generando");
+    setEsEspera(false);
+    setEtapa("preparando");
+    setProgreso(0);
+    setTardando(false);
 
-      try {
-        // Segundo cinturón, por encima del presupuesto del servidor. La
-        // ruta se corta sola bastante antes, pero si la respuesta se
-        // pierde por el camino —un proxy, la red del alumno— sin esto el
-        // spinner se queda girando para siempre. Un mensaje de error es
-        // peor que un bloque y muchísimo mejor que una espera sin fin.
-        const respuesta = await fetch("/api/generar-bloque", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ alumnoId, modo, excluir: todos.map((b) => b.titulo) }),
-          signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS),
-        });
+    try {
+      // Segundo cinturón, por encima del presupuesto del servidor. La
+      // ruta se corta sola bastante antes, pero si la respuesta se
+      // pierde por el camino —un proxy, la red del alumno— sin esto el
+      // spinner se queda girando para siempre. Un mensaje de error es
+      // peor que un bloque y muchísimo mejor que una espera sin fin.
+      const respuesta = await fetch("/api/generar-bloque", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ alumnoId, excluir: todos.map((b) => b.titulo) }),
+        signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS),
+      });
 
-        // Los fallos que la ruta detecta antes de empezar a generar
-        // llegan como JSON con su código y su explicación. Esa
-        // explicación es mejor que cualquier texto genérico nuestro:
-        // sabe si caducó la sesión o si falta la ficha.
-        if (!respuesta.ok) {
-          throw await mensajeDeFallo(respuesta);
-        }
-
-        const bloque = respuesta.headers.get("content-type")?.includes(TIPO_FLUJO)
-          ? await leerFlujo(respuesta, anotarEtapa)
-          : await leerRespuestaUnica(respuesta);
-
-        // No se guarda desde aquí: lo hace `app/api/generar-bloque` antes
-        // de responder. Esto solo lo pone en pantalla.
-        setProgreso(100);
-        setGeneradosNuevos((previos) => [bloque, ...previos]);
-        setEstado("listo");
-        setModoActivo(null);
-
-        window.requestAnimationFrame(() => {
-          zonaNuevos.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-      } catch (error) {
-        console.error("[practica] No se pudo generar el bloque:", error);
-        setEsEspera(error instanceof ErrorDeEspera);
-        setMensajeError(
-          error instanceof DOMException && error.name === "TimeoutError"
-            ? "La preparación ha tardado más de lo que podemos esperar. Vuelve a darle y lo intentamos otra vez."
-            : error instanceof Error && error.message
-              ? error.message
-              : MENSAJE_GENERICO
-        );
-        setEstado("error");
-        setModoActivo(null);
+      // Los fallos que la ruta detecta antes de empezar a generar
+      // llegan como JSON con su código y su explicación. Esa
+      // explicación es mejor que cualquier texto genérico nuestro:
+      // sabe si caducó la sesión o si falta la ficha.
+      if (!respuesta.ok) {
+        throw await mensajeDeFallo(respuesta);
       }
-    },
-    [alumnoId, todos, anotarEtapa]
-  );
 
-  /** Reintenta el mismo modo que falló, sin obligar a buscar la tarjeta. */
-  const reintentar = useCallback(() => {
-    if (ultimoModo.current) void generar(ultimoModo.current);
-  }, [generar]);
+      const bloque = respuesta.headers.get("content-type")?.includes(TIPO_FLUJO)
+        ? await leerFlujo(respuesta, anotarEtapa)
+        : await leerRespuestaUnica(respuesta);
+
+      // No se guarda desde aquí: lo hace `app/api/generar-bloque` antes
+      // de responder. Esto solo lo pone en pantalla.
+      setProgreso(100);
+      setGeneradosNuevos((previos) => [bloque, ...previos]);
+      setEstado("listo");
+
+      window.requestAnimationFrame(() => {
+        zonaNuevos.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    } catch (error) {
+      console.error("[practica] No se pudo generar el bloque:", error);
+      setEsEspera(error instanceof ErrorDeEspera);
+      setMensajeError(
+        error instanceof DOMException && error.name === "TimeoutError"
+          ? "La preparación ha tardado más de lo que podemos esperar. Vuelve a darle y lo intentamos otra vez."
+          : error instanceof Error && error.message
+            ? error.message
+            : MENSAJE_GENERICO
+      );
+      setEstado("error");
+    }
+  }, [alumnoId, todos, anotarEtapa]);
 
   return {
     estado,
-    modoActivo,
     generando: estado === "generando",
     etapa,
     progreso,
     tardando,
     mensajeError,
     esEspera,
-    reintentar,
+    /** Reintentar es volver a pulsar: ya no hay modo que recordar. */
+    reintentar: generar,
     /**
      * Solo los de esta visita, el más reciente primero.
      *

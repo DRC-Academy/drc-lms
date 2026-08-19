@@ -20,7 +20,7 @@ import "server-only";
 import { baseLms } from "@/lib/supabase-lms";
 import { validarBloque } from "@/lib/validarBloque";
 import type { Bloque } from "@/lib/data";
-import type { ModoGeneracion } from "@/lib/modos";
+import type { ModoHistorico } from "@/lib/modos";
 import type { ProgresoLocal, RegistroAvance, RegistroProgreso } from "@/lib/progreso";
 
 export type { ProgresoLocal };
@@ -172,53 +172,45 @@ export async function leerBloquesGenerados(
 }
 
 /**
- * Cuándo generó por última vez un bloque de cada modo.
+ * Cuándo generó su último bloque, o null si no ha generado ninguno.
  *
- * Es lo que necesitan las reglas de `lib/limites.ts`: no hace falta
- * contar cuántos lleva, solo cuándo fue el último de cada clase. Los
- * modos sin ningún bloque salen como null, que es lo que las reglas
- * leen como "primera vez, adelante".
+ * Es lo único que necesita la regla de `lib/limites.ts`, que ahora es
+ * una sola: se desbloquea cuando entra un transcript nuevo. Antes esto
+ * devolvía una fecha POR MODO, porque cada modo tenía su propia regla y
+ * su propia espera; con un modo único, la última generación es la
+ * última generación y da igual con qué modo se escribiera.
+ *
+ * NO SE FILTRA POR MODO, y es deliberado. Un alumno que ayer se generó
+ * un bloque de repaso con la versión anterior no debería poder pedir
+ * otro hoy con la misma clase: su materia prima no ha cambiado, que es
+ * de lo que va la regla. Filtrar por `modo = 'practica'` le regalaría
+ * una generación de más el día del despliegue, a él y a todos.
  *
  * Cuenta los dos orígenes, `ia` y `banco`: si la generación falló y se
- * sirvió un bloque del banco, el alumno tiene cinco minutos de práctica
- * delante igual. Descontarlo solo cuando la IA acierta sería cargarle
- * nuestra tasa de fallo como si fuera suya.
+ * sirvió un bloque del banco, el alumno tiene práctica delante igual.
+ * Descontarlo solo cuando la IA acierta sería cargarle nuestra tasa de
+ * fallo como si fuera suya.
  *
  * Lo que generó el equipo NO cuenta, y esto no es un detalle: sin el
  * filtro, alguien del equipo revisando una ficha le gastaría al alumno
- * el repaso del día sin que ninguno de los dos se enterara.
+ * su bloque sin que ninguno de los dos se enterara.
  *
  * Va sobre `idx_bloques_generados_alumno (alumno_id, generado_en desc)`,
  * que ya estaba creado justo para esto.
  */
-export async function leerUltimaGeneracionPorModo(
-  alumnoId: string
-): Promise<Record<ModoGeneracion, string | null>> {
-  const salida: Record<ModoGeneracion, string | null> = {
-    repaso: null,
-    examen: null,
-    contexto: null,
-  };
-
+export async function leerUltimaGeneracion(alumnoId: string): Promise<string | null> {
   const { data, error } = await baseLms()
     .from("bloques_generados")
-    .select("modo, generado_en")
+    .select("generado_en")
     .eq("alumno_id", alumnoId)
     .eq("generado_por_equipo", false)
     .order("generado_en", { ascending: false })
-    .returns<{ modo: string; generado_en: string }[]>();
+    .limit(1)
+    .returns<{ generado_en: string }[]>();
 
-  if (!registrar("No se pudo leer la última generación por modo", error)) return salida;
+  if (!registrar("No se pudo leer la última generación", error)) return null;
 
-  // Vienen del más reciente al más antiguo, así que el primero de cada
-  // modo es el bueno y los siguientes se ignoran.
-  for (const fila of data ?? []) {
-    if (fila.modo in salida && salida[fila.modo as ModoGeneracion] === null) {
-      salida[fila.modo as ModoGeneracion] = fila.generado_en;
-    }
-  }
-
-  return salida;
+  return (data ?? [])[0]?.generado_en ?? null;
 }
 
 /**
@@ -333,7 +325,7 @@ export async function borrarAvance(alumnoId: string, bloqueClave: string): Promi
 export async function guardarBloqueGenerado(
   alumnoId: string,
   bloque: Bloque,
-  modo: ModoGeneracion,
+  modo: ModoHistorico,
   origen: OrigenBloque,
   revision: unknown = null,
   porEquipo = false

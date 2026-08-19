@@ -1,8 +1,10 @@
 // ---------------------------------------------------------------
 // VALIDACIÓN DE BLOQUES
-// Se usa en dos sitios donde no controlamos el origen del dato:
+// Se usa en tres sitios donde no controlamos el origen del dato:
 //   1. La respuesta del modelo en /api/generar-bloque.
-//   2. Los bloques releídos de localStorage (pueden venir de una
+//   2. Los bloques releídos de la base, que pueden haberse escrito con
+//      una versión anterior del validador.
+//   3. Los bloques releídos de localStorage (pueden venir de una
 //      versión anterior de la app).
 // Un ejercicio mal formado en una academia de inglés es peor que
 // no tener el bloque: si algo no cuadra, devolvemos null.
@@ -10,14 +12,37 @@
 
 import type { Bloque, Ejercicio, Producir, Reconocer, Transformar } from "@/lib/data";
 
-/** Orden exacto que exigimos: 2 reconocer → 2 transformar → 1 producir. */
-const ORDEN: Ejercicio["tipo"][] = [
-  "reconocer",
-  "reconocer",
-  "transformar",
-  "transformar",
-  "producir",
-];
+// ---------------------------------------------------------------
+// LAS DOS FORMAS QUE ACEPTAMOS
+//
+// La nueva son diez ejercicios: 4 reconocer → 4 transformar → 2
+// producir. Es lo único que se genera desde el bloque único.
+//
+// La vieja son cinco: 2 → 2 → 1. Ya no se genera, pero SIGUE SIENDO
+// VÁLIDA, y esto no es cortesía con el pasado: `leerBloquesGenerados`
+// pasa por aquí cada bloque que saca de la base, así que rechazar los de
+// cinco borraría de la pantalla toda la práctica que los alumnos tienen
+// hecha hasta hoy. Se enseñan igual y sin marcar: el alumno nunca supo
+// que la forma había cambiado.
+//
+// Se elige por longitud, que es lo que las distingue sin ambigüedad. Un
+// bloque con cualquier otro número de ejercicios no es ninguna de las
+// dos y se descarta entero.
+// ---------------------------------------------------------------
+
+function orden(reconocer: number, transformar: number, producir: number): Ejercicio["tipo"][] {
+  return [
+    ...Array<Ejercicio["tipo"]>(reconocer).fill("reconocer"),
+    ...Array<Ejercicio["tipo"]>(transformar).fill("transformar"),
+    ...Array<Ejercicio["tipo"]>(producir).fill("producir"),
+  ];
+}
+
+/** La forma de hoy y la de antes, indexadas por número de ejercicios. */
+const FORMAS: Record<number, Ejercicio["tipo"][]> = {
+  10: orden(4, 4, 2),
+  5: orden(2, 2, 1),
+};
 
 const NIVELES: Bloque["nivel"][] = ["A1", "A2", "B1", "B2", "C1"];
 
@@ -140,30 +165,37 @@ export function validarBloque(valor: unknown): Bloque | null {
   if (!id || !titulo || !area || !intro) return null;
   if (!nivel || !NIVELES.includes(nivel as Bloque["nivel"])) return null;
 
-  // Los minutos son informativos: los ajustamos a un rango razonable
-  // en vez de descartar el bloque entero por un número raro.
+  const crudos = valor.ejercicios;
+  if (!Array.isArray(crudos)) return null;
+
+  const forma = FORMAS[crudos.length];
+  if (!forma) return null;
+
+  // Los minutos son informativos: los ajustamos a un rango razonable en
+  // vez de descartar el bloque entero por un número raro. El tope sube a
+  // 20 con los diez ejercicios; el suelo se queda en 3 porque los
+  // bloques de cinco que ya están guardados siguen pasando por aquí.
   const minutos =
     typeof valor.minutos === "number" && Number.isFinite(valor.minutos)
-      ? Math.min(15, Math.max(3, Math.round(valor.minutos)))
-      : 5;
-
-  const crudos = valor.ejercicios;
-  if (!Array.isArray(crudos) || crudos.length !== ORDEN.length) return null;
+      ? Math.min(20, Math.max(3, Math.round(valor.minutos)))
+      : crudos.length >= 10
+        ? 10
+        : 5;
 
   const ejercicios: Ejercicio[] = [];
-  for (let i = 0; i < ORDEN.length; i++) {
+  for (let i = 0; i < forma.length; i++) {
     const crudo = crudos[i];
     if (!esRegistro(crudo)) return null;
-    if (crudo.tipo !== ORDEN[i]) return null;
+    if (crudo.tipo !== forma[i]) return null;
 
     const idEjercicio = cadena(crudo.id, 2) ?? `${id}-${i + 1}`;
 
     const ejercicio =
-      ORDEN[i] === "reconocer"
+      forma[i] === "reconocer"
         ? validarReconocer(crudo, idEjercicio)
-        : ORDEN[i] === "transformar"
-        ? validarTransformar(crudo, idEjercicio)
-        : validarProducir(crudo, idEjercicio);
+        : forma[i] === "transformar"
+          ? validarTransformar(crudo, idEjercicio)
+          : validarProducir(crudo, idEjercicio);
 
     if (!ejercicio) return null;
     ejercicios.push(ejercicio);

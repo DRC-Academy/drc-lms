@@ -1,9 +1,15 @@
 // ---------------------------------------------------------------
 // GENERACIÓN DE UN BLOQUE NUEVO
 //
-// Recibe el id del alumno y el modo, lee sus datos de DRC Gestión en
-// el servidor y le pide a Claude un bloque con la forma del tipo
-// `Bloque`.
+// Recibe el id del alumno, lee de DRC Gestión todo lo que sabemos de
+// él —su última clase, las anteriores, su perfil, su plan— y le pide a
+// Claude UN bloque de diez ejercicios con la forma del tipo `Bloque`.
+//
+// UN SOLO MODO. Ya no viene `modo` en el cuerpo: había tres y el alumno
+// elegía cuál, cuando lo que necesita es un bloque que sea las cuatro
+// fuentes a la vez. El prompt que las combina vive en
+// `lib/prompt-bloque.ts`; aquí queda la fontanería: sesión, lecturas,
+// presupuesto de tiempo, flujo y guardado.
 //
 // Se llama a la API con `fetch` en vez del SDK oficial a propósito:
 // el proyecto no debe crecer en dependencias.
@@ -14,26 +20,48 @@
 // ---------------------------------------------------------------
 
 import { NextResponse } from "next/server";
-import { NOMBRE_EXAMEN, type Bloque, type TipoExamen } from "@/lib/data";
-import { obtenerAlumno } from "@/lib/gestion";
+import type { Bloque, TipoExamen } from "@/lib/data";
+import { anterioresA, historialDeClases, obtenerAlumno } from "@/lib/gestion";
 import { sesionActual } from "@/lib/sesion-servidor";
-import { detectarExamen, nivelDeBloque } from "@/lib/perfil";
-import { primeraFrase, type ModoGeneracion } from "@/lib/modos";
+import { detectarExamen, formatearFecha, nivelDeBloque } from "@/lib/perfil";
+import { MODO_ACTUAL } from "@/lib/modos";
+import {
+  construirSistema,
+  construirUsuario,
+  hayMateriaPrima,
+  type MateriaPrima,
+} from "@/lib/prompt-bloque";
 import { bloqueDeBanco } from "@/lib/banco";
 import { validarBloque } from "@/lib/validarBloque";
 import { extraerJson } from "@/lib/json";
-import { avisosParaRegenerar, revisarBloque, type Revision } from "@/lib/revisor";
-import { guardarBloqueGenerado, leerUltimaGeneracionPorModo } from "@/lib/progreso-servidor";
-import { calcularDisponibilidad, comoFecha, DIAS_CONTEXTO, type Disponibilidad } from "@/lib/limites";
+import { revisarBloque, type Revision } from "@/lib/revisor";
+import { guardarBloqueGenerado, leerUltimaGeneracion } from "@/lib/progreso-servidor";
+import { calcularDisponibilidad, comoFecha } from "@/lib/limites";
 import { abrirPlazo, conLimite, conLimiteOAlternativa, describir, type Plazo } from "@/lib/tiempo";
 import { TIPO_FLUJO, type EventoGeneracion } from "@/lib/generacion";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Sin esto la plataforma corta por su cuenta y el alumno recibe un 504
-// del gateway en vez de un bloque del banco. Es el techo duro; el
-// presupuesto de abajo está calculado para caber dentro con holgura.
+// ---------------------------------------------------------------
+// EL TECHO, Y POR QUÉ NO SE MUEVE
+//
+// 60 SEGUNDOS ES EL MÁXIMO DEL PLAN, no una elección nuestra. El
+// proyecto está en el plan Hobby de Vercel, donde `maxDuration` no puede
+// pasar de 60: escribir 120 aquí no alargaría nada, la plataforma
+// cortaría igual y el alumno recibiría un 504 del gateway en vez de un
+// bloque.
+//
+// Eso es lo que decide todo el presupuesto de abajo. Un bloque de diez
+// ejercicios tarda, medido en cinco tiradas contra la API real, entre 43
+// y 52 segundos (media 48). La revisión son 3 más. No cabe una segunda
+// generación, así que NO HAY REGENERACIÓN: el revisor deja su veredicto
+// guardado y el bloque sale igual.
+//
+// Si el proyecto pasa algún día a Pro, el techo sube a 300 y lo que hay
+// que tocar es esto: `maxDuration` a 120, `PRESUPUESTO_IA_MS` a 100_000 y
+// devolver la regeneración a `generarConRevision`.
+// ---------------------------------------------------------------
 export const maxDuration = 60;
 
 const MODELO = "claude-sonnet-4-6";
@@ -43,27 +71,50 @@ const ESPERA_BANCO_MS = 1600; // el banco responde al instante: sin esto la demo
 // ---------------------------------------------------------------
 // PRESUPUESTO DE TIEMPO
 //
-// Cada llamada tenía su propio máximo y nadie sumaba: dos generaciones
-// y dos revisiones daban 210 segundos en el peor caso, con el alumno
-// mirando un spinner. Ahora hay un único presupuesto para toda la fase
-// de IA y cada llamada solo puede gastar lo que quede.
+// Un único presupuesto para toda la fase de IA; cada llamada solo puede
+// gastar lo que quede. Sin esto cada una respeta su propio máximo y el
+// total es la suma, que es como se llegaba a los 210 segundos de antes.
 //
-// La cuenta del peor caso: 45s de generación agotan el presupuesto, no
-// hay reintento ni revisión, y se sirve el banco. Total por debajo de
-// `maxDuration`, siempre.
+// La cuenta, con los números medidos:
+//
+//   lecturas (sesión, y ficha e historial en paralelo)  ~1s    · tope 5+5
+//   generación                                          43-52s · tope 52
+//   revisión                                            3s     · lo que sobre
+//   guardado                                            <1s    · tope 5
+//
+// El peor caso previsto es que la generación se coma los 52 segundos
+// enteros: entonces no queda revisión, el bloque sale sin revisar y
+// sigue estando por debajo del techo. El caso malo de verdad —que tarde
+// MÁS de 52— se corta y se sirve el banco, que es exactamente lo que
+// pasaba antes a los 45.
+//
+// LA REVISIÓN COBRA LO QUE SOBRA, y por eso corre unas veces sí y otras
+// no. Es a propósito: entre un bloque suyo sin revisar y un bloque
+// genérico del banco, gana el suyo. Reservarle cinco segundos fijos
+// obligaría a cortar la generación en 47, y con eso una de cada cinco
+// personas acabaría en el banco.
 // ---------------------------------------------------------------
 
-const TIEMPO_MAXIMO_MS = 45_000; // tope de UNA llamada al modelo
-const PRESUPUESTO_IA_MS = 45_000; // tope de TODA la fase de generación
-const TIEMPO_REVISOR_MS = 15_000; // tope de una revisión
-const TIEMPO_BASE_MS = 8_000; // tope de una consulta a Supabase
+const TIEMPO_MAXIMO_MS = 52_000; // tope de UNA llamada al modelo
+const PRESUPUESTO_IA_MS = 52_000; // tope de TODA la fase de generación
+// Ocho, y no cinco. No le quita nada a la generación —esta corre antes y
+// se lleva lo que necesite— así que es solo el tope de lo que la revisión
+// puede gastar de lo que sobre. Con cinco se quedaba a medias en tiradas
+// donde había sitio de sobra: medido, una revisión tarda entre 0,9 y más
+// de 5 segundos según lo cargada que esté la API.
+const TIEMPO_REVISOR_MS = 8_000;
+const TIEMPO_BASE_MS = 5_000; // tope de una consulta a Supabase
+
+// Siguen siendo dos porque un fallo rápido —un 429, un JSON cortado— deja
+// sitio de sobra para otro intento. El presupuesto es quien decide: si la
+// primera llamada se comió el reloj, no hay segunda.
 const INTENTOS = 2;
+
+/** Lo que se reserva para el guardado y el cierre del flujo. */
+const RESERVA_FINAL_MS = 6_000;
 
 // `Origen` y la forma de la respuesta viven ahora en `lib/generacion.ts`,
 // que es el contrato que comparten esta ruta y el cliente que la lee.
-
-const AREAS = ["Gramática", "Léxico", "Discurso"];
-const MODOS: ModoGeneracion[] = ["repaso", "examen", "contexto"];
 
 function esperar(ms: number) {
   return new Promise<void>((resolver) => setTimeout(resolver, ms));
@@ -155,22 +206,17 @@ function flujoDeGeneracion(
 }
 
 /**
- * Lo que se le responde a quien pulsa un modo que todavía no le toca.
+ * Lo que se le responde a quien pulsa cuando todavía no le toca.
  *
  * Es la red de seguridad, no el camino normal: aquí se llega con una
  * pestaña que lleva horas abierta. Aun así se cuenta igual que en la
  * tarjeta —de qué depende, no qué tiene prohibido— porque el alumno no
  * tiene forma de saber que su pantalla estaba vieja.
  */
-function mensajeDeEspera(disponibilidad: Exclude<Disponibilidad, { disponible: true }>): string {
-  if (disponibilidad.motivo === "clase") {
-    return "Ya has repasado lo de tu última clase. En cuanto tengas la siguiente, preparamos el próximo bloque.";
-  }
-  if (disponibilidad.motivo === "dias") {
-    const dias = disponibilidad.diasRestantes;
-    return `Estos ejercicios salen de tu perfil, y eso no cambia de un día para otro. Cada ${DIAS_CONTEXTO} días te preparamos uno nuevo: este te toca ${dias === 1 ? "mañana" : `en ${dias} días`}.`;
-  }
-  return "Ya has practicado el formato hoy. Mañana preparamos otro.";
+function mensajeDeEspera(tuvoClase: boolean): string {
+  return tuvoClase
+    ? "Ya has practicado lo de tu última clase. En cuanto tengas la siguiente, preparamos el próximo bloque."
+    : "Ya tienes tu bloque con lo que sabemos de ti. En cuanto se analice tu primera clase, preparamos el siguiente.";
 }
 
 /**
@@ -208,242 +254,6 @@ function conIdPropio(bloque: Bloque): Bloque {
     id,
     ejercicios: bloque.ejercicios.map((ejercicio, i) => ({ ...ejercicio, id: `${id}-${i + 1}` })),
   };
-}
-
-// ---------------------------------------------------------------
-// CALIBRACIÓN POR NIVEL
-// A1 y A2 no son "B1 más fácil": cambian la longitud de la frase y el
-// vocabulario admisible. Sin esto el modelo escribe B1 para todos.
-// ---------------------------------------------------------------
-
-const CALIBRACION: Record<Bloque["nivel"], string> = {
-  A1: "Nivel A1: frases de 6 a 9 palabras, presente simple, vocabulario de las 500 palabras más frecuentes. Sin subordinadas y sin phrasal verbs.",
-  A2: "Nivel A2: frases de 8 a 12 palabras, presentes y pasado simple, vocabulario de alta frecuencia y de la vida diaria. Nada de léxico abstracto ni de subordinadas largas.",
-  B1: "Nivel B1: frases claras de longitud media, tiempos básicos y perfectos, vocabulario cotidiano y de trabajo corriente.",
-  B2: "Nivel B2: frases de complejidad natural, gama completa de tiempos, phrasal verbs y collocations de registro profesional.",
-  C1: "Nivel C1: registro formal y matizado, estructuras enfáticas, collocations precisas y diferencias de matiz entre opciones cercanas.",
-};
-
-// ---------------------------------------------------------------
-// FORMATO AUTÉNTICO DE CADA EXAMEN
-// ---------------------------------------------------------------
-
-const FORMATO_EXAMEN: Record<TipoExamen, string> = {
-  b2_first: [
-    "Reproduce el formato real del Use of English de B2 First:",
-    "- Los dos 'reconocer' son Part 1 (multiple-choice cloze): una frase con un hueco y cuatro opciones de léxico cercano entre sí (collocation, phrasal verb, matiz de significado). No sirve que la diferencia sea gramatical y evidente.",
-    "- El primer 'transformar' es Part 2 (open cloze): la frase lleva un hueco que se completa con UNA sola palabra gramatical (preposición, auxiliar, relativo, artículo o cuantificador).",
-    "- El segundo 'transformar' es Part 4 (key word transformation): da la frase original, indica en la instrucción la palabra clave OBLIGATORIA en mayúsculas, y la respuesta debe usar entre DOS y CINCO palabras incluyendo esa palabra sin modificarla. Dos y cinco es la especificación de B2 First; el rango de tres a seis es el de C1 Advanced y aquí sería un error.",
-    "- El 'producir' es una tarea breve de Writing del examen (un email o el párrafo central de un essay).",
-  ].join("\n"),
-  c1_advanced: [
-    "Reproduce el formato real del Use of English de C1 Advanced:",
-    "- Los dos 'reconocer' son Part 1 (multiple-choice cloze) con cuatro opciones de significado muy próximo, donde lo que decide es la collocation.",
-    "- El primer 'transformar' es Part 3 (word formation): da la frase con el hueco y, entre paréntesis, la palabra raíz en mayúsculas que hay que transformar (prefijo, sufijo o cambio de categoría).",
-    "- El segundo 'transformar' es Part 4 (key word transformation): palabra clave OBLIGATORIA en mayúsculas en la instrucción y respuesta de entre TRES y SEIS palabras que la incluya sin cambiarla. Tres y seis es la especificación de C1 Advanced, distinta de la de B2 First.",
-    "- El 'producir' es un párrafo de Writing de C1, con registro formal.",
-  ].join("\n"),
-  b1_preliminary: [
-    "Reproduce el formato real de B1 Preliminary:",
-    "- Los dos 'reconocer' son Reading Part 5 (multiple-choice cloze): vocabulario de alta frecuencia, cuatro opciones cercanas y una sola correcta por significado o por collocation.",
-    "- El primer 'transformar' es Reading Part 6 (open cloze): un hueco que se rellena con UNA sola palabra gramatical.",
-    "- El segundo 'transformar' reescribe una frase manteniendo el significado, indicando en la instrucción con qué palabra o estructura debe empezar.",
-    "- El 'producir' es un email corto o una nota, del tipo de Writing Part 2.",
-  ].join("\n"),
-  ielts: [
-    "Reproduce el estilo de IELTS. OJO: IELTS no es Cambridge, así que NO uses key word transformation ni open cloze.",
-    "- Los dos 'reconocer' trabajan vocabulario académico en contexto y paráfrasis: qué opción reformula mejor la idea de la frase.",
-    "- Los dos 'transformar' piden reescribir una frase con registro académico, usando nominalización o voz pasiva, como exige Writing Task 2.",
-    "- El 'producir' es un párrafo de Writing Task 2 con criterios de coherencia, cohesión y rango léxico.",
-  ].join("\n"),
-};
-
-// ---------------------------------------------------------------
-// PROMPTS
-// ---------------------------------------------------------------
-
-function construirSistema(nivel: Bloque["nivel"]): string {
-  return [
-    "Eres el diseñador de materiales de DRC Academy, una academia de inglés online para adultos hispanohablantes.",
-    "Escribes bloques de práctica de cinco minutos.",
-    "",
-    "REGLAS DE CONTENIDO",
-    "- Los enunciados, frases y respuestas de los ejercicios van en inglés.",
-    "- Las instrucciones, pistas y explicaciones van en español de España, tuteando, en tono cálido y directo.",
-    "- Nunca uses lenguaje de error o de vigilancia: nada de 'tus fallos', 'tus errores' o 'áreas deficientes'.",
-    "- Las explicaciones dicen POR QUÉ, no repiten la regla en abstracto. Una o dos frases, sin jerga gramatical innecesaria.",
-    "- El contexto es adulto. Nada de ejemplos escolares.",
-    "",
-    "CALIBRACIÓN",
-    CALIBRACION[nivel],
-    "",
-    "DISTRACTORES (lo más importante)",
-    "Cada opción incorrecta tiene que ser el error concreto que comete un hispanohablante de este nivel:",
-    "calco literal del español, tiempo verbal equivocado por interferencia, preposición traducida, colocación inventada,",
-    "participio mal formado, orden de palabras del español. Nunca opciones absurdas, ni fáciles de descartar a ojo,",
-    "ni tres opciones evidentemente malas alrededor de una buena. Si un distractor no lo elegiría un alumno real, cámbialo.",
-    "",
-    "FORMATO",
-    "Devuelves SOLO el objeto JSON. Sin markdown, sin vallados, sin una sola palabra antes ni después.",
-  ].join("\n");
-}
-
-function plantillaJson(nivel: Bloque["nivel"]): string {
-  return JSON.stringify(
-    {
-      id: "identificador-en-minusculas-con-guiones",
-      titulo: "Título corto en español, máximo 40 caracteres",
-      area: `Una de: ${AREAS.join(" | ")}`,
-      nivel,
-      minutos: 5,
-      intro: "Una o dos frases en español que expliquen la idea clave del bloque.",
-      ejercicios: [
-        {
-          tipo: "reconocer",
-          id: "r1",
-          enunciado: "Frase en inglés con ____ donde va el hueco.",
-          opciones: ["correcta", "distractor 1", "distractor 2", "distractor 3"],
-          correcta: 0,
-          explicacion: "Por qué es esa y qué error refleja la que suele elegirse.",
-        },
-        { tipo: "reconocer", id: "r2", enunciado: "…", opciones: ["…"], correcta: 0, explicacion: "…" },
-        {
-          tipo: "transformar",
-          id: "t1",
-          instruccion: "Qué tiene que hacer, en español.",
-          frase: "Frase de partida en inglés.",
-          respuestas: ["Todas las formas correctas, incluidas contracciones y orden alternativo."],
-          pista: "Una pista corta que acote la respuesta.",
-          explicacion: "Qué cambia y por qué.",
-        },
-        { tipo: "transformar", id: "t2", instruccion: "…", frase: "…", respuestas: ["…"], pista: "…", explicacion: "…" },
-        {
-          tipo: "producir",
-          id: "p1",
-          instruccion: "Qué tiene que escribir, en español.",
-          contexto: "Situación concreta y extensión esperada.",
-          criterios: ["Criterio comprobable 1", "Criterio comprobable 2", "Criterio comprobable 3"],
-          modelo: "Una respuesta modelo en inglés, natural, de dos a cuatro frases.",
-        },
-      ],
-    },
-    null,
-    2
-  );
-}
-
-const REQUISITOS = [
-  "Requisitos que se comprueban antes de publicar el bloque:",
-  "- Exactamente 5 ejercicios, en este orden: reconocer, reconocer, transformar, transformar, producir.",
-  "- Cada 'reconocer' tiene exactamente 4 opciones distintas y 'correcta' es el índice (0-3) de la buena.",
-  "- Cada 'transformar' lista TODAS las respuestas aceptables: la respuesta del alumno se compara literalmente",
-  "  (ignorando mayúsculas y puntuación), así que incluye contracciones ('I would' y \"I'd\") y variantes de orden.",
-  "  Que la pista sea lo bastante concreta como para que solo quepan las respuestas que has listado.",
-  "- El 'producir' tiene entre 2 y 5 criterios comprobables y un modelo real.",
-].join("\n");
-
-type Contexto = {
-  nivel: Bloque["nivel"];
-  nombre: string;
-  titulosExcluidos: string[];
-};
-
-/**
- * Modo repaso. NO se le manda el transcript de la clase: el análisis ya
- * se hizo en Gestión y volver a mandarlo sería pagar dos veces por el
- * mismo texto. Se trabaja sobre lo ya destilado.
- */
-function usuarioRepaso(
-  ctx: Contexto,
-  clase: { titulo: string; temas: string; errores: string; priority: string; mainFocus: string }
-): string {
-  const temas = clase.temas.trim();
-  const errores = clase.errores.trim();
-
-  const material = [`- Título de la clase: ${clase.titulo}`];
-  if (temas) material.push(`- Temas que se trabajaron: ${temas}`);
-  if (errores) material.push(`- Cosas concretas que se le resistieron: ${errores}`);
-  material.push(`- Prioridad marcada para la próxima clase: ${clase.priority}`);
-  material.push(`- Foco principal de la próxima clase: ${clase.mainFocus}`);
-
-  // Hay una fila con `temas` vacío y otra con `errores` vacío. La guía
-  // está rellena en las 68, así que siempre queda de dónde tirar.
-  const instruccionDistractores = errores
-    ? "Los distractores de las opciones múltiples tienen que reproducir EXACTAMENTE los errores concretos descritos arriba. Ese es el punto del bloque: que el alumno se reencuentre con su propio error y esta vez lo vea venir."
-    : "No tenemos anotados errores concretos de esta clase, así que apóyate en la prioridad y el foco: los distractores deben ser los errores típicos de un hispanohablante de este nivel en ese punto exacto.";
-
-  return [
-    `Ficha del alumno:`,
-    `- Nombre: ${ctx.nombre}`,
-    `- Nivel: ${ctx.nivel}`,
-    "",
-    "Lo que dejó su última clase (ya analizada, no hace falta más contexto):",
-    material.join("\n"),
-    "",
-    `Prepara UN bloque de nivel ${ctx.nivel} que continúe ese trabajo: profundiza en el foco principal`,
-    `o ataca el punto donde ese tema se confunde con otro.`,
-    "",
-    instruccionDistractores,
-    ctx.titulosExcluidos.length
-      ? `\nNo repitas estos temas, que el alumno ya tiene delante: ${ctx.titulosExcluidos.join("; ")}.`
-      : "",
-    "",
-    "Devuelve exactamente esta estructura:",
-    plantillaJson(ctx.nivel),
-    "",
-    REQUISITOS,
-  ].join("\n");
-}
-
-function usuarioExamen(ctx: Contexto, examen: TipoExamen): string {
-  return [
-    `Ficha del alumno:`,
-    `- Nombre: ${ctx.nombre}`,
-    `- Nivel: ${ctx.nivel}`,
-    `- Se está preparando el examen: ${NOMBRE_EXAMEN[examen]}`,
-    "",
-    FORMATO_EXAMEN[examen],
-    "",
-    `Prepara UN bloque de nivel ${ctx.nivel} con ese formato. El alumno tiene que reconocer el examen`,
-    `en cuanto lo vea: si el ejercicio no podría aparecer tal cual en una prueba real, no sirve.`,
-    ctx.titulosExcluidos.length
-      ? `\nNo repitas estos temas, que el alumno ya tiene delante: ${ctx.titulosExcluidos.join("; ")}.`
-      : "",
-    "",
-    "Devuelve exactamente esta estructura:",
-    plantillaJson(ctx.nivel),
-    "",
-    REQUISITOS,
-  ].join("\n");
-}
-
-function usuarioContexto(ctx: Contexto, ocupacion: string | null, objetivo: string | null): string {
-  // Solo la primera frase de cada campo: son párrafos de varias oraciones
-  // y mandarlos enteros diluye la señal concreta que nos interesa.
-  const perfil: string[] = [];
-  if (ocupacion) perfil.push(`- A qué se dedica: ${primeraFrase(ocupacion)}`);
-  if (objetivo) perfil.push(`- Qué quiere conseguir: ${primeraFrase(objetivo)}`);
-
-  return [
-    `Ficha del alumno:`,
-    `- Nombre: ${ctx.nombre}`,
-    `- Nivel: ${ctx.nivel}`,
-    perfil.join("\n"),
-    "",
-    `Prepara UN bloque de nivel ${ctx.nivel} ambientado en las situaciones reales de esta persona:`,
-    `las conversaciones, los correos y los documentos que se encuentra de verdad en su trabajo.`,
-    "",
-    "Nada de frases genéricas de libro de texto. Si un ejercicio podría aparecer igual en el bloque de",
-    "cualquier otro alumno, reescríbelo hasta que solo tenga sentido para esta persona.",
-    ctx.titulosExcluidos.length
-      ? `\nNo repitas estos temas, que el alumno ya tiene delante: ${ctx.titulosExcluidos.join("; ")}.`
-      : "",
-    "",
-    "Devuelve exactamente esta estructura:",
-    plantillaJson(ctx.nivel),
-    "",
-    REQUISITOS,
-  ].join("\n");
 }
 
 // ---------------------------------------------------------------
@@ -495,7 +305,12 @@ async function pedirBloqueAlModelo(
       },
       body: JSON.stringify({
         model: MODELO,
-        max_tokens: 8000,
+        // El doble que con cinco ejercicios, por lo mismo. Un bloque de
+        // diez son unos 2.500 tokens de salida medidos, así que 16.000
+        // no es lo que se gasta: es el margen para que una respuesta
+        // larga no llegue cortada, que aquí se leería como JSON
+        // inválido y costaría la generación entera.
+        max_tokens: 16000,
         system: sistema,
         messages: [{ role: "user", content: usuario }],
       }),
@@ -628,18 +443,24 @@ function registrarRevision(etiqueta: string, revision: Revision) {
 }
 
 /**
- * Genera, revisa y, si el revisor lo tumba, regenera UNA vez avisando de
- * lo que falló. Devuelve null cuando no hay nada publicable, que es la
- * señal para servir el banco.
+ * Genera un bloque y lo pasa por el revisor. Devuelve null cuando no hay
+ * nada publicable, que es la señal para servir el banco.
  *
- * La revisión solo bloquea cuando dice explícitamente que hay problemas:
- * si falla o expira, el bloque sale igual. Nunca puede dejar al alumno
- * sin ejercicios.
+ * YA NO REGENERA, y es el cambio que trajeron los diez ejercicios. Antes,
+ * si el revisor tumbaba el bloque, se pedía otro avisando de lo que había
+ * fallado. Con una generación de 48 segundos medidos y un techo de
+ * plataforma de 60, ese segundo intento no cabe: intentarlo significaría
+ * cortarlo a la mitad y acabar en el banco, que es peor que un bloque
+ * suyo con un defecto señalado.
  *
- * Devuelve también el veredicto del revisor, que ya no se tira: se
- * guarda en `bloques_generados.revision`. Es lo que permitirá mirar
- * después qué proporción de bloques salió "apto" a la primera y con qué
- * problemas, sin tener que instrumentar nada más.
+ * Así que el veredicto ahora se GUARDA en vez de mandar. Va a
+ * `bloques_generados.revision` y es lo que deja medir qué proporción sale
+ * limpia y con qué problemas. Cuando esa medida diga que hace falta
+ * volver a filtrar, se sabrá cuánto cuesta el presupuesto que hace falta
+ * para ello.
+ *
+ * La revisión NUNCA deja al alumno sin ejercicios: si falla, expira o no
+ * le queda presupuesto, el bloque sale igual con el veredicto que haya.
  */
 async function generarConRevision(
   clave: string,
@@ -656,54 +477,24 @@ async function generarConRevision(
   // después: es lo que hace que el texto de la pantalla y lo que está
   // ocurriendo aquí dentro sean la misma cosa.
   emitir({ tipo: "etapa", etapa: "escribiendo", ms: plazo.transcurrido() });
-  const primero = await generarEstructural(clave, sistema, usuario, plazo, traza);
-  if (!primero) return null;
+  const bloque = await generarEstructural(clave, sistema, usuario, plazo, traza);
+  if (!bloque) return null;
 
-  traza("revisión 1:inicio", `restante ${plazo.restante()}ms`);
+  // Con lo que sobre. La generación se lleva casi todo el presupuesto y
+  // hay tiradas en las que no queda nada; entonces `revisarBloque`
+  // devuelve "no-disponible" sin llamar a nadie y el bloque sale sin
+  // revisar, que es exactamente lo que se quiere.
+  traza("revisión:inicio", `restante ${plazo.restante()}ms`);
   emitir({ tipo: "etapa", etapa: "revisando", ms: plazo.transcurrido() });
-  const revision = await revisarBloque(clave, primero, examen, plazo.hasta(TIEMPO_REVISOR_MS));
-  registrarRevision("revisión 1", revision);
-  if (revision.estado !== "con-problemas") return { bloque: primero, revision, intentos: 1 };
+  const revision = await revisarBloque(clave, bloque, examen, plazo.hasta(TIEMPO_REVISOR_MS));
+  registrarRevision("revisión", revision);
 
-  // La regeneración es un lujo: si no queda presupuesto se entrega el
-  // bloque que ya tenemos con su veredicto. Un bloque con un defecto
-  // señalado en `bloques_generados` es mejor que un banco genérico, y
-  // muchísimo mejor que seguir haciendo esperar al alumno.
-  if (plazo.restante() < 5_000) {
-    traza("revisión 1:sin margen para regenerar", `restante ${plazo.restante()}ms`);
-    console.warn("[revisor] No queda presupuesto para regenerar. Se entrega el bloque revisado.");
-    return { bloque: primero, revision, intentos: 1 };
-  }
-
-  emitir({ tipo: "etapa", etapa: "reescribiendo", ms: plazo.transcurrido() });
-  const segundo = await generarEstructural(
-    clave,
-    sistema,
-    usuario + avisosParaRegenerar(revision.problemas),
-    plazo,
-    traza
-  );
-  if (!segundo) return null;
-
-  traza("revisión 2:inicio", `restante ${plazo.restante()}ms`);
-  emitir({ tipo: "etapa", etapa: "revisando", ms: plazo.transcurrido() });
-  const segundaRevision = await revisarBloque(clave, segundo, examen, plazo.hasta(TIEMPO_REVISOR_MS));
-  registrarRevision("revisión 2", segundaRevision);
-  if (segundaRevision.estado !== "con-problemas") {
-    return { bloque: segundo, revision: segundaRevision, intentos: 2 };
-  }
-
-  console.warn("[revisor] Dos intentos rechazados por revisión. Se sirve un bloque del banco.");
-  return null;
+  return { bloque, revision, intentos: 1 };
 }
 
 // ---------------------------------------------------------------
 // HANDLER
 // ---------------------------------------------------------------
-
-function esModo(valor: unknown): valor is ModoGeneracion {
-  return typeof valor === "string" && MODOS.includes(valor as ModoGeneracion);
-}
 
 export async function POST(peticion: Request) {
   const { traza, plazo: plazoPeticion } = abrirTraza();
@@ -745,7 +536,12 @@ export async function POST(peticion: Request) {
     return NextResponse.json({ error: "El cuerpo de la petición no es JSON." }, { status: 400 });
   }
 
-  const datos = (cuerpo ?? {}) as { alumnoId?: unknown; modo?: unknown; excluir?: unknown };
+  // `modo` ya no se lee. Si llega —de una pestaña abierta desde antes
+  // del cambio— se ignora en silencio: pedía uno de los tres modos
+  // antiguos y lo que se le va a dar es el bloque único, que incluye lo
+  // que ese modo hacía. Rechazar la petición sería hacerle recargar para
+  // acabar en el mismo sitio.
+  const datos = (cuerpo ?? {}) as { alumnoId?: unknown; excluir?: unknown };
   const pedido = typeof datos.alumnoId === "string" ? datos.alumnoId : "";
 
   // Al alumno se le impone el suyo y no se discute. El equipo sí puede
@@ -775,24 +571,34 @@ export async function POST(peticion: Request) {
    */
   const porEquipo = sesion.rol !== "alumno";
 
-  if (!esModo(datos.modo)) {
-    return NextResponse.json(
-      { error: `El modo tiene que ser uno de: ${MODOS.join(", ")}.` },
-      { status: 400 }
-    );
-  }
-  const modo = datos.modo;
-
-  // Dos lecturas contra Gestión, también con plazo. Este era el punto
-  // más probable de cuelgue: pasa antes de tocar el modelo, así que un
-  // Supabase que no responde dejaba la petición parada sin llegar
-  // siquiera al try/catch que sirve el banco.
+  // ---------------------------------------------------------------
+  // LAS LECTURAS, LAS DOS A LA VEZ
+  //
+  // La ficha y el historial de clases salen en paralelo y no en serie, y
+  // no es una optimización de adorno: el presupuesto de esta ruta va
+  // justo, y encadenarlas costaría un viaje entero a Gestión antes de
+  // que el modelo empiece a escribir.
+  //
+  // Se puede porque el historial NO necesita saber cuál es la última
+  // clase para pedirse: se traen las cinco más recientes y luego
+  // `anterioresA` descarta la que ya venía por la vista. El recorte se
+  // hace en memoria, cuando las dos respuestas ya están.
+  // ---------------------------------------------------------------
   let alumno;
+  let historial;
   try {
     traza("gestión:lectura");
-    alumno = alumnoId
-      ? await conLimite(obtenerAlumno(alumnoId), TIEMPO_BASE_MS, "obtenerAlumno")
-      : null;
+    [alumno, historial] = await conLimite(
+      Promise.all([
+        alumnoId ? obtenerAlumno(alumnoId) : Promise.resolve(null),
+        // Sin id no hay a quién leerle el historial. Devuelve vacío en
+        // vez de fallar: es material que mejora el bloque, no material
+        // sin el que no haya bloque.
+        alumnoId ? historialDeClases(alumnoId) : Promise.resolve([]),
+      ]),
+      TIEMPO_BASE_MS,
+      "gestión"
+    );
   } catch (error) {
     traza("gestión:fallo", describir(error));
     console.error("[generar-bloque] No se pudo leer la ficha del alumno:", describir(error));
@@ -806,9 +612,10 @@ export async function POST(peticion: Request) {
     traza("gestión:sin ficha");
     return NextResponse.json({ error: "No encontramos a ese alumno." }, { status: 404 });
   }
-  traza("gestión:ok");
 
   const { perfil, ultimaClase } = alumno;
+  const anteriores = anterioresA(historial, ultimaClase?.analizadoEn ?? null);
+  traza("gestión:ok", `${anteriores.length} clase(s) anterior(es)`);
 
   const titulosExcluidos = Array.isArray(datos.excluir)
     ? datos.excluir.filter((t): t is string => typeof t === "string").slice(0, 20)
@@ -817,95 +624,94 @@ export async function POST(peticion: Request) {
   // Sin perfil (alumno con clase pero sin ficha) tiramos de B1, que es
   // el nivel con más alumnos y más material.
   const nivel = perfil ? nivelDeBloque(perfil.nivel) : "B1";
-  const ctx: Contexto = {
-    nivel,
+
+  // ---------------------------------------------------------------
+  // LA MATERIA PRIMA
+  //
+  // Las cuatro fuentes juntas, cada una si la hay. Aquí es donde se ve
+  // lo que cambió al fundir los tres modos: antes, cada modo comprobaba
+  // que tuviera SU fuente y devolvía 409 si le faltaba. Ahora basta con
+  // tener una cualquiera, y las que falten simplemente no entran en el
+  // mensaje.
+  // ---------------------------------------------------------------
+  const materia: MateriaPrima = {
     nombre: perfil?.nombre.trim() || "el alumno",
+    nivel,
+    ultimaClase: ultimaClase
+      ? {
+          titulo: ultimaClase.titulo,
+          fecha: formatearFecha(ultimaClase.fechaClase),
+          temas: ultimaClase.temas,
+          errores: ultimaClase.errores,
+          priority: ultimaClase.guiaProxima?.priority ?? "",
+          mainFocus: ultimaClase.guiaProxima?.mainFocus ?? "",
+        }
+      : null,
+    anteriores: anteriores.map((clase) => ({
+      fecha: formatearFecha(clase.fechaClase),
+      titulo: clase.titulo,
+      errores: clase.errores,
+    })),
+    ocupacion: perfil?.ocupacion ?? null,
+    objetivo: perfil?.objetivoPerfil ?? null,
+    // Se calcula aparte del reparto porque el revisor también lo
+    // necesita: es lo que le dice contra qué especificaciones comprobar.
+    examen: perfil ? detectarExamen(perfil.plan) : null,
     titulosExcluidos,
   };
 
-  // Se calcula fuera del reparto por modos porque el revisor también lo
-  // necesita: es lo que le dice contra qué especificaciones comprobar.
-  const examen = perfil ? detectarExamen(perfil.plan) : null;
-
-  // Cada modo necesita su materia prima. Si no está, el modo no se
-  // ofrece en la interfaz, así que llegar aquí sin ella es un error
-  // de la petición, no del alumno.
-  let usuario: string;
-
-  if (modo === "repaso") {
-    if (!ultimaClase) {
-      return NextResponse.json(
-        { error: "Este alumno todavía no tiene una clase analizada." },
-        { status: 409 }
-      );
-    }
-    const guia = ultimaClase.guiaProxima;
-    usuario = usuarioRepaso(ctx, {
-      titulo: ultimaClase.titulo,
-      temas: ultimaClase.temas,
-      errores: ultimaClase.errores,
-      priority: guia?.priority ?? "",
-      mainFocus: guia?.mainFocus ?? "",
-    });
-  } else if (modo === "examen") {
-    if (!examen) {
-      return NextResponse.json(
-        { error: "Este alumno no está preparando ningún examen que sepamos preparar." },
-        { status: 409 }
-      );
-    }
-    usuario = usuarioExamen(ctx, examen);
-  } else {
-    if (!perfil || (!perfil.ocupacion && !perfil.objetivoPerfil)) {
-      return NextResponse.json(
-        { error: "Todavía no sabemos lo suficiente de este alumno." },
-        { status: 409 }
-      );
-    }
-    usuario = usuarioContexto(ctx, perfil.ocupacion, perfil.objetivoPerfil);
+  // Sin ninguna de las cuatro fuentes no hay nada que sea suyo, y la
+  // tarjeta ni siquiera se le ofrece. Llegar aquí es una petición a mano
+  // o una pestaña muy vieja.
+  if (!hayMateriaPrima(materia)) {
+    traza("sin materia prima");
+    return NextResponse.json(
+      { error: "Todavía no sabemos lo suficiente de ti para prepararte un bloque." },
+      { status: 409 }
+    );
   }
 
   // ---------------------------------------------------------------
   // ¿TOCA GENERAR?
   //
-  // Las tarjetas ya llegan sabiéndolo, así que en condiciones normales
-  // el alumno no pulsa un modo que no le toca. Esto es la comprobación
-  // de verdad, la que aguanta una pestaña vieja o una petición a mano.
+  // Una sola regla: se desbloquea cuando entra un transcript nuevo. La
+  // tarjeta ya llega sabiéndolo, así que en condiciones normales el
+  // alumno no pulsa cuando no le toca. Esto es la comprobación de
+  // verdad, la que aguanta una pestaña vieja o una petición a mano.
   //
   // Solo para alumnos. El rol sale de la cookie firmada —el mismo dato
-  // que decide `porEquipo` unas líneas más arriba— así que no hay nada
-  // que el cliente pueda mandar para saltárselo, y la superficie es
-  // exactamente la del acceso de administrador, que ya da mucho más.
-  // Además, lo que genera el equipo se guarda marcado y
-  // `leerUltimaGeneracionPorModo` no lo mira: no le gasta la espera a
-  // nadie ni desplaza el conteo de un alumno.
+  // que decide `porEquipo` más arriba— así que no hay nada que el
+  // cliente pueda mandar para saltárselo, y la superficie es exactamente
+  // la del acceso de administrador, que ya da mucho más. Además, lo que
+  // genera el equipo se guarda marcado y `leerUltimaGeneracion` no lo
+  // mira: no le gasta la espera a nadie.
   // ---------------------------------------------------------------
   if (sesion.rol === "alumno") {
-    const ultimas = await conLimiteOAlternativa<Record<ModoGeneracion, string | null> | null>(
-      leerUltimaGeneracionPorModo(alumnoId),
+    const ultima = await conLimiteOAlternativa<string | null>(
+      leerUltimaGeneracion(alumnoId),
       TIEMPO_BASE_MS,
-      "leerUltimaGeneracionPorModo",
+      "leerUltimaGeneracion",
       // Si la base no contesta se deja pasar. Es la misma decisión que
       // toma `consultarViva` con las sesiones: un mal minuto de Supabase
       // no puede dejar sin práctica a quien sí le tocaba.
       null
     );
 
-    if (ultimas) {
-      const disponibilidad = calcularDisponibilidad(
-        modo,
-        comoFecha(ultimas[modo]),
-        comoFecha(ultimaClase?.analizadoEn),
-        new Date()
-      );
+    const disponibilidad = calcularDisponibilidad(
+      comoFecha(ultima),
+      comoFecha(ultimaClase?.analizadoEn),
+      new Date()
+    );
 
-      if (!disponibilidad.disponible) {
-        traza("límite", `${modo} · ${disponibilidad.motivo}`);
-        return NextResponse.json(
-          { error: mensajeDeEspera(disponibilidad), motivo: disponibilidad.motivo },
-          { status: 409 }
-        );
-      }
+    if (!disponibilidad.disponible) {
+      traza("límite", disponibilidad.motivo);
+      return NextResponse.json(
+        {
+          error: mensajeDeEspera(ultimaClase !== null),
+          motivo: disponibilidad.motivo,
+        },
+        { status: 409 }
+      );
     }
   }
 
@@ -919,20 +725,23 @@ export async function POST(peticion: Request) {
   return flujoDeGeneracion(traza, async (emitir) => {
     if (clave) {
       const sistema = construirSistema(nivel);
-      // Las especificaciones de examen solo se revisan en el modo examen:
-      // un bloque de repaso de un alumno que prepara First no tiene por qué
-      // seguir el formato del examen.
-      const examenARevisar = modo === "examen" ? examen : null;
+      const usuario = construirUsuario(materia);
 
       // El presupuesto de IA es el menor entre su propio tope y lo que
-      // queda de la petición: lo gastado en sesión y ficha ya no está.
-      const plazoIa = abrirPlazo(Math.min(PRESUPUESTO_IA_MS, plazoPeticion.restante() - 5_000));
+      // queda de la petición: lo gastado en sesión y ficha ya no está, y
+      // hay que dejar sitio para el guardado.
+      const plazoIa = abrirPlazo(
+        Math.min(PRESUPUESTO_IA_MS, plazoPeticion.restante() - RESERVA_FINAL_MS)
+      );
 
       const generado = await generarConRevision(
         clave,
         sistema,
         usuario,
-        examenARevisar,
+        // El revisor comprueba las especificaciones del examen solo si
+        // el alumno prepara uno. Parte del bloque las sigue y parte no,
+        // y eso ya se le explica en su propio mensaje.
+        materia.examen,
         plazoIa,
         traza,
         emitir
@@ -952,15 +761,14 @@ export async function POST(peticion: Request) {
         traza("guardado:ia");
         emitir({ tipo: "etapa", etapa: "guardando", ms: plazoPeticion.transcurrido() });
         await conLimiteOAlternativa(
-          // El veredicto MÁS cuántos intentos costó. Hasta ahora un
-          // bloque que salió a la primera y otro que necesitó dos
-          // quedaban los dos como "apto", indistinguibles, así que la
-          // tasa de regeneración no se podía medir. Esto empieza a
-          // contar desde el despliegue: lo anterior no se reconstruye.
+          // El veredicto MÁS cuántos intentos costó. Hoy `intentos` es
+          // siempre 1 —no hay regeneración— y se sigue guardando porque
+          // es lo que distinguirá las filas de ahora de las de cuando
+          // vuelva a haber presupuesto para un segundo intento.
           guardarBloqueGenerado(
             alumnoId,
             bloque,
-            modo,
+            MODO_ACTUAL,
             "ia",
             { ...generado.revision, intentos: generado.intentos },
             porEquipo
@@ -976,6 +784,12 @@ export async function POST(peticion: Request) {
     }
 
     // Sin clave, o con la generación descartada: banco de reserva.
+    //
+    // El banco sigue teniendo bloques de CINCO ejercicios, no de diez, y
+    // es una decisión y no un olvido: son textos escritos a mano con el
+    // mismo acabado que el catálogo, y duplicarlos a ciegas para cuadrar
+    // un número los convertiría en relleno. Un bloque corto y bueno el
+    // día que la generación falla es mejor que uno largo y flojo.
     traza("banco:inicio");
     emitir({ tipo: "etapa", etapa: "banco", ms: plazoPeticion.transcurrido() });
 
@@ -988,7 +802,7 @@ export async function POST(peticion: Request) {
 
     const bloque = conIdPropio(bloqueDeBanco(nivel, titulosExcluidos));
     await conLimiteOAlternativa(
-      guardarBloqueGenerado(alumnoId, bloque, modo, "banco", null, porEquipo),
+      guardarBloqueGenerado(alumnoId, bloque, MODO_ACTUAL, "banco", null, porEquipo),
       TIEMPO_BASE_MS,
       "guardarBloqueGenerado(banco)",
       false

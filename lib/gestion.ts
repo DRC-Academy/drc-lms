@@ -353,3 +353,142 @@ export async function listarAlumnos(busqueda = "", limite = 20): Promise<Resumen
 
   return deduplicar(data ?? []).slice(0, limite).map(aResumen);
 }
+
+// ---------------------------------------------------------------
+// EL HISTORIAL DE CLASES
+//
+// `vista_ultima_clase` da una fila por alumno: la última. Sirve para
+// saber qué acaba de ver, no para ver qué arrastra, y eso es la mitad
+// del material del bloque único: un error que aparece en tres clases
+// seguidas no es un despiste, es el punto que se le resiste de verdad,
+// y no lo ve nadie porque cada clase se analiza sola.
+//
+// Se lee `class_analyses`, que es la tabla de la que sale esa vista.
+// Sigue siendo SOLO LECTURA contra Gestión, que es la regla que
+// importa; lo que se pierde es la comodidad de que el contrato fueran
+// exactamente dos vistas. Se piden columnas nombradas y nunca `*`: la
+// tabla guarda el transcript entero, decenas de miles de caracteres por
+// clase, y aquí no se usa para nada.
+//
+// LA LECTURA Y EL FILTRO VAN SEPARADOS a propósito. Para descartar la
+// última clase hace falta su `analizado_en`, que llega por la otra
+// consulta; si la lectura lo esperase, las dos irían en serie y el
+// presupuesto de la ruta no da para un viaje de más. Así la consulta
+// sale a la vez que el perfil y el recorte se hace después, ya en
+// memoria.
+// ---------------------------------------------------------------
+
+/**
+ * Cuántas clases anteriores se miran, como mucho.
+ *
+ * CUATRO, y sale de los datos, no de una intuición. De los 112 alumnos
+ * con alguna clase analizada, 95 tienen cuatro o menos en total: con
+ * esta ventana se lee su historial entero. Subir a seis alcanzaría a
+ * 109 —tres alumnos más— y bajar a dos dejaría a la mitad de la gente
+ * mirando solo un par de clases.
+ *
+ * Cuatro anteriores más la última son cinco clases, que es donde un
+ * patrón repetido empieza a distinguirse de una coincidencia sin llenar
+ * el mensaje de material viejo que ya no describe a esa persona.
+ */
+export const CLASES_ANTERIORES = 4;
+
+/**
+ * Y ninguna de más de esto.
+ *
+ * Hoy no descarta nada, y se sabe: el hueco más largo entre dos clases
+ * analizadas consecutivas es de 21 días, y de la última a la quinta más
+ * reciente hay 35 días en el peor caso. Existe para el alumno que para
+ * tres meses y vuelve. Sus errores de hace un trimestre no son "lo que
+ * arrastra", son los de otra persona, y darlos por vigentes sería peor
+ * que no tener historial.
+ */
+const DIAS_MAXIMOS = 90;
+
+/** Una clase analizada, con lo justo para leer patrones. */
+export type ClaseAnalizada = {
+  fechaClase: string;
+  titulo: string;
+  errores: string;
+  /** La misma marca que `UltimaClase.analizadoEn`: es lo que las empareja. */
+  analizadoEn: string;
+};
+
+/**
+ * Las últimas clases analizadas de un alumno, de la más reciente a la
+ * más antigua. Incluye la última: la descarta después `anterioresA`.
+ *
+ * Solo filas `ready` y con errores anotados. Un análisis fallido o vacío
+ * no aporta ningún patrón, y contarlo gastaría un hueco de la ventana
+ * sin decir nada. Hay alumnos con siete análisis de los que cinco
+ * fallaron.
+ *
+ * Nunca lanza. Sin historial el bloque se genera igual, solo que con
+ * menos: es material que lo mejora, no material sin el que no haya nada.
+ */
+export async function historialDeClases(alumnoId: string): Promise<ClaseAnalizada[]> {
+  const { data, error } = await soloLectura("class_analyses")
+    .select("class_date, class_title, errors_detected, analyzed_at")
+    .eq("student_id", alumnoId)
+    .eq("analysis_status", "ready")
+    .not("errors_detected", "is", null)
+    .order("class_date", { ascending: false })
+    .order("analyzed_at", { ascending: false })
+    // Una más de las que se quieren: la primera suele ser la última
+    // clase, que se descarta en `anterioresA`.
+    .limit(CLASES_ANTERIORES + 1)
+    .returns<Fila[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo leer class_analyses:", error.message);
+    return [];
+  }
+
+  const salida: ClaseAnalizada[] = [];
+
+  for (const fila of data ?? []) {
+    const errores = comoTexto(fila.errors_detected).trim();
+    const fechaClase = comoTexto(fila.class_date);
+    if (errores === "" || fechaClase === "") continue;
+
+    salida.push({
+      fechaClase,
+      titulo: comoTexto(fila.class_title),
+      errores,
+      analizadoEn: comoTexto(fila.analyzed_at),
+    });
+  }
+
+  return salida;
+}
+
+/**
+ * Del historial, las anteriores a la última: como mucho
+ * `CLASES_ANTERIORES` y ninguna de más de `DIAS_MAXIMOS`.
+ *
+ * La última se descarta por su `analizado_en` y no por la fecha porque
+ * hay alumnos con dos clases el mismo día, y filtrar por fecha se
+ * llevaría por delante una clase entera.
+ *
+ * Función pura: quien llama ya tiene las dos lecturas hechas.
+ */
+export function anterioresA(
+  historial: ClaseAnalizada[],
+  ultimaAnalizadaEn: string | null,
+  ahora: Date = new Date()
+): ClaseAnalizada[] {
+  const limite = ahora.getTime() - DIAS_MAXIMOS * 24 * 60 * 60 * 1000;
+  const salida: ClaseAnalizada[] = [];
+
+  for (const clase of historial) {
+    if (ultimaAnalizadaEn !== null && clase.analizadoEn === ultimaAnalizadaEn) continue;
+
+    const momento = Date.parse(clase.fechaClase);
+    if (Number.isFinite(momento) && momento < limite) continue;
+
+    salida.push(clase);
+    if (salida.length === CLASES_ANTERIORES) break;
+  }
+
+  return salida;
+}

@@ -220,11 +220,15 @@ create table if not exists public.bloques_generados (
   generado_por_equipo boolean not null default false,
 
   constraint bloques_generados_modo_valido
-    -- Cuando entren los cursos de LearnDash hará falta un modo más.
-    -- Es un CHECK y no un ENUM justamente por eso: añadir un valor es
-    -- `alter table ... drop constraint` + volver a crearla, sin tocar
-    -- ningún tipo del que ya dependan otras columnas.
-    check (modo in ('repaso', 'examen', 'contexto')),
+    -- Es un CHECK y no un ENUM porque añadir un valor tenía que salir
+    -- barato, y ya ha hecho falta: 'practica' entró el 19-08-2026. Se
+    -- hace con `alter table ... drop constraint` + volver a crearla, sin
+    -- tocar ningún tipo del que ya dependan otras columnas.
+    --
+    -- 'practica' es el único que se genera hoy. Los otros tres son
+    -- histórico: se conservan porque hay miles de filas con ellos y el
+    -- panel del equipo los lee.
+    check (modo in ('repaso', 'examen', 'contexto', 'practica')),
 
   constraint bloques_generados_nivel_valido
     -- Los mismos cinco de `Bloque["nivel"]` en lib/data.ts.
@@ -250,6 +254,33 @@ alter table public.bloques_generados
 
 comment on column public.bloques_generados.generado_por_equipo is
   'true = lo generó el equipo revisando. No sale en la práctica del alumno, no gasta su espera entre generaciones y no cuenta en el panel.';
+
+-- ---------------------------------------------------------------
+-- MIGRACIÓN 19-08-2026 · EL MODO ÚNICO
+--
+-- Los tres modos de generación se fundieron en uno, 'practica', que
+-- combina la última clase, los patrones de las clases anteriores, el
+-- perfil profesional y el formato del examen dentro de un mismo prompt.
+--
+-- HAY QUE EJECUTARLO ANTES DE DESPLEGAR, y el motivo es que el fallo
+-- sería silencioso. La CHECK anterior rechaza 'practica' con un 23514, y
+-- como la escritura va envuelta en `conLimiteOAlternativa` ese error no
+-- rompe la respuesta: el alumno vería su bloque, lo practicaría, y al
+-- volver no estaría, porque nunca llegó a guardarse.
+--
+-- El `create table if not exists` de arriba no toca una tabla que ya
+-- existe, así que la constraint hay que rehacerla aquí. Es idempotente:
+-- el archivo entero se puede ejecutar las veces que haga falta.
+-- ---------------------------------------------------------------
+alter table public.bloques_generados
+  drop constraint if exists bloques_generados_modo_valido;
+
+alter table public.bloques_generados
+  add constraint bloques_generados_modo_valido
+  check (modo in ('repaso', 'examen', 'contexto', 'practica'));
+
+comment on column public.bloques_generados.modo is
+  'practica = el modo único desde el 19-08-2026. repaso/examen/contexto = histórico, ya no se generan.';
 
 
 -- ===============================================================

@@ -1,14 +1,14 @@
 "use client";
 
-import type { ModoGeneracion } from "@/lib/modos";
 import { textoDeEtapa, type EtapaGeneracion } from "@/lib/generacion";
 
 /**
  * Lo que ve el alumno mientras se prepara su bloque.
  *
- * Sustituye a un spinner sin final. Entre veinte y cuarenta y cinco
- * segundos mirando algo que gira sin decir nada no se distingue de una
- * pantalla rota, y esa es la lectura que acaba haciendo cualquiera.
+ * Sustituye a un spinner sin final. Con diez ejercicios la espera son
+ * entre cuarenta y tres y cincuenta y dos segundos medidos, y ese rato
+ * mirando algo que gira sin decir nada no se distingue de una pantalla
+ * rota: es la lectura que acaba haciendo cualquiera.
  *
  * Tres decisiones que sostienen la pieza:
  *
@@ -20,19 +20,20 @@ import { textoDeEtapa, type EtapaGeneracion } from "@/lib/generacion";
  *      convierte cada segundo siguiente en sospecha.
  *   3. Si se pasa de lo previsto se dice. Reconocer la espera cuesta una
  *      frase y evita que el alumno se pregunte si aquello sigue vivo.
+ *
+ * Ya no recibe `modo`: había un juego de textos por cada uno de los tres
+ * y ahora hay uno solo, porque el bloque es uno solo.
  */
 export default function AvanceGeneracion({
-  modo,
   etapa,
   progreso,
   tardando,
 }: {
-  modo: ModoGeneracion;
   etapa: EtapaGeneracion;
   progreso: number;
   tardando: boolean;
 }) {
-  const texto = textoDeEtapa(modo, etapa);
+  const texto = textoDeEtapa(etapa);
 
   return (
     <div className="aparece mt-4 rounded-[14px] border border-marca-borde bg-white px-5 py-5 lg:px-6">
@@ -68,7 +69,7 @@ export default function AvanceGeneracion({
       <p className="mt-3 text-[14px] leading-[1.5] text-marca-gris">
         {tardando
           ? "Se está haciendo de rogar, pero seguimos en ello."
-          : "Puedes quedarte aquí mientras lo preparamos."}
+          : "Son diez ejercicios, así que tarda un poco. Puedes quedarte aquí mientras."}
       </p>
     </div>
   );

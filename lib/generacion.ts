@@ -1,11 +1,12 @@
 // ---------------------------------------------------------------
 // EL CONTRATO DE LA GENERACIÓN EN DIRECTO
 //
-// `app/api/generar-bloque` ya no responde una sola vez al final: emite
-// una línea JSON por etapa según avanza y termina con el bloque. El
-// motivo es la espera. Entre 20 y 45 segundos con un spinner mudo el
-// alumno no distingue "está trabajando" de "se ha roto", y lo segundo
-// es lo que acaba asumiendo.
+// `app/api/generar-bloque` no responde una sola vez al final: emite una
+// línea JSON por etapa según avanza y termina con el bloque. El motivo
+// es la espera. Antes eran de 20 a 45 segundos; con diez ejercicios en
+// vez de cinco son de 43 a 52 segundos medidos, y con un spinner mudo
+// el alumno no distingue "está trabajando" de "se ha roto", que es lo
+// segundo que acaba asumiendo.
 //
 // La regla que ordena todo este módulo: las etapas las manda el
 // servidor. Nada de temporizadores que adivinen. Si en pantalla pone
@@ -18,7 +19,6 @@
 // ---------------------------------------------------------------
 
 import type { Bloque } from "@/lib/data";
-import type { ModoGeneracion } from "@/lib/modos";
 
 export type Origen = "ia" | "banco";
 
@@ -27,15 +27,20 @@ export type Origen = "ia" | "banco";
  *
  * `preparando` es la única que no viaja por el flujo: cubre desde que el
  * alumno pulsa hasta que llega el primer evento, que es justo el rato en
- * que el servidor comprueba la sesión y lee la ficha en Gestión. Es
- * trabajo real, pero sucede antes de que la respuesta empiece a
- * escribirse, así que la pone el cliente al arrancar.
+ * que el servidor comprueba la sesión y lee su ficha y su historial en
+ * Gestión. Es trabajo real, pero sucede antes de que la respuesta empiece
+ * a escribirse, así que la pone el cliente al arrancar.
+ *
+ * `reescribiendo` se ha ido con la regeneración. El presupuesto de la
+ * plataforma —60 segundos de techo en el plan actual— no da para un
+ * segundo intento después de una generación de 48, así que el revisor
+ * ahora deja constancia pero no manda rehacer nada. Una etapa que no
+ * puede ocurrir no debe existir en el contrato.
  */
 export type EtapaGeneracion =
   | "preparando"
   | "escribiendo"
   | "revisando"
-  | "reescribiendo"
   | "guardando"
   | "banco";
 
@@ -51,8 +56,10 @@ export const TIPO_FLUJO = "application/x-ndjson";
 // ---------------------------------------------------------------
 // CALIBRACIÓN DE LA BARRA
 //
-// El presupuesto de IA de la ruta es de 45 segundos, así que la barra se
-// mide contra esos 45 segundos y no contra una duración inventada.
+// El presupuesto de IA de la ruta es de 52 segundos, así que la barra se
+// mide contra esos 52 y no contra una duración inventada. Sube desde los
+// 45 de antes por lo mismo que sube todo aquí: el bloque pasó de cinco
+// ejercicios a diez.
 //
 // Dos reglas que no se tocan:
 //
@@ -64,7 +71,7 @@ export const TIPO_FLUJO = "application/x-ndjson";
 //      retroceder: una barra que baja se lee como un fallo.
 // ---------------------------------------------------------------
 
-export const PRESUPUESTO_VISIBLE_MS = 45_000;
+export const PRESUPUESTO_VISIBLE_MS = 52_000;
 
 /** A partir de aquí se reconoce la espera en vez de disimularla. */
 export const UMBRAL_TARDANZA_MS = PRESUPUESTO_VISIBLE_MS;
@@ -73,15 +80,18 @@ export const UMBRAL_TARDANZA_MS = PRESUPUESTO_VISIBLE_MS;
 export const TECHO_SIN_RESPUESTA = 95;
 
 /**
- * El mínimo al que salta la barra cuando entra cada etapa. Están
- * repartidos por peso real: escribir es lo que se lleva casi todo el
- * presupuesto, revisar es corto.
+ * El mínimo al que salta la barra cuando entra cada etapa.
+ *
+ * Repartidos por peso REAL, y el reparto ha cambiado: escribir son ahora
+ * 48 segundos de media y revisar son 3, así que revisar entra al 90% y
+ * no al 62% de antes. Con el piso viejo, la barra pegaba un salto hacia
+ * atrás en percepción —del 90% que llevaba por tiempo al 62% de la
+ * etapa— justo en el último tramo.
  */
 const PISO: Record<EtapaGeneracion, number> = {
   preparando: 4,
-  escribiendo: 10,
-  revisando: 62,
-  reescribiendo: 70,
+  escribiendo: 8,
+  revisando: 90,
   guardando: 94,
   banco: 90,
 };
@@ -90,9 +100,9 @@ const PISO: Record<EtapaGeneracion, number> = {
  * Cuánto marcar, combinando el reloj con la última etapa conocida.
  *
  * El tiempo da el movimiento continuo —sin él la barra se queda quieta
- * durante los 30 segundos que tarda el modelo— y la etapa da los saltos
- * verificados. Se toma el mayor de los dos y nunca por debajo de lo ya
- * mostrado.
+ * durante los cincuenta segundos que tarda el modelo— y la etapa da los
+ * saltos verificados. Se toma el mayor de los dos y nunca por debajo de
+ * lo ya mostrado.
  */
 export function calcularProgreso(
   etapa: EtapaGeneracion,
@@ -107,41 +117,23 @@ export function calcularProgreso(
 // ---------------------------------------------------------------
 // LO QUE SE LE DICE AL ALUMNO
 //
-// Cada modo cuenta su propia historia porque cada modo hace de verdad
-// una cosa distinta: repaso parte de su última clase, examen del formato
-// de la prueba, contexto de su trabajo. Un texto genérico para los tres
-// desperdiciaría la única parte de la espera que es interesante.
+// Un solo juego de textos, porque ya solo hay un modo. Antes había tres
+// —uno por modo— y cada uno contaba su propia historia; ahora la
+// historia es que el bloque mira a varios sitios a la vez, y eso se
+// cuenta mejor en la etapa de preparar, que es justo cuando el servidor
+// está leyendo su ficha y su historial de clases.
 // ---------------------------------------------------------------
 
-const TEXTO: Record<ModoGeneracion, Record<EtapaGeneracion, string>> = {
-  repaso: {
-    preparando: "Revisando tu última clase…",
-    escribiendo: "Escribiendo los ejercicios…",
-    revisando: "Revisando que todo esté bien…",
-    reescribiendo: "Afinando un par de detalles…",
-    guardando: "Guardando tu bloque…",
-    banco: "Preparando un bloque de repaso…",
-  },
-  examen: {
-    preparando: "Mirando qué examen preparas…",
-    escribiendo: "Escribiendo las tareas con el formato del examen…",
-    revisando: "Comprobando que el formato sea el del examen…",
-    reescribiendo: "Ajustando un par de tareas…",
-    guardando: "Guardando tu bloque…",
-    banco: "Preparando un bloque de práctica…",
-  },
-  contexto: {
-    preparando: "Repasando tu perfil…",
-    escribiendo: "Escribiendo ejercicios con tus situaciones…",
-    revisando: "Revisando que todo esté bien…",
-    reescribiendo: "Afinando un par de detalles…",
-    guardando: "Guardando tu bloque…",
-    banco: "Preparando un bloque de práctica…",
-  },
+const TEXTO: Record<EtapaGeneracion, string> = {
+  preparando: "Repasando tus clases y tu perfil…",
+  escribiendo: "Escribiendo tus diez ejercicios…",
+  revisando: "Revisando que todo esté bien…",
+  guardando: "Guardando tu bloque…",
+  banco: "Preparando un bloque de práctica…",
 };
 
-export function textoDeEtapa(modo: ModoGeneracion, etapa: EtapaGeneracion): string {
-  return TEXTO[modo][etapa];
+export function textoDeEtapa(etapa: EtapaGeneracion): string {
+  return TEXTO[etapa];
 }
 
 /**

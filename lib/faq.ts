@@ -172,35 +172,35 @@ export const FAQ: CategoriaFaq[] = [
         id: "practica-que-es",
         pregunta: "¿Qué es «tu práctica» y en qué se diferencia del curso?",
         respuesta:
-          "El curso es el mismo para todos los alumnos de tu nivel. La práctica se genera solo para ti, a partir de lo que trabajaste en tu última clase y de lo que nos hayas contado sobre ti.",
+          "El curso es el mismo para todos los alumnos de tu nivel. La práctica se genera solo para ti, a partir de lo que trabajaste en tu última clase, de lo que se te viene repitiendo en las anteriores y de lo que nos hayas contado sobre ti.",
         claves: ["diferencia", "que es", "personalizada", "para mi"],
       },
       {
         id: "practica-de-donde-salen",
         pregunta: "¿De dónde salen estos ejercicios?",
         respuesta:
-          "De lo que tu profesor trabaja contigo en clase. Después de cada sesión queda registrado qué visteis y qué conviene reforzar, y de ahí salen.",
+          "De cuatro sitios a la vez: lo que trabajaste en tu última clase, lo que se te repite en las anteriores, a qué te dedicas si nos lo has contado, y el formato de tu examen si preparas uno. Todo eso va en el mismo bloque.",
         claves: ["de donde", "ejercicios", "generados", "origen", "quien los hace"],
       },
       {
-        id: "practica-otro-repaso",
-        pregunta: "¿Por qué no puedo generar otro repaso hoy?",
+        id: "practica-otro-bloque",
+        pregunta: "¿Por qué no puedo generar otro bloque hoy?",
         respuesta:
-          "Porque hasta tu próxima clase no hay material nuevo del que partir. En cuanto tengas la siguiente, preparamos otro bloque.",
-        claves: ["repaso", "generar", "otro", "bloqueado", "no puedo", "espera"],
+          "Porque hasta tu próxima clase no hay material nuevo del que partir, y otro bloque con lo mismo sería el que ya tienes con otras palabras. En cuanto tengas la siguiente, preparamos otro.",
+        claves: ["repaso", "generar", "otro", "bloqueado", "no puedo", "espera", "bloque"],
       },
       {
         id: "practica-ingles-trabajo",
-        pregunta: "¿Por qué no me aparece «inglés para tu trabajo»?",
+        pregunta: "¿Por qué mis ejercicios no hablan de mi trabajo?",
         respuesta:
-          "Esa práctica necesita que completes tu perfil: a qué te dedicas y qué quieres conseguir con el inglés. Con eso podemos crear ejercicios con tus situaciones reales.",
+          "Porque todavía no sabemos a qué te dedicas. Completa tu perfil —a qué te dedicas y qué quieres conseguir con el inglés— y parte de los ejercicios de tu próximo bloque estarán ambientados en tus situaciones reales.",
         claves: ["trabajo", "contexto", "perfil", "no aparece", "dia a dia"],
       },
       {
         id: "practica-duracion-bloque",
         pregunta: "¿Cuánto dura cada bloque de práctica?",
         respuesta:
-          "Unos cinco minutos. Son cinco ejercicios que van de reconocer la forma correcta a producirla tú.",
+          "Unos diez minutos. Son diez ejercicios que van de reconocer la forma correcta a producirla tú: cuatro de reconocer, cuatro de transformar y dos de escribir.",
         claves: ["cuanto dura", "tiempo", "minutos", "bloque", "largo"],
       },
       {

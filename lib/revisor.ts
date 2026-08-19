@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------
 // REVISIÓN PEDAGÓGICA
 //
-// La validación estructural comprueba la FORMA del bloque: cinco
+// La validación estructural comprueba la FORMA del bloque: diez
 // ejercicios, cuatro opciones, un índice válido. No puede ver que un
 // distractor sea, de hecho, una respuesta correcta.
 //
@@ -10,6 +10,16 @@
 // profesor y la autoridad del material se cae. Por eso, después de la
 // validación estructural y antes de devolver nada, un segundo modelo
 // revisa el bloque como haría un compañero de departamento.
+//
+// LO QUE HA CAMBIADO CON LOS DIEZ EJERCICIOS: el veredicto ya no manda
+// rehacer el bloque, solo se guarda. Una generación son 48 segundos
+// medidos y el techo de la plataforma son 60, así que no cabe un
+// segundo intento; con lo que queda —tres segundos de revisión— se
+// alcanza a dejar constancia y nada más. La revisión pasó de ser un
+// filtro a ser un registro, y eso es exactamente lo que hay: sirve para
+// medir con qué frecuencia sale mal y por qué, que es lo que hace falta
+// para decidir si merece la pena pagar el presupuesto que la
+// devolvería a filtro.
 //
 // La revisión NUNCA puede dejar al alumno sin ejercicios: si falla,
 // tarda demasiado o responde algo que no se entiende, se devuelve el
@@ -24,8 +34,19 @@ import { extraerJson } from "@/lib/json";
 // Tarea de verificación acotada y en cada generación: prima el coste.
 const MODELO_REVISOR = "claude-haiku-4-5-20251001";
 const URL_API = "https://api.anthropic.com/v1/messages";
-const MAX_TOKENS = 1000; // la respuesta es un JSON corto
-const TIEMPO_MAXIMO_MS = 15_000;
+// Sube a 2000 con los diez ejercicios: un bloque con varios problemas
+// señalados llenaba los 1000 y el JSON llegaba cortado, que aquí se lee
+// como "no se pudo interpretar" y tira la revisión entera.
+const MAX_TOKENS = 2000;
+
+// Ocho segundos. No es un plazo cómodo: es el tope de lo que sobra del
+// presupuesto de la ruta después de la generación, y quien llama lo
+// recorta todavía más cuando la generación se pasó de lo previsto.
+//
+// Medido sobre bloques de diez, una revisión tarda entre 0,9 y más de 5
+// segundos según lo cargada que esté la API. Con el tope en 5 se quedaba
+// fuera la mitad larga de esa horquilla incluso habiendo sitio.
+const TIEMPO_MAXIMO_MS = 8_000;
 
 export const TIPOS_PROBLEMA = [
   "distractor_valido",
@@ -38,7 +59,7 @@ export const TIPOS_PROBLEMA = [
 export type TipoProblema = (typeof TIPOS_PROBLEMA)[number];
 
 export type Problema = {
-  /** Posición del ejercicio dentro del bloque, de 1 a 5. */
+  /** Posición del ejercicio dentro del bloque, de 1 a 10. */
   ejercicio: number;
   tipo: TipoProblema;
   detalle: string;
@@ -70,17 +91,19 @@ const ESPECIFICACION_EXAMEN: Record<TipoExamen, string> = {
 const SISTEMA = [
   "Eres revisor de materiales de inglés en DRC Academy, una academia irlandesa. Revisas ejercicios que ha escrito otro modelo, antes de que lleguen al alumno.",
   "",
-  "Tu única tarea es DETECTAR defectos. No reescribes, no propones alternativas y no corriges: si algo está mal, se regenera entero.",
+  "Tu única tarea es DETECTAR defectos. No reescribes, no propones alternativas y no corriges: solo señalas.",
   "",
-  "SÉ CONSERVADOR. Marca un problema solo si estás seguro. Un falso positivo cuesta una regeneración; un falso negativo llega al alumno y le damos por fallada una respuesta que era correcta. Ante la duda, no marques.",
+  "SÉ CONSERVADOR. Marca un problema solo si estás seguro. Ante la duda, no marques. Lo que apuntes queda registrado como un defecto real de este bloque, así que un falso positivo ensucia la medida con la que decidimos qué arreglar; el que de verdad hace daño es el falso negativo, que llega al alumno y le da por fallada una respuesta que era correcta.",
   "",
-  "ESTRUCTURA FIJA. Todos los bloques de DRC llevan siempre 5 ejercicios: 2 de tipo 'reconocer', 2 de tipo 'transformar' y 1 de tipo 'producir'. Es el formato pedagógico de la academia y no una afirmación sobre el examen. Que un bloque contenga ejercicios 'transformar', o que el 'producir' sea una tarea de escritura abierta, NO es un defecto: no comentes a qué sección del examen pertenecería cada ejercicio ni propongas otra estructura.",
+  "ESTRUCTURA FIJA. Todos los bloques de DRC llevan siempre 10 ejercicios: 4 de tipo 'reconocer', 4 de tipo 'transformar' y 2 de tipo 'producir'. Es el formato pedagógico de la academia y no una afirmación sobre el examen. Que un bloque contenga ejercicios 'transformar', o que los 'producir' sean tareas de escritura abierta, NO es un defecto: no comentes a qué sección del examen pertenecería cada ejercicio ni propongas otra estructura.",
+  "",
+  "UN BLOQUE MIRA A VARIAS COSAS A LA VEZ. Se construye con la última clase del alumno, con los errores que arrastra de clases anteriores, con su trabajo y —si prepara uno— con el formato de su examen. Que unos ejercicios estén ambientados en su oficina y otros no, o que solo algunos sigan el formato del examen, es lo previsto y NO es un defecto. Tampoco lo es que los dos 'producir' pidan cosas distintas: están hechos para ser distintos.",
   "",
   "NO REPORTES LO QUE NO ESTÁS AFIRMANDO. Si al razonarlo concluyes que en realidad no hay defecto, no lo incluyas en la lista. Cada entrada de 'problemas' es una afirmación de que algo está mal.",
   "",
   "UNA COLOCACIÓN MENOS FRECUENTE NO ES UN DISTRACTOR INVÁLIDO. En los exámenes de Cambridge es normal que el distractor sea una combinación posible pero que no es la que se usa en ese contexto. Marca distractor_valido solo cuando la opción sea plenamente natural EN ESA FRASE para un hablante nativo, no cuando sea simplemente menos habitual.",
   "",
-  "Buscas EXACTAMENTE cuatro defectos:",
+  "Buscas EXACTAMENTE estos cinco defectos, y ninguno más:",
   "",
   "1. distractor_valido — una opción marcada como incorrecta que en realidad también es correcta. Es el defecto más común y el más dañino. Ejemplos reales:",
   "   · 'Every morning I ____ a shower' con 'have' como correcta y 'take' como distractor: 'take a shower' es inglés normal en registro americano.",
@@ -101,7 +124,7 @@ const SISTEMA = [
   "",
   "FORMATO DE RESPUESTA",
   'Devuelves SOLO este objeto JSON, sin markdown y sin una palabra antes ni después: {"apto": true|false, "problemas": [{"ejercicio": 1, "tipo": "...", "detalle": "..."}]}',
-  '"ejercicio" es la posición del ejercicio en el bloque, de 1 a 5. "tipo" es uno de: distractor_valido, respuesta_incorrecta, distractor_implausible, instruccion_incoherente, formato_examen.',
+  '"ejercicio" es la posición del ejercicio en el bloque, de 1 a 10. "tipo" es uno de: distractor_valido, respuesta_incorrecta, distractor_implausible, instruccion_incoherente, formato_examen.',
   '"detalle" es una frase en español que diga qué falla y por qué. Si el bloque está bien, devuelves {"apto": true, "problemas": []}.',
 ].join("\n");
 
@@ -114,16 +137,16 @@ function construirUsuario(bloque: Bloque, examen: TipoExamen | null): string {
 
   if (examen) {
     partes.push(
-      `El bloque prepara el examen ${NOMBRE_EXAMEN[examen]}. Comprueba también sus especificaciones:`,
+      `El alumno prepara el examen ${NOMBRE_EXAMEN[examen]}, así que parte del bloque —no todo— sigue su formato. Comprueba sus especificaciones SOLO en los ejercicios que claramente lo reproducen; que otros no lo hagan es lo previsto:`,
       ESPECIFICACION_EXAMEN[examen]
     );
   } else {
-    partes.push("El bloque no prepara ningún examen: no revises especificaciones de examen.");
+    partes.push("El alumno no prepara ningún examen: no revises especificaciones de examen.");
   }
 
   partes.push(
     "",
-    "Los ejercicios van numerados del 1 al 5 en el mismo orden del array.",
+    `Los ejercicios van numerados del 1 al ${bloque.ejercicios.length} en el mismo orden del array.`,
     "",
     JSON.stringify({ titulo: bloque.titulo, intro: bloque.intro, ejercicios: bloque.ejercicios }, null, 2)
   );
@@ -239,9 +262,9 @@ export async function revisarBloque(
       return { estado: "no-disponible", motivo: "no se pudo leer el JSON del revisor", ms: total };
     }
 
-    // Un "apto: false" sin un solo problema legible no da nada que
-    // corregir en la regeneración: se deja pasar antes que gastar una
-    // llamada a ciegas.
+    // Un "apto: false" sin un solo problema legible no dice nada: no
+    // señala qué falla, así que guardarlo como defecto solo ensuciaría
+    // el recuento. Cuenta como apto.
     if (leido.apto || leido.problemas.length === 0) {
       return { estado: "apto", problemas: [], ms: total };
     }
@@ -258,25 +281,4 @@ export async function revisarBloque(
   } finally {
     clearTimeout(corte);
   }
-}
-
-/**
- * Convierte los problemas detectados en un aviso para el generador.
- * Se le dice qué evitar, no cómo arreglar el bloque anterior: el bloque
- * se rehace entero.
- */
-export function avisosParaRegenerar(problemas: Problema[]): string {
-  const lineas = problemas.map((p) => `- Ejercicio ${p.ejercicio} (${p.tipo}): ${p.detalle}`);
-
-  return [
-    "",
-    "AVISO IMPORTANTE. Un revisor rechazó el intento anterior por estos motivos:",
-    ...lineas,
-    "",
-    "Escribe un bloque NUEVO que no repita ninguno de esos fallos. En particular:",
-    "- Antes de dar por buena una opción incorrecta, comprueba que no sea válida en ningún registro ni variedad del inglés. Recuerda que la academia es irlandesa: los nombres colectivos ('the team', 'the board') admiten verbo en singular y en plural, así que no sirven como distractor uno del otro.",
-    "- Cada respuesta de la lista de aceptadas tiene que ser inglés correcto en esa frase concreta.",
-    "- Cada distractor tiene que producir una frase completa y plausible, con el error que cometería un alumno, no una frase rota.",
-    "- La instrucción debe describir TODO lo que hace falta para acertar, sin pasos implícitos.",
-  ].join("\n");
 }

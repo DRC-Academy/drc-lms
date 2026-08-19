@@ -38,13 +38,15 @@ function Frescura({ calculadoEn }: { calculadoEn: string }) {
  */
 
 const NOMBRE_MODO: Record<UsoDeModo["modo"], string> = {
+  practica: "Bloque de práctica",
   repaso: "Repaso de clase",
   examen: "Preparación de examen",
   contexto: "Su día a día",
 };
 
 const REQUISITO_MODO: Record<UsoDeModo["modo"], string> = {
-  repaso: "necesitan clase analizada",
+  practica: "tienen alguna fuente (clase, examen o perfil)",
+  repaso: "necesitaban clase analizada",
   examen: "preparan un examen",
   contexto: "tienen perfil con ocupación u objetivo",
 };
@@ -347,9 +349,9 @@ export default function PanelAdmin({ datos }: { datos: DatosPanel }) {
       <Seccion
         id="modos"
         titulo="Uso por modo"
-        entradilla="El total no dice dónde está el cuello de botella; el desglose sí. Cada modo se compara con los alumnos que podrían usarlo, porque un modo poco usado puede significar que no interesa o que casi nadie es elegible."
+        entradilla="Desde el 19-08-2026 solo se genera un modo, que combina la última clase, los patrones de las anteriores, el perfil y el examen. Los tres anteriores siguen aquí mientras tengan bloques en el periodo: son el histórico, no una opción que alguien pueda elegir hoy."
       >
-        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {modos.map((m) => {
             const pct = porcentaje(m.usuarios.length, m.elegibles);
 
@@ -358,8 +360,16 @@ export default function PanelAdmin({ datos }: { datos: DatosPanel }) {
                 key={m.modo}
                 className="rounded-[16px] border border-marca-borde bg-white p-4 lg:p-5"
               >
-                <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
                   {NOMBRE_MODO[m.modo]}
+                  {/* Los tres modos antiguos siguen contando su histórico,
+                      pero ya no se generan. Sin este sello, un panel de
+                      hace un mes y otro de mañana se leerían igual. */}
+                  {m.retirado && (
+                    <span className="rounded-full bg-marca-pista px-2 py-1 text-[9.5px] tracking-[0.08em] text-marca-gris">
+                      Retirado
+                    </span>
+                  )}
                 </p>
 
                 <p className="mt-3 flex items-baseline gap-1.5">
@@ -377,7 +387,8 @@ export default function PanelAdmin({ datos }: { datos: DatosPanel }) {
                   <strong className="font-semibold text-marca-tinta tabular-nums">
                     {m.usuarios.length} de {m.elegibles}
                   </strong>{" "}
-                  ({pct}%) de los que {REQUISITO_MODO[m.modo]} lo han usado.
+                  ({pct}%) de los que {REQUISITO_MODO[m.modo]} lo{" "}
+                  {m.retirado ? "usaron" : "han usado"}.
                 </p>
 
                 {m.elegibles === 0 && (

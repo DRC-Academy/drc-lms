@@ -11,7 +11,7 @@
 //   2. La clave se lee de SUPABASE_SERVICE_ROLE_KEY, sin NEXT_PUBLIC_.
 //      Sin ese prefijo Next nunca la inyecta en el bundle del navegador.
 //   3. `soloLectura()` es el único acceso que se exporta y devuelve un
-//      cliente restringido a SELECT sobre las dos vistas del contrato.
+//      cliente restringido a SELECT sobre la lista blanca de abajo.
 //
 // El LMS NO escribe en Gestión. Gestión hace escrituras al leer y no
 // hay locks: un insert/update desde aquí provocaría conflicto.
@@ -20,8 +20,23 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-/** Las dos únicas vistas que el LMS puede leer. Son el contrato con Gestión. */
-export const VISTAS = ["vista_perfil_alumno", "vista_ultima_clase"] as const;
+// ---------------------------------------------------------------
+// LO ÚNICO QUE EL LMS PUEDE LEER DE GESTIÓN
+//
+// Las dos primeras son las vistas del contrato: se hicieron para esto y
+// no exponen nada más que lo acordado.
+//
+// `class_analyses` es una TABLA y entró después, con el bloque único: la
+// vista de la última clase da una fila por alumno y no deja ver qué
+// arrastra de las anteriores, que es la mitad del material del bloque.
+// Se lee con columnas nombradas, nunca con `*`: la tabla guarda el
+// transcript entero y no se quiere ni de paso.
+//
+// Añadir algo a esta lista es ampliar lo que el LMS ve de una base con
+// datos de alumnos, profesores y nóminas. Solo con un motivo escrito,
+// como este.
+// ---------------------------------------------------------------
+export const VISTAS = ["vista_perfil_alumno", "vista_ultima_clase", "class_analyses"] as const;
 export type Vista = (typeof VISTAS)[number];
 
 let cliente: SupabaseClient | null = null;
@@ -85,7 +100,17 @@ type Consulta = {
    * que lanzar una consulta por columna cuando el buscador mira varias.
    */
   or(filtros: string): Consulta;
+  /**
+   * Negación de un filtro: `not("errors_detected", "is", null)`. Acota el
+   * SELECT igual que `eq`; no escribe nada.
+   */
+  not(columna: string, operador: string, valor: unknown): Consulta;
   order(columna: string, opciones: { ascending: boolean }): Consulta;
+  /**
+   * Tope de filas. Lo pide la lectura del historial de clases, que es la
+   * única que no se recorta sola por tener una fila por alumno.
+   */
+  limit(cantidad: number): Consulta;
   returns<T>(): PromiseLike<Resultado<T>>;
 };
 
@@ -94,7 +119,7 @@ type LectorVista = {
 };
 
 /**
- * Devuelve un lector de una de las dos vistas del contrato.
+ * Devuelve un lector de una de las relaciones de la lista blanca.
  *
  * La conversión pasa por `unknown` a propósito: es el único punto donde
  * se estrecha el cliente de Supabase, está acotada a esta función y no

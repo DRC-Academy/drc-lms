@@ -2,13 +2,19 @@ import { redirect } from "next/navigation";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { nivelDeBloque } from "@/lib/perfil";
-import { avisoFormulario, calcularTarjetas, urlFormulario } from "@/lib/modos";
+import {
+  avisoFormulario,
+  calcularTarjeta,
+  resumenUltimaClase,
+  tieneContexto,
+  urlFormulario,
+} from "@/lib/modos";
 import { exigirSesion } from "@/lib/sesion-servidor";
 import {
   leerAvanceAlumno,
   leerBloquesGenerados,
   leerProgresoAlumno,
-  leerUltimaGeneracionPorModo,
+  leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
 import { cursosAsignados } from "@/lib/cursos-servidor";
 import Cabecera from "@/components/Cabecera";
@@ -41,12 +47,12 @@ export default async function PaginaPractica() {
 
   const alumnoId = sesion.alumnoId;
 
-  const [datos, progreso, avance, generados, ultimasGeneraciones] = await Promise.all([
+  const [datos, progreso, avance, generados, ultimaGeneracion] = await Promise.all([
     obtenerAlumno(alumnoId),
     leerProgresoAlumno(alumnoId),
     leerAvanceAlumno(alumnoId),
     leerBloquesGenerados(alumnoId),
-    leerUltimaGeneracionPorModo(alumnoId),
+    leerUltimaGeneracion(alumnoId),
   ]);
 
   // Sin ficha en Gestión no hay perfil del que generar nada. No es un
@@ -54,7 +60,7 @@ export default async function PaginaPractica() {
   const perfil = datos?.perfil ?? null;
   const ultimaClase = datos?.ultimaClase ?? null;
 
-  const tarjetas = calcularTarjetas(perfil, ultimaClase, ultimasGeneraciones);
+  const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion);
   const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(perfil.nivel)) : [];
 
   // Solo para que la cabecera pueda pintar "Mi curso" sin cambiar de
@@ -80,14 +86,20 @@ export default async function PaginaPractica() {
             Tu práctica
           </h1>
           <p className="mt-[5px] max-w-[720px] text-pretty text-[14px] leading-[1.45] text-marca-gris lg:mt-1.5 lg:text-[15px]">
-            Ejercicios hechos para ti a partir de tu perfil y de lo último que diste en clase. No es
-            el curso: es lo que te toca a ti hoy.
+            Ejercicios hechos para ti a partir de tu perfil y de lo que trabajas en clase. No es el
+            curso: es lo que te toca a ti hoy.
           </p>
         </header>
 
         <PanelPractica
           alumnoId={alumnoId}
-          tarjetas={tarjetas}
+          tarjeta={tarjeta}
+          // La tarjeta crema de arriba habla solo de su clase, no de las
+          // cuatro fuentes del bloque, así que se redacta aparte. Está
+          // "ya practicada" cuando la tarjeta trae espera, que con la
+          // regla única significa exactamente eso.
+          resumenClase={resumenUltimaClase(perfil, ultimaClase, tarjeta?.espera != null)}
+          conContexto={tieneContexto(perfil)}
           bloques={bloques}
           progreso={progreso}
           avance={avance}

@@ -1,95 +1,77 @@
 // ---------------------------------------------------------------
 // CUÁNDO SE PUEDE GENERAR OTRO BLOQUE
 //
-// La regla no es un cupo, es una pregunta: ¿ha cambiado la materia
-// prima desde el último bloque de este modo? Si no ha cambiado, el
-// modelo escribiría una variación sobre exactamente el mismo material,
-// y eso no es práctica nueva: es el mismo bloque con otras palabras.
+// UNA SOLA REGLA: se desbloquea cuando entra un transcript nuevo.
 //
-// De ahí salen tres reglas distintas, una por modo:
+// No es un cupo, es una pregunta: ¿ha cambiado la materia prima desde el
+// último bloque? Si no ha cambiado, el modelo escribiría una variación
+// sobre exactamente el mismo material, y eso no es práctica nueva: es el
+// mismo bloque con otras palabras.
 //
-//   · repaso   — la materia prima es la última clase analizada. Se
-//                desbloquea cuando hay una analizada DESPUÉS del último
-//                bloque de repaso. Es exacto: mientras no haya otra
-//                clase, no hay nada nuevo de donde tirar.
-//   · contexto — la materia prima es su perfil, que no cambia a diario
-//                pero tampoco es fijo. Cada tres días.
-//   · examen   — la materia prima es el formato del examen, que no
-//                cambia nunca. Aquí el criterio no aplica, así que se
-//                acota por otro lado: uno al día.
+// Antes había tres reglas, una por modo: repaso miraba la última clase,
+// contexto se renovaba cada tres días y examen permitía uno al día. Las
+// dos últimas se han ido con los modos. Y no se han ido solo por
+// simetría: eran las dos que no tenían nada detrás. El perfil de un
+// alumno no cambia el jueves porque hayan pasado tres días desde el
+// lunes, y el formato del First no cambia nunca, así que "uno al día"
+// era un cupo disfrazado de regla. La clase sí cambia de verdad, y es la
+// única de las cuatro fuentes que trae material nuevo.
+//
+// Consecuencia asumida: un alumno sin ninguna clase analizada genera su
+// primer bloque —con su perfil y su examen— y después espera a su
+// primera clase. Es lo correcto: con las mismas dos frases de su
+// formulario, el segundo bloque sería el primero otra vez.
 //
 // Módulo puro: sin `server-only`, porque lo usan la ruta (para decidir)
 // y `lib/modos.ts` (para redactar lo que ve el alumno). Ni toca la base
 // ni el navegador; quien llama le pasa las fechas ya leídas.
 // ---------------------------------------------------------------
 
-import type { ModoGeneracion } from "@/lib/modos";
-import { comoFecha, diasNaturales } from "@/lib/fechas";
+import { comoFecha } from "@/lib/fechas";
 
 // Se reexportan porque media aplicación los importaba desde aquí, y
 // porque quien razona sobre límites razona sobre días naturales.
 export { comoFecha, diaLocal, diasNaturales } from "@/lib/fechas";
 
-/** Cada cuántos días naturales se renueva el bloque de contexto. */
-export const DIAS_CONTEXTO = 3;
-
 /**
- * Por qué no se puede generar todavía, o que sí se puede.
+ * Si se puede generar, o de qué depende que se pueda.
  *
- * `motivo` no es un código de error: es lo que decide qué se le cuenta
- * al alumno, y cada uno se cuenta distinto.
+ * `motivo` sobrevive con un único valor y no se ha quitado a propósito:
+ * es lo que la ruta manda en el 409 para que el cliente sepa que ese
+ * error no es un fallo suyo sino un "todavía no toca", y esa distinción
+ * decide si se ofrece o no el botón de reintentar.
  */
 export type Disponibilidad =
   | { disponible: true }
-  /** Contexto: faltan días y se saben cuántos. */
-  | { disponible: false; motivo: "dias"; diasRestantes: number }
-  /** Repaso: depende de su próxima clase, no de un plazo. */
-  | { disponible: false; motivo: "clase" }
-  /** Examen: ya lo hizo hoy. */
-  | { disponible: false; motivo: "hoy" };
+  /** Depende de su próxima clase, no de un plazo. */
+  | { disponible: false; motivo: "clase" };
 
 const DISPONIBLE: Disponibilidad = { disponible: true };
+const ESPERANDO_CLASE: Disponibilidad = { disponible: false, motivo: "clase" };
 
 /**
- * ¿Puede este alumno generar ahora un bloque de este modo?
+ * ¿Puede este alumno generar ahora un bloque?
  *
- * @param ultimaGeneracion  Cuándo generó el último bloque DE ESTE MODO, o null si ninguno.
+ * @param ultimaGeneracion  Cuándo generó su último bloque, o null si ninguno.
  * @param claseAnalizadaEn  Cuándo se analizó su última clase, o null si no tiene.
  */
 export function calcularDisponibilidad(
-  modo: ModoGeneracion,
   ultimaGeneracion: Date | null,
   claseAnalizadaEn: Date | null,
-  ahora: Date
+  _ahora: Date = new Date()
 ): Disponibilidad {
-  // LA PRIMERA VEZ SIEMPRE SE PUEDE, en los tres modos.
+  // LA PRIMERA VEZ SIEMPRE SE PUEDE.
   //
-  // Importa sobre todo en repaso: un alumno con una clase de hace un mes
+  // Importa más de lo que parece: un alumno con una clase de hace un mes
   // y ninguna nueva nunca tendría material "posterior a su último
   // bloque" —porque no tiene ninguno— y con la regla estricta se
   // quedaría fuera para siempre. Su primera clase analizada es material
   // nuevo para él aunque sea vieja para el calendario.
   if (!ultimaGeneracion) return DISPONIBLE;
 
-  if (modo === "repaso") {
-    // Sin clase analizada no habría llegado hasta aquí: la tarjeta de
-    // repaso no se ofrece. Se comprueba igual por si acaso.
-    if (!claseAnalizadaEn) return { disponible: false, motivo: "clase" };
+  // Sin clase analizada no hay nada que pueda haber cambiado desde su
+  // bloque anterior: su perfil y su examen son los mismos de entonces.
+  if (!claseAnalizadaEn) return ESPERANDO_CLASE;
 
-    return claseAnalizadaEn.getTime() > ultimaGeneracion.getTime()
-      ? DISPONIBLE
-      : { disponible: false, motivo: "clase" };
-  }
-
-  if (modo === "contexto") {
-    const pasados = diasNaturales(ultimaGeneracion, ahora);
-    return pasados >= DIAS_CONTEXTO
-      ? DISPONIBLE
-      : { disponible: false, motivo: "dias", diasRestantes: DIAS_CONTEXTO - pasados };
-  }
-
-  // examen
-  return diasNaturales(ultimaGeneracion, ahora) >= 1
-    ? DISPONIBLE
-    : { disponible: false, motivo: "hoy" };
+  return claseAnalizadaEn.getTime() > ultimaGeneracion.getTime() ? DISPONIBLE : ESPERANDO_CLASE;
 }

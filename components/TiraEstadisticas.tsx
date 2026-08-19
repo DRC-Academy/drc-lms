@@ -1,47 +1,46 @@
 import { Casilla, CasillaNivel, Cifra, Escala } from "@/components/Casillas";
 
 /**
- * Las cuatro cifras del inicio.
+ * Las dos cifras del inicio: cuánto llevas del curso y a qué nivel vas.
  *
- * CADA NÚMERO SE LEE SOBRE SU ESCALA, no suelto. La barra de debajo dice
- * cuánto queda, que es la única forma honesta de comunicar avance sin
- * tener histórico: un "78%" a secas no distingue entre ir bien e ir mal.
+ * ERAN CUATRO. "Bloques dominados" y "Aciertos" se han ido, y no por
+ * falta de sitio: son medidas de rendimiento, y en la pantalla a la que
+ * el alumno llega al entrar, un porcentaje de aciertos es una nota. La
+ * práctica está para equivocarse —de ahí salen los distractores del
+ * bloque siguiente— y recibir a alguien con su media de aciertos empuja
+ * justo a lo contrario: a no abrir el bloque los días flojos.
  *
- * Se esconde entera cuando el alumno todavía no ha hecho nada. Cuatro
- * ceros no informan y lo único que consiguen es recibir a quien acaba de
- * entrar con un boletín en blanco. El nivel no cuenta como dato para esa
- * decisión: lo tiene todo el mundo desde el primer día.
+ * Las dos que quedan miden avance, no acierto. "Del curso" dice cuánto
+ * le falta y el nivel dice a qué altura va todo lo que se le sirve.
+ * Ninguna de las dos empeora por practicar.
+ *
+ * SIGUEN EN EL PANEL DEL EQUIPO, donde sí son útiles: allí la pregunta
+ * es si el material funciona, y esa se responde exactamente con la tasa
+ * de acierto. La diferencia no es el número, es quién lo lee.
+ *
+ * Se esconde entera cuando no hay curso del que hablar. Con una sola
+ * casilla a cero y el nivel al lado, esto no informa: es un boletín en
+ * blanco delante de quien acaba de entrar. El nivel no cuenta como dato
+ * para esa decisión, porque lo tiene todo el mundo desde el primer día.
  *
  * Las casillas en sí viven en `components/Casillas.tsx`: `/practica`
- * tiene su propia fila con otras cuatro medidas y las dos pantallas
- * comparten el mueble. Aquí queda lo que es de esta pantalla, que es qué
- * se mide y con qué escala se lee.
+ * tiene su propia fila con otras medidas y las dos pantallas comparten
+ * el mueble. Aquí queda lo que es de esta pantalla, que es qué se mide y
+ * con qué escala se lee.
  */
 export default function TiraEstadisticas({
   porcentajeCurso,
   completadas,
   total,
-  dominados,
-  practicados,
-  aciertos,
   nivel,
 }: {
   /** % de lecciones del curso completadas, o null si no tiene curso. */
   porcentajeCurso: number | null;
   completadas: number;
   total: number;
-  /** Bloques de práctica dominados, o null si nunca practicó. */
-  dominados: number | null;
-  /** Bloques que ha practicado alguna vez: el denominador de los dominados. */
-  practicados: number;
-  /** % de acierto medio en práctica, o null si nunca practicó. */
-  aciertos: number | null;
   nivel: string;
 }) {
-  const hayDatos = porcentajeCurso !== null || dominados !== null || aciertos !== null;
-  if (!hayDatos) return null;
-
-  const pctDominados = practicados > 0 && dominados !== null ? (dominados / practicados) * 100 : 0;
+  if (porcentajeCurso === null) return null;
 
   return (
     <section aria-label="Cómo vas" className="mt-[18px] lg:mt-6">
@@ -49,29 +48,14 @@ export default function TiraEstadisticas({
         Cómo vas
       </h2>
 
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-5">
+      {/* Dos casillas: media pantalla cada una en móvil, y en escritorio
+          se quedan a la izquierda en vez de estirarse hasta el borde. Con
+          `grid-cols-4` y dos hijas, cada una ocupaba un cuarto y la fila
+          se leía como una tira a la que le faltan dos. */}
+      <div className="grid grid-cols-2 gap-2.5 lg:max-w-[520px] lg:gap-5">
         <Casilla etiquetaLarga="Del curso" pie={textoLecciones(completadas, total)} pieCorto="de tu curso">
-          <Cifra valor={porcentajeCurso === null ? "—" : String(porcentajeCurso)} unidad="%" />
-          <Escala porcentaje={porcentajeCurso ?? 0} />
-        </Casilla>
-
-        <Casilla
-          etiquetaLarga="Bloques dominados"
-          etiquetaCorta="Bloques"
-          pie="de los que has practicado"
-          pieCorto="dominados"
-        >
-          <Cifra
-            valor={dominados === null ? "—" : String(dominados)}
-            unidad={practicados > 0 ? `de ${practicados}` : ""}
-            unidadSuave
-          />
-          <Escala porcentaje={pctDominados} />
-        </Casilla>
-
-        <Casilla etiquetaLarga="Aciertos" pie="en tus últimos ejercicios" pieCorto="últimos ejercicios">
-          <Cifra valor={aciertos === null ? "—" : String(aciertos)} unidad="%" />
-          <Escala porcentaje={aciertos ?? 0} />
+          <Cifra valor={String(porcentajeCurso)} unidad="%" />
+          <Escala porcentaje={porcentajeCurso} />
         </Casilla>
 
         <CasillaNivel nivel={nivel} />

@@ -61,8 +61,26 @@ export function estadoDeBloque(
   }
 
   if (avance) {
-    // Los cinco ejercicios van 2 reconocer → 2 transformar → 1 producir.
-    const fases = avance.indice >= 4 ? 3 : avance.indice >= 2 ? 2 : 1;
+    // ---------------------------------------------------------------
+    // POR QUÉ FASE VA, CALCULADO Y NO ESCRITO A MANO
+    //
+    // Los cortes eran fijos —índice 2 y 4— porque todos los bloques
+    // tenían cinco ejercicios: 2 reconocer, 2 transformar, 1 producir.
+    // Ahora los nuevos llevan diez (4, 4, 2) y los viejos siguen en la
+    // base con cinco, así que un corte fijo diría "fase 3" en el quinto
+    // ejercicio de un bloque de diez, cuando ahí todavía va por el
+    // primer transformar.
+    //
+    // Se saca del propio avance, que ya guarda cuántos ejercicios tiene
+    // ese bloque: reconocer ocupa la primera mitad de los cerrados,
+    // transformar la segunda, y producir el último quinto. Las dos
+    // formas caen donde tienen que caer sin preguntar por ninguna.
+    // ---------------------------------------------------------------
+    const total = avance.total > 0 ? avance.total : 5;
+    const finReconocer = Math.round(total * 0.4); // 2 de 5, 4 de 10
+    const finTransformar = Math.round(total * 0.8); // 4 de 5, 8 de 10
+
+    const fases = avance.indice >= finTransformar ? 3 : avance.indice >= finReconocer ? 2 : 1;
     return { estado: "en-curso", porcentaje: null, fases };
   }
 

@@ -1,22 +1,31 @@
 // ---------------------------------------------------------------
-// LOS TRES MODOS DE GENERACIÓN
+// UN SOLO MODO DE GENERACIÓN
 //
-// El perfil decide qué tarjetas ve el alumno. Puede cumplir varias
-// condiciones y ver varias tarjetas; puede no cumplir ninguna y ver
-// solo la invitación a completar el perfil.
+// Había tres —repaso, examen y contexto— y el alumno elegía. Elegir era
+// el problema: las tres fuentes son suyas y se explican entre ellas, así
+// que partirlas obligaba a que en cada bloque sobraran dos. Un alumno
+// que prepara el First y trabaja en una gestoría tenía que decidir si
+// hoy practicaba su clase, su examen o su trabajo, cuando lo que
+// necesita es un bloque que sea las tres cosas.
 //
-// Módulo puro: no toca la base ni el navegador. La página lo calcula
-// en el servidor y le pasa el resultado ya resuelto al componente.
+// Ahora hay un botón. Lo que había detrás de los tres modos no se ha
+// perdido: se ha juntado dentro de un único prompt, que las combina y
+// las pesa (ver `lib/prompt-bloque.ts`).
+//
+// EL HISTÓRICO NO SE MARCA. Los bloques generados con los tres modos
+// antiguos se enseñan exactamente igual que los nuevos, sin distintivo
+// de ningún tipo. El alumno nunca supo que había tres modos: contárselo
+// ahora, en pasado, sería explicarle una decisión nuestra que no le
+// afectó nunca.
+//
+// Módulo puro: no toca la base ni el navegador. La página lo calcula en
+// el servidor y le pasa el resultado ya resuelto al componente.
 // ---------------------------------------------------------------
 
-import { NOMBRE_EXAMEN, type PerfilAlumno, type TipoExamen, type UltimaClase } from "@/lib/data";
+import type { PerfilAlumno, TipoExamen, UltimaClase } from "@/lib/data";
+import { NOMBRE_EXAMEN } from "@/lib/data";
 import { detectarExamen, formatearFecha } from "@/lib/perfil";
-import {
-  calcularDisponibilidad,
-  comoFecha,
-  DIAS_CONTEXTO,
-  type Disponibilidad,
-} from "@/lib/limites";
+import { calcularDisponibilidad, comoFecha, type Disponibilidad } from "@/lib/limites";
 
 // ---------------------------------------------------------------
 // EL ENLACE AL FORMULARIO DE PERFIL
@@ -68,8 +77,8 @@ export function urlFormulario(base: string | undefined, token: string | null): s
 //     cuando Gestión empezó a emitirlos. A esos, "revisa tu correo" los
 //     manda a buscar algo que no existe.
 //
-// El texto se redacta aquí y no en el componente por lo mismo que las
-// esperas de las tarjetas: depende del profesor y de una fecha, que son
+// El texto se redacta aquí y no en el componente por lo mismo que la
+// espera de la tarjeta: depende del profesor y de una fecha, que son
 // datos de este lado. El componente solo pinta.
 // ---------------------------------------------------------------
 
@@ -94,14 +103,35 @@ export function avisoFormulario(profesor: string, enviadoEn: string | null): Avi
   };
 }
 
-export type ModoGeneracion = "repaso" | "examen" | "contexto";
+// ---------------------------------------------------------------
+// EL MODO
+// ---------------------------------------------------------------
 
 /**
- * Lo que se enseña cuando el modo todavía no está disponible.
+ * El único modo que se genera hoy.
+ *
+ * Es el valor que va a `bloques_generados.modo`. Sigue existiendo la
+ * columna —y sigue habiendo miles de filas con `repaso`, `examen` y
+ * `contexto`— porque el panel del equipo lee el histórico y necesita
+ * distinguir de cuándo es cada bloque.
+ */
+export const MODO_ACTUAL = "practica";
+
+/**
+ * Todos los valores que pueden aparecer en la columna, incluidos los
+ * tres que ya no se generan. Es un tipo de LECTURA: lo usa el panel para
+ * repasar el histórico, nunca la generación.
+ */
+export type ModoHistorico = "repaso" | "examen" | "contexto" | "practica";
+
+export const MODOS_HISTORICOS: ModoHistorico[] = ["repaso", "examen", "contexto", "practica"];
+
+/**
+ * Lo que se enseña cuando todavía no toca generar.
  *
  * Se redacta aquí, en el servidor, y no en el componente: el texto
- * depende del profesor y de los días que falten, que son datos que solo
- * hay de este lado. El componente solo lo pinta.
+ * depende del profesor, que es un dato que solo hay de este lado. El
+ * componente solo lo pinta.
  */
 export type EsperaTarjeta = {
   /** Sustituye a `llamada` en el botón, que va desactivado. */
@@ -110,8 +140,8 @@ export type EsperaTarjeta = {
   nota: string;
 };
 
-export type TarjetaModo = {
-  modo: ModoGeneracion;
+/** La tarjeta única de generación. Null cuando no hay de dónde tirar. */
+export type TarjetaPractica = {
   etiqueta: string;
   titulo: string;
   descripcion: string;
@@ -142,18 +172,6 @@ export function primeraFrase(texto: string, maximo = 150): string {
   return `${base.replace(/[,;:]$/, "")}…`;
 }
 
-/** Lo que se le cuenta al alumno del formato de su examen. */
-const FORMATO_EXAMEN: Record<TipoExamen, string> = {
-  b2_first:
-    "Con las tareas reales del Use of English: multiple-choice cloze, open cloze y key word transformations.",
-  c1_advanced:
-    "Con las tareas reales del Use of English de C1: open cloze, word formation y key word transformations.",
-  b1_preliminary:
-    "Con las tareas reales del examen: multiple-choice cloze, open cloze y frases para reescribir.",
-  ielts:
-    "Con tareas al estilo del examen: completar frases, parafrasear y vocabulario académico.",
-};
-
 /** ¿Tenemos material para ambientar los ejercicios en su vida real? */
 export function tieneContexto(perfil: PerfilAlumno | null): boolean {
   if (!perfil) return false;
@@ -163,134 +181,176 @@ export function tieneContexto(perfil: PerfilAlumno | null): boolean {
   return perfil.ocupacion !== null || perfil.objetivoPerfil !== null;
 }
 
-function tarjetaRepaso(
-  perfil: PerfilAlumno | null,
-  clase: UltimaClase
-): Omit<TarjetaModo, "espera"> {
-  const fecha = formatearFecha(clase.fechaClase);
-  const profesor = perfil?.profesor.trim();
+// ---------------------------------------------------------------
+// LA DESCRIPCIÓN
+//
+// Con tres tarjetas, cada una nombraba su fuente y ya está. Con una
+// sola, la descripción tiene que decir de qué está hecho ESTE bloque, y
+// eso cambia de alumno a alumno: uno tiene clase y examen, otro solo
+// perfil, otro las cuatro cosas.
+//
+// Se enumeran las fuentes que ese alumno tiene de verdad. Nombrarlas es
+// lo que sostiene la promesa: si dijera siempre "hecho para ti", el
+// alumno sin perfil leería lo mismo que el que rellenó el formulario, y
+// entonces rellenarlo no sirve de nada.
+// ---------------------------------------------------------------
 
-  // Sin perfil no sabemos quién dio la clase: se cuenta sin el nombre
-  // en lugar de esconder la tarjeta.
-  const descripcion = profesor
-    ? `${profesor} trabajó contigo ${clase.titulo} el ${fecha}.`
-    : `Trabajaste ${clase.titulo} el ${fecha}.`;
+function describirFuentes(
+  ultimaClase: UltimaClase | null,
+  conContexto: boolean,
+  examen: TipoExamen | null
+): string {
+  const frases: string[] = [];
 
-  return {
-    modo: "repaso",
-    etiqueta: "Tu última clase",
-    titulo: "Lo de tu última clase",
-    descripcion,
-    llamada: "Repasar lo de clase",
-  };
-}
+  if (ultimaClase) {
+    frases.push(`lo que trabajaste el ${formatearFecha(ultimaClase.fechaClase)}`);
+    // El historial no se nombra con número de clases: al alumno no le
+    // dice nada "tus últimas cuatro clases" y suena a expediente.
+    frases.push("lo que se te viene repitiendo de clases anteriores");
+  }
+  if (conContexto) frases.push("tu día a día");
+  if (examen) frases.push(`el formato del ${NOMBRE_EXAMEN[examen]}`);
 
-function tarjetaExamen(examen: TipoExamen): Omit<TarjetaModo, "espera"> {
-  return {
-    modo: "examen",
-    etiqueta: "Tu examen",
-    titulo: `Practica para tu ${NOMBRE_EXAMEN[examen]}`,
-    descripcion: FORMATO_EXAMEN[examen],
-    llamada: "Practicar el formato",
-  };
-}
+  if (frases.length === 0) return "";
+  if (frases.length === 1) return frases[0];
 
-function tarjetaContexto(perfil: PerfilAlumno): Omit<TarjetaModo, "espera"> {
-  // La ocupación describe mejor la situación; el objetivo entra cuando
-  // no hay ocupación. Siempre precedida de una frase nuestra, para que
-  // no parezca un campo volcado en pantalla.
-  const fuente = perfil.ocupacion ?? perfil.objetivoPerfil ?? "";
-
-  return {
-    modo: "contexto",
-    // "Tu día a día" y no "Tu contexto": nombra lo que el alumno
-    // reconoce —su trabajo, sus correos, sus reuniones— en vez de la
-    // palabra con la que lo llamamos nosotros por dentro.
-    etiqueta: "Tu día a día",
-    titulo: "Inglés para tu trabajo",
-    descripcion: `Ejercicios con situaciones tuyas, no frases de libro. ${primeraFrase(fuente)}`,
-    llamada: "Practicar con tu contexto",
-  };
+  return `${frases.slice(0, -1).join(", ")} y ${frases[frases.length - 1]}`;
 }
 
 // ---------------------------------------------------------------
 // LO QUE SE CUENTA MIENTRAS NO TOCA
 //
-// Ninguno de estos textos dice que el alumno no pueda. Dicen de qué
-// depende, que es distinto: de su próxima clase, de que su perfil dé
-// para algo nuevo, de que pase el día. La espera es una consecuencia de
-// cómo funciona el material, no una norma que se le impone.
+// El texto no dice que el alumno no pueda. Dice de qué depende, que es
+// distinto: de su próxima clase. La espera es una consecuencia de cómo
+// funciona el material —sin clase nueva no hay materia prima nueva—, no
+// una norma que se le impone.
 // ---------------------------------------------------------------
 
 function redactarEspera(
   disponibilidad: Disponibilidad,
-  profesor: string
+  profesor: string,
+  tuvoClase: boolean
 ): EsperaTarjeta | null {
   if (disponibilidad.disponible) return null;
 
-  if (disponibilidad.motivo === "clase") {
-    // El vínculo con el profesor es el punto: lo siguiente que desbloquea
-    // esto es su próxima clase, no un contador. Sin nombre se cuenta
-    // igual, sin fingir que lo sabemos.
+  if (!tuvoClase) {
+    // Ya generó con lo único que teníamos —su perfil, su examen— y no
+    // hay clase analizada que pueda traer nada nuevo. Es la espera más
+    // larga de todas y por eso se cuenta entera.
     return {
-      etiquetaBoton: "Después de tu próxima clase",
+      etiquetaBoton: "Después de tu primera clase",
       nota: profesor
-        ? `Ya has repasado lo de tu última clase. En cuanto tengas la siguiente con ${profesor}, preparamos el próximo bloque.`
-        : "Ya has repasado lo de tu última clase. En cuanto tengas la siguiente, preparamos el próximo bloque.",
+        ? `Ya tienes tu bloque con lo que sabemos de ti. En cuanto ${profesor} analice tu primera clase, preparamos el siguiente con lo que trabajéis.`
+        : "Ya tienes tu bloque con lo que sabemos de ti. En cuanto se analice tu primera clase, preparamos el siguiente con lo que trabajéis.",
     };
   }
 
-  if (disponibilidad.motivo === "dias") {
-    const dias = disponibilidad.diasRestantes;
-    return {
-      etiquetaBoton: dias === 1 ? "Disponible mañana" : `Disponible en ${dias} días`,
-      nota: `Estos ejercicios salen de tu perfil, y eso no cambia de un día para otro. Cada ${DIAS_CONTEXTO} días te preparamos uno nuevo.`,
-    };
-  }
-
+  // El vínculo con el profesor es el punto: lo siguiente que desbloquea
+  // esto es su próxima clase, no un contador. Sin nombre se cuenta
+  // igual, sin fingir que lo sabemos.
   return {
-    etiquetaBoton: "Disponible mañana",
-    nota: "Ya has practicado el formato hoy. Mañana preparamos otro.",
+    etiquetaBoton: "Después de tu próxima clase",
+    nota: profesor
+      ? `Ya has practicado lo de tu última clase. En cuanto tengas la siguiente con ${profesor}, preparamos el próximo bloque.`
+      : "Ya has practicado lo de tu última clase. En cuanto tengas la siguiente, preparamos el próximo bloque.",
   };
 }
 
 /**
- * Tarjetas que le tocan a este alumno, en orden de cercanía: lo que
- * acaba de ver en clase, luego su examen, luego su contexto.
+ * La tarjeta de este alumno, o null si no hay con qué construir nada.
  *
- * Cada una llega sabiendo ya si se puede pulsar. Se decide aquí y no al
- * pulsar para que el alumno no choque contra nada: ve antes de tocar
- * que ese bloque le toca mañana, y con las otras tarjetas activas.
+ * Llega sabiendo ya si se puede pulsar. Se decide aquí y no al pulsar
+ * para que el alumno no choque contra nada: ve antes de tocar que el
+ * próximo bloque llega con su próxima clase.
+ *
+ * DEVUELVE NULL SOLO SIN NINGUNA FUENTE. Antes hacían falta condiciones
+ * por modo; ahora basta con tener una de las cuatro cosas. Quien no
+ * tiene ninguna —ni clase, ni perfil, ni examen— es a quien se le enseña
+ * la invitación a completar el perfil, que es lo único que puede hacer.
  */
-export function calcularTarjetas(
+export function calcularTarjeta(
   perfil: PerfilAlumno | null,
   ultimaClase: UltimaClase | null,
-  ultimasGeneraciones: Record<ModoGeneracion, string | null>,
+  ultimaGeneracion: string | null,
   ahora: Date = new Date()
-): TarjetaModo[] {
-  const tarjetas: TarjetaModo[] = [];
-  const analizadaEn = comoFecha(ultimaClase?.analizadoEn);
-  const profesor = perfil?.profesor.trim() ?? "";
-
-  const conEspera = (tarjeta: Omit<TarjetaModo, "espera">): TarjetaModo => ({
-    ...tarjeta,
-    espera: redactarEspera(
-      calcularDisponibilidad(
-        tarjeta.modo,
-        comoFecha(ultimasGeneraciones[tarjeta.modo]),
-        analizadaEn,
-        ahora
-      ),
-      profesor
-    ),
-  });
-
-  if (ultimaClase) tarjetas.push(conEspera(tarjetaRepaso(perfil, ultimaClase)));
-
+): TarjetaPractica | null {
+  const conContexto = tieneContexto(perfil);
   const examen = perfil ? detectarExamen(perfil.plan) : null;
-  if (examen) tarjetas.push(conEspera(tarjetaExamen(examen)));
 
-  if (perfil && tieneContexto(perfil)) tarjetas.push(conEspera(tarjetaContexto(perfil)));
+  if (!ultimaClase && !conContexto && !examen) return null;
 
-  return tarjetas;
+  const profesor = perfil?.profesor.trim() ?? "";
+  const fuentes = describirFuentes(ultimaClase, conContexto, examen);
+
+  const espera = redactarEspera(
+    calcularDisponibilidad(
+      comoFecha(ultimaGeneracion),
+      comoFecha(ultimaClase?.analizadoEn),
+      ahora
+    ),
+    profesor,
+    ultimaClase !== null
+  );
+
+  return {
+    etiqueta: "Hecho para ti",
+    titulo: "Tu bloque de práctica",
+    // Sin fuentes no se llega aquí, pero la frase aguanta el caso igual
+    // antes que quedarse a medias en pantalla.
+    descripcion: fuentes
+      ? `Diez ejercicios a partir de ${fuentes}.`
+      : "Diez ejercicios hechos con lo que sabemos de ti.",
+    llamada: "Preparar mi bloque",
+    espera,
+  };
+}
+
+// ---------------------------------------------------------------
+// EL RESUMEN DE LA ÚLTIMA CLASE
+//
+// La tarjeta crema que abre `/practica`. Antes salía de la tarjeta de
+// repaso: se le cogía la descripción —"Aoife trabajó contigo X el 12 de
+// agosto"— y se le pegaba una consecuencia. Con un modo único esa
+// tarjeta ya no existe, y su descripción tampoco valdría: ahora nombra
+// las cuatro fuentes a la vez y aquí se habla solo de la clase.
+//
+// Así que se redacta aparte, que es además donde tenía que haber estado:
+// esto no describe de qué se genera un bloque, describe en qué punto
+// está el alumno con su profesor.
+// ---------------------------------------------------------------
+
+export type ResumenClase = { titulo: string; cuerpo: string };
+
+export function resumenUltimaClase(
+  perfil: PerfilAlumno | null,
+  ultimaClase: UltimaClase | null,
+  /** Si su bloque ya está hecho y toca esperar a la siguiente clase. */
+  yaGenerado: boolean
+): ResumenClase {
+  if (!ultimaClase) {
+    return {
+      titulo: "Todavía no hay clase que repasar",
+      cuerpo:
+        "En cuanto tu profesor analice tu primera clase, preparamos aquí un bloque con lo que trabajasteis.",
+    };
+  }
+
+  const fecha = formatearFecha(ultimaClase.fechaClase);
+  const profesor = perfil?.profesor.trim();
+
+  // Sin perfil no sabemos quién dio la clase: se cuenta sin el nombre en
+  // lugar de esconder la tarjeta.
+  const quien = profesor
+    ? `${profesor} trabajó contigo ${ultimaClase.titulo} el ${fecha}.`
+    : `Trabajaste ${ultimaClase.titulo} el ${fecha}.`;
+
+  return yaGenerado
+    ? {
+        titulo: "Ya lo has practicado",
+        cuerpo: `${quien} En cuanto tengas la siguiente clase, preparamos el próximo bloque.`,
+      }
+    : {
+        titulo: "Tienes clase nueva",
+        cuerpo: `${quien} Ahí abajo puedes prepararte el bloque con lo que trabajasteis.`,
+      };
 }

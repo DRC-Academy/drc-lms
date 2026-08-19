@@ -30,7 +30,7 @@ import { detectarExamen } from "@/lib/perfil";
 import { calcularApertura } from "@/lib/drip";
 import { comoFecha } from "@/lib/fechas";
 import { claveCoincide, cursosDelAlumno } from "@/lib/cursos";
-import type { ModoGeneracion } from "@/lib/modos";
+import { MODOS_HISTORICOS, type ModoHistorico } from "@/lib/modos";
 import type { TipoExamen } from "@/lib/data";
 
 export type { AlumnoPanel };
@@ -117,12 +117,14 @@ export type Acceso = {
 };
 
 export type UsoDeModo = {
-  modo: ModoGeneracion;
+  modo: ModoHistorico;
   bloques: number;
   /** Quién lo usó y cuánto, del que más al que menos. */
   usuarios: { alumno: FichaPanel; bloques: number }[];
   /** Cuántos alumnos PODRÍAN usarlo. Sin esto el porcentaje no dice nada. */
   elegibles: number;
+  /** Ya no se genera: es histórico y solo sale si tiene bloques detrás. */
+  retirado: boolean;
 };
 
 export type Atencion = {
@@ -408,15 +410,31 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
     nuncaEntraron: sesiones === null ? [] : fichas.filter((f) => !idsSesion.has(f.alumnoId)),
   };
 
-  // --- Bloque 2: uso por modo ---
-  const MODOS: ModoGeneracion[] = ["repaso", "examen", "contexto"];
-  const elegiblePara: Record<ModoGeneracion, (f: FichaPanel) => boolean> = {
+  // ---------------------------------------------------------------
+  // Bloque 2: uso por modo
+  //
+  // Los tres modos antiguos SIGUEN AQUÍ aunque ya no se generen. Esta
+  // sección es el histórico de generación, y borrar de golpe las columnas
+  // de repaso, examen y contexto haría desaparecer del panel todos los
+  // bloques anteriores al cambio, que es precisamente contra lo que se
+  // mira un panel.
+  //
+  // Lo que se hace es no enseñar los vacíos: un modo retirado sin un solo
+  // bloque en el periodo no aporta nada y se cae solo cuando el periodo
+  // elegido queda por completo después del cambio. `practica` no se cae
+  // nunca, aunque marque cero: ahí el cero es el dato.
+  //
+  // El de hoy es elegible para cualquiera que tenga ALGUNA fuente, que es
+  // la misma condición con la que se le ofrece la tarjeta.
+  // ---------------------------------------------------------------
+  const elegiblePara: Record<ModoHistorico, (f: FichaPanel) => boolean> = {
     repaso: (f) => f.conTranscript,
     examen: (f) => f.examen !== null,
     contexto: (f) => f.conContexto,
+    practica: (f) => f.conTranscript || f.examen !== null || f.conContexto,
   };
 
-  const modos: UsoDeModo[] = MODOS.map((modo) => {
+  const modos: UsoDeModo[] = MODOS_HISTORICOS.map((modo) => {
     const suyos = (bloques ?? []).filter((b) => b.modo === modo);
 
     const cuenta = new Map<string, number>();
@@ -432,8 +450,9 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
       bloques: suyos.length,
       usuarios,
       elegibles: fichas.filter(elegiblePara[modo]).length,
+      retirado: modo !== "practica",
     };
-  });
+  }).filter((m) => m.modo === "practica" || m.bloques > 0);
 
   // --- Bloque 5: requieren atención ---
   const idsCompletaron = completaron ?? new Set<string>();

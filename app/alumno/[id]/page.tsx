@@ -3,13 +3,12 @@ import { notFound } from "next/navigation";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { formatearFecha, nivelDeBloque } from "@/lib/perfil";
-import { avisoFormulario, calcularTarjetas, tieneContexto, urlFormulario } from "@/lib/modos";
+import { avisoFormulario, calcularTarjeta, tieneContexto, urlFormulario } from "@/lib/modos";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
-import { numerosDePractica } from "@/lib/progreso";
 import {
   leerBloquesGenerados,
   leerProgresoAlumno,
-  leerUltimaGeneracionPorModo,
+  leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
 import Cabecera from "@/components/Cabecera";
@@ -29,13 +28,13 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   // Gestión primero: de su `plan` y su `nivel` sale qué cursos le tocan,
   // así que la consulta de cursos no puede ir en el mismo lote.
-  const [datos, progreso, generados, ultimasGeneraciones] = await Promise.all([
+  const [datos, progreso, generados, ultimaGeneracion] = await Promise.all([
     obtenerAlumno(params.id),
     leerProgresoAlumno(params.id),
     // Con el rol: los bloques que el equipo genera para revisar solo
     // salen en la lista de quien los generó. Al alumno no le aparecen.
     leerBloquesGenerados(params.id, sesion.rol === "admin"),
-    leerUltimaGeneracionPorModo(params.id),
+    leerUltimaGeneracion(params.id),
   ]);
 
   // Solo es 404 cuando el id no corresponde a nadie. Un alumno con clase
@@ -43,7 +42,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   if (!datos) notFound();
 
   const { perfil, ultimaClase } = datos;
-  const tarjetas = calcularTarjetas(perfil, ultimaClase, ultimasGeneraciones);
+  const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion);
 
   // Sin perfil no hay plan ni nivel, así que tampoco curso: el banner
   // enseña el estado sobrio y la práctica sigue funcionando.
@@ -52,8 +51,6 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   // Los bloques estáticos se filtran por nivel exacto. Un A2 no recibe
   // material B1: su contenido sale del banco A2 al generar.
   const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(perfil.nivel)) : [];
-
-  const { dominados, aciertos, practicados } = numerosDePractica(progreso);
 
   // El porcentaje del curso es el del que manda en el banner. Con dos
   // cursos se enseña el de ese, no una media de los dos: una media de
@@ -175,16 +172,13 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           porcentajeCurso={porcentajeCurso}
           completadas={principal?.completadas ?? 0}
           total={principal?.total ?? 0}
-          dominados={dominados}
-          practicados={practicados}
-          aciertos={aciertos}
           nivel={perfil?.nivel ?? ""}
         />
 
         <PanelAlumno
           alumnoId={params.id}
           profesor={profesor}
-          tarjetas={tarjetas}
+          tarjeta={tarjeta}
           bloques={bloques}
           generadosIniciales={generados}
           esAdministrador={sesion.rol === "admin"}

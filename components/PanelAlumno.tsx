@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import type { Bloque } from "@/lib/data";
-import type { TarjetaModo } from "@/lib/modos";
+import type { TarjetaPractica } from "@/lib/modos";
 import {
   borrarProgresoLocal,
   hayProgresoLocal,
@@ -23,7 +23,7 @@ import TarjetasPractica from "@/components/TarjetasPractica";
 export default function PanelAlumno({
   alumnoId,
   profesor,
-  tarjetas,
+  tarjeta,
   bloques,
   generadosIniciales,
   esAdministrador,
@@ -31,7 +31,8 @@ export default function PanelAlumno({
   alumnoId: string;
   /** Nombre del profesor para el subtítulo. Vacío si no hay perfil. */
   profesor: string;
-  tarjetas: TarjetaModo[];
+  /** La tarjeta de generación, o null si no hay de dónde tirar. */
+  tarjeta: TarjetaPractica | null;
   bloques: Bloque[];
   generadosIniciales: Bloque[];
   /** Solo cambia lo que se pinta; lo que protege está en los guards. */
@@ -40,7 +41,6 @@ export default function PanelAlumno({
   const router = useRouter();
   const {
     estado,
-    modoActivo,
     etapa,
     progreso,
     tardando,
@@ -114,10 +114,9 @@ export default function PanelAlumno({
 
   return (
     <TarjetasPractica
-      tarjetas={tarjetas}
+      tarjeta={tarjeta}
       profesor={profesor}
       estado={estado}
-      modoActivo={modoActivo}
       etapa={etapa}
       progreso={progreso}
       tardando={tardando}

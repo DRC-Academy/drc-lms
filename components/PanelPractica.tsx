@@ -1,7 +1,7 @@
 "use client";
 
 import type { Bloque } from "@/lib/data";
-import type { AvisoFormulario, TarjetaModo } from "@/lib/modos";
+import type { AvisoFormulario, ResumenClase, TarjetaPractica } from "@/lib/modos";
 import { numerosDePractica } from "@/lib/progreso";
 import { usarGenerador } from "@/components/usarGenerador";
 import TarjetasGeneracion from "@/components/TarjetasGeneracion";
@@ -34,7 +34,9 @@ import Banner from "@/components/Banner";
  */
 export default function PanelPractica({
   alumnoId,
-  tarjetas,
+  tarjeta,
+  resumenClase,
+  conContexto,
   bloques,
   progreso,
   avance,
@@ -44,7 +46,12 @@ export default function PanelPractica({
   avisoFormulario,
 }: {
   alumnoId: string;
-  tarjetas: TarjetaModo[];
+  /** La tarjeta de generación, o null si no hay de dónde tirar. */
+  tarjeta: TarjetaPractica | null;
+  /** La tarjeta crema de arriba, ya redactada en el servidor. */
+  resumenClase: ResumenClase;
+  /** Si ya sabemos a qué se dedica: decide si se le invita a contarlo. */
+  conContexto: boolean;
   bloques: Bloque[];
   progreso: ProgresoBloques;
   avance: AvanceBloques;
@@ -58,7 +65,6 @@ export default function PanelPractica({
 }) {
   const {
     estado,
-    modoActivo,
     generando,
     etapa,
     // `progreso` ya es en esta pantalla el de los bloques terminados.
@@ -101,26 +107,6 @@ export default function PanelPractica({
 
   const { dominados, practicados } = numerosDePractica(progreso);
 
-  // La tarjeta crema de arriba resume el estado de la última clase. El
-  // dato —quién, qué y cuándo— viene redactado del servidor; lo que se
-  // añade aquí es la consecuencia, que es copy fijo.
-  const repaso = tarjetas.find((t) => t.modo === "repaso") ?? null;
-  const ultimaClase = repaso
-    ? repaso.espera
-      ? {
-          titulo: "Ya lo has repasado",
-          cuerpo: `${repaso.descripcion} En cuanto tengas la siguiente clase, preparamos el próximo bloque.`,
-        }
-      : {
-          titulo: "Tienes clase nueva",
-          cuerpo: `${repaso.descripcion} Ahí abajo puedes prepararte el bloque con lo que trabajasteis.`,
-        }
-    : {
-        titulo: "Todavía no hay clase que repasar",
-        cuerpo:
-          "En cuanto tu profesor analice tu primera clase, preparamos aquí un bloque con lo que trabajasteis.",
-      };
-
   return (
     <>
       <FilaDestacada
@@ -130,7 +116,7 @@ export default function PanelPractica({
         total={total}
         empezados={empezados}
         segmentos={segmentos}
-        ultimaClase={ultimaClase}
+        ultimaClase={resumenClase}
       />
 
       {/* Sin bloques no hay sesión que medir: cuatro casillas a cero no
@@ -149,14 +135,14 @@ export default function PanelPractica({
       )}
 
       <TarjetasGeneracion
-        tarjetas={tarjetas}
+        tarjeta={tarjeta}
         estado={estado}
-        modoActivo={modoActivo}
         etapa={etapa}
         progreso={progresoGeneracion}
         tardando={tardando}
         mensajeError={mensajeError}
         esEspera={esEspera}
+        conContexto={conContexto}
         onGenerar={generar}
         onReintentar={reintentar}
         urlFormulario={urlFormulario}

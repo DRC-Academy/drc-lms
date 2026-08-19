@@ -1,47 +1,32 @@
 "use client";
 
-import type { AvisoFormulario, ModoGeneracion, TarjetaModo } from "@/lib/modos";
+import type { AvisoFormulario, TarjetaPractica } from "@/lib/modos";
 import type { EtapaGeneracion } from "@/lib/generacion";
 import AvanceGeneracion from "@/components/AvanceGeneracion";
 
 export type EstadoGeneracion = "listo" | "generando" | "error";
 
 /**
- * "Tu práctica de hoy": de dónde puede salir el próximo bloque.
+ * "Tu práctica de hoy" en `/practica`: de dónde sale el próximo bloque.
  *
  * MISMA TARJETA QUE EN EL INICIO. Estas dos pantallas ofrecen lo mismo y
- * hasta ahora lo pintaban con dos paletas distintas —el inicio con
- * `marca-*` y esto con `drc-*`—, así que la práctica parecía de otro
- * producto. Ahora el punto de color, el fondo de cada modo y el botón
- * son los del inicio; lo único que cambia es que aquí las tarjetas
- * tienen la pantalla entera para ellas.
+ * durante un tiempo lo pintaron con dos paletas distintas, así que la
+ * práctica parecía de otro producto. Lo único que cambia aquí es que la
+ * tarjeta tiene la pantalla entera para ella.
  *
- * EL COLOR DISTINGUE EL MODO, no la urgencia: el punto verde es lo de
- * clase, el ámbar el examen y el de tinta su día a día. Los botones son
- * verdes en los tres —el ámbar no llega al contraste como fondo de texto
- * blanco y, sobre todo, tres llamadas de tres colores no se ordenan.
+ * UNA SOLA TARJETA. Antes eran hasta tres —una por modo— y el alumno
+ * elegía si hoy practicaba su clase, su examen o su trabajo. Ahora el
+ * bloque es las cuatro cosas a la vez y hay un botón; la descripción,
+ * que la redacta el servidor, es la que dice de qué está hecho el suyo.
+ *
+ * Con las tres tarjetas se ha ido el color por modo, que distinguía algo
+ * que ya no existe. Queda el punto verde y el botón verde.
  *
  * SIN MINUTOS EN NINGUNA PARTE. El subtítulo decía "cada bloque son
  * cinco minutos" y era una promesa que no depende de nosotros: cada
  * alumno tarda lo suyo, y ponerle reloj a la práctica solo sirve para
  * que quien va más despacio lo lea como un suspenso.
  */
-
-/**
- * El acento de cada modo: fondo de la tarjeta y punto.
- *
- * EL BOTÓN NO ESTÁ AQUÍ, y es lo que se acaba de arreglar. Cada modo
- * tenía el suyo —verde el de clase, verde profundo el de examen, tinta
- * el de contexto— y las tres tarjetas de una misma fila se leían como
- * tres controles distintos haciendo lo mismo. El botón es `.btn-verde`
- * en los tres; lo que distingue el modo es el punto y el fondo, que es
- * donde el color informa sin competir.
- */
-const ESTILO: Record<ModoGeneracion, { tarjeta: string; punto: string }> = {
-  repaso: { tarjeta: "border-marca-borde bg-white", punto: "bg-marca-verde" },
-  examen: { tarjeta: "border-marca-examenBorde bg-marca-examen", punto: "bg-marca-amarillo" },
-  contexto: { tarjeta: "border-marca-contextoBorde bg-marca-contexto", punto: "bg-marca-tinta" },
-};
 
 function IconoGirando() {
   return (
@@ -121,23 +106,22 @@ function TarjetaSinDatos({ url, aviso }: { url: string | null; aviso: AvisoFormu
 }
 
 export default function TarjetasGeneracion({
-  tarjetas,
+  tarjeta,
   estado,
-  modoActivo,
   etapa,
   progreso,
   tardando,
   mensajeError,
   esEspera,
+  conContexto,
   onGenerar,
   onReintentar,
   urlFormulario,
   avisoFormulario,
 }: {
-  tarjetas: TarjetaModo[];
+  /** Null cuando no hay ninguna fuente de la que tirar. */
+  tarjeta: TarjetaPractica | null;
   estado: EstadoGeneracion;
-  /** Modo que se está generando ahora mismo, o null si no hay ninguno. */
-  modoActivo: ModoGeneracion | null;
   /** Etapa que el servidor dice estar ejecutando. */
   etapa: EtapaGeneracion;
   /** De 0 a 95 mientras se espera; 100 solo con el bloque ya en la mano. */
@@ -147,7 +131,9 @@ export default function TarjetasGeneracion({
   mensajeError: string;
   /** El mensaje no es un fallo, es un "todavía no toca". */
   esEspera: boolean;
-  onGenerar: (modo: ModoGeneracion) => void;
+  /** Si ya sabemos a qué se dedica. Decide si se le invita a contarlo. */
+  conContexto: boolean;
+  onGenerar: () => void;
   onReintentar: () => void;
   /**
    * El enlace al formulario de Gestión, ya montado con el token del
@@ -161,23 +147,13 @@ export default function TarjetasGeneracion({
 }) {
   const generando = estado === "generando";
 
-  // Quien ya tiene alguna tarjeta pero no la de contexto puede desbloquearla.
-  // Se ofrece en una línea discreta, nunca como candado ni como requisito.
+  // Quien ya tiene tarjeta pero todavía no nos ha contado a qué se
+  // dedica puede mejorar lo que recibe. Se ofrece en una línea discreta,
+  // nunca como candado ni como requisito.
   //
   // Sin enlace la línea no se pinta: es una invitación de una frase, y
   // una invitación que no lleva a ningún sitio solo da envidia.
-  const puedeSumarContexto =
-    urlFormulario !== null &&
-    tarjetas.length > 0 &&
-    !tarjetas.some((tarjeta) => tarjeta.modo === "contexto");
-
-  // Dos tarjetas al 50%; con la tercera, tres calles cuando hay sitio.
-  const columnas =
-    tarjetas.length >= 3
-      ? "min-[900px]:grid-cols-2 min-[1200px]:grid-cols-3"
-      : tarjetas.length === 2
-        ? "min-[900px]:grid-cols-2"
-        : "grid-cols-1";
+  const puedeSumarContexto = urlFormulario !== null && tarjeta !== null && !conContexto;
 
   return (
     <section aria-labelledby="titulo-practica">
@@ -189,81 +165,67 @@ export default function TarjetasGeneracion({
           Tu práctica de hoy
         </h2>
         <p className="mt-1 text-pretty text-[14px] leading-[1.4] text-marca-gris lg:mt-0 lg:text-[15px]">
-          {tarjetas.length > 0
-            ? "Elige por dónde quieres tirar hoy."
+          {tarjeta
+            ? "Diez ejercicios, hechos con lo que sabemos de ti."
             : "En cuanto sepamos un poco más de ti, esto se llena de práctica hecha para ti."}
         </p>
       </div>
 
-      {tarjetas.length === 0 ? (
+      {tarjeta === null ? (
         <div className="mt-4">
           <TarjetaSinDatos url={urlFormulario} aviso={avisoFormulario} />
         </div>
       ) : (
         <>
-          {/* `items-stretch` y la descripción en `flex-1` dejan los botones
-              a la misma altura: los textos vienen de la API y tienen dos,
-              tres o cuatro líneas según el alumno. */}
-          <ul className={`mt-4 grid grid-cols-1 items-stretch gap-3 lg:gap-5 ${columnas}`}>
-            {tarjetas.map((tarjeta) => {
-              const estilo = ESTILO[tarjeta.modo];
-              const activa = generando && modoActivo === tarjeta.modo;
+          <article className="mt-4 flex flex-col rounded-[14px] border border-marca-borde bg-white p-[18px] min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-6 lg:p-6">
+            <div className="min-[900px]:min-w-0 min-[900px]:flex-1">
+              <p className="flex items-center gap-2">
+                <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-marca-verde" />
+                <span className="text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-marca-gris">
+                  {tarjeta.etiqueta}
+                </span>
+              </p>
 
-              return (
-                <li key={tarjeta.modo} className="flex">
-                  <article
-                    className={`flex w-full flex-col rounded-[14px] border p-[18px] lg:p-6 ${estilo.tarjeta}`}
-                  >
-                    <p className="flex items-center gap-2">
-                      <span aria-hidden className={`h-[7px] w-[7px] rounded-full ${estilo.punto}`} />
-                      <span className="text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-marca-gris">
-                        {tarjeta.etiqueta}
-                      </span>
-                    </p>
+              <h3 className="mt-3 text-pretty font-display text-[20px] font-bold leading-[1.2] text-marca-tinta">
+                {tarjeta.titulo}
+              </h3>
 
-                    <h3 className="mt-3 text-pretty font-display text-[20px] font-bold leading-[1.2] text-marca-tinta">
-                      {tarjeta.titulo}
-                    </h3>
+              <p className="mt-2 text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia">
+                {tarjeta.descripcion}
+              </p>
 
-                    <p className="mt-2 text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia">
-                      {tarjeta.descripcion}
-                    </p>
+              {/* Mientras no toca, la tarjeta cuenta de qué depende. Va
+                  antes del botón para que se lea primero el porqué y
+                  después el botón apagado, y no al revés. */}
+              {tarjeta.espera && (
+                <p className="mt-2.5 text-[13.5px] leading-[1.5] text-marca-gris">
+                  {tarjeta.espera.nota}
+                </p>
+              )}
+            </div>
 
-                    {/* Mientras no toca, la tarjeta cuenta de qué depende.
-                        Va antes del botón para que se lea primero el porqué
-                        y después el botón apagado, y no al revés. */}
-                    {tarjeta.espera && (
-                      <p className="mt-2.5 text-[13.5px] leading-[1.5] text-marca-gris">
-                        {tarjeta.espera.nota}
-                      </p>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => onGenerar(tarjeta.modo)}
-                      disabled={generando || tarjeta.espera !== null}
-                      aria-disabled={tarjeta.espera !== null}
-                      aria-live="polite"
-                      className={`mt-5 flex min-h-[46px] w-full items-center justify-center rounded-full px-6 text-[15px] font-semibold leading-[1.1] transition-colors disabled:cursor-default min-[900px]:mt-auto ${
-                        tarjeta.espera
-                          ? "bg-marca-pista text-marca-grisInactivo"
-                          : "btn-verde disabled:cursor-wait disabled:opacity-60"
-                      }`}
-                    >
-                      {activa && <IconoGirando />}
-                      <span className={activa ? "ml-2" : ""}>
-                        {activa ? "Preparando…" : (tarjeta.espera?.etiquetaBoton ?? tarjeta.llamada)}
-                      </span>
-                    </button>
-                  </article>
-                </li>
-              );
-            })}
-          </ul>
+            <button
+              type="button"
+              onClick={onGenerar}
+              disabled={generando || tarjeta.espera !== null}
+              aria-disabled={tarjeta.espera !== null}
+              aria-live="polite"
+              className={`mt-5 flex min-h-[46px] w-full items-center justify-center rounded-full px-6 text-[15px] font-semibold leading-[1.1] transition-colors disabled:cursor-default min-[900px]:mt-0 min-[900px]:w-auto min-[900px]:shrink-0 ${
+                tarjeta.espera
+                  ? "bg-marca-pista text-marca-grisInactivo"
+                  : "btn-verde disabled:cursor-wait disabled:opacity-60"
+              }`}
+            >
+              {generando && <IconoGirando />}
+              <span className={generando ? "ml-2" : ""}>
+                {generando ? "Preparando…" : (tarjeta.espera?.etiquetaBoton ?? tarjeta.llamada)}
+              </span>
+            </button>
+          </article>
 
           {puedeSumarContexto && (
             <p className="mt-3.5 text-[14px] leading-[1.5] text-marca-gris">
-              ¿Nos cuentas a qué te dedicas? Con eso te preparamos también ejercicios con tus
+              ¿Nos cuentas a qué te dedicas? Con eso ambientamos parte de tus ejercicios en tus
               situaciones del día a día.{" "}
               <EnlaceFormulario
                 url={urlFormulario}
@@ -274,9 +236,7 @@ export default function TarjetasGeneracion({
         </>
       )}
 
-      {generando && modoActivo && (
-        <AvanceGeneracion modo={modoActivo} etapa={etapa} progreso={progreso} tardando={tardando} />
-      )}
+      {generando && <AvanceGeneracion etapa={etapa} progreso={progreso} tardando={tardando} />}
 
       {estado === "error" && (
         <div className="aparece mt-4 rounded-[14px] border border-marca-examenBorde bg-marca-examen px-5 py-4">
@@ -284,10 +244,7 @@ export default function TarjetasGeneracion({
             {esEspera ? "Por ahora, ya está" : "Esta vez no ha salido."}
           </p>
           <p className="mt-1 text-[14px] leading-[1.5] text-marca-gris">{mensajeError}</p>
-          {/* Sin botón cuando es una espera: reintentar daría lo mismo.
-              El reintento vuelve al mismo modo que falló, que obligar a
-              buscar otra vez la tarjeta convierte un fallo nuestro en
-              trabajo suyo. */}
+          {/* Sin botón cuando es una espera: reintentar daría lo mismo. */}
           {!esEspera && (
             <button
               type="button"
