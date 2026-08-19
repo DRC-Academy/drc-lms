@@ -124,6 +124,24 @@ export function construirSistema(nivel: Bloque["nivel"]): string {
     "participio mal formado, orden de palabras del español. Nunca opciones absurdas, ni fáciles de descartar a ojo,",
     "ni tres opciones evidentemente malas alrededor de una buena. Si un distractor no lo elegiría un alumno real, cámbialo.",
     "",
+    "Y un distractor tiene que estar MAL DE VERDAD. Dos casos concretos que no lo están:",
+    "",
+    "1. CONCORDANCIA DE NOMBRES COLECTIVOS, nunca. 'The team has finished' y 'the team have finished' son las DOS",
+    "   correctas: en inglés británico e irlandés los nombres colectivos ('the team', 'the board', 'the company',",
+    "   'the government', 'the staff') admiten verbo en singular y en plural. La academia es irlandesa, así que",
+    "   marcar una de las dos como fallo es enseñar mal. Si necesitas un distractor en una frase con nombre",
+    "   colectivo, que sea de otra cosa: el tiempo verbal, la preposición, el participio.",
+    "",
+    "2. VARIEDADES Y REGISTROS DEL INGLÉS. Si una opción es normal en inglés americano, en registro formal o en",
+    "   habla corriente, no es un fallo aunque no sea la que tú elegirías. 'Take a shower' junto a 'have a shower',",
+    "   'in which' junto a 'where': las dos valen.",
+    "",
+    "LAS CUATRO OPCIONES SE TIENEN QUE PODER DISTINGUIR DE UN VISTAZO.",
+    "Tres opciones que solo cambian en una letra o en el verbo auxiliar ('nor his colleague is' / 'nor his colleague are'",
+    "/ 'nor his colleague') no son cuatro caminos que el alumno pueda razonar: son ruido, y el ejercicio se convierte en",
+    "un juego de detectar erratas. Cada opción tiene que representar UNA idea equivocada distinta y reconocible.",
+    "Esto importa el doble en A1 y A2, donde el alumno todavía lee palabra por palabra.",
+    "",
     "VARIEDAD DENTRO DEL BLOQUE",
     `Son ${REPARTO.reconocer} 'reconocer' y ${REPARTO.transformar} 'transformar', no dos de cada uno repetidos. Cada uno ataca un punto distinto:`,
     "si dos ejercicios se resuelven con la misma regla y el mismo razonamiento, el segundo sobra. Reescríbelo apuntando a otra cosa.",
@@ -419,6 +437,19 @@ function repartoDelBloque(materia: MateriaPrima): string[] {
       conClase ? "justo lo que trabajó en ella" : "el punto principal del bloque"
     }.`
   );
+
+  if (conClase) {
+    // El material de la clase trae de todo: el tema gramatical, pero
+    // también el texto o el vídeo con el que se practicó. Sin decir nada,
+    // el modelo se agarra a lo segundo —es lo más vistoso— y sale una
+    // tarea sobre el cantante del listening en la que se puede responder
+    // sin tocar el punto de lengua que la clase trabajó.
+    lineas.push(
+      "  Y que trabaje el CONTENIDO de la clase, no la anécdota con la que se practicó. Si en clase se vio el pasado",
+      "  simple con un texto sobre un músico, la tarea pide usar el pasado simple, no contar cosas del músico: ese",
+      "  texto era el vehículo, no la materia. Bien está usarlo de ambientación; mal está que sea el tema."
+    );
+  }
 
   if (hayContexto(materia)) {
     lineas.push(
