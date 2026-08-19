@@ -16,10 +16,11 @@ import BloquesGenerados from "@/components/BloquesGenerados";
 /**
  * El cuerpo del inicio: la rejilla de dos columnas y lo que va debajo.
  *
- * ES CLIENTE PORQUE LA GENERACIÓN LO ES, pero la franja del curso no
- * tiene por qué serlo: entra por `banner` ya renderizada en el servidor.
- * Es lo que permite que siga siendo un componente de servidor y a la vez
- * comparta fila con una tarjeta que necesita estado.
+ * ES CLIENTE PORQUE LA GENERACIÓN LO ES, pero el curso y el diploma no
+ * tienen por qué serlo: entran por `banner` y `diploma` ya renderizados
+ * en el servidor. Es lo que permite que la franja siga siendo un
+ * componente de servidor y a la vez comparta fila con una tarjeta que
+ * necesita estado.
  *
  * LA REJILLA VIVE AQUÍ y no en la página por una razón práctica: la
  * columna derecha y la sección de abajo comparten el mismo estado de
@@ -35,6 +36,7 @@ export default function PanelAlumno({
   idsTerminados,
   esAdministrador,
   banner,
+  diploma,
 }: {
   alumnoId: string;
   /** La tarjeta de generación, o null si no hay de dónde tirar. */
@@ -47,6 +49,8 @@ export default function PanelAlumno({
   esAdministrador: boolean;
   /** La franja del curso, renderizada en el servidor. */
   banner: ReactNode;
+  /** La fila del diploma, renderizada en el servidor. Null sin curso. */
+  diploma: ReactNode;
 }) {
   const router = useRouter();
   const {
@@ -135,10 +139,12 @@ export default function PanelAlumno({
           conColumna ? "lg:grid-cols-[minmax(0,1fr)_416px]" : "lg:grid-cols-1"
         }`}
       >
-        {/* IZQUIERDA: el curso. El diploma tuvo aquí una fila fina hasta
-            que pasó a ser la barra fija de la cabecera, que lo enseña en
-            todas las pantallas en vez de solo en esta. */}
-        <div className="flex flex-col gap-3">{banner}</div>
+        {/* IZQUIERDA: el curso, y pegado debajo el diploma. La acción
+            arriba y el motivo justo después. */}
+        <div className="flex flex-col gap-3">
+          {banner}
+          {diploma}
+        </div>
 
         {conColumna && (
           <TarjetaGeneracion

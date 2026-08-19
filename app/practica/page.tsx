@@ -16,8 +16,7 @@ import {
   leerProgresoAlumno,
   leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
-import { cursosDelInicio } from "@/lib/cursos-servidor";
-import { calcularDiploma } from "@/lib/diploma";
+import { cursosAsignados } from "@/lib/cursos-servidor";
 import Cabecera from "@/components/Cabecera";
 import PanelPractica from "@/components/PanelPractica";
 
@@ -64,28 +63,17 @@ export default async function PaginaPractica() {
   const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion);
   const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(perfil.nivel)) : [];
 
-  // Para que la cabecera pinte "Mi curso" y la barra fina del diploma.
-  //
-  // `cursosDelInicio` y no `cursosAsignados`: además de los cursos trae
-  // su progreso, que es lo que la barra cuenta. Son un par de consultas
-  // más en un paso que ya existía, no un viaje nuevo.
-  const estadosCurso = perfil ? await cursosDelInicio(alumnoId, perfil.plan, perfil.nivel) : [];
-  const principal = estadosCurso[0];
-
-  // Mismo criterio que en el inicio: sin curso no hay barra.
-  const barraDiploma =
-    calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0).estado === "sin-curso"
-      ? null
-      : { completadas: principal?.completadas ?? 0, total: principal?.total ?? 0 };
+  // Solo para que la cabecera pueda pintar "Mi curso" sin cambiar de
+  // forma entre pantallas.
+  const cursos = perfil ? await cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : [];
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
       <Cabecera
         nombre={perfil?.nombre.trim() || undefined}
         alumnoId={alumnoId}
-        cursoSlug={principal?.curso.slug ?? null}
+        cursoSlug={cursos[0]?.slug ?? null}
         seccion="practica"
-        diploma={barraDiploma}
       />
 
       {/* El hueco de abajo es para la barra fija: 120px es lo que mide con

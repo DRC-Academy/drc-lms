@@ -15,6 +15,7 @@ import { calcularDiploma } from "@/lib/diploma";
 import { PALABRA_NIVEL } from "@/components/Casillas";
 import Cabecera from "@/components/Cabecera";
 import BannerCurso from "@/components/BannerCurso";
+import FilaDiploma from "@/components/FilaDiploma";
 import PanelAlumno from "@/components/PanelAlumno";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
@@ -68,17 +69,6 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   const principal = estadosCurso[0];
   const diploma = calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0);
 
-  // ---------------------------------------------------------------
-  // EL DIPLOMA YA NO TIENE FILA PROPIA AQUÍ
-  //
-  // La tuvo: una fila fina bajo la franja del curso. Se ha ido porque
-  // ahora hay una barra fija que lo enseña en todas las pantallas y en
-  // todo momento, y el mismo número dos veces en la misma pantalla no es
-  // insistir, es hacer dudar de cuál de los dos es el bueno.
-  //
-  // El cálculo se queda: es lo que alimenta la barra de la cabecera.
-  // ---------------------------------------------------------------
-
   const nombre = perfil?.nombre.trim() ?? "";
   const profesor = perfil?.profesor.trim() ?? "";
 
@@ -130,12 +120,6 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   const nivelLimpio = (perfil?.nivel ?? "").trim().toUpperCase();
   const palabraNivel = PALABRA_NIVEL[nivelLimpio] ?? "";
 
-  // Sin curso no hay barra. Es el mismo criterio que tenía la fila.
-  const barraDiploma =
-    diploma.estado === "sin-curso"
-      ? null
-      : { completadas: principal?.completadas ?? 0, total: principal?.total ?? 0 };
-
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
       <Cabecera
@@ -143,7 +127,6 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
         alumnoId={sesion.alumnoId}
         cursoSlug={estadosCurso[0]?.curso.slug ?? null}
         seccion="inicio"
-        diploma={barraDiploma}
       />
 
       <main className="mx-auto w-full max-w-contenido flex-1 px-4 pb-8 pt-[18px] lg:px-9 lg:pb-11 lg:pt-8">
@@ -215,6 +198,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}
           banner={<BannerCurso estados={estadosCurso} conLateral={tarjeta !== null} />}
+          diploma={<FilaDiploma estado={diploma} tituloCurso={principal?.curso.titulo ?? ""} />}
         />
 
       </main>
