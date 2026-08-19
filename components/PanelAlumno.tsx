@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { Bloque } from "@/lib/data";
 import type { TarjetaPractica } from "@/lib/modos";
 import {
@@ -10,37 +10,52 @@ import {
   recogerProgresoLocal,
 } from "@/lib/migracion-local";
 import { usarGenerador } from "@/components/usarGenerador";
-import TarjetasPractica from "@/components/TarjetasPractica";
+import TarjetaGeneracion from "@/components/TarjetaGeneracion";
+import BloquesGenerados from "@/components/BloquesGenerados";
 
 /**
- * La parte del inicio que necesita ser cliente: las tarjetas de
- * generación y la migración del progreso que quedó en el navegador.
+ * El cuerpo del inicio: la rejilla de dos columnas y lo que va debajo.
  *
- * El saludo, el banner del curso, la tira de estadísticas y la
- * invitación al perfil los pinta el servidor desde
- * `app/alumno/[id]/page.tsx`, y la lista de bloques vive en `/practica`.
+ * ES CLIENTE PORQUE LA GENERACIÓN LO ES, pero el curso y el diploma no
+ * tienen por qué serlo: entran por `banner` y `diploma` ya renderizados
+ * en el servidor. Es lo que permite que la franja siga siendo un
+ * componente de servidor y a la vez comparta fila con una tarjeta que
+ * necesita estado.
+ *
+ * LA REJILLA VIVE AQUÍ y no en la página por una razón práctica: la
+ * columna derecha y la sección de abajo comparten el mismo estado de
+ * generación —el bloque que aparece abajo es el que produce el botón de
+ * arriba—, y partirlas entre dos componentes obligaría a subir ese
+ * estado a la página, que es de servidor.
  */
 export default function PanelAlumno({
   alumnoId,
-  profesor,
   tarjeta,
   bloques,
   generadosIniciales,
+  idsTerminados,
   esAdministrador,
+  banner,
+  diploma,
 }: {
   alumnoId: string;
-  /** Nombre del profesor para el subtítulo. Vacío si no hay perfil. */
-  profesor: string;
   /** La tarjeta de generación, o null si no hay de dónde tirar. */
   tarjeta: TarjetaPractica | null;
   bloques: Bloque[];
   generadosIniciales: Bloque[];
+  /** Bloques que ya ha cerrado: dejan de salir en el inicio. */
+  idsTerminados: string[];
   /** Solo cambia lo que se pinta; lo que protege está en los guards. */
   esAdministrador: boolean;
+  /** La franja del curso, renderizada en el servidor. */
+  banner: ReactNode;
+  /** La fila del diploma, renderizada en el servidor. Null sin curso. */
+  diploma: ReactNode;
 }) {
   const router = useRouter();
   const {
     estado,
+    generando,
     etapa,
     progreso,
     tardando,
@@ -112,26 +127,54 @@ export default function PanelAlumno({
     })();
   }, [alumnoId, esAdministrador, router]);
 
+  // Sin tarjeta que ofrecer, la columna derecha desaparece y la franja
+  // pasa a ancho completo. Es el mismo criterio que tenía la invitación
+  // al perfil cuando vivía en ese hueco.
+  const conColumna = tarjeta !== null;
+
   return (
-    <TarjetasPractica
-      tarjeta={tarjeta}
-      profesor={profesor}
-      estado={estado}
-      etapa={etapa}
-      progreso={progreso}
-      tardando={tardando}
-      mensajeError={mensajeError}
-      esEspera={esEspera}
-      // Se le pasan todos los generados —también los de días anteriores—
-      // y aparte los ids de esta visita, que son los que llevan sello.
-      // El recorte a los que caben lo hace el propio componente.
-      generados={generados}
-      idsNuevos={recienGenerados.map((bloque) => bloque.id)}
-      alumnoId={alumnoId}
-      totalPractica={todos.length}
-      zonaNuevos={zonaNuevos}
-      onGenerar={generar}
-      onReintentar={reintentar}
-    />
+    <>
+      <div
+        className={`grid items-start gap-3 lg:gap-5 ${
+          conColumna ? "lg:grid-cols-[minmax(0,1fr)_416px]" : "lg:grid-cols-1"
+        }`}
+      >
+        {/* IZQUIERDA: el curso, y pegado debajo el diploma. La acción
+            arriba y el motivo justo después. */}
+        <div className="flex flex-col gap-3">
+          {banner}
+          {diploma}
+        </div>
+
+        {conColumna && (
+          <TarjetaGeneracion
+            tarjeta={tarjeta}
+            estado={estado}
+            etapa={etapa}
+            progreso={progreso}
+            tardando={tardando}
+            mensajeError={mensajeError}
+            esEspera={esEspera}
+            onGenerar={generar}
+            onReintentar={reintentar}
+          />
+        )}
+      </div>
+
+      <div className="mt-[26px] lg:mt-9">
+        <BloquesGenerados
+          bloques={generados}
+          idsNuevos={recienGenerados.map((bloque) => bloque.id)}
+          idsTerminados={idsTerminados}
+          alumnoId={alumnoId}
+          generando={generando}
+          // El botón de arriba se puede pulsar: decide si el hueco vacío
+          // lo señala o cuenta de qué depende.
+          puedeGenerar={tarjeta !== null && tarjeta.espera === null}
+          totalPractica={todos.length}
+          zonaRef={zonaNuevos}
+        />
+      </div>
+    </>
   );
 }

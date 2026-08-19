@@ -15,7 +15,7 @@ import { calcularDiploma } from "@/lib/diploma";
 import { PALABRA_NIVEL } from "@/components/Casillas";
 import Cabecera from "@/components/Cabecera";
 import BannerCurso from "@/components/BannerCurso";
-import AnilloDiploma from "@/components/AnilloDiploma";
+import FilaDiploma from "@/components/FilaDiploma";
 import PanelAlumno from "@/components/PanelAlumno";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
@@ -94,24 +94,29 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   // ---------------------------------------------------------------
   // LA COLUMNA DE LA DERECHA
   //
-  // Era la invitación a completar el perfil y ahora es el diploma. La
-  // invitación no se ha perdido: vive en «Para ti», donde además está
-  // pegada a lo que promete —los ejercicios ambientados en su trabajo—
-  // en vez de suelta al lado de un curso con el que no tiene que ver.
+  // Fue de la invitación al perfil, luego del anillo del diploma, y ahora
+  // es de LA PRÁCTICA. Cada mudanza tuvo el mismo motivo: quien la ocupa
+  // es lo que más gana por estar a la altura de los ojos, y la práctica
+  // es lo que hace distinto al producto.
   //
-  // El hueco se lo queda el diploma porque compite mejor por él: la
-  // invitación le habla a quien todavía no nos ha contado nada, y el
-  // diploma a todo el que tenga un curso, que son 165 de 168.
+  // La invitación no se ha perdido: vive en «Para ti», pegada a lo que
+  // promete. El diploma tampoco: encogió a una fila y se puso debajo de
+  // la franja, que es donde el dato tiene sentido —lo que avanza el curso
+  // es lo que acerca el diploma—.
   //
-  // Sin curso no hay anillo y el banner pasa a ancho completo, igual que
-  // antes hacía sin invitación.
+  // Quién ocupa la columna lo decide «PanelAlumno», que es el que sabe si
+  // hay tarjeta que ofrecer.
   // ---------------------------------------------------------------
-  const conAnillo = diploma.estado !== "sin-curso";
 
-  // El nivel MCER, que estuvo dentro del banner del diploma mientras el
-  // banner era ancho. En el anillo no cabe sin robarle sitio a la cifra,
-  // así que sube al saludo, que es donde se lee lo que el alumno ES
-  // —quién eres, a qué altura vas— y no lo que le queda por hacer.
+  // Los bloques que ya cerró con un intento completo. El inicio enseña el
+  // más reciente que le quede PENDIENTE y lo retira en cuanto lo hace,
+  // que es lo que evita que se reencuentre trabajo ya terminado.
+  const idsTerminados = Object.keys(progreso);
+
+  // El nivel MCER. Vivió dentro de la tarjeta del diploma mientras esta
+  // era ancha; en una fila de 50px no cabe sin robarle sitio a la cifra,
+  // así que se queda en el saludo, que es donde se lee lo que el alumno
+  // ES —quién eres, a qué altura vas— y no lo que le queda por hacer.
   const nivelLimpio = (perfil?.nivel ?? "").trim().toUpperCase();
   const palabraNivel = PALABRA_NIVEL[nivelLimpio] ?? "";
 
@@ -182,29 +187,18 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           </p>
         </div>
 
-        {/* La rejilla principal: el banner manda y el diploma le hace
-            sitio a la derecha. En móvil no hay dos columnas, así que el
-            anillo cae solo debajo del banner, que es donde tiene que
-            estar: primero adónde vas, después cuánto te queda. */}
-        <div
-          className={`grid items-start gap-3 lg:gap-5 ${
-            conAnillo ? "lg:grid-cols-[minmax(0,1fr)_340px]" : "lg:grid-cols-1"
-          }`}
-        >
-          <BannerCurso estados={estadosCurso} conLateral={conAnillo} />
-
-          {conAnillo && (
-            <AnilloDiploma estado={diploma} tituloCurso={principal?.curso.titulo ?? ""} />
-          )}
-        </div>
-
+        {/* La franja y el diploma entran como piezas ya renderizadas: los
+            pinta el servidor y los coloca «PanelAlumno», que es quien
+            monta la rejilla porque la columna derecha necesita estado. */}
         <PanelAlumno
           alumnoId={params.id}
-          profesor={profesor}
           tarjeta={tarjeta}
           bloques={bloques}
           generadosIniciales={generados}
+          idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}
+          banner={<BannerCurso estados={estadosCurso} conLateral={tarjeta !== null} />}
+          diploma={<FilaDiploma estado={diploma} tituloCurso={principal?.curso.titulo ?? ""} />}
         />
 
       </main>

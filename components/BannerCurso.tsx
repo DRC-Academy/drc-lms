@@ -16,8 +16,9 @@ import Banner from "@/components/Banner";
  *
  * La forma la pone `components/Banner.tsx`: este archivo decide QUÉ se
  * cuenta —qué lección toca, qué llamada, qué progreso— y el banner cómo
- * se ve. Antes esto era una franja en tinta oscura con botón verde y era
- * el único sitio de la aplicación donde se pintaba así.
+ * se ve. Hoy eso es una franja en tinta con botón verde; pasó por el
+ * verde de marca con botón amarillo y ha vuelto, porque el verde no
+ * puede ser a la vez el fondo y el color de «pulsa aquí».
  *
  * Se renderiza en el servidor: no tiene estado ni interacción.
  */

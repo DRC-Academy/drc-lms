@@ -269,12 +269,15 @@
      Todo lo aplica `components/Banner.tsx`. Ninguna página define su
      propio fondo, radio o sombra de banner.
      --------------------------------------------------------------- */
+  /* Plano, no degradado. El degradado existía para dar cuerpo a un verde
+     saturado; la tinta no lo necesita, y una superficie lisa es una cosa
+     menos que mantener sincronizada con la marca. */
   .banner {
-    background: linear-gradient(180deg, theme("colors.banner.alto") 0%, theme("colors.banner.bajo") 100%);
-    box-shadow: 0 16px 34px rgba(15, 122, 55, 0.18);
+    background: theme("colors.banner.fondo");
+    box-shadow: 0 16px 34px rgba(18, 33, 26, 0.16);
   }
 
-  /* El verde de marca no se ve sobre el verde del banner: el anillo de
+  /* El verde de marca no se ve sobre la tinta del banner: el anillo de
      foco pasa a blanco mientras se está dentro de uno. */
   .banner :focus-visible {
     outline: 2px solid #FFFFFF;
@@ -282,30 +285,34 @@
   }
 
   /* Segunda acción de un banner: enlace blanco subrayado, nunca un
-     segundo botón. Un solo amarillo por franja. */
+     segundo botón. Un solo botón por franja. */
   .banner a:not(.banner-cta) {
     text-decoration: underline;
     text-underline-offset: 2px;
   }
 
   .banner a:not(.banner-cta):hover {
-    color: theme("colors.banner.ambar");
+    color: theme("colors.banner.etiqueta");
   }
 
   /* ---------------------------------------------------------------
      EL BOTÓN DEL BANNER
 
-     Amarillo, y solo dentro del verde. El color del texto es una
-     variable a propósito: la marca lo quiere blanco, pero blanco sobre
-     este amarillo da 1,9:1 y no pasa AA ni de lejos. El verde profundo
-     da 6,2:1 y sigue leyéndose como el botón amarillo de siempre. Para
-     volver al blanco se cambia esta línea y nada más.
+     Verde otra vez, después de una temporada en amarillo. Aquel amarillo
+     no era una decisión de marca: era lo único que destacaba sobre un
+     fondo verde sin ser verde sobre verde. Con la franja en tinta la
+     colisión no existe y el botón vuelve a ser el de toda la aplicación.
+
+     Es un verde MÁS CLARO que `marca-verde`, eso sí: el de acción está
+     pensado para destacar sobre blanco y sobre la tinta se apaga. El
+     color del texto sigue siendo una variable porque ese verde claro
+     pide tinta encima —7,1:1—, y el blanco daría 2,3:1.
      --------------------------------------------------------------- */
   .banner-cta {
     --banner-cta-fg: theme("colors.banner.ctaTexto");
     background: theme("colors.banner.cta");
     color: var(--banner-cta-fg);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
   }
 
   .banner-cta:hover {

@@ -15,17 +15,17 @@ import type { CSSProperties, ReactNode } from "react";
  * `.banner-cta` (ver `globals.css`) y aquí solo se decide la forma.
  * NINGUNA PÁGINA VUELVE A DEFINIR SU PROPIO FONDO DE BANNER.
  *
- * EL BOTÓN ES AMARILLO, Y ES LA EXCEPCIÓN DE TODA LA APLICACIÓN. Fuera
- * de aquí las acciones son verdes y el amarillo es acento —etiquetas,
- * chips, sellos—. Dentro del verde se invierte: un botón verde sobre
- * fondo verde no es un botón, es un rectángulo. Por eso la regla se
- * enuncia al revés y no admite matices: amarillo solo dentro del verde,
- * verde en todo lo demás. Las tarjetas blancas y crema siguen con el
- * suyo.
+ * LA FRANJA ES TINTA, NO VERDE, y con eso se cayó la única excepción de
+ * color que tenía la aplicación. Mientras el fondo era verde de marca,
+ * el botón tenía que ser amarillo —un botón verde sobre fondo verde no
+ * es un botón, es un rectángulo— y había que enunciar la regla al revés
+ * en cada archivo que la tocara. Sobre tinta el botón vuelve a ser
+ * verde, igual que en el resto de la aplicación, y el amarillo se queda
+ * donde siempre debió estar: de acento, en sellos y chips.
  *
  * UN SOLO BOTÓN POR BANNER. La segunda acción, si hace falta, es un
  * enlace blanco subrayado —lo estiliza `globals.css`—, porque dos
- * botones amarillos en la misma franja no se ordenan.
+ * botones en la misma franja no se ordenan.
  *
  * EL BANNER NO ES CLICABLE ENTERO. Lo accionable es el botón, y su
  * nombre accesible lleva de qué va ("Continuar Estilo indirecto"): una
@@ -194,8 +194,8 @@ export default function Banner({
 function Eyebrow({ children }: { children: ReactNode }) {
   return (
     <p className="flex items-center gap-2">
-      <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-banner-ambar" />
-      <span className="text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-banner-ambar">
+      <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-banner-etiqueta" />
+      <span className="text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-banner-etiqueta">
         {children}
       </span>
     </p>
