@@ -38,7 +38,7 @@ import { revisarBloque, type Revision } from "@/lib/revisor";
 import { guardarBloqueGenerado, leerUltimaGeneracion } from "@/lib/progreso-servidor";
 import { calcularDisponibilidad, comoFecha } from "@/lib/limites";
 import { abrirPlazo, conLimite, conLimiteOAlternativa, describir, type Plazo } from "@/lib/tiempo";
-import { TIPO_FLUJO, type EventoGeneracion } from "@/lib/generacion";
+import { TIPO_FLUJO, type EventoGeneracion, type Origen } from "@/lib/generacion";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -112,6 +112,31 @@ const INTENTOS = 2;
 
 /** Lo que se reserva para el guardado y el cierre del flujo. */
 const RESERVA_FINAL_MS = 6_000;
+
+/**
+ * Deja constancia de un guardado que no salió.
+ *
+ * NO CORTA LA RESPUESTA, y eso no cambia: llegados a ese punto el bloque
+ * ya está generado y pagado, y dejar al alumno con el spinner después de
+ * cincuenta segundos sería peor que perder la fila.
+ *
+ * Lo que cambia es que ahora se ve. El aviso de `guardarBloqueGenerado`
+ * se pierde entre los de una petición larga, y este fallo tiene una
+ * consecuencia que no se parece a un aviso: el alumno practica un bloque
+ * que al recargar no existe. Pasó de verdad —una CHECK de `modo` sin
+ * migrar— y no se notó hasta que alguien fue a buscar la fila a mano.
+ *
+ * El marcador va en mayúsculas y con el motivo delante para que se pueda
+ * filtrar en los logs de la plataforma sin leerlos enteros.
+ */
+function avisarGuardadoPerdido(traza: Traza, origen: Origen, bloqueId: string) {
+  traza("guardado:PERDIDO", `${origen} · ${bloqueId}`);
+  console.error(
+    `[generar-bloque] BLOQUE NO GUARDADO (${origen}) · ${bloqueId} — el alumno lo va a ver ` +
+      "y al recargar no estará. Mira el aviso de [progreso] justo encima: si habla de " +
+      "bloques_generados_modo_valido, falta la migración de supabase/lms-esquema.sql."
+  );
+}
 
 // `Origen` y la forma de la respuesta viven ahora en `lib/generacion.ts`,
 // que es el contrato que comparten esta ruta y el cliente que la lee.
@@ -760,7 +785,7 @@ export async function POST(peticion: Request) {
         // dejar al alumno con el spinner después de esperarlo todo.
         traza("guardado:ia");
         emitir({ tipo: "etapa", etapa: "guardando", ms: plazoPeticion.transcurrido() });
-        await conLimiteOAlternativa(
+        const guardado = await conLimiteOAlternativa(
           // El veredicto MÁS cuántos intentos costó. Hoy `intentos` es
           // siempre 1 —no hay regeneración— y se sigue guardando porque
           // es lo que distinguirá las filas de ahora de las de cuando
@@ -777,6 +802,7 @@ export async function POST(peticion: Request) {
           "guardarBloqueGenerado(ia)",
           false
         );
+        if (!guardado) avisarGuardadoPerdido(traza, "ia", bloque.id);
         traza("salida:ia");
         emitir({ tipo: "listo", bloque, origen: "ia" });
         return;
@@ -801,12 +827,13 @@ export async function POST(peticion: Request) {
     }
 
     const bloque = conIdPropio(bloqueDeBanco(nivel, titulosExcluidos));
-    await conLimiteOAlternativa(
+    const guardadoBanco = await conLimiteOAlternativa(
       guardarBloqueGenerado(alumnoId, bloque, MODO_ACTUAL, "banco", null, porEquipo),
       TIEMPO_BASE_MS,
       "guardarBloqueGenerado(banco)",
       false
     );
+    if (!guardadoBanco) avisarGuardadoPerdido(traza, "banco", bloque.id);
     traza("salida:banco");
     emitir({ tipo: "listo", bloque, origen: "banco" });
   });
