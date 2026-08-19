@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import BarraDiploma from "@/components/BarraDiploma";
 import ChatAyuda from "@/components/ChatAyuda";
 
 export type SeccionActiva = "inicio" | "curso" | "practica";
@@ -71,12 +72,26 @@ export type ContextoCurso = {
   total: number;
 };
 
+/**
+ * El avance hacia el diploma, para la barra fina.
+ *
+ * Lo pasa quien tiene los números a mano y NO se pasa dentro del curso:
+ * allí `contexto` ya lleva el mismo "12 de 191" en la propia cabecera, y
+ * repetirlo dos centímetros más abajo sería la tercera copia del mismo
+ * dato en la misma pantalla.
+ */
+export type ProgresoDiploma = {
+  completadas: number;
+  total: number;
+};
+
 export default function Cabecera({
   nombre,
   alumnoId,
   cursoSlug,
   seccion,
   contexto,
+  diploma,
 }: {
   nombre?: string;
   /** El alumno de la sesión. null en el equipo: no navega por secciones. */
@@ -84,6 +99,12 @@ export default function Cabecera({
   /** El curso que abre "Mi curso". Sin él, el enlace no se pinta. */
   cursoSlug?: string | null;
   seccion?: SeccionActiva;
+  /**
+   * Avance hacia el diploma para la barra fina. Omitido dentro del curso
+   * —la cabecera ya lo lleva en `contexto`— y en el equipo, que no tiene
+   * diploma ninguno.
+   */
+  diploma?: ProgresoDiploma | null;
   /**
    * Nombre y progreso del curso, solo dentro de él. Se AÑADE a la
    * navegación, nunca la sustituye: perderla al entrar en el curso es el
@@ -224,9 +245,26 @@ export default function Cabecera({
             </div>
           </div>
         )}
+
+        {/* EN ESCRITORIO, COLGADA DE LA CABECERA. Va dentro del
+            `<header>` a propósito: es lo que le da el `sticky` gratis, sin
+            un segundo elemento fijo que mantener alineado con este. */}
+        {diploma && <BarraDiploma {...diploma} variante="cabecera" />}
       </header>
 
-      {enlaces.length > 0 && <NavegacionInferior enlaces={enlaces} seccion={seccion} />}
+      {/* EN MÓVIL, ABAJO Y PEGADAS. La barra y la navegación viven en el
+          mismo contenedor fijo, no en dos: el borde inferior de un móvil
+          ya es zona disputada —ahí puede haber también la barra de
+          continuar de una lección— y dos capas flotando por separado se
+          leen como dos barras en vez de como un pie. El hueco que hay que
+          dejarles al final de la página lo calcula `globals.css` mirando
+          cuál de las dos está puesta. */}
+      {enlaces.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+          {diploma && <BarraDiploma {...diploma} variante="pie" />}
+          <NavegacionInferior enlaces={enlaces} seccion={seccion} />
+        </div>
+      )}
 
       {/* LA AYUDA VIVE AQUÍ Y NO EN EL LAYOUT porque su condición es la
           misma que la de la navegación: hay alumno. El equipo entra por
@@ -282,10 +320,11 @@ function BarraCurso({ contexto, compacto }: { contexto: ContextoCurso; compacto?
 /**
  * La barra de abajo, solo en móvil.
  *
- * `fixed` y no `sticky`. La cabecera se pinta ANTES del contenido de
- * cada página, así que un `sticky` colocaría la barra en el flujo justo
- * debajo del logotipo: se vería abajo, sí, pero dejaría una banda vacía
- * de 60px bajo la cabecera. Fija, da igual dónde esté en el DOM.
+ * NO SE POSICIONA SOLA: la fija el contenedor de arriba, que es el que
+ * la agrupa con la barra del diploma para que las dos se lean como un
+ * único pie. Antes llevaba aquí su propio `fixed inset-x-0 bottom-0`, y
+ * con dos elementos fijos hermanos había que mantener a mano la
+ * distancia entre ellos.
  *
  * El hueco al final de la página lo reserva `globals.css` mirando si
  * esta barra existe, para que ninguna pantalla tenga que acordarse.
@@ -303,7 +342,7 @@ function NavegacionInferior({
     <nav
       aria-label="Secciones"
       data-nav-inferior
-      className="fixed inset-x-0 bottom-0 z-40 grid border-t border-marca-borde bg-white/[0.96] px-1 pb-3.5 pt-2 backdrop-blur-md lg:hidden"
+      className="grid border-t border-marca-borde bg-white/[0.96] px-1 pb-3.5 pt-2 backdrop-blur-md"
       style={{ gridTemplateColumns: `repeat(${enlaces.length}, minmax(0, 1fr))` }}
     >
       {enlaces.map((enlace) => {

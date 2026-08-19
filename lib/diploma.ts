@@ -112,76 +112,22 @@ export function calcularDiploma(completadas: number, total: number): EstadoDiplo
   };
 }
 
-/**
- * Lo que se lee dentro del anillo.
- *
- * Se redacta aquí y no en el componente por lo mismo que las esperas de
- * la generación: depende de datos y de reglas, y el componente solo
- * pinta. Aquí además se lee entero de una vez, que es lo que hace falta
- * para revisar el tono sin abrir tres archivos.
- *
- * LA FORMA LA IMPONE EL SITIO. Esto vivía en un banner ancho y ahora
- * vive en una columna de 340px con un círculo dentro, así que ya no hay
- * un titular y una nota: hay una CIFRA —la que va en el centro del
- * anillo— y dos líneas cortas debajo. Un titular de siete palabras aquí
- * se parte en cuatro renglones.
- */
-export type TextoDiploma = {
-  /**
-   * El número grande del centro. Null en "conseguido", que enseña un
-   * sello en su lugar: ahí no falta nada que contar.
-   */
-  cifra: number | null;
-  /** Justo debajo de la cifra. Concuerda con ella en singular y plural. */
-  etiqueta: string;
-  /** En pequeño, al pie: el curso del que hablamos. */
-  pie: string;
-  /** Una línea más, solo donde aporta. Null en el estado corriente. */
-  extra: string | null;
-};
-
-export function textoDiploma(estado: EstadoDiploma, tituloCurso: string): TextoDiploma | null {
-  if (estado.estado === "sin-curso") return null;
-
-  if (estado.estado === "conseguido") {
-    // PROVISIONAL, hasta que exista el botón de descarga.
-    //
-    // Lo que NO puede hacer este texto: prometer un archivo que no se
-    // genera, dar una fecha que nadie ha fijado, o mandar al profesor,
-    // que no es por donde va a llegar. Lo que sí: reconocer que ha
-    // terminado, que es un hecho y es suyo.
-    //
-    // "Es tuyo" y no "está en camino" a propósito: lo segundo es una
-    // promesa con fecha implícita, y quien la lea el lunes preguntará el
-    // martes.
-    return {
-      cifra: null,
-      etiqueta: "Curso completado",
-      pie: tituloCurso,
-      extra: "El diploma es tuyo. Te contamos enseguida cómo descargarlo.",
-    };
-  }
-
-  const unaSola = estado.restantes === 1;
-
-  if (estado.sinEmpezar) {
-    // Mismo número que en curso —no ha hecho ninguna, así que le faltan
-    // todas— pero contado como lo que es: el tamaño del curso, no una
-    // deuda. La diferencia la carga el pie, porque en el centro no cabe.
-    return {
-      cifra: estado.total,
-      etiqueta: unaSola ? "lección para tu diploma" : "lecciones para tu diploma",
-      pie: tituloCurso,
-      extra: "Empieza por la primera y esto se va llenando solo.",
-    };
-  }
-
-  return {
-    cifra: estado.restantes,
-    etiqueta: unaSola ? "lección para tu diploma" : "lecciones para tu diploma",
-    pie: tituloCurso,
-    // La última merece que se lo digan. El resto del camino no necesita
-    // una frase de ánimo cada vez que abre el inicio.
-    extra: unaSola ? "La última. Ya está." : null,
-  };
-}
+// ---------------------------------------------------------------
+// LO QUE SE LEÍA DENTRO DEL ANILLO
+//
+// Aquí vivía `textoDiploma`, que redactaba los cuatro estados con la
+// regla de comunicar lo que FALTA y nunca el porcentaje: «te faltan 81
+// lecciones para tu diploma», «te falta 1, la última», «tu diploma son
+// 187 lecciones», «curso completado».
+//
+// Se ha ido con la fila del diploma. Lo que la sustituye —la barra fina
+// y fija de `components/BarraDiploma.tsx`— cuenta la fracción, «16 de
+// 191 lecciones», porque acompaña en todas las pantallas en vez de
+// empujar en una: una barra repitiendo «te faltan 81» todo el rato y en
+// todas partes se lee como una deuda.
+//
+// EL CAMBIO TIENE UN COSTE y conviene tenerlo escrito: la formulación
+// motivadora ya no aparece en ningún sitio del producto. Si se quiere
+// recuperar, está en el historial —era este archivo— y la barra puede
+// decirlo con un cambio de una línea.
+// ---------------------------------------------------------------

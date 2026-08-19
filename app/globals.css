@@ -29,17 +29,25 @@
   }
 
   /* ---------------------------------------------------------------
-     HUECO PARA LA NAVEGACIÓN INFERIOR
+     HUECO PARA EL PIE DE MÓVIL
 
-     La barra de secciones de móvil es `fixed`, así que no ocupa sitio y
+     La navegación de secciones es `fixed`, así que no ocupa sitio y
      taparía el final de la página. En vez de que cada pantalla se
      acuerde de dejar un padding —y de que la próxima se olvide—, el
      hueco se reserva aquí y solo cuando la barra existe: las pantallas
      del equipo y el acceso no la llevan.
+
+     Y encima de la navegación puede ir la barra fina del diploma, que
+     suma 30px. Las dos van en el mismo contenedor fijo (ver
+     `Cabecera`), así que aquí solo hay que preguntar si está puesta.
      --------------------------------------------------------------- */
   @media (max-width: 1023px) {
     body:has(nav[data-nav-inferior]) {
       padding-bottom: 78px;
+    }
+
+    body:has(nav[data-nav-inferior]):has([data-barra-diploma]) {
+      padding-bottom: 108px;
     }
   }
 
@@ -355,10 +363,22 @@
       bottom: 90px;
     }
 
-    /* Y en móvil las dos pueden coincidir: la barra va sobre la
-       navegación, y la ayuda sobre la barra. */
+    /* Con la barra del diploma encima de la navegación, 30px más. */
+    body:has(nav[data-nav-inferior]):has([data-barra-diploma]) .zona-ayuda {
+      bottom: 120px;
+    }
+
+    /* Y en móvil pueden coincidir todas: la de continuar va sobre el
+       pie, y la ayuda sobre ella. La del diploma no entra en esta
+       cuenta —las pantallas con barra de continuar no la llevan— pero se
+       contempla por si algún día coinciden. */
     body:has(nav[data-nav-inferior]):has([data-barra-inferior]) .zona-ayuda {
       bottom: 162px;
+    }
+
+    body:has(nav[data-nav-inferior]):has([data-barra-inferior]):has([data-barra-diploma])
+      .zona-ayuda {
+      bottom: 192px;
     }
   }
 }
