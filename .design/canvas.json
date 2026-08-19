@@ -1,0 +1,107 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Ahora",
+      "x": 0,
+      "y": 0,
+      "w": 375,
+      "h": 900
+    },
+    {
+      "file": "Papel.dc.html",
+      "title": "A · Papel",
+      "x": 495,
+      "y": 0,
+      "w": 375,
+      "h": 900
+    },
+    {
+      "file": "Tinta.dc.html",
+      "title": "B · Tinta (elegida)",
+      "x": 990,
+      "y": 0,
+      "w": 375,
+      "h": 900
+    },
+    {
+      "file": "Pareja.dc.html",
+      "title": "C · Pareja",
+      "x": 1485,
+      "y": 0,
+      "w": 375,
+      "h": 900
+    },
+    {
+      "file": "Escritorio.dc.html",
+      "title": "B · Escritorio · con bloque",
+      "x": 0,
+      "y": 1120,
+      "w": 1440,
+      "h": 1060
+    },
+    {
+      "file": "EscritorioVacio.dc.html",
+      "title": "B · Escritorio · sin bloques",
+      "x": 0,
+      "y": 2240,
+      "w": 1440,
+      "h": 1000
+    }
+  ],
+  "annotations": [
+    {
+      "id": "ahora",
+      "x": 0,
+      "y": -150,
+      "w": 375,
+      "text": "AHORA\n\nLa franja verde se lleva la pantalla y la práctica queda tercera, en una tarjeta blanca del mismo peso que el diploma.\n\nEl verde hace dos trabajos a la vez: fondo de franja y color de acción."
+    },
+    {
+      "id": "papel",
+      "x": 495,
+      "y": -150,
+      "w": 375,
+      "text": "A · PAPEL — quitar el color de la franja\n\nEl curso pasa a tarjeta blanca con un filete verde de 3px. La práctica se queda con TODO el color: es el único bloque relleno.\n\nA favor: lo más minimalista, y la práctica gana sin agrandarla.\nEn contra: el bloque verde grande es lo más llamativo de la pantalla; si algún día la práctica falla, chirría."
+    },
+    {
+      "id": "tinta",
+      "x": 990,
+      "y": -150,
+      "w": 375,
+      "text": "B · TINTA — ELEGIDA\n\nFranja en tinta #12211A, así el verde deja de ser fondo y vuelve a ser solo acción. La práctica gana por tamaño y por el sello ámbar, no por color.\n\nCambio pedido: el anillo del diploma se sustituye por la fila fina de C. Dice lo mismo en un tercio del alto, y ese hueco es lo que sube la práctica dentro de la primera pantalla.\n\nLa barra inferior no se ha tocado: ya era idéntica a la de C."
+    },
+    {
+      "id": "pareja",
+      "x": 1485,
+      "y": -150,
+      "w": 375,
+      "text": "C · PAREJA — quitar la franja del todo\n\nDos tarjetas hermanas, mismo tamaño y mismo borde. La práctica va PRIMERA y con botón sólido; el curso, segundo y con botón de contorno. El diploma se reduce a una fila fina.\n\nA favor: lo más fácil de escanear y lo más adaptado a todos los públicos.\nEn contra: sin franja se pierde el golpe de marca; el inicio se vuelve muy sobrio."
+    },
+    {
+      "id": "criterio",
+      "x": 0,
+      "y": 960,
+      "w": 500,
+      "text": "Qué mirar al elegir\n\n1. ¿Qué es lo primero que ve el ojo? En las tres, la práctica.\n2. ¿Se entiende sin leer? Pregunta clave para un A2.\n3. ¿El verde significa una sola cosa? Hoy no: es fondo y es acción.\n\nTodo está con vuestros tokens reales (Radio Canada, #1E9E3A, #12211A, #E2E8E4), no con colores inventados."
+    },
+    {
+      "id": "escritorio",
+      "x": 1500,
+      "y": 1120,
+      "w": 400,
+      "text": "B EN ESCRITORIO · 1440\n\nLa columna derecha era del perfil, luego del anillo del diploma, y ahora que el diploma es una fila fina se la queda LA PRÁCTICA. Queda a la altura de los ojos y es la única tarjeta blanca con botón verde de la pantalla.\n\nDebajo, el bloque recién preparado — UNO, no la lista. En la fase 2 quitamos las tarjetas del inicio para que no hubiera dos puertas al mismo ejercicio: el alumno lo hacía desde aquí y al día siguiente lo veía otra vez. La excepción es el que acaba de pedir.\n\nDecisión pendiente: si ese hueco debe enseñar también los de días anteriores, vuelve el problema de las dos puertas."
+    },
+    {
+      "id": "vacio",
+      "x": 1500,
+      "y": 2240,
+      "w": 400,
+      "text": "SIN NADA GENERADO\n\nEl mismo hueco, cuando el alumno todavía no ha preparado ninguno. Ni en blanco ni relleno de adorno: dice qué falta, quién lo hace y cuánto tarda.\n\nLa flecha apunta a la tarjeta de arriba a la derecha, que es el único botón que llena esto. Es el estado que ve un alumno nuevo, así que es el que decide si entiende la app en tres segundos.\n\nHoy lo ven 86 de 168 alumnos: los que no tienen ningún bloque generado."
+    }
+  ],
+  "launch": {
+    "view": "focused",
+    "file": "EscritorioVacio.dc.html"
+  }
+}

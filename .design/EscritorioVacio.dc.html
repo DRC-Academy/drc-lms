@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; background: #F4F7F4; }
+    * { box-sizing: border-box; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1000px; background: #F4F7F4">
+
+  <!-- CABECERA. En escritorio la navegación va aquí, junto al logotipo:
+       la barra inferior es solo de móvil. -->
+  <div style="display: flex; align-items: center; gap: 40px; height: 68px; padding: 0 36px; background: #FFFFFF; border-bottom: 1px solid #E2E8E4">
+    <span style="font-family: 'Radio Canada Big', system-ui, sans-serif; font-size: 18px; font-weight: 700; color: #04A749; letter-spacing: -0.01em">DRC Academy</span>
+
+    <div style="display: flex; align-items: center; gap: 28px; height: 100%">
+      <span style="display: flex; align-items: center; height: 100%; font-size: 15px; font-weight: 600; color: #12211A; box-shadow: inset 0 -2px 0 #1E9E3A">Inicio</span>
+      <span style="display: flex; align-items: center; height: 100%; font-size: 15px; font-weight: 500; color: #5F6F66">Mi curso</span>
+      <span style="display: flex; align-items: center; height: 100%; font-size: 15px; font-weight: 500; color: #5F6F66">Para ti</span>
+    </div>
+
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 16px">
+      <span style="font-size: 14px; color: #5F6F66">Salir</span>
+      <span style="font-size: 14px; font-weight: 500; color: #12211A">Julen Bilbao</span>
+      <span style="display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: #12211A; color: #FFFFFF; font-size: 13px; font-weight: 600">J</span>
+    </div>
+  </div>
+
+  <div style="max-width: 1440px; margin: 0 auto; padding: 32px 36px 44px">
+
+    <!-- saludo -->
+    <div style="margin-bottom: 22px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+        <h1 style="margin: 0; font-family: 'Radio Canada Big', system-ui, sans-serif; font-size: 30px; font-weight: 700; line-height: 1.15; color: #12211A">Hola, Julen</h1>
+        <span style="display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 11px; border-radius: 999px; background: #F0FAF2">
+          <span style="font-size: 13px; font-weight: 700; line-height: 1; color: #14722A">B2</span>
+          <span style="font-size: 12px; line-height: 1; color: #14722Acc">intermedio alto</span>
+        </span>
+      </div>
+      <p style="margin: 6px 0 0; font-size: 16px; line-height: 1.4; color: #5F6F66; text-wrap: pretty">Aoife trabajó contigo el 18 de agosto. Aquí tienes por dónde seguir.</p>
+    </div>
+
+    <!-- LA REJILLA. La columna derecha era del perfil, luego del anillo
+         del diploma, y ahora que el diploma es una fila fina se la queda
+         LA PRÁCTICA: es lo que se quería subir de rango y aquí queda a la
+         altura de los ojos, sin bajar la página.
+
+         416px y no 340: la tarjeta lleva un titular de 24px, tres líneas
+         de descripción y un botón, y a 340 el titular se partía en tres. -->
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 416px; gap: 20px; align-items: stretch">
+
+      <!-- IZQUIERDA: el curso y, debajo, el diploma -->
+      <div style="display: flex; flex-direction: column; gap: 12px">
+
+        <div style="flex: 1; border-radius: 20px; padding: 30px 32px; background: #12211A; display: flex; flex-direction: column">
+          <p style="margin: 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #A9DFB7">Continúa donde lo dejaste</p>
+
+          <h2 style="margin: 14px 0 0; font-family: 'Radio Canada Big', system-ui, sans-serif; font-size: 30px; font-weight: 700; line-height: 1.15; color: #FFFFFF; text-wrap: pretty">Comparativos de igualdad</h2>
+          <p style="margin: 8px 0 0; font-size: 15px; line-height: 1.4; color: #FFFFFFb3">Módulo 12 · Curso Ingles General B2</p>
+
+          <div style="display: flex; align-items: center; gap: 20px; margin-top: 26px">
+            <span style="display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 30px; border-radius: 999px; background: #37C25A; color: #06240F; font-size: 15.5px; font-weight: 700">Continuar</span>
+            <span style="font-size: 14px; color: #FFFFFFb3">llevas 87 de 168 lecciones</span>
+          </div>
+
+          <!-- El progreso por marcas, una por lección: en escritorio cabe
+               y dice de un vistazo lo hecho y lo que queda, que es lo que
+               una barra lisa no distingue. -->
+          <div style="display: flex; gap: 2px; margin-top: auto; padding-top: 30px">
+            <div style="flex: 52; height: 6px; border-radius: 3px; background: #37C25A"></div>
+            <div style="flex: 48; height: 6px; border-radius: 3px; background: #FFFFFF26"></div>
+          </div>
+        </div>
+
+        <!-- EL DIPLOMA, LA MISMA FILA FINA QUE EN MÓVIL. A lo ancho tiene
+             sitio para nombrar el curso al final, que en 375px no cabía. -->
+        <div style="display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E2E8E4">
+          <svg viewBox="0 0 18 18" style="width: 19px; height: 19px; flex-shrink: 0" fill="none" stroke="#1E9E3A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="7" r="4.6"></circle>
+            <path d="M6.4 11.2 5.4 16l3.6-1.9 3.6 1.9-1-4.8"></path>
+          </svg>
+          <p style="margin: 0; flex-shrink: 0; font-size: 15px; line-height: 1.35; color: #12211A"><strong style="font-weight: 700">81 lecciones</strong> para tu diploma</p>
+          <div style="flex: 1; height: 5px; border-radius: 3px; background: #E8EEE9; overflow: hidden">
+            <div style="height: 100%; width: 52%; border-radius: 3px; background: #1E9E3A"></div>
+          </div>
+          <span style="flex-shrink: 0; font-size: 13px; color: #7A8A80">Curso Ingles General B2</span>
+        </div>
+      </div>
+
+      <!-- DERECHA: la práctica -->
+      <div style="display: flex; flex-direction: column; border-radius: 20px; border: 1px solid #E2E8E4; background: #FFFFFF; padding: 26px 24px; box-shadow: 0 10px 24px rgba(18, 33, 26, 0.07)">
+        <p style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0">
+          <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: #FFFBEB; border: 1px solid #EFE3C0">
+            <svg viewBox="0 0 20 20" style="width: 13px; height: 13px" fill="none" stroke="#9A7B00" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 2.5 11.9 7l4.6.4-3.5 3 1.1 4.5L10 12.5 5.9 14.9 7 10.4l-3.5-3L8.1 7 10 2.5Z"></path>
+            </svg>
+            <span style="font-size: 11.5px; font-weight: 600; line-height: 1; color: #9A7B00">Nuevo tras cada clase</span>
+          </span>
+        </p>
+
+        <h2 style="margin: 16px 0 0; font-family: 'Radio Canada Big', system-ui, sans-serif; font-size: 24px; font-weight: 700; line-height: 1.15; color: #12211A; text-wrap: pretty">Tu bloque de práctica</h2>
+        <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.5; color: #4C5C53; text-wrap: pretty">Diez ejercicios con lo que trabajaste el 18 de agosto, lo que se te repite de clases anteriores y el formato del B2 First.</p>
+
+        <!-- `margin-top: auto` pega el botón al fondo: así la tarjeta
+             iguala el alto de la columna izquierda sin dejar el botón
+             flotando a media altura. -->
+        <span style="display: flex; align-items: center; justify-content: center; min-height: 48px; margin-top: auto; border-radius: 999px; background: #1E9E3A; color: #FFFFFF; font-size: 15.5px; font-weight: 700; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12)">Preparar mi bloque</span>
+
+        <p style="margin: 14px 0 0; font-size: 13.5px; line-height: 1.45; color: #5F6F66">Tienes 4 bloques listos. <span style="font-weight: 600; color: #14722A; text-decoration: underline; text-underline-offset: 2px">Ir a Para ti</span></p>
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------------------------
+         EL MISMO SITIO, SIN NADA TODAVÍA
+         El hueco no se deja en blanco ni se rellena con contenido de
+         adorno: se usa para decir qué falta y quién lo hace. La flecha
+         apunta a la tarjeta de arriba a la derecha, que es el único
+         botón que llena esto.
+         --------------------------------------------------------------- -->
+    <div style="margin-top: 34px">
+      <div style="display: flex; align-items: baseline; gap: 14px">
+        <h2 style="margin: 0; font-family: 'Radio Canada Big', system-ui, sans-serif; font-size: 20px; font-weight: 700; color: #12211A">Tus bloques</h2>
+        <p style="margin: 0; font-size: 15px; color: #5F6F66">Aquí aparece el que prepares, listo para empezarlo.</p>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 40px; margin-top: 16px; border-radius: 18px; border: 1.5px dashed #C9D6CD; background: #FBFCFB; padding: 40px 44px">
+
+        <div style="display: grid; place-items: center; width: 84px; height: 84px; flex-shrink: 0; border-radius: 999px; background: #F0FAF2">
+          <svg viewBox="0 0 24 24" style="width: 34px; height: 34px" fill="none" stroke="#1E9E3A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3.5 14.3 9l5.7.5-4.3 3.7 1.3 5.6L12 15.9l-5 2.9 1.3-5.6L4 9.5 9.7 9 12 3.5Z"></path>
+          </svg>
+        </div>
+
+        <div style="min-width: 0; flex: 1">
+          <h3 style="margin: 0; font-family: 'Radio Canada Big', system-ui, sans-serif; font-size: 22px; font-weight: 700; line-height: 1.2; color: #12211A">Todavía no has preparado ninguno</h3>
+          <p style="margin: 10px 0 0; max-width: 62ch; font-size: 15.5px; line-height: 1.55; color: #4C5C53; text-wrap: pretty">Pulsa <strong style="font-weight: 700; color: #12211A">Preparar mi bloque</strong> y en menos de un minuto tienes diez ejercicios hechos con tu última clase, con lo que se te repite y con tu examen. Aparecerán aquí.</p>
+        </div>
+
+        <!-- La flecha apunta arriba a la derecha, a la tarjeta que lo
+             genera. Es lo único que hay que hacer en esta pantalla. -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; flex-shrink: 0; padding-right: 8px">
+          <svg viewBox="0 0 60 80" style="width: 60px; height: 80px" fill="none" stroke="#1E9E3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 74 C 8 40, 22 12, 50 8" stroke-dasharray="5 7"></path>
+            <path d="M39 6 L 51 7.5 L 47 19"></path>
+          </svg>
+          <span style="max-width: 130px; text-align: center; font-size: 13.5px; line-height: 1.4; font-weight: 600; color: #14722A">Está ahí arriba</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
