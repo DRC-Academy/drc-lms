@@ -14,8 +14,8 @@
 // SE CUENTA LO QUE FALTA, NO EL PORCENTAJE. "Te faltan 12 lecciones"
 // y "llevas el 68%" son el mismo dato, pero el primero se puede terminar
 // y el segundo solo se puede mirar. Doce es una tarde; el 68% no es
-// nada. El porcentaje sigue existiendo para la barra, que necesita un
-// ancho, pero no se escribe en ninguna parte.
+// nada. El porcentaje sigue existiendo para rellenar el anillo, que
+// necesita una fracción, pero no se escribe en ninguna parte.
 //
 // SOBRE EL DENOMINADOR. Son las lecciones del curso ENTERO, no las que
 // la apertura progresiva tiene desbloqueadas hoy. Es lo que ya devuelve
@@ -113,61 +113,75 @@ export function calcularDiploma(completadas: number, total: number): EstadoDiplo
 }
 
 /**
- * Lo que se lee en el banner.
+ * Lo que se lee dentro del anillo.
  *
  * Se redacta aquí y no en el componente por lo mismo que las esperas de
  * la generación: depende de datos y de reglas, y el componente solo
- * pinta. Aquí además se puede leer entero de una vez, que es lo que hace
- * falta para revisar el tono sin abrir tres archivos.
+ * pinta. Aquí además se lee entero de una vez, que es lo que hace falta
+ * para revisar el tono sin abrir tres archivos.
+ *
+ * LA FORMA LA IMPONE EL SITIO. Esto vivía en un banner ancho y ahora
+ * vive en una columna de 340px con un círculo dentro, así que ya no hay
+ * un titular y una nota: hay una CIFRA —la que va en el centro del
+ * anillo— y dos líneas cortas debajo. Un titular de siete palabras aquí
+ * se parte en cuatro renglones.
  */
-export type TextoDiploma = { titulo: string; nota: string };
+export type TextoDiploma = {
+  /**
+   * El número grande del centro. Null en "conseguido", que enseña un
+   * sello en su lugar: ahí no falta nada que contar.
+   */
+  cifra: number | null;
+  /** Justo debajo de la cifra. Concuerda con ella en singular y plural. */
+  etiqueta: string;
+  /** En pequeño, al pie: el curso del que hablamos. */
+  pie: string;
+  /** Una línea más, solo donde aporta. Null en el estado corriente. */
+  extra: string | null;
+};
 
 export function textoDiploma(estado: EstadoDiploma, tituloCurso: string): TextoDiploma | null {
   if (estado.estado === "sin-curso") return null;
 
   if (estado.estado === "conseguido") {
+    // PROVISIONAL, hasta que exista el botón de descarga.
+    //
+    // Lo que NO puede hacer este texto: prometer un archivo que no se
+    // genera, dar una fecha que nadie ha fijado, o mandar al profesor,
+    // que no es por donde va a llegar. Lo que sí: reconocer que ha
+    // terminado, que es un hecho y es suyo.
+    //
+    // "Es tuyo" y no "está en camino" a propósito: lo segundo es una
+    // promesa con fecha implícita, y quien la lea el lunes preguntará el
+    // martes.
     return {
-      // PROVISIONAL, hasta que exista el botón de descarga.
-      //
-      // Lo que NO puede hacer este texto: prometer un archivo que no se
-      // genera, dar una fecha que nadie ha fijado, o mandar al profesor,
-      // que no es por donde va a llegar. Lo que sí: reconocer que ha
-      // terminado, que es un hecho y es suyo, y dejar dicho que el
-      // diploma viene sin comprometer cuándo.
-      //
-      // "Es tuyo" y no "está en camino" a propósito: lo segundo es una
-      // promesa con fecha implícita, y quien la lea el lunes preguntará
-      // el martes.
-      titulo: "Curso completado",
-      nota:
-        (estado.total === 1
-          ? `Has hecho la única lección de ${tituloCurso}.`
-          : `Has hecho las ${estado.total} lecciones de ${tituloCurso}.`) +
-        " El diploma es tuyo: te contamos enseguida cómo descargarlo.",
-    };
-  }
-
-  if (estado.sinEmpezar) {
-    // A quien no ha empezado, "te faltan 187 lecciones" lo recibe con
-    // una cuesta. Se le cuenta el mismo número como lo que es: el tamaño
-    // del curso, no una deuda.
-    return {
-      titulo:
-        estado.total === 1
-          ? "Tu diploma es una lección"
-          : `Tu diploma son ${estado.total} lecciones`,
-      nota: `Es lo que tiene ${tituloCurso} entero. Empieza por la primera y esto se va llenando solo.`,
+      cifra: null,
+      etiqueta: "Curso completado",
+      pie: tituloCurso,
+      extra: "El diploma es tuyo. Te contamos enseguida cómo descargarlo.",
     };
   }
 
   const unaSola = estado.restantes === 1;
 
+  if (estado.sinEmpezar) {
+    // Mismo número que en curso —no ha hecho ninguna, así que le faltan
+    // todas— pero contado como lo que es: el tamaño del curso, no una
+    // deuda. La diferencia la carga el pie, porque en el centro no cabe.
+    return {
+      cifra: estado.total,
+      etiqueta: unaSola ? "lección para tu diploma" : "lecciones para tu diploma",
+      pie: tituloCurso,
+      extra: "Empieza por la primera y esto se va llenando solo.",
+    };
+  }
+
   return {
-    titulo: unaSola
-      ? "Te falta 1 lección para tu diploma"
-      : `Te faltan ${estado.restantes} lecciones para tu diploma`,
-    nota: unaSola
-      ? `La última de ${tituloCurso}. Ya está.`
-      : `Llevas ${estado.completadas} de ${estado.total} en ${tituloCurso}.`,
+    cifra: estado.restantes,
+    etiqueta: unaSola ? "lección para tu diploma" : "lecciones para tu diploma",
+    pie: tituloCurso,
+    // La última merece que se lo digan. El resto del camino no necesita
+    // una frase de ánimo cada vez que abre el inicio.
+    extra: unaSola ? "La última. Ya está." : null,
   };
 }

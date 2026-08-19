@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { formatearFecha, nivelDeBloque } from "@/lib/perfil";
-import { avisoFormulario, calcularTarjeta, tieneContexto, urlFormulario } from "@/lib/modos";
+import { calcularTarjeta } from "@/lib/modos";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
 import {
   leerBloquesGenerados,
@@ -12,10 +12,10 @@ import {
 } from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
 import { calcularDiploma } from "@/lib/diploma";
+import { PALABRA_NIVEL } from "@/components/Casillas";
 import Cabecera from "@/components/Cabecera";
 import BannerCurso from "@/components/BannerCurso";
-import BannerDiploma from "@/components/BannerDiploma";
-import TarjetaPerfil from "@/components/TarjetaPerfil";
+import AnilloDiploma from "@/components/AnilloDiploma";
 import PanelAlumno from "@/components/PanelAlumno";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
@@ -91,16 +91,29 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
       )}. Aquí tienes por dónde seguir.`
     : `${profesor || "Tu profesor"} ya te ha dejado el curso preparado. Empieza cuando quieras.`;
 
-  // La invitación al perfil desaparece en cuanto hay con qué ambientar
-  // los ejercicios, y entonces el banner pasa a ancho completo.
+  // ---------------------------------------------------------------
+  // LA COLUMNA DE LA DERECHA
   //
-  // LO QUE NO LA HACE DESAPARECER ES NO TENER ENLACE. Sin token la
-  // tarjeta se queda y cambia el botón por un aviso: son 91 de los 136
-  // sin perfil, la mayoría, y a esos hay que contarles que esto llega
-  // por correo en vez de dejarles el hueco vacío. Ver `TarjetaPerfil`.
-  const invitacionPerfil = !tieneContexto(perfil);
-  const enlaceFormulario = urlFormulario(process.env.URL_FORMULARIO_BASE, perfil?.formToken ?? null);
-  const avisoPerfil = avisoFormulario(profesor, perfil?.formTokenEnviadoEn ?? null);
+  // Era la invitación a completar el perfil y ahora es el diploma. La
+  // invitación no se ha perdido: vive en «Para ti», donde además está
+  // pegada a lo que promete —los ejercicios ambientados en su trabajo—
+  // en vez de suelta al lado de un curso con el que no tiene que ver.
+  //
+  // El hueco se lo queda el diploma porque compite mejor por él: la
+  // invitación le habla a quien todavía no nos ha contado nada, y el
+  // diploma a todo el que tenga un curso, que son 165 de 168.
+  //
+  // Sin curso no hay anillo y el banner pasa a ancho completo, igual que
+  // antes hacía sin invitación.
+  // ---------------------------------------------------------------
+  const conAnillo = diploma.estado !== "sin-curso";
+
+  // El nivel MCER, que estuvo dentro del banner del diploma mientras el
+  // banner era ancho. En el anillo no cabe sin robarle sitio a la cifra,
+  // así que sube al saludo, que es donde se lee lo que el alumno ES
+  // —quién eres, a qué altura vas— y no lo que le queda por hacer.
+  const nivelLimpio = (perfil?.nivel ?? "").trim().toUpperCase();
+  const palabraNivel = PALABRA_NIVEL[nivelLimpio] ?? "";
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
@@ -143,43 +156,46 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
         )}
 
         <div className="mb-4 lg:mb-[22px]">
-          <h1 className="font-display text-[22px] font-bold leading-[1.15] text-marca-tinta lg:text-[30px]">
-            {saludo}
-          </h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <h1 className="font-display text-[22px] font-bold leading-[1.15] text-marca-tinta lg:text-[30px]">
+              {saludo}
+            </h1>
+
+            {/* El nivel, junto al nombre. Es contexto de identidad y no
+                una métrica: por eso va aquí y no en una casilla. */}
+            {nivelLimpio !== "" && (
+              <span className="inline-flex items-baseline gap-1.5 rounded-full bg-marca-verdeFondo px-2.5 py-1">
+                <span className="text-[12.5px] font-bold leading-none text-marca-verdeOsc">
+                  {nivelLimpio}
+                </span>
+                {palabraNivel !== "" && (
+                  <span className="text-[11.5px] leading-none text-marca-verdeOsc/80">
+                    {palabraNivel}
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+
           <p className="mt-[5px] text-pretty text-[14px] leading-[1.4] text-marca-gris lg:mt-1.5 lg:text-[16px]">
             {subtitulo}
           </p>
         </div>
 
-        {/* La rejilla principal: el banner manda y la invitación al perfil
-            le hace sitio a la derecha. Sin invitación, ancho completo. */}
+        {/* La rejilla principal: el banner manda y el diploma le hace
+            sitio a la derecha. En móvil no hay dos columnas, así que el
+            anillo cae solo debajo del banner, que es donde tiene que
+            estar: primero adónde vas, después cuánto te queda. */}
         <div
           className={`grid items-start gap-3 lg:gap-5 ${
-            invitacionPerfil ? "lg:grid-cols-[minmax(0,1fr)_340px]" : "lg:grid-cols-1"
+            conAnillo ? "lg:grid-cols-[minmax(0,1fr)_340px]" : "lg:grid-cols-1"
           }`}
         >
-          <BannerCurso estados={estadosCurso} conLateral={invitacionPerfil} />
+          <BannerCurso estados={estadosCurso} conLateral={conAnillo} />
 
-          {/* En móvil esta tarjeta va al final de la página, no aquí:
-              entre el banner y la práctica sería un desvío justo cuando
-              el alumno acaba de ver a dónde tiene que ir. */}
-          {invitacionPerfil && (
-            <div className="hidden lg:block">
-              <TarjetaPerfil url={enlaceFormulario} aviso={avisoPerfil} />
-            </div>
+          {conAnillo && (
+            <AnilloDiploma estado={diploma} tituloCurso={principal?.curso.titulo ?? ""} />
           )}
-        </div>
-
-        {/* Debajo del banner del curso y pegado a él: la acción está
-            arriba y el motivo justo después. Separarlos con la práctica
-            en medio dejaría el diploma al final, que es donde no lo ve
-            nadie. */}
-        <div className="mt-3 lg:mt-5">
-          <BannerDiploma
-            estado={diploma}
-            tituloCurso={principal?.curso.titulo ?? ""}
-            nivel={perfil?.nivel ?? ""}
-          />
         </div>
 
         <PanelAlumno
@@ -191,16 +207,6 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           esAdministrador={sesion.rol === "admin"}
         />
 
-        {/* En móvil la invitación cierra la página. El enlace suelto a
-            /practica que había aquí se ha ido: la sección ya está en la
-            navegación —arriba en escritorio, abajo en móvil— y repetirla
-            al final solo añadía una salida más justo donde el alumno
-            acaba de elegir su práctica. */}
-        {invitacionPerfil && (
-          <div className="mt-3 lg:hidden">
-            <TarjetaPerfil url={enlaceFormulario} aviso={avisoPerfil} />
-          </div>
-        )}
       </main>
     </div>
   );

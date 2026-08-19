@@ -59,10 +59,14 @@ function EnlaceFormulario({ url, className }: { url: string | null; className: s
  * Tarjeta única para quien todavía no tiene de dónde tirar. No es un
  * estado de error ni un bloqueo: es una invitación, y cuenta qué gana.
  *
- * ESTA NO SE PUEDE OCULTAR CUANDO NO HAY ENLACE, y es la diferencia con
- * `TarjetaPerfil`. Aquella es un extra en una pantalla llena; esta es lo
- * ÚNICO que hay delante de un alumno sin práctica disponible. Quitarla
- * dejaría la sección en blanco, sin decir por qué.
+ * ESTA NO SE PUEDE OCULTAR CUANDO NO HAY ENLACE. Es lo ÚNICO que hay
+ * delante de un alumno sin práctica disponible: quitarla dejaría la
+ * sección en blanco, sin decir por qué.
+ *
+ * Y desde que el inicio cedió su columna derecha al diploma, esta
+ * pantalla es además el ÚNICO sitio donde se invita a completar el
+ * perfil. Antes había dos puertas y una podía permitirse desaparecer;
+ * ahora no.
  *
  * Así que sin token se queda la tarjeta y el botón se cambia por el
  * mismo aviso que enseña la del inicio: de quién depende y si ya se lo
