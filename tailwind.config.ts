@@ -89,32 +89,33 @@ const config: Config = {
         // ---------------------------------------------------------------
         // EL BANNER, Y SOLO EL BANNER
         //
-        // Una franja destacada es la única superficie de la aplicación con
-        // fondo verde de marca, y por eso tiene paleta propia: estos seis
-        // valores no deben aparecer fuera de `components/Banner.tsx`. El
-        // resto de la pantalla —tarjetas blancas y crema— sigue con
-        // `marca-*` y con el botón verde de siempre.
+        // Una franja destacada es la única superficie oscura de la
+        // aplicación, y por eso tiene paleta propia: estos cinco valores
+        // no deben aparecer fuera de `components/Banner.tsx`. El resto de
+        // la pantalla —tarjetas blancas y crema— sigue con `marca-*`.
         //
-        // EL AMARILLO SOLO EXISTE DENTRO DEL VERDE. Fuera de un banner un
-        // botón amarillo compite con el verde de acción y la pantalla
-        // acaba con dos llamadas discutiendo; dentro, es lo único que
-        // destaca sobre el fondo sin ser otra vez verde sobre verde.
+        // EL FONDO ERA VERDE DE MARCA Y AHORA ES TINTA. El verde hacía dos
+        // trabajos a la vez —fondo de franja y color de "pulsa aquí"— y de
+        // esa colisión salía toda una excepción: el botón del banner tenía
+        // que ser amarillo porque un botón verde sobre fondo verde no es
+        // un botón, es un rectángulo. Con la franja en tinta el verde
+        // vuelve a significar una sola cosa, el botón vuelve a ser verde y
+        // la excepción del amarillo desaparece de la aplicación.
         //
-        // El texto del CTA es verde profundo y no blanco: blanco sobre
-        // este amarillo da 1,9:1 y no llega ni de lejos a AA. Se cambia en
-        // `--banner-cta-fg` (ver `globals.css`), no aquí.
+        // El amarillo sigue existiendo fuera de aquí como acento —sellos,
+        // chips, el borde del bloque recién preparado—, que es lo que
+        // siempre debió ser.
         // ---------------------------------------------------------------
         banner: {
-          /** Arranque del degradado, arriba. */
-          alto: "#23A44E",
-          /** Final del degradado, abajo. */
-          bajo: "#0F9A3E",
-          /** Etiqueta de sección sobre el verde. */
-          ambar: "#FFD54A",
-          cta: "#F7C500",
-          ctaHover: "#E6B800",
-          /** Texto sobre el amarillo: 6,2:1. */
-          ctaTexto: "#0D5C2F",
+          /** Fondo de la franja. El mismo tinta que los titulares. */
+          fondo: "#12211A",
+          /** Etiqueta de sección sobre la tinta: 11,1:1. */
+          etiqueta: "#A9DFB7",
+          /** El verde de acción no se ve sobre tinta; este sí. */
+          cta: "#37C25A",
+          ctaHover: "#52CE72",
+          /** Texto sobre ese verde claro: 7,1:1. */
+          ctaTexto: "#06240F",
         },
         // La paleta del inicio del alumno y del visor de curso. La usaba
         // ya media aplicación con seis tokens; el rediseño del inicio
