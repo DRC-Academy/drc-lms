@@ -33,10 +33,22 @@ const LOGO = { ancho: 121, alto: 32 };
 /**
  * Barra de marca y navegación.
  *
- * Tres secciones para el alumno —Inicio, Mi curso y Práctica— porque el
+ * Tres secciones para el alumno —Inicio, Mi curso y Para ti— porque el
  * producto son dos cosas que conviven: el curso enseña contenido
- * estructurado y la práctica genera ejercicios a partir de su perfil.
- * Si la navegación solo nombrara una, la otra parecería un anexo.
+ * estructurado y la otra genera ejercicios a partir de su perfil y de
+ * sus clases. Si la navegación solo nombrara una, la otra parecería un
+ * anexo.
+ *
+ * SE LLAMA "PARA TI" Y NO "PRÁCTICA". Lo que la distingue del curso no
+ * es que se practique —en el curso también— sino que está hecha con lo
+ * que sabemos de este alumno y de nadie más. "Práctica" nombraba el
+ * formato; "Para ti" nombra la promesa, que es lo único que el curso no
+ * puede ofrecer.
+ *
+ * La RUTA sigue siendo /practica. Renombrarla rompería los enlaces que
+ * ya estén por ahí y no le cambia nada al alumno, que ve la etiqueta y
+ * no la barra de direcciones. La clave interna `practica` se queda por
+ * lo mismo: nombra el destino, no el rótulo.
  *
  * El equipo NO ve la navegación: entra por el buscador y va saltando de
  * ficha en ficha, así que "Mi curso" no significa nada para él. Le queda
@@ -86,7 +98,7 @@ export default function Cabecera({
           ...(cursoSlug
             ? [{ clave: "curso" as const, texto: "Mi curso", href: `/curso/${cursoSlug}` }]
             : []),
-          { clave: "practica" as const, texto: "Práctica", href: "/practica" },
+          { clave: "practica" as const, texto: "Para ti", href: "/practica" },
         ]
       : [];
 

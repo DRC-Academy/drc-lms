@@ -11,9 +11,10 @@ import {
   leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
+import { calcularDiploma } from "@/lib/diploma";
 import Cabecera from "@/components/Cabecera";
 import BannerCurso from "@/components/BannerCurso";
-import TiraEstadisticas from "@/components/TiraEstadisticas";
+import BannerDiploma from "@/components/BannerDiploma";
 import TarjetaPerfil from "@/components/TarjetaPerfil";
 import PanelAlumno from "@/components/PanelAlumno";
 
@@ -52,20 +53,21 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   // material B1: su contenido sale del banco A2 al generar.
   const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(perfil.nivel)) : [];
 
-  // El porcentaje del curso es el del que manda en el banner. Con dos
-  // cursos se enseña el de ese, no una media de los dos: una media de
-  // dos cursos distintos no significa nada.
+  // ---------------------------------------------------------------
+  // EL DIPLOMA
   //
-  // `completadas > 0` y no solo `total > 0`: un alumno que aún no ha
-  // hecho ninguna lección tiene un 0% que no es un dato, es la ausencia
-  // de él. Sin esto, quien entra por primera vez recibe una tira de
-  // "0% · — · — · B1", que es exactamente el boletín en blanco que la
-  // tira existe para evitar.
+  // Del curso que manda en el banner, que es el mismo del que habla todo
+  // lo demás de la pantalla. Con dos cursos asignados no se suman ni se
+  // promedian: dos diplomas distintos no hacen medio diploma, y enseñar
+  // los dos rompería el principio de tener dos o tres elementos.
+  //
+  // Aquí SÍ se enseña con cero lecciones hechas, al revés que la tira de
+  // estadísticas que esto sustituye. Aquel cero no era un dato; este sí:
+  // "tu diploma son 187 lecciones" le dice a quien acaba de entrar
+  // exactamente a qué ha venido.
+  // ---------------------------------------------------------------
   const principal = estadosCurso[0];
-  const porcentajeCurso =
-    principal && principal.total > 0 && principal.completadas > 0
-      ? Math.round((principal.completadas / principal.total) * 100)
-      : null;
+  const diploma = calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0);
 
   const nombre = perfil?.nombre.trim() ?? "";
   const profesor = perfil?.profesor.trim() ?? "";
@@ -168,12 +170,17 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           )}
         </div>
 
-        <TiraEstadisticas
-          porcentajeCurso={porcentajeCurso}
-          completadas={principal?.completadas ?? 0}
-          total={principal?.total ?? 0}
-          nivel={perfil?.nivel ?? ""}
-        />
+        {/* Debajo del banner del curso y pegado a él: la acción está
+            arriba y el motivo justo después. Separarlos con la práctica
+            en medio dejaría el diploma al final, que es donde no lo ve
+            nadie. */}
+        <div className="mt-3 lg:mt-5">
+          <BannerDiploma
+            estado={diploma}
+            tituloCurso={principal?.curso.titulo ?? ""}
+            nivel={perfil?.nivel ?? ""}
+          />
+        </div>
 
         <PanelAlumno
           alumnoId={params.id}

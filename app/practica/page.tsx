@@ -82,12 +82,15 @@ export default async function PaginaPractica() {
           inferior. */}
       <main className="mx-auto flex w-full max-w-contenido flex-1 flex-col gap-7 px-4 pb-[120px] pt-[18px] lg:gap-9 lg:px-9 lg:pt-8">
         <header>
+          {/* El mismo rótulo que la pestaña. Si la navegación dice una
+              cosa y el título de la pantalla dice otra, el alumno duda de
+              si ha llegado adonde quería. */}
           <h1 className="font-display text-[24px] font-extrabold leading-[1.15] tracking-[-0.02em] text-marca-tinta lg:text-[30px]">
-            Tu práctica
+            Para ti
           </h1>
           <p className="mt-[5px] max-w-[720px] text-pretty text-[14px] leading-[1.45] text-marca-gris lg:mt-1.5 lg:text-[15px]">
-            Ejercicios hechos para ti a partir de tu perfil y de lo que trabajas en clase. No es el
-            curso: es lo que te toca a ti hoy.
+            Ejercicios hechos contigo dentro: tu perfil, tus clases y lo que se te viene repitiendo.
+            No es el curso, que es igual para todos: es lo tuyo.
           </p>
         </header>
 
