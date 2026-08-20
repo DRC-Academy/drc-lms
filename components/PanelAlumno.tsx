@@ -16,8 +16,8 @@ import BloquesGenerados from "@/components/BloquesGenerados";
 /**
  * El cuerpo del inicio: la rejilla de dos columnas y lo que va debajo.
  *
- * ES CLIENTE PORQUE LA GENERACIÓN LO ES, pero el curso y el diploma no
- * tienen por qué serlo: entran por `banner` y `diploma` ya renderizados
+ * ES CLIENTE PORQUE LA GENERACIÓN LO ES, pero el curso y el hito no
+ * tienen por qué serlo: entran por `banner` y `hito` ya renderizados
  * en el servidor. Es lo que permite que la franja siga siendo un
  * componente de servidor y a la vez comparta fila con una tarjeta que
  * necesita estado.
@@ -36,7 +36,7 @@ export default function PanelAlumno({
   idsTerminados,
   esAdministrador,
   banner,
-  diploma,
+  hito,
 }: {
   alumnoId: string;
   /** La tarjeta de generación, o null si no hay de dónde tirar. */
@@ -49,8 +49,8 @@ export default function PanelAlumno({
   esAdministrador: boolean;
   /** La franja del curso, renderizada en el servidor. */
   banner: ReactNode;
-  /** La fila del diploma, renderizada en el servidor. Null sin curso. */
-  diploma: ReactNode;
+  /** La fila del hito, renderizada en el servidor. Null sin curso. */
+  hito: ReactNode;
 }) {
   const router = useRouter();
   const {
@@ -139,11 +139,12 @@ export default function PanelAlumno({
           conColumna ? "lg:grid-cols-[minmax(0,1fr)_416px]" : "lg:grid-cols-1"
         }`}
       >
-        {/* IZQUIERDA: el curso, y pegado debajo el diploma. La acción
-            arriba y el motivo justo después. */}
+        {/* IZQUIERDA: el curso con el diploma dentro, y pegado debajo el
+            paso de esta semana. La meta y la acción arriba; el paso que
+            de verdad se puede dar hoy, justo después. */}
         <div className="flex flex-col gap-3">
           {banner}
-          {diploma}
+          {hito}
         </div>
 
         {conColumna && (
