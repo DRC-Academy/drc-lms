@@ -199,7 +199,12 @@ export default function PanelPractica({
               generando={generando}
             />
 
-            {total > 0 && (
+            {/* Solo mientras quede algo por cerrar. Terminados los
+                cuatro, «cuando termines los 4» habla de un futuro que ya
+                pasó, y lo que de verdad toca decir —que la próxima clase
+                trae bloque nuevo— ya lo dicen la franja de arriba y la
+                barra de abajo. */}
+            {total > 0 && enCurso && (
               <p className="mt-5 text-[14px] leading-[1.5] text-marca-grisSuave">
                 Cuando termines {total === 1 ? "el bloque" : `los ${total}`}, tu práctica se vuelve a
                 generar con lo de tu siguiente clase.
