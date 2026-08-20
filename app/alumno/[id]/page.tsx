@@ -11,11 +11,11 @@ import {
   leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
-import { calcularDiploma, textoHito } from "@/lib/diploma";
+import { calcularDiploma } from "@/lib/diploma";
 import { PALABRA_NIVEL } from "@/components/Casillas";
 import Cabecera from "@/components/Cabecera";
 import BannerCurso from "@/components/BannerCurso";
-import FilaHito from "@/components/FilaHito";
+import BannerDiploma from "@/components/BannerDiploma";
 import PanelAlumno from "@/components/PanelAlumno";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
@@ -54,7 +54,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(perfil.nivel)) : [];
 
   // ---------------------------------------------------------------
-  // EL EMBUDO DEL DIPLOMA
+  // EL DIPLOMA
   //
   // Del curso que manda en el banner, que es el mismo del que habla todo
   // lo demás de la pantalla. Con dos cursos asignados no se suman ni se
@@ -66,16 +66,13 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   // "tu diploma son 187 lecciones" le dice a quien acaba de entrar
   // exactamente a qué ha venido.
   //
-  // SON DOS PIEZAS Y NO UNA, y ese es el embudo: la META va dentro de la
-  // franja, en la cifra grande —lo que falta para el diploma— y el PASO
-  // va en la fila de debajo —lo que falta para cerrar este módulo—. Las
-  // dos apuntan al mismo botón. Antes la fila repetía la cuenta de la
-  // franja con otra aritmética, así que había dos cifras del mismo hecho
-  // y ningún camino entre ellas.
+  // VA FUERA DE «PanelAlumno», y por eso se pinta aquí y no se le pasa
+  // como prop: ocupa el ancho entero por encima de la rejilla, así que
+  // no es una de las dos columnas. Es también lo que le deja seguir
+  // siendo un componente de servidor puro, sin pasar por el cliente.
   // ---------------------------------------------------------------
   const principal = estadosCurso[0];
   const diploma = calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0);
-  const hito = textoHito(diploma, principal?.hito ?? null);
 
   const nombre = perfil?.nombre.trim() ?? "";
   const profesor = perfil?.profesor.trim() ?? "";
@@ -195,9 +192,17 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           </p>
         </div>
 
-        {/* La franja y el hito entran como piezas ya renderizadas: los
-            pinta el servidor y los coloca «PanelAlumno», que es quien
-            monta la rejilla porque la columna derecha necesita estado. */}
+        {/* EL DIPLOMA, LO PRIMERO DEBAJO DEL SALUDO. A ancho completo y
+            por encima de la rejilla: es la meta de la que cuelga todo lo
+            que viene después, y compartiendo caja con el curso se leía
+            como un dato del curso. */}
+        <div className="mb-3 lg:mb-5">
+          <BannerDiploma estado={diploma} tituloCurso={principal?.curso.titulo ?? ""} />
+        </div>
+
+        {/* La franja entra como pieza ya renderizada: la pinta el
+            servidor y la coloca «PanelAlumno», que es quien monta la
+            rejilla porque la columna derecha necesita estado. */}
         <PanelAlumno
           alumnoId={params.id}
           tarjeta={tarjeta}
@@ -205,14 +210,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           generadosIniciales={generados}
           idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}
-          banner={
-            <BannerCurso
-              estados={estadosCurso}
-              diploma={diploma}
-              conLateral={tarjeta !== null}
-            />
-          }
-          hito={<FilaHito texto={hito} />}
+          banner={<BannerCurso estados={estadosCurso} />}
         />
 
       </main>

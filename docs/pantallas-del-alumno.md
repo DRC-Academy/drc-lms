@@ -18,7 +18,7 @@ Dónde vive hoy el copy, para saber dónde tocar:
 | Fuente | Qué redacta |
 |---|---|
 | `lib/modos.ts` | Tarjeta de generación, esperas, resumen de la última clase, avisos del formulario de perfil |
-| `lib/diploma.ts` | El embudo del diploma: la meta de la franja, la línea junto al botón y el hito de la fila |
+| `lib/diploma.ts` | Los cuatro estados del banner del diploma: cifra, unidad, pie y nota |
 | `lib/generacion.ts` | Los cinco textos de etapa mientras se genera un bloque |
 | `lib/drip.ts` | «Disponible mañana» / «Disponible en N días» |
 | `lib/faq.ts` | Las 35 preguntas y respuestas de la ayuda, y el mensaje de WhatsApp |
@@ -208,18 +208,23 @@ Para lector de pantalla: «Cargando el curso…»
 
 `app/alumno/[id]/page.tsx`
 
-Orden de la pantalla: saludo → (franja del curso, con el diploma dentro, + fila
-del hito) a la izquierda, tarjeta de práctica a la derecha → el bloque
-preparado, a lo ancho.
+Orden de la pantalla: saludo → **banner del diploma**, a lo ancho → franja del
+curso a la izquierda y tarjeta de práctica a la derecha → el bloque preparado, a
+lo ancho.
 
-**El embudo del diploma** son tres piezas encadenadas, y cada una es un dato
-distinto:
+**El diploma tiene banner propio** y es lo primero bajo el saludo. Ha vivido en
+tres sitios antes de este —un anillo en la columna derecha, una fila de 50px
+bajo la franja, y dentro de la franja como su cifra grande— y los tres fallaban
+por lo mismo: compartía caja con el curso, así que se leía como un dato del
+curso. Con la mudanza, **la franja pierde su columna de cifra**: mientras el
+diploma contaba lo que falta y la franja lo que llevas, la pantalla tenía dos
+cuentas del mismo avance a dos centímetros.
 
-| Paso | Dónde | Qué dice |
+| Pieza | Qué dice | Dónde |
 |---|---|---|
-| **Meta** | Cifra grande de la franja | «179 lecciones · PARA TU DIPLOMA» |
-| **Paso** | Fila fina bajo la franja | «4 lecciones para cerrar este módulo» |
-| **Acción** | Botón de la franja | «Continuar» → la lección exacta |
+| **Banner del diploma** | «179 lecciones para conseguirlo» + barra + nota | `components/BannerDiploma.tsx` |
+| **Franja del curso** | Dónde lo dejaste, el módulo y el botón | `components/BannerCurso.tsx` |
+| **Tarjeta de práctica** | El bloque generado con lo suyo | `components/TarjetaGeneracion.tsx` |
 
 ### 4.1 Saludo
 
@@ -259,74 +264,75 @@ verde).
 > Tu plan todavía no tiene un curso asociado. Coméntaselo a tu profesor y lo
 > activamos. Mientras tanto, tu práctica de abajo funciona con normalidad.
 
-**Con curso**, tres estados:
+**Con curso**, cuatro estados:
 
 | Estado | Etiqueta | Titular | Botón | Junto al botón |
 |---|---|---|---|---|
-| Sin empezar | · EMPIEZA TU CURSO | {título de la 1ª lección} | Empezar | Empieza por la primera y esto se va llenando solo |
-| En curso | · CONTINÚA DONDE LO DEJASTE | {título de la lección donde se quedó} | Continuar | Cada lección te acerca una |
-| Queda una | · CONTINÚA DONDE LO DEJASTE | {título de la última lección} | Continuar | Es la última que te queda |
+| Sin empezar | · EMPIEZA TU CURSO | {título de la 1ª lección} | Empezar | Lección 1 de {total} |
+| En curso | · CONTINÚA DONDE LO DEJASTE | {título de la lección donde se quedó} | Continuar | Lección {n} de {total} |
+| Queda una | · CONTINÚA DONDE LO DEJASTE | {título de la última lección} | Continuar | Lección {total} de {total} |
 | Terminado | · CURSO COMPLETADO | {título del curso} | Repasar el curso | *(nada)* |
 
 - Segunda línea (`meta`): «{título del curso} · {módulo}», con el prefijo de
   LearnDash («Week 3 - Lesson 12:») ya quitado. Con el curso terminado, el
   título ya **es** el curso, así que ahí solo va el módulo.
+- **La franja no tiene columna de cifra.** Tuvo el «{porcentaje}% · del curso
+  completado» y después la cuenta del diploma; las dos contaban el mismo avance
+  que ahora cuenta el banner de arriba. Lo único que sobrevive de esa columna es
+  la posición de la lección, y sobrevive porque no lo dice nadie más.
+- La posición se cuenta sobre el **orden real del curso**, no sobre las
+  completadas: quien haya hecho lecciones sueltas fuera de orden lleva más
+  hechas que su posición.
 - El botón lleva el título en su nombre accesible: «Continuar {título}».
-
-### 5.1.1 La cifra de la franja: el diploma
-
-La columna derecha de la franja **es el diploma**. Antes decía «{porcentaje}% ·
-del curso completado» y ahora dice lo que falta.
-
-> **179** lecciones
-> **PARA TU DIPLOMA**   ← verde claro `#A9DFB7`, la etiqueta del banner
-> *(una marca por lección en escritorio, una barra en móvil)*
-> llevas 12 de 191
-
-| Estado | Cifra | Etiqueta | Pie |
-|---|---|---|---|
-| Sin empezar | {total} lecciones | PARA TU DIPLOMA | {total} lecciones por delante |
-| En curso | {restantes} lecciones | PARA TU DIPLOMA | llevas {n} de {total} |
-| Queda una | 1 lección | PARA TU DIPLOMA | llevas {total-1} de {total} |
-| Conseguido | *(sello de 40px)* | DIPLOMA CONSEGUIDO | {total} lecciones, todas hechas |
-
-La cifra es **siempre lo que falta, nunca el porcentaje**: 179 es un objetivo,
-el 6% es una nota. El porcentaje sobrevive como relleno de las marcas y de la
-barra de móvil, donde no se lee como número sino como distancia.
 
 **Segundo curso** (alumnos de examen), fuera de la franja:
 
 > También tienes acceso a [{título del segundo curso}].
 
-### 5.2 Fila del hito: el paso de esta semana
+### 5.2 Banner del diploma
 
-`components/FilaHito.tsx` + `lib/diploma.ts`. Fila fina bajo la franja, con un
-sello y una barra. **No es pulsable.**
+`components/BannerDiploma.tsx` + `lib/diploma.ts`. A lo ancho, entre el saludo y
+la rejilla. **No es pulsable y no lleva botón.**
 
-Es el mismo mueble de 50px que antes ocupaba la fila del diploma, contando otra
-cosa: cuánto falta para **cerrar el módulo en el que está**. El diploma se
-mudó arriba, a la cifra de la franja.
+Superficie de **pergamino** —crema `#FFFDF5` con borde `#D9D0A8` y un doble
+filete interior— que es la única de ese color en la pantalla: se separa sola de
+la franja en tinta y de las tarjetas blancas sin robarle el verde de acción a
+ningún botón. El ámbar se queda de acento, que es su papel en el resto de la
+aplicación.
 
-| Estado | Lo que se lee | Barra |
-|---|---|---|
-| Sin curso, o curso sin lecciones | *No se pinta nada* | — |
-| Sin empezar | **{n} lecciones** para cerrar tu primer módulo · {módulo} | del módulo |
-| En curso | **{n} lecciones** para cerrar este módulo · {módulo} | del módulo |
-| Queda una del curso | **La última. Ya está.** · {módulo} | del módulo |
-| Conseguido | **El diploma es tuyo. Te contamos enseguida cómo descargarlo.** | *(ninguna)* |
+> `🏅`  **TU DIPLOMA · B1 GENERAL**
+> **179** lecciones para conseguirlo
+> ▓▓░░░░░░░░  llevas 12 de 191   │  Se emite al completar el curso entero.
+>                                │  Cada lección que cierras lo acerca.
 
-- **La barra es la del módulo, no la del curso.** Es la que se mueve en una
-  sesión: cerrar una lección de 191 no mueve un píxel, una de 7 mueve un
-  séptimo.
-- El nombre del módulo solo sale a partir de 900px, donde sobra ancho.
-- Con el curso terminado la fila cambia de color (verde de fondo, sello
-  relleno) y pierde la barra: una barra al 100% junto a «ya está» no añade nada.
-- Descripción para lector de pantalla: «Te faltan {n} lecciones para cerrar este
-  módulo» / «Te queda la última lección del curso».
+| Estado | Cifra | Unidad | Pie | Nota |
+|---|---|---|---|---|
+| Sin curso, o curso sin lecciones | *No se pinta nada* | — | — | — |
+| Sin empezar | {total} | lecciones para conseguirlo | aún no has empezado | Empieza por la primera y esto se va llenando solo. |
+| En curso | {restantes} | lecciones para conseguirlo | llevas {n} de {total} | Se emite al completar el curso entero. Cada lección que cierras lo acerca. |
+| Queda una | 1 | lección para conseguirlo | llevas {total-1} de {total} | **La última. Ya está.** |
+| Conseguido | *(sello relleno)* | Diploma conseguido | {total} lecciones, todas hechas | El diploma es tuyo. Te contamos enseguida cómo descargarlo. |
+
+- La cifra es **siempre lo que falta, nunca el porcentaje**: 179 es un objetivo,
+  el 6% es una nota. El porcentaje sobrevive como relleno de la barra, donde no
+  se lee como número sino como distancia.
+- **Sin empezar, la cifra es el curso entero.** Mismo número que «te faltan
+  todas», contado como lo que es: el tamaño de lo que tiene por delante, no una
+  deuda. La diferencia la cargan el pie y la nota.
+- **Conseguido** cambia la piel a verde (`#F0FAF2` con borde `#1E9E3A`), rellena
+  el sello y **pierde la barra**: una barra al 100% junto a «ya está» no añade
+  un dato. Tampoco enseña un «0», que se leería como carencia en el momento del
+  logro.
+- En móvil el lateral se pliega: la nota baja bajo la barra, unida al pie por un
+  «·».
+- Descripción para lector de pantalla: «Te faltan {n} de {total} lecciones para
+  tu diploma de {curso}» / «Has completado {curso}».
 
 > **Sigue sin haber descarga del diploma.** Ni botón, ni archivo, ni fecha. Las
 > cuatro piezas pendientes están anotadas en `lib/diploma.ts`. El texto de
-> «conseguido» es provisional a propósito y no promete archivo ni plazo.
+> «conseguido» es provisional a propósito y no promete archivo ni plazo. Cuando
+> exista el botón, su sitio es este banner: es la única pieza de la pantalla que
+> habla del diploma y ahora tiene hueco sin quitárselo a nada.
 
 ### 5.3 Tarjeta de práctica (columna derecha)
 
@@ -492,16 +498,17 @@ de la tarjeta real, para que no salte nada al llegar. Sin texto.
 
 ## 5.9 El inicio, por estados del alumno
 
-| Estado del alumno | Franja del curso | Diploma (en la franja) | Fila del hito | Tarjeta de práctica | Bloque preparado |
-|---|---|---|---|---|---|
-| **Sin perfil en Gestión** | Tarjeta «Tu plan todavía no tiene un curso asociado…» | No se pinta | No se pinta | No se pinta (sin fuentes) | «Todavía no has preparado ninguno» + «En cuanto tu profesor analice tu primera clase…» |
-| **Sin curso asignado** | Ídem | No se pinta | No se pinta | Normal, si tiene alguna fuente | Normal |
-| **Curso sin lecciones cargadas** | Franja sin columna derecha | No se pinta | No se pinta | Normal | Normal |
-| **Sin clase analizada** | Normal | Normal | Normal | Normal (fuentes: perfil y/o examen) | Según haya generado o no |
-| **Con todo** | Normal | Normal | Normal | Normal | Normal |
+| Estado del alumno | Banner del diploma | Franja del curso | Tarjeta de práctica | Bloque preparado |
+|---|---|---|---|---|
+| **Sin perfil en Gestión** | No se pinta | Tarjeta «Tu plan todavía no tiene un curso asociado…» | No se pinta (sin fuentes) | «Todavía no has preparado ninguno» + «En cuanto tu profesor analice tu primera clase…» |
+| **Sin curso asignado** | No se pinta | Ídem | Normal, si tiene alguna fuente | Normal |
+| **Curso sin lecciones cargadas** | No se pinta | Franja normal, sin posición de lección | Normal | Normal |
+| **Sin clase analizada** | Normal | Normal | Normal (fuentes: perfil y/o examen) | Según haya generado o no |
+| **Con todo** | Normal | Normal | Normal | Normal |
 
 Cuando la tarjeta de práctica no se pinta, la franja del curso pasa a ancho
-completo y la columna derecha desaparece (`components/PanelAlumno.tsx:133`).
+completo y la columna derecha desaparece (`components/PanelAlumno.tsx`). El
+banner del diploma va siempre a ancho completo, por encima de esa rejilla.
 
 ---
 
@@ -1489,8 +1496,8 @@ Por orden de lo que más se nota en pantalla:
   (§10.7.1). Con ello apareció la píldora `Practicado` para los que se cerraron
   por debajo del 80%: antes se etiquetaban «En progreso», igual que los que
   están de verdad a medias.
-- **El diploma pasa a ser la cifra grande de la franja** (§5.1.1) y la fila de
-  debajo cuenta el paso de esta semana (§5.2). Con eso desaparece la
-  duplicación que tenía el inicio —«llevas 12 de 191» y «179 lecciones para tu
-  diploma», el mismo hecho en dos renglones— y el copy motivador que estaba
-  escrito y sin pintar pasa a leerse junto al botón.
+- **El diploma tiene banner propio** (§5.2), de pergamino, a lo ancho y encima
+  de la rejilla; la franja del curso se queda sin columna de cifra (§5.1). Con
+  eso desaparece la duplicación que tenía el inicio —«llevas 12 de 191» y «179
+  lecciones para tu diploma», el mismo hecho en dos renglones— y el copy que
+  estaba escrito y sin pintar pasa a leerse en la nota del banner.

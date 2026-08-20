@@ -18,7 +18,6 @@
 import "server-only";
 import { cache } from "react";
 import { aperturaDeLeccion, calcularApertura } from "@/lib/drip";
-import { partirModulo } from "@/lib/modulo";
 import { baseLms } from "@/lib/supabase-lms";
 import { claveCoincide, cursosDelAlumno } from "@/lib/cursos";
 import { excepcionesDelAlumno } from "@/lib/accesos-manuales";
@@ -36,27 +35,15 @@ export type SiguienteLeccion = {
   id: string;
   titulo: string;
   moduloTitulo: string;
-};
-
-/**
- * EL HITO CERCANO: el módulo en el que está ahora mismo.
- *
- * Existe para el embudo del diploma. "Te faltan 179 lecciones" es la
- * meta, y una meta a 179 lecciones no mueve a nadie un martes; "te
- * faltan 4 para cerrar este módulo" sí, porque es esta semana. Los dos
- * números hacen falta y son datos distintos, así que ninguno repite al
- * otro.
- *
- * Sale de la misma consulta que ya se hacía: los módulos y las lecciones
- * están todos leídos y el progreso también. No cuesta un viaje más.
- */
-export type HitoModulo = {
-  /** El título ya limpio, sin el "Week 3 - Lesson 12:" de LearnDash. */
-  titulo: string;
-  total: number;
-  completadas: number;
-  /** Nunca cero: con cero el módulo estaría cerrado y el hito sería el siguiente. */
-  restantes: number;
+  /**
+   * Qué número hace en el curso, empezando en 1.
+   *
+   * Se cuenta sobre el orden real —módulo y luego lección—, no sobre las
+   * completadas: quien haya hecho lecciones sueltas fuera de orden tiene
+   * más hechas que su posición, y "Lección 13 de 191" tiene que decir
+   * dónde está, no cuántas lleva.
+   */
+  posicion: number;
 };
 
 export type EstadoCurso = {
@@ -66,8 +53,6 @@ export type EstadoCurso = {
   completadas: number;
   /** La primera sin completar, o null si ya está el curso entero. */
   siguiente: SiguienteLeccion | null;
-  /** El módulo de esa lección, con su cuenta. Null con el curso terminado. */
-  hito: HitoModulo | null;
   /** Cuándo tocó este curso por última vez. Decide cuál va en el banner. */
   ultimaActividad: string | null;
 };
@@ -161,7 +146,6 @@ export async function estadoDelCurso(alumnoId: string, curso: CursoFila): Promis
     total: 0,
     completadas: 0,
     siguiente: null,
-    hito: null,
     ultimaActividad: null,
   };
 
@@ -220,16 +204,15 @@ export async function estadoDelCurso(alumnoId: string, curso: CursoFila): Promis
 
   let completadas = 0;
   let siguiente: SiguienteLeccion | null = null;
-  let moduloDelSiguiente: string | null = null;
   let ultimaActividad: string | null = null;
 
-  for (const leccion of ordenadas) {
+  ordenadas.forEach((leccion, i) => {
     const cuando = completadaEn.get(leccion.id);
 
     if (cuando !== undefined) {
       completadas++;
       if (ultimaActividad === null || cuando > ultimaActividad) ultimaActividad = cuando;
-      continue;
+      return;
     }
 
     // La primera pendiente en el orden del curso es donde se retoma.
@@ -238,33 +221,12 @@ export async function estadoDelCurso(alumnoId: string, curso: CursoFila): Promis
         id: leccion.id,
         titulo: leccion.titulo,
         moduloTitulo: tituloModulo.get(leccion.modulo_id) ?? "",
+        posicion: i + 1,
       };
-      moduloDelSiguiente = leccion.modulo_id;
     }
-  }
+  });
 
-  // Segunda pasada, solo sobre el módulo en curso. Es sobre las mismas
-  // filas que ya están en memoria: recorrerlas otra vez cuesta menos que
-  // llevar un acumulador por módulo durante el bucle de arriba.
-  let hito: HitoModulo | null = null;
-  if (moduloDelSiguiente !== null) {
-    const delModulo = ordenadas.filter((l) => l.modulo_id === moduloDelSiguiente);
-    const hechas = delModulo.filter((l) => completadaEn.has(l.id)).length;
-
-    hito = {
-      // Sin el prefijo de LearnDash: en una fila de 50px, "Week 3 -
-      // Lesson 12: Reported speech" se corta antes de decir de qué va.
-      titulo: partirModulo(
-        tituloModulo.get(moduloDelSiguiente) ?? "",
-        ordenModulo.get(moduloDelSiguiente) ?? 0
-      ).titulo,
-      total: delModulo.length,
-      completadas: hechas,
-      restantes: delModulo.length - hechas,
-    };
-  }
-
-  return { curso, total: ordenadas.length, completadas, siguiente, hito, ultimaActividad };
+  return { curso, total: ordenadas.length, completadas, siguiente, ultimaActividad };
 }
 
 // ---------------------------------------------------------------
