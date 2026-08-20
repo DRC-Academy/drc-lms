@@ -1,0 +1,41 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Home del alumno · escritorio", "x": 0, "y": 0, "w": 1440, "h": 1040 },
+    { "file": "DireccionA.dc.html", "title": "A · Pergamino", "x": 0, "y": 1160, "w": 880, "h": 440 },
+    { "file": "DireccionB.dc.html", "title": "B · Sello en tinta", "x": 960, "y": 1160, "w": 880, "h": 440 },
+    { "file": "DireccionC.dc.html", "title": "C · Las 191, a la vista", "x": 1920, "y": 1160, "w": 880, "h": 440 },
+    { "file": "Estados.dc.html", "title": "Los cuatro estados del diploma", "x": 0, "y": 1720, "w": 880, "h": 900 },
+    { "file": "Movil.dc.html", "title": "Home del alumno · móvil 390", "x": 960, "y": 1720, "w": 390, "h": 1380 }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 0,
+      "y": -200,
+      "w": 620,
+      "text": "HOME DEL ALUMNO · el diploma sale de la franja\n\nQué cambia respecto de lo que hay hoy en producción:\n\n1. El diploma deja de ser la cifra de la franja del curso y pasa a un banner propio, a lo ancho, encima de todo.\n2. Se va la fila «4 lecciones para cerrar este módulo».\n3. La franja del curso se queda sin columna de cifra: solo dónde lo dejaste y el botón.\n\nTodo está con los tokens reales (Radio Canada, #12211A, #1E9E3A, #FFC400, #E2E8E4), no con colores inventados."
+    },
+    {
+      "id": "sobre-main",
+      "x": 1520,
+      "y": 0,
+      "w": 380,
+      "text": "EL HOME CON LA DIRECCIÓN A\n\nEl diploma va entre el saludo y la rejilla: es lo primero que se ve al entrar y ocupa el ancho entero, así que se lee como una pieza propia y no como un apéndice de la franja.\n\nCuesta unos 124px antes del pliegue. La franja y la práctica bajan eso.\n\nDECISIÓN PENDIENTE: la franja del curso se ha quedado sin su columna del 12%. Si vuelve, la pantalla tiene otra vez dos cuentas del mismo avance —«llevas 12 de 191» arriba y abajo—, que es justo lo que se venía a quitar. Aquí está sin ella."
+    },
+    {
+      "id": "sobre-direcciones",
+      "x": 2880,
+      "y": 1160,
+      "w": 380,
+      "text": "TRES FORMAS DE QUE RESALTE\n\nCada una destaca por una vía distinta:\n\nA por SUPERFICIE — la única pieza crema de la pantalla.\nB por PESO — segunda banda oscura, la más contundente.\nC por FORMA — muy ancha y muy baja, con las 191 marcas dentro.\n\nQué mirar al elegir:\n\n1. ¿Qué es lo primero que ve el ojo al abrir? Si tiene que ser el diploma, es B.\n2. ¿El verde sigue significando solo «pulsa aquí»? En las tres, sí.\n3. ¿Y el ámbar sigue siendo acento? En A y C sí; en B pasa a ser superficie."
+    },
+    {
+      "id": "sobre-estados",
+      "x": 1440,
+      "y": 1720,
+      "w": 380,
+      "text": "LOS CUATRO ESTADOS\n\nSin empezar, en curso, la última y conseguido. Los textos son los que ya están escritos en lib/diploma.ts, incluido el de «conseguido», que a propósito no promete archivo ni fecha porque la descarga todavía no existe.\n\nEl de «sin empezar» es el que ve un alumno nuevo: la cifra es el tamaño del curso, no una deuda.\n\nEl móvil de al lado es la PÁGINA ENTERA, no la pantalla: en el teléfono real todo lo que hay por debajo de la franja llega con scroll."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}
