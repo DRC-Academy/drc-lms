@@ -204,6 +204,50 @@ export async function alumnosDelPanel(): Promise<AlumnoPanel[]> {
   }));
 }
 
+// ---------------------------------------------------------------
+// LOS ALUMNOS DEL CRON DE AVISOS
+//
+// Es la única lectura de Gestión que se lleva el EMAIL de todos a la
+// vez. Está justificada —sin dirección no hay a quién avisar— y por eso
+// vive aquí, en el módulo que ya es el único que habla con Gestión, y
+// no en el del cron.
+//
+// Ese email no se pinta en ninguna pantalla ni se escribe en ningún
+// log: solo va al `to:` de Resend. Ver la nota del panel, que dejó de
+// enseñarlos por lo mismo.
+// ---------------------------------------------------------------
+
+export type AlumnoAviso = {
+  alumnoId: string;
+  nombre: string;
+  email: string;
+  plan: string;
+  nivel: string;
+  /** Sin ella no hay drip que anunciar: el curso entero está abierto. */
+  fechaInicio: string | null;
+};
+
+export async function alumnosParaAvisos(): Promise<AlumnoAviso[]> {
+  const { data, error } = await soloLectura("vista_perfil_alumno")
+    .select("alumno_id, nombre, email, plan, nivel, fecha_inicio")
+    .order("alumno_id", { ascending: true })
+    .returns<Fila[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo listar para los avisos:", error.message);
+    return [];
+  }
+
+  return deduplicar(data ?? []).map((fila) => ({
+    alumnoId: comoTexto(fila.alumno_id),
+    nombre: comoTexto(fila.nombre),
+    email: comoTexto(fila.email),
+    plan: comoTexto(fila.plan),
+    nivel: comoTexto(fila.nivel),
+    fechaInicio: comoTextoOpcional(fila.fecha_inicio),
+  }));
+}
+
 export type ClasePanel = {
   alumnoId: string;
   titulo: string;

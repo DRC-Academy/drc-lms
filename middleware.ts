@@ -28,8 +28,27 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { NOMBRE_COOKIE, abrirSesion } from "@/lib/sesion";
 
-/** Lo único a lo que se llega sin haber entrado. */
-const PUBLICAS = ["/acceso", "/entrar"];
+/**
+ * Lo único a lo que se llega sin haber entrado.
+ *
+ * LAS TRES DE LOS AVISOS NO SON UN AGUJERO: ninguna se sirve sin
+ * autorización, lo que pasa es que la suya no es la cookie.
+ *
+ *   · `/avisos` — la pantalla de baja. El alumno llega desde el correo,
+ *     casi siempre en el móvil y sin haber entrado nunca. Lo que la
+ *     autoriza es el token firmado del enlace, que no abre nada más.
+ *     Detrás de la cookie, el enlace de baja llevaría a la pantalla de
+ *     acceso, que es la forma más rápida de que marque el correo como
+ *     spam.
+ *
+ *   · `/api/avisos` — el mismo token, para el botón de baja que enseñan
+ *     Gmail y Outlook, que hace un POST sin abrir el navegador.
+ *
+ *   · `/api/avisos-apertura` — el cron. Vercel lo llama sin cookie y
+ *     con `Authorization: Bearer CRON_SECRET`, que es lo que comprueba
+ *     la propia ruta antes de hacer nada.
+ */
+const PUBLICAS = ["/acceso", "/entrar", "/avisos", "/api/avisos", "/api/avisos-apertura"];
 
 function esPublica(ruta: string): boolean {
   return PUBLICAS.some((publica) => ruta === publica || ruta.startsWith(`${publica}/`));

@@ -23,17 +23,22 @@ import { MINUTOS_ENLACE } from "@/lib/sesion";
  * apuntando URL_BASE ahí; hasta entonces, el enlace del correo puede
  * acabar en spam aunque el envío salga bien.
  */
-const REMITENTE = "DRC Academy <practica@drcacademy.com>";
+export const REMITENTE = "DRC Academy <practica@drcacademy.com>";
 
 const ASUNTO = "Tu acceso a la práctica de DRC Academy";
 
 // Los mismos valores que usa la aplicación (tailwind.config.ts, paleta
 // `drc`), para que el correo y la pantalla de acceso se parezcan.
-const VERDE = "#037A36";
-const TITULAR = "#0E2A19";
-const CUERPO = "#5A655E";
-const FONDO = "#F4F3EF";
-const BORDE = "#E6E3DA";
+//
+// Se exportan porque el LMS manda ya dos correos —este y el aviso de
+// contenido nuevo, en `lib/correo-avisos.ts`— y dos copias de los mismos
+// cinco hexadecimales se separan a la primera vez que alguien retoque
+// uno.
+export const VERDE = "#037A36";
+export const TITULAR = "#0E2A19";
+export const CUERPO = "#5A655E";
+export const FONDO = "#F4F3EF";
+export const BORDE = "#E6E3DA";
 
 /**
  * De dónde sale el dominio del enlace.
@@ -43,7 +48,7 @@ const BORDE = "#E6E3DA";
  * apuntando al servidor de otro. El origen lo decide el entorno, no
  * quien llama.
  */
-function urlBase(): string {
+export function urlBase(): string {
   const explicita = process.env.URL_BASE?.trim();
   if (explicita) return explicita.replace(/\/+$/, "");
 

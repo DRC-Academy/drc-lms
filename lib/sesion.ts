@@ -172,7 +172,7 @@ function aBytes(texto: string) {
 // FIRMA
 // ---------------------------------------------------------------
 
-type Proposito = "enlace" | "sesion" | "woo";
+type Proposito = "enlace" | "sesion" | "woo" | "baja";
 
 /** Qué clave firma cada sobre. Ver la cabecera del módulo. */
 function nombreDelSecreto(proposito: Proposito): "SECRETO_SESION" | "SECRETO_WOO" {
@@ -366,6 +366,51 @@ export async function abrirTokenWoo(token: string): Promise<ContenidoSobre | nul
     console.error("[sesion] No se pudo verificar el sobre de WooCommerce:", error);
     return null;
   }
+}
+
+// ---------------------------------------------------------------
+// EL ENLACE DE BAJA DE LOS AVISOS
+//
+// Va al pie de cada correo de contenido nuevo. Firmado con la misma
+// clave que todo lo demás —SECRETO_SESION— y con propósito propio, que
+// es lo que impide que un token de baja sirva para entrar: `cerrar` y
+// `abrir` meten el propósito DENTRO de lo que se firma.
+//
+// NO CADUCA, y es deliberado. Un correo se abre a los tres meses y el
+// enlace de baja tiene que seguir funcionando: si caducara, el alumno
+// que quiere dejar de recibirlos se encontraría un enlace muerto y
+// marcaría el correo como spam, que es justo lo que esto viene a
+// evitar. La fecha viaja dentro igualmente, para saber de qué correo
+// salió si algún día hace falta.
+//
+// Lo único que revela un token robado es que ese alumno deje de recibir
+// avisos de contenido. No abre sesión, no lee nada y se deshace desde
+// la misma pantalla.
+// ---------------------------------------------------------------
+
+type SobreBaja = {
+  /** alumnoId */
+  a: string;
+  /** emitido en (ms) */
+  t: number;
+};
+
+export function crearTokenBaja(alumnoId: string): Promise<string> {
+  const sobre: SobreBaja = { a: alumnoId, t: Date.now() };
+  return cerrar("baja", sobre);
+}
+
+/** El alumno del enlace de baja, o null si la firma no cuadra. */
+export async function abrirTokenBaja(token: string): Promise<string | null> {
+  if (token === "") return null;
+
+  const datos = await abrir("baja", token);
+  if (typeof datos !== "object" || datos === null) return null;
+
+  const { a } = datos as { a?: unknown };
+  if (typeof a !== "string" || a.trim() === "") return null;
+
+  return a.trim();
 }
 
 // ---------------------------------------------------------------
