@@ -44,11 +44,10 @@ function EsqueletoBloque() {
       aria-hidden
       className="esqueleto rounded-[16px] border border-marca-borde bg-white p-[18px] lg:rounded-[18px] lg:p-6"
     >
-      <div className="flex items-center gap-2">
-        <span className="block h-[10px] w-20 rounded-full bg-marca-pista" />
-        <span className="block h-[10px] w-12 rounded-full bg-marca-niebla" />
-      </div>
-      <span className="mt-3 block h-[21px] w-[58%] rounded-md bg-marca-pista lg:h-[23px]" />
+      {/* El sello «Nuevo», que es lo único que va encima del título
+          desde que se fueron el área y los minutos. */}
+      <span className="block h-[24px] w-[62px] rounded-full bg-marca-pista" />
+      <span className="mt-2.5 block h-[21px] w-[58%] rounded-md bg-marca-pista lg:mt-3 lg:h-[23px]" />
       <span className="mt-2.5 block h-[14px] w-full rounded-md bg-marca-niebla" />
       <span className="mt-2 block h-[14px] w-[72%] rounded-md bg-marca-niebla" />
       <div className="mt-3.5 flex flex-wrap gap-1.5">
@@ -106,17 +105,30 @@ export default function BloquesGenerados({
 
   return (
     <section ref={zonaRef} aria-labelledby="titulo-bloques" className="scroll-mt-24">
+      {/* «TU LECCIÓN PERSONALIZADA», NO «TU BLOQUE PREPARADO». «Bloque» es
+          nuestra palabra —viene de la tabla `bloques_generados`— y no
+          dice qué es ni qué tiene de particular; «lección personalizada»
+          dice las dos cosas y la segunda es la promesa entera del
+          producto.
+
+          OJO: el rename está solo AQUÍ. El botón de arriba sigue siendo
+          «Preparar mi bloque» y el hueco vacío sigue hablando de
+          bloques, así que por ahora el alumno lee dos nombres para la
+          misma cosa. Cambiarlo entero es un repaso de copy aparte —y de
+          concordancia: «el que prepares» pasa a «la que prepares»—.
+
+          Y DEBAJO, «PENDIENTE» A SECAS. Decía «Lo tienes aquí hasta que
+          lo termines», que explicaba una regla nuestra; lo que el alumno
+          necesita saber de un vistazo es en qué estado está. */}
       <div className="lg:flex lg:items-baseline lg:gap-3.5">
         <h2
           id="titulo-bloques"
           className="shrink-0 font-display text-[17px] font-bold text-marca-tinta lg:text-[20px]"
         >
-          {pendiente ? "Tu bloque preparado" : "Tus bloques"}
+          {pendiente ? "Tu lección personalizada" : "Tus bloques"}
         </h2>
         <p className="mt-1 text-pretty text-[14px] leading-[1.4] text-marca-gris lg:mt-0 lg:text-[15px]">
-          {pendiente
-            ? "Lo tienes aquí hasta que lo termines."
-            : "Aquí aparece el que prepares, listo para empezarlo."}
+          {pendiente ? "Pendiente" : "Aquí aparece el que prepares, listo para empezarlo."}
         </p>
       </div>
 
@@ -163,20 +175,27 @@ function TarjetaPendiente({
       style={esNuevo ? { boxShadow: "0 0 0 3px rgba(255, 196, 0, 0.14)" } : undefined}
     >
       <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-          <span className="flex items-center gap-[7px] text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-gris lg:text-[11px]">
-            <span>{bloque.area}</span>
-            <span aria-hidden className="h-[3px] w-[3px] shrink-0 rounded-full bg-marca-grisTenue" />
-            <span className="tabular-nums">{bloque.minutos} min</span>
-          </span>
-          {esNuevo && (
+        {/* SIN «GRAMÁTICA · 10 MIN» ENCIMA DEL TÍTULO. El área ya la dice
+            el título del bloque con sus palabras, y los minutos son una
+            estimación nuestra sobre lo que tarda otra persona: quien va
+            más despacio la lee como un suspenso. Es la misma regla que
+            «Para ti», donde no se enseña ni un minuto (ver
+            `PanelPractica`); esto era el último sitio que los enseñaba.
+
+            Arriba solo queda el sello «Nuevo», y solo el día que lo es. */}
+        {esNuevo && (
+          <p>
             <span className="inline-flex items-center rounded-full bg-marca-amarillo px-2.5 py-1 text-[11px] font-semibold leading-none text-marca-tinta">
               Nuevo
             </span>
-          )}
-        </p>
+          </p>
+        )}
 
-        <h3 className="mt-2.5 text-pretty font-display text-[18px] font-bold leading-[1.2] text-marca-tinta lg:mt-3 lg:text-[21px]">
+        <h3
+          className={`text-pretty font-display text-[18px] font-bold leading-[1.2] text-marca-tinta lg:text-[21px] ${
+            esNuevo ? "mt-2.5 lg:mt-3" : ""
+          }`}
+        >
           {bloque.titulo}
         </h3>
 
