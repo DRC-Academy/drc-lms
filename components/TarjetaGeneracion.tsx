@@ -1,7 +1,7 @@
 "use client";
 
 import type { TarjetaPractica } from "@/lib/modos";
-import type { EstadoGeneracion } from "@/components/TarjetasGeneracion";
+import type { EstadoGeneracion } from "@/components/usarGenerador";
 import type { EtapaGeneracion } from "@/lib/generacion";
 import AvanceGeneracion from "@/components/AvanceGeneracion";
 

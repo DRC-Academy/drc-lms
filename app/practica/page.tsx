@@ -11,7 +11,6 @@ import {
 } from "@/lib/modos";
 import { exigirSesion } from "@/lib/sesion-servidor";
 import {
-  leerAvanceAlumno,
   leerBloquesGenerados,
   leerProgresoAlumno,
   leerUltimaGeneracion,
@@ -47,10 +46,9 @@ export default async function PaginaPractica() {
 
   const alumnoId = sesion.alumnoId;
 
-  const [datos, progreso, avance, generados, ultimaGeneracion] = await Promise.all([
+  const [datos, progreso, generados, ultimaGeneracion] = await Promise.all([
     obtenerAlumno(alumnoId),
     leerProgresoAlumno(alumnoId),
-    leerAvanceAlumno(alumnoId),
     leerBloquesGenerados(alumnoId),
     leerUltimaGeneracion(alumnoId),
   ]);
@@ -80,20 +78,14 @@ export default async function PaginaPractica() {
           su margen, así que la última tarjeta nunca queda debajo. En
           móvil se suma el que `globals.css` reserva para la navegación
           inferior. */}
-      <main className="mx-auto flex w-full max-w-contenido flex-1 flex-col gap-7 px-4 pb-[120px] pt-[18px] lg:gap-9 lg:px-9 lg:pt-8">
-        <header>
-          {/* El mismo rótulo que la pestaña. Si la navegación dice una
-              cosa y el título de la pantalla dice otra, el alumno duda de
-              si ha llegado adonde quería. */}
-          <h1 className="font-display text-[24px] font-extrabold leading-[1.15] tracking-[-0.02em] text-marca-tinta lg:text-[30px]">
-            Para ti
-          </h1>
-          <p className="mt-[5px] max-w-[720px] text-pretty text-[14px] leading-[1.45] text-marca-gris lg:mt-1.5 lg:text-[15px]">
-            Ejercicios hechos contigo dentro: tu perfil, tus clases y lo que se te viene repitiendo.
-            No es el curso, que es igual para todos: es lo tuyo.
-          </p>
-        </header>
+      {/* SIN ENCABEZADO DE PÁGINA. Aquí había un «Para ti» con su
+          bajada de dos líneas, y debajo, a dos dedos, el saludo con el
+          titular de la ruta: dos titulares seguidos para decir dónde
+          estás, cuando la pestaña de la navegación ya va marcada.
 
+          El titular de la pantalla es ahora el de la ruta, que además
+          nombra al profesor —que es de quien sale todo esto—. */}
+      <main className="mx-auto flex w-full max-w-contenido flex-1 flex-col px-4 pb-[120px] pt-[18px] lg:px-9 lg:pt-8">
         <PanelPractica
           alumnoId={alumnoId}
           // El nombre y el profesor van al saludo y al pie de la parada
@@ -105,9 +97,7 @@ export default async function PaginaPractica() {
           conContexto={tieneContexto(perfil)}
           bloques={bloques}
           progreso={progreso}
-          avance={avance}
           generadosIniciales={generados}
-          nivel={perfil?.nivel ?? ""}
           urlFormulario={urlFormulario(process.env.URL_FORMULARIO_BASE, perfil?.formToken ?? null)}
           avisoFormulario={avisoFormulario(
             perfil?.profesor ?? "",

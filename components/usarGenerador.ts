@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Bloque } from "@/lib/data";
 import { validarBloque } from "@/lib/validarBloque";
-import type { EstadoGeneracion } from "@/components/TarjetasGeneracion";
 import {
   calcularProgreso,
   leerEvento,
@@ -11,6 +10,15 @@ import {
   UMBRAL_TARDANZA_MS,
   type EtapaGeneracion,
 } from "@/lib/generacion";
+
+/**
+ * En qué punto está la generación.
+ *
+ * Vive aquí, con el hook que la mueve, y no en el componente que la
+ * pinta: quien la enseña ha cambiado tres veces —tres tarjetas, una
+ * tarjeta, y ahora la última parada de la ruta— y el estado no.
+ */
+export type EstadoGeneracion = "listo" | "generando" | "error";
 
 /**
  * Un poco por encima del `maxDuration` de `app/api/generar-bloque`, que

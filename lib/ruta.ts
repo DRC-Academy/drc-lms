@@ -13,8 +13,17 @@
 //
 // LO CERRADO SIGUE SIENDO PARADA. Un bloque hecho no desaparece del
 // camino, se convierte en un punto con su marca: es el rastro. El
-// detalle —el porcentaje, el botón de repasar— vive en el desplegable de
-// «Ya realizados», que es donde el alumno lo busca cuando lo busca.
+// detalle —el porcentaje, el botón de repetir— vive en el desplegable de
+// «Paradas hechas», que es donde el alumno lo busca cuando lo busca.
+//
+// LA ÚLTIMA PARADA ES LA GENERACIÓN, y no un bloque escondido. Durante
+// un tiempo se retenía el último bloque estático para poder enseñar un
+// candado; el candado decía «se abre con tu próxima clase», que es
+// exactamente la condición de la generación, así que la pantalla tenía
+// dos cosas distintas contando lo mismo —el candado aquí y una tarjeta
+// con su botón apagado al pie—. Ahora es una sola parada, la última, y
+// tiene los dos estados de verdad: cerrada mientras no haya clase nueva
+// que analizar, abierta —con su botón— en cuanto la hay.
 //
 // Módulo puro: sin `server-only`, lo importa un componente de cliente.
 // ---------------------------------------------------------------
@@ -31,10 +40,20 @@ export type TipoParada =
   /** La primera sin cerrar: donde está el alumno ahora. */
   | "actual"
   | "pendiente"
-  /** El bloque que espera a la próxima clase. */
-  | "bloqueada"
+  /** La que cierra el camino: el bloque que sale de la próxima clase. */
+  | "generacion"
   /** Las hechas de más, agrupadas en un solo punto al principio. */
   | "resumen";
+
+/**
+ * En qué estado llega la parada de generación.
+ *
+ * `null` es «no hay ninguna fuente de la que tirar»: sin clase, sin
+ * perfil y sin examen no hay parada que enseñar, ni cerrada. A ese
+ * alumno se le invita a completar el perfil, que es lo único que puede
+ * hacer.
+ */
+export type EstadoGeneracionRuta = "abierta" | "cerrada" | null;
 
 export type Parada = {
   /** Estable entre renders. El id del bloque, o una clave sintética. */
@@ -48,6 +67,8 @@ export type Parada = {
   porcentaje: number | null;
   /** Solo en el resumen: cuántas agrupa. */
   agrupadas: number;
+  /** Solo en la de generación: si ya se puede preparar. */
+  abierta: boolean;
 };
 
 /**
@@ -79,43 +100,32 @@ export function estaDominado(progreso: ProgresoBloques, bloque: Bloque): boolean
  * Las paradas del camino, en orden.
  *
  * @param bloques Todos los del alumno, generados primero.
- * @param indiceBloqueado Posición del que espera a la próxima clase, o -1.
+ * @param generacion En qué estado va la parada que cierra el camino.
  */
 export function construirRuta(
   bloques: Bloque[],
   progreso: ProgresoBloques,
-  indiceBloqueado: number
+  generacion: EstadoGeneracionRuta
 ): Parada[] {
   const hechas: Parada[] = [];
   const resto: Parada[] = [];
 
-  // El actual es el primero sin cerrar Y sin bloquear: mandar a una
-  // parada que todavía no se abre sería mandar a chocarse con ella.
-  const indiceActual = bloques.findIndex(
-    (bloque, i) => i !== indiceBloqueado && !estaCerrado(progreso, bloque)
-  );
+  const indiceActual = bloques.findIndex((bloque) => !estaCerrado(progreso, bloque));
 
   bloques.forEach((bloque, i) => {
     const cerrado = estaCerrado(progreso, bloque);
     const parada: Parada = {
       clave: bloque.id,
-      tipo: cerrado
-        ? "hecha"
-        : i === indiceBloqueado
-          ? "bloqueada"
-          : i === indiceActual
-            ? "actual"
-            : "pendiente",
+      tipo: cerrado ? "hecha" : i === indiceActual ? "actual" : "pendiente",
       numero: null,
       titulo: bloque.titulo,
       bloque,
       porcentaje: cerrado ? porcentajeDe(progreso, bloque) : null,
       agrupadas: 0,
+      abierta: false,
     };
 
-    // El bloqueado nunca cuenta como hecho, pase lo que pase con su
-    // progreso: se enseña justamente para decir que todavía no toca.
-    if (cerrado && i !== indiceBloqueado) hechas.push(parada);
+    if (cerrado) hechas.push(parada);
     else resto.push(parada);
   });
 
@@ -131,6 +141,7 @@ export function construirRuta(
       bloque: null,
       porcentaje: null,
       agrupadas,
+      abierta: false,
     });
     visibles.push(...hechas.slice(-HECHAS_A_LA_VISTA));
   } else {
@@ -138,6 +149,21 @@ export function construirRuta(
   }
 
   visibles.push(...resto);
+
+  // Y al final, la de generación. Cierra el camino porque es de donde
+  // sale la siguiente: no es un hueco al pie de la pantalla.
+  if (generacion !== null) {
+    visibles.push({
+      clave: "generacion",
+      tipo: "generacion",
+      numero: null,
+      titulo: generacion === "abierta" ? "Lista para abrir" : "Se abre con tu próxima clase",
+      bloque: null,
+      porcentaje: null,
+      agrupadas: 0,
+      abierta: generacion === "abierta",
+    });
+  }
 
   // La numeración corre sobre el camino visible y se salta el resumen,
   // que no es una parada sino un montón de ellas.
