@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; background: #F5F6F4; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14603A; } a:hover { color: #0F1A14; }
+    .dsp { font-family: 'Radio Canada Big', 'Radio Canada', system-ui, sans-serif; }
+    .tramo { display: block; height: 10px; border-radius: 5px; background: #EDEFEB; overflow: hidden; }
+    .tramo > i { display: block; height: 100%; border-radius: 5px; background: #1DA34B; }
+    .rotulo-mes { margin: 9px 0 0; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1; color: #8A948D; }
+    .nota-mes { margin: 5px 0 0; font-size: 12px; line-height: 1; color: #98A29B; font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="width: 1240px; background: #F5F6F4; padding: 32px 44px; box-sizing: border-box;">
+
+  <p style="margin: 0 0 16px; font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; color: #8A948D;">A · Regla de meses</p>
+
+  <section aria-label="Tu recorrido por el curso" style="padding: 18px 22px 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E7E1;">
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px;">
+
+      <div>
+        <span class="tramo"><i style="width: 100%;"></i></span>
+        <p class="rotulo-mes" style="color: #14603A;">Mes 1</p>
+        <p class="nota-mes" style="color: #14603A;">32 de 32</p>
+      </div>
+
+      <div>
+        <span class="tramo"><i style="width: 100%;"></i></span>
+        <p class="rotulo-mes" style="color: #14603A;">Mes 2</p>
+        <p class="nota-mes" style="color: #14603A;">31 de 31</p>
+      </div>
+
+      <div>
+        <span class="tramo" style="box-shadow: 0 0 0 2px #FDFBEE, 0 0 0 3px #DFD4A2;"><i style="width: 34%;"></i></span>
+        <p class="rotulo-mes" style="display: flex; align-items: center; gap: 6px; color: #8A7A2E;">
+          <span style="width: 7px; height: 7px; border-radius: 999px; background: #E9B429;"></span>
+          Mes 3 · vas por aquí
+        </p>
+        <p class="nota-mes" style="color: #8A7A2E;">11 de 32</p>
+      </div>
+
+      <div>
+        <span class="tramo" style="background: #F3F5F1; border: 1px dashed #DCE0D9; height: 8px;"></span>
+        <p class="rotulo-mes">Mes 4</p>
+        <p class="nota-mes">en 12 días</p>
+      </div>
+
+      <div>
+        <span class="tramo" style="background: #F3F5F1; border: 1px dashed #DCE0D9; height: 8px;"></span>
+        <p class="rotulo-mes">Mes 5</p>
+        <p class="nota-mes">en 40 días</p>
+      </div>
+
+      <div>
+        <span class="tramo" style="background: #F3F5F1; border: 1px dashed #DCE0D9; height: 8px;"></span>
+        <p class="rotulo-mes">Mes 6</p>
+        <p class="nota-mes">en 68 días</p>
+      </div>
+    </div>
+  </section>
+
+  <p style="margin: 20px 0 0; max-width: 76ch; font-size: 14px; line-height: 1.55; color: #6B756E; text-wrap: pretty;"><strong style="font-weight: 600; color: #0F1A14;">Por qué.</strong> Seis tramos, uno por mes, cada uno relleno hasta donde llegó. Dice lo mismo que la rejilla de puntos —qué meses están cerrados, en cuál estás y cuánto llevas de él— en <strong style="font-weight: 600; color: #0F1A14;">86px</strong> y fuera de la franja. Los meses cerrados se leen en verde de un vistazo, los que aún no se han abierto van con traza discontinua y dicen cuándo llegan, que es información que antes había que desplegar para encontrar. Cada tramo sigue siendo pulsable y baja a su mes.</p>
+
+  <p style="margin: 8px 0 0; max-width: 76ch; font-size: 14px; line-height: 1.55; color: #6B756E; text-wrap: pretty;"><strong style="font-weight: 600; color: #0F1A14;">En contra.</strong> Los seis tramos miden lo mismo aunque los meses no tengan las mismas lecciones. Es una regla de capítulos, no una escala: si algún mes creciera mucho, mentiría un poco.</p>
+
+</div>
+</x-dc>
+</body>
+</html>

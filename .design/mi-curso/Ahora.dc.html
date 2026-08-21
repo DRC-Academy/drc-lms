@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; background: #F5F6F4; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14603A; } a:hover { color: #0F1A14; }
+    .dsp { font-family: 'Radio Canada Big', 'Radio Canada', system-ui, sans-serif; }
+    .punto { display: block; aspect-ratio: 1 / 1; border-radius: 1.5px; background: rgba(255, 255, 255, 0.32); }
+    .hecho { background: #FFFFFF; }
+    .celda-mes { display: block; }
+    .rejilla { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 3px; }
+  </style>
+</helmet>
+
+<div style="width: 1240px; background: #F5F6F4; padding: 32px 44px; box-sizing: border-box;">
+
+  <p style="margin: 0 0 16px; font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; color: #8A948D;">Ahora · lo que hay en producción</p>
+
+  <!-- La franja tal cual está hoy: la columna derecha se abre a 520px
+       para que quepa la rejilla de 191 puntos repartida en seis celdas. -->
+  <section style="padding: 30px 32px; border-radius: 16px; background: #12211A; box-shadow: 0 16px 34px rgba(18, 33, 26, 0.16);">
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 520px; gap: 40px;">
+
+      <div style="display: flex; flex-direction: column; min-width: 0;">
+        <p style="margin: 0; display: flex; align-items: center; gap: 8px;">
+          <span style="width: 6px; height: 6px; flex-shrink: 0; border-radius: 999px; background: #A9DFB7;"></span>
+          <span style="font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; color: #A9DFB7;">Tu plan de 6 meses</span>
+        </p>
+        <h2 class="dsp" style="margin: 12px 0 0; font-size: 34px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; color: #FFFFFF; text-wrap: pretty;">Mes 3 · Semana 2 · Módulo 18</h2>
+        <p style="margin: 10px 0 0; max-width: 560px; font-size: 15px; line-height: 1.55; color: rgba(255, 255, 255, 0.9); text-wrap: pretty;">Estrategias avanzadas y primeros simulacros</p>
+        <div style="display: flex; align-items: center; gap: 18px; margin-top: auto; padding-top: 28px;">
+          <span style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 14px 32px; border-radius: 999px; background: #37C25A; color: #06240F; font-size: 16px; font-weight: 700; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);">Continuar</span>
+          <span style="font-size: 14px; line-height: 1.45; color: rgba(255, 255, 255, 0.82);">3 de 4 lecciones en este módulo</span>
+        </div>
+      </div>
+
+      <div style="border-left: 1px solid rgba(255, 255, 255, 0.25); padding-left: 28px;">
+        <p style="margin: 0; display: flex; align-items: baseline; gap: 4px;">
+          <span class="dsp" style="font-size: 40px; font-weight: 800; line-height: 1; color: #FFFFFF; font-variant-numeric: tabular-nums;">39</span>
+          <span style="font-size: 14px; font-weight: 600; color: rgba(255, 255, 255, 0.82);">%</span>
+        </p>
+        <p style="margin: 4px 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.82); font-variant-numeric: tabular-nums;">llevas 74 de 191 lecciones</p>
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 18px;">
+          <span class="celda-mes">
+            <span style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 10px;">
+              <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #FFFFFF;">Mes 1</span>
+              <span style="font-size: 10.5px; font-weight: 700; color: rgba(255, 255, 255, 0.82); font-variant-numeric: tabular-nums;">100%</span>
+            </span>
+            <span class="rejilla"><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span></span>
+            <span style="display: block; margin-top: 10px; font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.82);">8 módulos</span>
+          </span>
+          <span class="celda-mes">
+            <span style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 10px;">
+              <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #FFFFFF;">Mes 2</span>
+              <span style="font-size: 10.5px; font-weight: 700; color: rgba(255, 255, 255, 0.82); font-variant-numeric: tabular-nums;">100%</span>
+            </span>
+            <span class="rejilla"><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span></span>
+            <span style="display: block; margin-top: 10px; font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.82);">8 módulos</span>
+          </span>
+          <span class="celda-mes">
+            <span style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 10px;">
+              <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #FFFFFF;">Mes 3</span>
+              <span style="font-size: 10.5px; font-weight: 700; color: rgba(255, 255, 255, 0.82); font-variant-numeric: tabular-nums;">34%</span>
+            </span>
+            <span class="rejilla"><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto hecho"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span></span>
+            <span style="display: block; margin-top: 10px; font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.82);">8 módulos</span>
+          </span>
+          <span class="celda-mes">
+            <span style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 10px;">
+              <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #FFFFFF;">Mes 4</span>
+              <span style="font-size: 10.5px; font-weight: 700; color: rgba(255, 255, 255, 0.82); font-variant-numeric: tabular-nums;">0%</span>
+            </span>
+            <span class="rejilla"><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span></span>
+            <span style="display: block; margin-top: 10px; font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.82);">8 módulos</span>
+          </span>
+          <span class="celda-mes">
+            <span style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 10px;">
+              <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #FFFFFF;">Mes 5</span>
+              <span style="font-size: 10.5px; font-weight: 700; color: rgba(255, 255, 255, 0.82); font-variant-numeric: tabular-nums;">0%</span>
+            </span>
+            <span class="rejilla"><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span></span>
+            <span style="display: block; margin-top: 10px; font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.82);">8 módulos</span>
+          </span>
+          <span class="celda-mes">
+            <span style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 10px;">
+              <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #FFFFFF;">Mes 6</span>
+              <span style="font-size: 10.5px; font-weight: 700; color: rgba(255, 255, 255, 0.82); font-variant-numeric: tabular-nums;">0%</span>
+            </span>
+            <span class="rejilla"><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span><span class="punto"></span></span>
+            <span style="display: block; margin-top: 10px; font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.82);">7 módulos</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p style="margin: 20px 0 0; max-width: 78ch; font-size: 14px; line-height: 1.55; color: #6B756E; text-wrap: pretty;"><strong style="font-weight: 600; color: #0F1A14;">Qué falla.</strong> La columna de la cifra mide 210px en el resto de la aplicación; aquí se abre a <strong style="font-weight: 600; color: #0F1A14;">520</strong> para que quepan las seis celdas de mes. Con eso el titular se queda con 528px y se parte, el botón —que es el destino de la franja— pierde la mitad de su peso, y 191 cuadritos blancos sobre tinta se llevan la mirada antes que ninguna de las dos cosas. Es una pantalla dentro de una franja.</p>
+
+  <p style="margin: 8px 0 0; max-width: 78ch; font-size: 14px; line-height: 1.55; color: #6B756E; text-wrap: pretty;"><strong style="font-weight: 600; color: #0F1A14;">Qué sí vale la pena conservar.</strong> Que cada celda sea pulsable y baje al mes. Esa función se mantiene en la línea de progreso; lo que se va es el tamaño.</p>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,40 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Mi curso · rediseño · escritorio", "x": 0, "y": 0, "w": 1440, "h": 1700 },
+    { "file": "Ahora.dc.html", "title": "Ahora · la franja rota", "x": 0, "y": 1820, "w": 1240, "h": 620 },
+    { "file": "LineaA.dc.html", "title": "A · Regla de meses", "x": 1320, "y": 1820, "w": 1240, "h": 440 },
+    { "file": "LineaB.dc.html", "title": "B · Una sola línea, a escala", "x": 2640, "y": 1820, "w": 1240, "h": 440 },
+    { "file": "Movil.dc.html", "title": "Mi curso · móvil 390", "x": 0, "y": 2560, "w": 390, "h": 1440 }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 0,
+      "y": -230,
+      "w": 640,
+      "text": "MI CURSO · rediseño\n\nEl problema: PanelPlan mete una rejilla de 191 puntos, repartida en seis celdas de mes, DENTRO de la franja. Para que quepa, la columna de la cifra se abre de 210px a 520. El titular se parte, el botón pierde peso y la mancha de cuadritos se lleva la mirada antes que ninguno de los dos.\n\nEl rediseño, en tres movimientos:\n\n1. La franja se queda sin columna derecha. Vuelve a ser lo que es en el resto de la aplicación: etiqueta, titular, subtítulo y botón.\n2. Entra una LÍNEA DE PROGRESO debajo, que hereda lo único que la rejilla hacía bien —enseñar el recorrido y saltar a un mes— en 86px.\n3. Y debajo, el DIPLOMA, el mismo banner de pergamino que el inicio.\n\nTodo con los tokens reales del temario (#F5F6F4, #1DA34B, #E9B429, #0F1A14) y de la franja (#12211A, #37C25A)."
+    },
+    {
+      "id": "sobre-main",
+      "x": 1520,
+      "y": 0,
+      "w": 380,
+      "text": "EL ORDEN DE LA PANTALLA\n\nFranja → línea → diploma → programa.\n\nCada pieza responde a una pregunta distinta y ninguna repite la cuenta de otra:\n\n· La FRANJA dice qué toca ahora y lleva el botón.\n· La LÍNEA dice dónde estás en los seis meses. Es un mapa, no una cifra.\n· El DIPLOMA dice cuánto falta para la meta. Es el único que cuenta lecciones del curso entero.\n\nCAMBIO EN LA CABECERA: la barra de arriba decía «12 de 191 lecciones» y ahora dice solo el porcentaje, como ya hacía en móvil. Ese recuento lo da el diploma dos dedos más abajo, y tenerlo dos veces en la misma pantalla era parte del ruido."
+    },
+    {
+      "id": "sobre-lineas",
+      "x": 3960,
+      "y": 1820,
+      "w": 380,
+      "text": "DOS FORMAS DE LÍNEA\n\nA · REGLA DE MESES — seis tramos separados, cada uno con su cuenta y su fecha de apertura. Dice más y ocupa 86px.\n\nB · UNA SOLA LÍNEA — continua y a escala real de lecciones. Dice menos y ocupa 72px.\n\nMain lleva la A: la información que se pierde en B —«11 de 32» por mes, «disponible en 40 días»— es justo la que hoy obliga a desplegar un mes para encontrarla.\n\nSi lo que se busca es la pantalla más callada posible, B."
+    },
+    {
+      "id": "sobre-movil",
+      "x": 470,
+      "y": 2560,
+      "w": 380,
+      "text": "EN MÓVIL\n\nEs donde la rejilla de puntos era más insostenible: a 358px ni se intentaba, y la franja se quedaba con el porcentaje suelto.\n\nLos seis tramos sí caben; lo que se va es el detalle de cada uno. La cuenta del mes en curso sube a la línea de arriba y el aviso del próximo mes baja al pie.\n\nEl artboard es la PÁGINA ENTERA, no la pantalla: en el teléfono todo lo que va por debajo de la franja llega con scroll."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

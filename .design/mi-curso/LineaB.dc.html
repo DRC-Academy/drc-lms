@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; background: #F5F6F4; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14603A; } a:hover { color: #0F1A14; }
+    .dsp { font-family: 'Radio Canada Big', 'Radio Canada', system-ui, sans-serif; }
+    /* Los tramos comparten la línea, así que cada uno pesa lo que pesa su
+       mes en lecciones. La escala es real, no de capítulos. */
+    .seg { position: relative; height: 100%; }
+    .seg + .seg { border-left: 2px solid #F5F6F4; }
+    .etq { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1; color: #98A29B; }
+  </style>
+</helmet>
+
+<div style="width: 1240px; background: #F5F6F4; padding: 32px 44px; box-sizing: border-box;">
+
+  <p style="margin: 0 0 16px; font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; color: #8A948D;">B · Una sola línea, a escala</p>
+
+  <section aria-label="Tu recorrido por el curso" style="padding: 20px 22px 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E7E1;">
+
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin-bottom: 14px;">
+      <p style="margin: 0; font-size: 13.5px; font-weight: 600; color: #0F1A14;">Vas por el <span style="color: #8A7A2E;">mes 3 de 6</span></p>
+      <p style="margin: 0; font-size: 13px; color: #6B756E; font-variant-numeric: tabular-nums;">74 de 191 lecciones</p>
+    </div>
+
+    <!-- La marca de posición va encima de la línea y no dentro: dentro
+         tapaba el relleno justo donde hay que leerlo. -->
+    <div style="position: relative; height: 10px; border-radius: 5px; background: #EDEFEB; overflow: hidden; display: flex;">
+      <span class="seg" style="flex: 32;"><span style="display: block; height: 100%; width: 100%; background: #1DA34B;"></span></span>
+      <span class="seg" style="flex: 31;"><span style="display: block; height: 100%; width: 100%; background: #1DA34B;"></span></span>
+      <span class="seg" style="flex: 32;"><span style="display: block; height: 100%; width: 34%; background: #1DA34B;"></span></span>
+      <span class="seg" style="flex: 32;"></span>
+      <span class="seg" style="flex: 32;"></span>
+      <span class="seg" style="flex: 32;"></span>
+    </div>
+
+    <div style="display: flex; margin-top: 9px;">
+      <span style="flex: 32;"><span class="etq" style="color: #14603A;">Mes 1</span></span>
+      <span style="flex: 31;"><span class="etq" style="color: #14603A;">Mes 2</span></span>
+      <span style="flex: 32;"><span class="etq" style="display: inline-flex; align-items: center; gap: 6px; color: #8A7A2E;"><span style="width: 7px; height: 7px; border-radius: 999px; background: #E9B429;"></span>Mes 3</span></span>
+      <span style="flex: 32;"><span class="etq">Mes 4</span></span>
+      <span style="flex: 32;"><span class="etq">Mes 5</span></span>
+      <span style="flex: 32;"><span class="etq">Mes 6</span></span>
+    </div>
+
+    <p style="margin: 14px 0 0; font-size: 12.5px; color: #98A29B;">El mes 4 se abre en 12 días.</p>
+  </section>
+
+  <p style="margin: 20px 0 0; max-width: 76ch; font-size: 14px; line-height: 1.55; color: #6B756E; text-wrap: pretty;"><strong style="font-weight: 600; color: #0F1A14;">Por qué.</strong> Una sola línea, y cada mes pesa en ella lo que pesa de verdad en lecciones: la escala no miente aunque un mes crezca. Es la versión más callada de las dos —ocupa <strong style="font-weight: 600; color: #0F1A14;">72px</strong>— y deja el protagonismo entero a la franja y al diploma.</p>
+
+  <p style="margin: 8px 0 0; max-width: 76ch; font-size: 14px; line-height: 1.55; color: #6B756E; text-wrap: pretty;"><strong style="font-weight: 600; color: #0F1A14;">En contra.</strong> Dice mucho menos por mes: no hay «11 de 32» ni «disponible en 40 días» en cada tramo, solo el aviso del próximo que se abre. Y con seis meses seguidos en una línea continua, distinguir dónde acaba uno y empieza el siguiente pide fijarse.</p>
+
+</div>
+</x-dc>
+</body>
+</html>
