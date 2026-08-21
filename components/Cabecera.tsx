@@ -240,12 +240,18 @@ export default function Cabecera({
 }
 
 /**
- * El progreso del curso: barra y cifra.
+ * El progreso del curso: barra y porcentaje.
  *
- * En escritorio la cifra es "12 de 191 lecciones", que es lo que de
- * verdad orienta. En móvil no cabe y se reduce al porcentaje, que ocupa
- * tres caracteres y dice lo mismo con menos precisión. La barra es la
- * misma en los dos: es la que se lee de un vistazo.
+ * EL PORCENTAJE EN LOS DOS ANCHOS. En escritorio decía "12 de 191
+ * lecciones", y ese recuento lo da ahora el banner del diploma —dos
+ * dedos más abajo dentro del curso, y en el inicio— con la aritmética
+ * del revés: lo que falta. Tenerlo aquí además era la tercera cuenta del
+ * mismo avance en la misma pantalla.
+ *
+ * La barra se queda porque hace otro trabajo: esta cabecera es pegajosa,
+ * así que es lo único que orienta cuando el alumno está a mitad de una
+ * lección o abajo del todo del temario. Y el porcentaje, que ocupa tres
+ * caracteres, basta para eso.
  */
 function BarraCurso({ contexto, compacto }: { contexto: ContextoCurso; compacto?: boolean }) {
   const porcentaje =
@@ -261,20 +267,18 @@ function BarraCurso({ contexto, compacto }: { contexto: ContextoCurso; compacto?
         aria-valuenow={porcentaje}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`Progreso en ${contexto.titulo}`}
+        aria-label={`Progreso en ${contexto.titulo}: ${contexto.completadas} de ${contexto.total} lecciones`}
       >
         <div className="h-full rounded-[3px] bg-marca-verde" style={{ width: `${porcentaje}%` }} />
       </div>
 
-      {compacto ? (
-        <span className="text-[11.5px] font-semibold text-marca-gris tabular-nums">
-          {porcentaje}%
-        </span>
-      ) : (
-        <span className="whitespace-nowrap text-[13px] text-marca-grisSuave tabular-nums">
-          {contexto.completadas} de {contexto.total} lecciones
-        </span>
-      )}
+      <span
+        className={`font-semibold tabular-nums ${
+          compacto ? "text-[11.5px] text-marca-gris" : "text-[12px] text-marca-grisSuave"
+        }`}
+      >
+        {porcentaje}%
+      </span>
     </div>
   );
 }

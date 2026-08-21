@@ -20,7 +20,7 @@ Dónde vive hoy el copy, para saber dónde tocar:
 | `lib/modos.ts` | Tarjeta de generación, esperas, resumen de la última clase, avisos del formulario de perfil |
 | `lib/diploma.ts` | Los cuatro estados del banner del diploma: cifra, unidad, pie y nota |
 | `lib/generacion.ts` | Los cinco textos de etapa mientras se genera un bloque |
-| `lib/drip.ts` | «Disponible mañana» / «Disponible en N días» |
+| `lib/drip.ts` | «Disponible mañana» / «Disponible en N días», en el temario y en la línea de progreso |
 | `lib/faq.ts` | Las 35 preguntas y respuestas de la ayuda, y el mensaje de WhatsApp |
 | `lib/correo.ts` | El email del enlace de acceso |
 | Los JSX | Todo lo demás |
@@ -193,8 +193,14 @@ Barra pegajosa arriba en todas las pantallas del alumno.
 
 ### Contexto del curso (solo dentro de `/curso/…`)
 
-- Escritorio: título del curso + barra + «{completadas} de {total} lecciones»
+- Escritorio: título del curso + barra + «{porcentaje}%»
 - Móvil: segunda línea con el título truncado + barra + «{porcentaje}%»
+
+El recuento largo —«12 de 191 lecciones»— se fue de aquí: lo da el banner del
+diploma, con la aritmética del revés. Lo que se queda es la barra, que es lo
+único que orienta con la cabecera pegajosa a mitad de una lección. El recuento
+sobrevive en el nombre accesible de la barra: «Progreso en {curso}:
+{completadas} de {total} lecciones».
 
 ### Cabecera en carga
 
@@ -538,20 +544,60 @@ franja que el resto.
 > {título del módulo actual}
 >
 > [ **Continuar** ]   {completadas} de {total} lecciones en este módulo
->
-> — columna derecha —
-> **{porcentaje}** %
-> llevas {completadas} de {total} lecciones
-> *(rejilla de puntos, una casilla por lección, agrupada por mes:*
-> *«Mes 1  74%» + puntos + «{n} módulos», pulsable)*
 
 Titular en los otros dos casos:
 
 - Curso terminado: **Has terminado el curso** (sin botón)
 - Curso sin contenido: **Todavía sin contenido** (sin botón)
 
-Cada celda de mes, para lector de pantalla:
-«{completadas} de {total} lecciones hechas. Ir al mes {n}.»
+**La franja no tiene columna derecha.** La tuvo, y era el problema de esta
+pantalla: una rejilla con una casilla por lección —191 cuadritos blancos sobre
+tinta— agrupada en seis celdas de mes. Para que cupiera, la columna de la cifra
+se abría de los 210px que mide en el resto de la aplicación hasta **520**: el
+titular se quedaba con 528px y se partía, el botón perdía la mitad de su peso y
+la mancha se llevaba la mirada antes que ninguno de los dos. Lo que la rejilla
+hacía bien —el recorrido y el salto a un mes— vive ahora en §6.2.1; la escala
+del curso entero, en el diploma de §6.2.2. Aquí queda lo que solo puede decir la
+franja: qué toca ahora.
+
+### 6.2.1 La línea de progreso
+
+`components/curso/LineaProgreso.tsx`. Tarjeta blanca bajo la franja, **86px**.
+
+> ▓▓▓▓▓  ▓▓▓▓▓  ▓▓░░░  ┄┄┄┄┄  ┄┄┄┄┄  ┄┄┄┄┄
+> MES 1  MES 2  ● MES 3 · vas por aquí  MES 4  MES 5  MES 6
+> 32 de 32 · 31 de 31 · 11 de 32 · Disponible en 12 días · …
+
+Seis tramos, uno por mes. Cada uno es un **botón**: abre ese mes en el temario y
+baja hasta él —nunca lo cierra—, igual que hacía cada celda de la rejilla.
+
+| Estado del mes | Pista | Rótulo | Nota |
+|---|---|---|---|
+| Completado | llena, verde | MES {n} en verde | {total} de {total} |
+| En curso | rellena al {porcentaje}%, con anillo ámbar | ● MES {n} · vas por aquí | {n} de {total} |
+| Abierto sin empezar | vacía | MES {n} | 0 de {total} |
+| Todavía por abrir | discontinua, sin relleno | MES {n} | Disponible mañana / Disponible en {n} días |
+
+- **Son seis tramos iguales aunque los meses no tengan las mismas lecciones.**
+  Es una regla de capítulos, no una escala: el trabajo de esta línea es
+  orientar («vas por el tercero de seis»). La escala real la da el diploma.
+- En **móvil** el rótulo se reduce al número del mes; la cuenta del mes en curso
+  sube a una línea encima («Vas por el mes 3 · 11 de 32 este mes») y el aviso
+  del próximo baja al pie («El mes 4 se abre en 12 días.»).
+- Cada tramo, para lector de pantalla: «{completadas} de {total} lecciones
+  hechas. Ir al mes {n}.»
+
+### 6.2.2 El diploma
+
+El **mismo** `components/BannerDiploma.tsx` que el inicio, con los mismos cuatro
+estados (§5.2), calculado sobre el curso de esta pantalla. Va debajo de la línea.
+
+Es la misma meta y tiene que reconocerse como la misma pieza; aquí gana algo que
+en el inicio no tiene: está en la pantalla donde se avanza.
+
+**Ninguna de las tres piezas repite la cifra de otra:** la franja dice qué toca
+ahora, la línea dónde estás en los seis meses, el diploma cuánto falta para el
+final.
 
 ### 6.3 Barra de sección
 

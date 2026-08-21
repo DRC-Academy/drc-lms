@@ -6,7 +6,9 @@ import { arbolDelCurso, cursoPorSlug, cursosAsignados } from "@/lib/cursos-servi
 import { sinDripEn } from "@/lib/accesos-manuales";
 import { construirTemario } from "@/lib/temario";
 import { comoFecha } from "@/lib/fechas";
+import { calcularDiploma } from "@/lib/diploma";
 import Temario from "@/components/curso/Temario";
+import BannerDiploma from "@/components/BannerDiploma";
 
 export const dynamic = "force-dynamic";
 
@@ -102,7 +104,24 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
           </p>
         </header>
 
-        <Temario temario={temario} slug={curso.slug} />
+        {/* EL DIPLOMA, TAMBIÉN AQUÍ. El mismo banner que el inicio, sin
+            cambiarle una coma: es la misma meta y tiene que reconocerse
+            como la misma pieza. Aquí gana algo que en el inicio no
+            tenía: está en la pantalla donde se avanza.
+
+            Se pinta en el servidor y entra en `Temario` por prop, que es
+            cliente. El equipo lo ve con su progreso a cero, como todo lo
+            demás de esta pantalla: no es alumno de nada. */}
+        <Temario
+          temario={temario}
+          slug={curso.slug}
+          diploma={
+            <BannerDiploma
+              estado={calcularDiploma(temario.completadas, temario.totalLecciones)}
+              tituloCurso={curso.titulo}
+            />
+          }
+        />
       </main>
     </div>
   );

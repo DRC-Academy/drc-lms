@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import type { MesTemario, Temario as DatosTemario } from "@/lib/temario";
 import PanelPlan from "@/components/curso/PanelPlan";
+import LineaProgreso from "@/components/curso/LineaProgreso";
 import FilaModulo from "@/components/curso/FilaModulo";
 import { textoDeEspera } from "@/lib/drip";
 
@@ -20,9 +21,16 @@ import { textoDeEspera } from "@/lib/drip";
 export default function Temario({
   temario,
   slug,
+  diploma,
 }: {
   temario: DatosTemario;
   slug: string;
+  /**
+   * El banner del diploma, renderizado en el servidor. Entra por prop y
+   * no se importa aquí para que siga siendo servidor: este componente es
+   * cliente solo por qué meses están abiertos.
+   */
+  diploma: ReactNode;
 }) {
   const inicial = temario.actual?.mes ?? temario.meses[0]?.numero;
 
@@ -70,7 +78,19 @@ export default function Temario({
 
   return (
     <>
-      <PanelPlan temario={temario} slug={slug} onIrAlMes={irAlMes} />
+      <PanelPlan temario={temario} slug={slug} />
+
+      {/* EL RECORRIDO Y LA META, en ese orden y las dos fuera de la
+          franja. La línea dice dónde estás en los seis meses; el diploma,
+          cuánto falta para el final. Ninguna repite la cifra de la otra
+          ni la de la franja. */}
+      <LineaProgreso
+        meses={temario.meses}
+        actual={temario.actual?.mes ?? null}
+        onIrAlMes={irAlMes}
+      />
+
+      <div className="mt-3">{diploma}</div>
 
       {/* ---------------------------- BARRA DE SECCIÓN ---------------------------- */}
       <div className="mt-[22px] flex items-center justify-between gap-5 min-[900px]:mt-[34px]">
