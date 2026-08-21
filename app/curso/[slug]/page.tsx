@@ -116,10 +116,7 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
           temario={temario}
           slug={curso.slug}
           diploma={
-            <BannerDiploma
-              estado={calcularDiploma(temario.completadas, temario.totalLecciones)}
-              tituloCurso={curso.titulo}
-            />
+            <BannerDiploma estado={calcularDiploma(temario.completadas, temario.totalLecciones)} />
           }
         />
       </main>

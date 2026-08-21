@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------
 
 import type { ArbolCurso } from "@/lib/cursos-servidor";
-import { partirModulo } from "@/lib/modulo";
+import { partirModulo, type ModuloPartido } from "@/lib/modulo";
 
 /** Cuántos módulos entran en un mes. La regla del curso actual. */
 export const MODULOS_POR_MES = 8;
@@ -146,6 +146,38 @@ function semanaPorPosicion(numero: number): number {
   return Math.min(SEMANAS_POR_MES, Math.ceil(dentroDelMes / (MODULOS_POR_MES / SEMANAS_POR_MES)));
 }
 
+/** Dónde cae un módulo dentro del plan. Las tres coordenadas juntas. */
+export type PosicionModulo = { mes: number; semana: number; modulo: number };
+
+/**
+ * El módulo, ya partido, situado en el plan.
+ *
+ * Sale de aquí y no de cada pantalla porque el mes se deriva —ver
+ * `mesDelModulo`— y la semana solo está en el título cuando el
+ * importador la trajo. Dos sitios derivándolo por su cuenta es cómo se
+ * consigue que «Mi curso» y el inicio no coincidan.
+ */
+export function ubicarModulo(partido: ModuloPartido): PosicionModulo {
+  return {
+    mes: mesDelModulo(partido.numero),
+    semana: partido.semana ?? semanaPorPosicion(partido.numero),
+    modulo: partido.numero,
+  };
+}
+
+/**
+ * "Mes 1 · Semana 3 · Módulo 5".
+ *
+ * EL MISMO RÓTULO EN LAS DOS PANTALLAS. Titula la franja del plan en «Mi
+ * curso» y la del curso en el inicio, que es la que el alumno ve
+ * primero. Antes esa segunda titulaba con el nombre de la lección: una
+ * frase distinta cada día, que no dice dónde está uno. Esto sí, y
+ * además es lo mismo que va a leer al entrar en el curso.
+ */
+export function etiquetaPosicion(posicion: PosicionModulo): string {
+  return `Mes ${posicion.mes} · Semana ${posicion.semana} · Módulo ${posicion.modulo}`;
+}
+
 function porcentajeDe(hechas: number, total: number): number {
   return total > 0 ? Math.round((hechas / total) * 100) : 0;
 }
@@ -172,15 +204,15 @@ export function construirTemario(arbol: ArbolCurso): Temario {
 
   const modulos: ModuloTemario[] = arbol.modulos.map((modulo, i) => {
     const partido = partirModulo(modulo.titulo, i);
-    const numero = partido.numero;
+    const { mes, semana, modulo: numero } = ubicarModulo(partido);
     const totalLecciones = modulo.lecciones.length;
     const pendiente = modulo.lecciones.find((leccion) => !leccion.completada);
 
     return {
       id: modulo.id,
       numero,
-      semana: partido.semana ?? semanaPorPosicion(numero),
-      mes: mesDelModulo(numero),
+      semana,
+      mes,
       titulo: partido.titulo,
       totalLecciones,
       completadas: modulo.completadas,

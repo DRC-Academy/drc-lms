@@ -36,6 +36,16 @@ export type SiguienteLeccion = {
   titulo: string;
   moduloTitulo: string;
   /**
+   * Qué lugar ocupa su módulo en el curso, DESDE 0.
+   *
+   * Es lo que espera `partirModulo`, y con él la franja del inicio sitúa
+   * la lección en el plan —mes, semana y módulo— con el mismo rótulo que
+   * «Mi curso». Se cuenta sobre la lista ya ordenada y no sobre la
+   * columna `orden`: si un módulo se borrara del catálogo, la columna
+   * dejaría un hueco y las dos pantallas contarían distinto.
+   */
+  moduloOrden: number;
+  /**
    * Qué número hace en el curso, empezando en 1.
    *
    * Se cuenta sobre el orden real —módulo y luego lección—, no sobre las
@@ -191,10 +201,10 @@ export async function estadoDelCurso(alumnoId: string, curso: CursoFila): Promis
 
   const ordenModulo = new Map<string, number>();
   const tituloModulo = new Map<string, string>();
-  for (const m of listaModulos) {
-    ordenModulo.set(m.id, m.orden);
+  listaModulos.forEach((m, i) => {
+    ordenModulo.set(m.id, i);
     tituloModulo.set(m.id, m.titulo);
-  }
+  });
 
   // Orden real del curso: primero por módulo, luego por lección.
   const ordenadas = (lecciones ?? []).slice().sort((a, b) => {
@@ -221,6 +231,7 @@ export async function estadoDelCurso(alumnoId: string, curso: CursoFila): Promis
         id: leccion.id,
         titulo: leccion.titulo,
         moduloTitulo: tituloModulo.get(leccion.modulo_id) ?? "",
+        moduloOrden: ordenModulo.get(leccion.modulo_id) ?? 0,
         posicion: i + 1,
       };
     }

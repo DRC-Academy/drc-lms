@@ -209,10 +209,9 @@ export default function TarjetasGeneracion({
                 {tarjeta.descripcion}
               </p>
 
-              {/* Mientras no toca, la tarjeta cuenta de qué depende. Va
-                  antes del botón para que se lea primero el porqué y
-                  después el botón apagado, y no al revés. */}
-              {tarjeta.espera && (
+              {/* Solo cuando la espera trae algo que el botón no dice
+                  ya. La de "espera a tu próxima clase" no lo trae. */}
+              {tarjeta.espera?.nota && (
                 <p className="mt-2.5 text-[13.5px] leading-[1.5] text-marca-gris">
                   {tarjeta.espera.nota}
                 </p>

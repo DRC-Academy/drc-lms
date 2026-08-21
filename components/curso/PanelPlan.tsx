@@ -1,4 +1,4 @@
-import type { Temario } from "@/lib/temario";
+import { etiquetaPosicion, type Temario } from "@/lib/temario";
 import Banner from "@/components/Banner";
 
 /**
@@ -28,7 +28,7 @@ export default function PanelPlan({ temario, slug }: { temario: Temario; slug: s
   const { actual, meses } = temario;
 
   const titulo = actual
-    ? `Mes ${actual.mes} · Semana ${actual.semana} · Módulo ${actual.modulo}`
+    ? etiquetaPosicion(actual)
     : temario.totalLecciones > 0
       ? "Has terminado el curso"
       : "Todavía sin contenido";

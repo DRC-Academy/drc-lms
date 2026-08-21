@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { EstadoCurso } from "@/lib/cursos-servidor";
 import { partirModulo } from "@/lib/modulo";
+import { etiquetaPosicion, ubicarModulo } from "@/lib/temario";
 import Banner from "@/components/Banner";
 
 /**
@@ -19,8 +20,8 @@ import Banner from "@/components/Banner";
  *
  * Así que la franja se queda con lo suyo, que no lo dice nadie más:
  * dónde lo dejaste, en qué módulo estás y el botón exacto para seguir.
- * Al perder la columna, el titular gana el ancho entero y una lección de
- * título largo deja de partirse en cuatro palabras por línea.
+ * Al perder la columna, el titular gana el ancho entero y el rótulo de
+ * posición cabe entero en una línea.
  *
  * La forma la pone `components/Banner.tsx`: este archivo decide QUÉ se
  * cuenta —qué lección toca, qué llamada— y el banner cómo se ve. Hoy eso
@@ -62,28 +63,38 @@ export default function BannerCurso({ estados }: { estados: EstadoCurso[] }) {
 
   const llamada = terminado ? "Repasar el curso" : empezado ? "Continuar" : "Empezar";
 
-  const titulo = terminado || !siguiente ? curso.titulo : siguiente.titulo;
-
-  // El curso se nombra AQUÍ, junto al módulo, que es la otra mitad del
-  // "dónde estoy", y con el prefijo de LearnDash ya quitado.
-  const contexto = [
-    // Con el curso terminado el titular YA es el nombre del curso:
-    // repetirlo aquí sería decirlo dos veces en dos renglones.
-    terminado ? "" : curso.titulo,
-    siguiente && siguiente.moduloTitulo !== ""
-      ? partirModulo(siguiente.moduloTitulo, 0).titulo
-      : "",
-  ]
-    .filter((parte) => parte !== "")
-    .join(" · ");
+  // ---------------------------------------------------------------
+  // EL TITULAR ES DÓNDE ESTÁS, NO QUÉ TOCA
+  //
+  // Era el nombre de la lección siguiente —"Estilo indirecto"—, que es
+  // una frase distinta cada día y no sitúa a nadie: para saber si vas
+  // adelantado o si llevas un mes parado, el nombre de una lección no
+  // sirve. "Mes 1 · Semana 3 · Módulo 5" sí, y es EXACTAMENTE el mismo
+  // rótulo que titula el plan dentro de «Mi curso» (ver
+  // `etiquetaPosicion`): la primera pantalla y la del curso dicen lo
+  // mismo con las mismas palabras.
+  //
+  // La lección baja a la segunda línea, que es su sitio: sigue haciendo
+  // falta —el botón lleva a ella y hay que saber qué se abre— pero no es
+  // lo que ordena la pantalla.
+  //
+  // Y con el módulo en el titular, la línea de contexto que había
+  // debajo —"curso · módulo"— se queda sin la mitad de su contenido. La
+  // otra mitad, el nombre del curso, se va con ella: lo dice la
+  // navegación en «Mi curso», y aquí era un renglón más que leer antes
+  // de llegar al botón.
+  // ---------------------------------------------------------------
+  const titulo = siguiente
+    ? etiquetaPosicion(ubicarModulo(partirModulo(siguiente.moduloTitulo, siguiente.moduloOrden)))
+    : curso.titulo;
 
   return (
     <section>
       <Banner
         eyebrow={etiqueta}
         title={titulo}
-        meta={contexto !== "" ? contexto : undefined}
-        action={{ label: llamada, href: destino, srSuffix: titulo }}
+        subtitle={siguiente?.titulo}
+        action={{ label: llamada, href: destino, srSuffix: siguiente?.titulo ?? titulo }}
         // Dónde cae esta lección dentro del curso. Es lo único que
         // sobrevive de la columna de cifra, y sobrevive porque no lo dice
         // nadie más: el banner del diploma cuenta el curso entero, no en

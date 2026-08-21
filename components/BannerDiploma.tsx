@@ -1,4 +1,4 @@
-import { esRecta, textoDiploma, type EstadoDiploma } from "@/lib/diploma";
+import { textoDiploma, type EstadoDiploma } from "@/lib/diploma";
 
 /**
  * EL DIPLOMA, EN SU PROPIO BANNER.
@@ -7,6 +7,13 @@ import { esRecta, textoDiploma, type EstadoDiploma } from "@/lib/diploma";
  * al entrar. Lo tuvo dentro de la franja del curso —como su cifra
  * grande— y ahí se leía como un dato más del curso; el sitio no era el
  * problema, era compartir caja.
+ *
+ * UNA SOLA LÍNEA DE TEXTO: "12 lecciones para tu diploma". Tuvo cuatro
+ * —la etiqueta con el nombre del curso, la cifra, el pie con el avance y
+ * la nota del lateral— y las tres que sobraban no añadían ningún dato:
+ * el avance ya lo enseña la barra, el curso lo dice la franja de debajo
+ * y la regla de emisión no cambia nada de lo que el alumno hace hoy. La
+ * redacción de lo que queda vive en `lib/diploma.ts`.
  *
  * PERGAMINO Y NO OTRA FRANJA. La superficie crema con doble filete es la
  * única de ese color en la pantalla, así que se separa sola de la franja
@@ -21,31 +28,26 @@ import { esRecta, textoDiploma, type EstadoDiploma } from "@/lib/diploma";
  * Cuando exista la descarga del diploma, este es su sitio: entonces
  * habrá algo que pulsar y será lo único que se pueda pulsar aquí.
  *
- * DOS ANCHOS, UN SOLO ORDEN. En móvil el sello y la cifra van en una
- * fila, y la barra con su pie debajo; el lateral se pliega bajo la barra
- * porque a 358px no cabe sin partir la cifra. A partir de `min-[900px]`
- * todo se pone en línea. Nada cambia de sitio entre los dos: se estira.
+ * DOS ANCHOS, UN SOLO ORDEN. En móvil el icono y la cifra van en una
+ * fila y la barra debajo, a ancho completo; a partir de `min-[900px]`
+ * los tres se ponen en línea. Nada cambia de sitio entre los dos: se
+ * estira.
  *
  * Se renderiza en el servidor: no tiene estado ni interacción.
  */
-export default function BannerDiploma({
-  estado,
-  tituloCurso,
-}: {
-  estado: EstadoDiploma;
-  tituloCurso: string;
-}) {
+export default function BannerDiploma({ estado }: { estado: EstadoDiploma }) {
   const texto = textoDiploma(estado);
   if (texto === null) return null;
 
   const conseguido = estado.estado === "conseguido";
-  const recta = esRecta(estado);
 
+  // Solo para el lector de pantalla: la barra sin narrar es un
+  // porcentaje suelto, y el número de al lado no dice de cuántas.
   const descripcion = conseguido
-    ? `Has completado ${tituloCurso}`
+    ? "Curso completado"
     : `Te ${texto.cifra === 1 ? "falta" : "faltan"} ${texto.cifra} de ${
         estado.estado === "en-curso" ? estado.total : 0
-      } lecciones para tu diploma de ${tituloCurso}`;
+      } lecciones para tu diploma`;
 
   return (
     <section
@@ -57,86 +59,37 @@ export default function BannerDiploma({
       }`}
     >
       <div className="flex flex-col gap-3.5 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-[26px]">
-        {/* ----------------------- SELLO Y CIFRA -----------------------
-            Juntos en la misma fila también en móvil: el sello solo no
+        {/* ----------------------- ICONO Y CIFRA -----------------------
+            Juntos en la misma fila también en móvil: el icono solo no
             dice nada y la cifra sola no dice de qué. */}
         <div className="flex items-center gap-3.5 min-[900px]:contents">
-          <Sello conseguido={conseguido} />
+          <IconoDiploma conseguido={conseguido} />
 
-          <div className="min-w-0 flex-1 min-[900px]:flex min-[900px]:flex-col min-[900px]:gap-2.5">
-            <p
-              className={`text-[10.5px] font-bold uppercase leading-none tracking-[0.14em] min-[900px]:text-[11px] ${
-                conseguido ? "text-marca-verdeOsc" : "text-marca-amarilloTexto"
-              }`}
-            >
-              Tu diploma{tituloCurso !== "" && ` · ${tituloCurso}`}
+          {texto.cifra === null ? (
+            <p className="min-w-0 flex-1 font-display text-[24px] font-extrabold leading-[1.1] tracking-[-0.02em] text-marca-tinta min-[900px]:flex-none min-[900px]:text-[32px]">
+              {texto.unidad}
             </p>
-
-            {texto.cifra === null ? (
-              <p className="mt-[7px] font-display text-[24px] font-extrabold leading-[1.1] tracking-[-0.02em] text-marca-tinta min-[900px]:mt-0 min-[900px]:text-[32px]">
+          ) : (
+            <p className="flex min-w-0 flex-1 items-baseline gap-2 min-[900px]:flex-none min-[900px]:gap-2.5">
+              <span className="font-display text-[32px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-marca-tinta min-[900px]:text-[42px]">
+                {texto.cifra}
+              </span>
+              <span className="text-pretty text-[14px] font-semibold leading-[1.25] text-marca-tintaMedia min-[900px]:text-[17px]">
                 {texto.unidad}
-              </p>
-            ) : (
-              <p className="mt-[7px] flex items-baseline gap-2 min-[900px]:mt-0 min-[900px]:gap-2.5">
-                <span className="font-display text-[32px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-marca-tinta min-[900px]:text-[42px]">
-                  {texto.cifra}
-                </span>
-                <span className="text-[14px] font-semibold text-marca-tintaMedia min-[900px]:text-[17px]">
-                  {texto.unidad}
-                </span>
-              </p>
-            )}
-
-            {/* La barra vive dentro de esta columna solo en escritorio;
-                en móvil sale fuera para poder ocupar el ancho entero. */}
-            {!conseguido && (
-              <div className="hidden items-center gap-4 min-[900px]:flex">
-                <Barra relleno={texto.relleno} descripcion={descripcion} />
-                <span className="shrink-0 text-[13.5px] tabular-nums text-marca-calidoBadgeTexto">
-                  {texto.pie}
-                </span>
-              </div>
-            )}
-
-            {conseguido && (
-              <p className="mt-2 text-[13px] tabular-nums text-marca-verdeOsc min-[900px]:mt-0 min-[900px]:text-[13.5px]">
-                {texto.pie}
-              </p>
-            )}
-          </div>
+              </span>
+            </p>
+          )}
         </div>
 
-        {/* ------------------------- EN MÓVIL -------------------------
-            La barra a ancho completo, con el avance debajo. Encima de
-            ella no cabe: la cifra ya se ha llevado la fila. */}
+        {/* La barra se lleva lo que sobre: a ancho completo en móvil,
+            y en escritorio todo lo que quede a la derecha de la cifra.
+            No lleva pie —el porcentaje no se escribe— porque la
+            distancia se ve mejor de lo que se lee. */}
         {!conseguido && (
-          <div className="min-[900px]:hidden">
+          <div className="min-[900px]:flex-1">
             <Barra relleno={texto.relleno} descripcion={descripcion} />
-            <p className="mt-2 text-[12.5px] leading-[1.45] text-marca-calidoBadgeTexto">
-              <span className="tabular-nums">{texto.pie}</span> · {texto.nota}
-            </p>
           </div>
         )}
-
-        {/* ------------------------ EN ESCRITORIO ------------------------
-            La nota se separa con un filete y se queda en una columna
-            fija: a ancho libre se estira hasta empujar la barra. */}
-        <div
-          className={`hidden w-px shrink-0 self-stretch min-[900px]:block ${
-            conseguido ? "bg-marca-verdePalido" : "bg-marca-examenBorde"
-          }`}
-        />
-        <p
-          className={`hidden w-[196px] shrink-0 text-pretty text-[13.5px] leading-[1.45] min-[900px]:block ${
-            conseguido
-              ? "text-marca-verdeOsc"
-              : recta
-                ? "font-semibold text-marca-tinta"
-                : "text-marca-calidoBadgeTexto"
-          }`}
-        >
-          {texto.nota}
-        </p>
       </div>
     </section>
   );
@@ -151,7 +104,7 @@ function Barra({ relleno, descripcion }: { relleno: number; descripcion: string 
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={descripcion}
-      className="h-[7px] flex-1 overflow-hidden rounded-[4px] bg-marca-calidoBadge min-[900px]:h-2"
+      className="h-[7px] overflow-hidden rounded-[4px] bg-marca-calidoBadge min-[900px]:h-2"
     >
       <div
         className="h-full rounded-[4px] bg-marca-verde transition-[width] duration-500"
@@ -162,10 +115,20 @@ function Barra({ relleno, descripcion }: { relleno: number; descripcion: string 
 }
 
 /**
- * El sello, en su medallón. Relleno y en verde cuando el diploma ya
- * está; de contorno y en ámbar mientras se persigue.
+ * EL DIPLOMA, NO UNA MEDALLA. Aquí hubo un medallón con su cinta, que es
+ * el icono de ganar una carrera: premia un resultado y lo compara con el
+ * de otros. Un diploma no es eso —acredita que has hecho un curso— y
+ * además el medallón repetía la forma del círculo que lo envuelve.
+ *
+ * Ahora es un pergamino: la hoja con su rollo a la izquierda, que es la
+ * forma en la que se dibuja un diploma desde antes de que hubiera
+ * iconos. Dentro lleva dos renglones mientras se persigue, y una marca
+ * de visto cuando ya está: el documento es el mismo, cambia lo escrito.
+ *
+ * Relleno y en verde cuando el diploma ya está; de contorno y en ámbar
+ * mientras se persigue.
  */
-function Sello({ conseguido }: { conseguido: boolean }) {
+function IconoDiploma({ conseguido }: { conseguido: boolean }) {
   const trazo = conseguido ? "#FFFFFF" : "#9A7B00";
 
   return (
@@ -183,9 +146,20 @@ function Sello({ conseguido }: { conseguido: boolean }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <circle cx="9" cy="7" r="4.6" stroke={trazo} fill={conseguido ? "#FFFFFF" : "none"} fillOpacity={conseguido ? 0.18 : 1} />
-        <path d="M6.4 11.2 5.4 16l3.6-1.9 3.6 1.9-1-4.8" stroke={trazo} />
-        {conseguido && <path d="M7 7l1.5 1.5L11 5.8" stroke={trazo} />}
+        {/* La hoja. Se cierra sola por la izquierda, donde va el rollo. */}
+        <path
+          d="M4.6 3.6h8.7a1.8 1.8 0 0 1 1.8 1.8v7.2a1.8 1.8 0 0 1-1.8 1.8H4.6"
+          stroke={trazo}
+          fill={conseguido ? "#FFFFFF" : "none"}
+          fillOpacity={conseguido ? 0.18 : 1}
+        />
+        {/* El rollo. */}
+        <ellipse cx="4.6" cy="9" rx="1.7" ry="5.4" stroke={trazo} />
+        {conseguido ? (
+          <path d="M8.2 9.3l1.6 1.6 3-3.2" stroke={trazo} />
+        ) : (
+          <path d="M7.8 7.4h4.6M7.8 10.4h3" stroke={trazo} />
+        )}
       </svg>
     </span>
   );

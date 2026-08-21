@@ -12,7 +12,6 @@ import {
 } from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
 import { calcularDiploma } from "@/lib/diploma";
-import { PALABRA_NIVEL } from "@/components/Casillas";
 import Cabecera from "@/components/Cabecera";
 import BannerCurso from "@/components/BannerCurso";
 import BannerDiploma from "@/components/BannerDiploma";
@@ -118,12 +117,11 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   // que es lo que evita que se reencuentre trabajo ya terminado.
   const idsTerminados = Object.keys(progreso);
 
-  // El nivel MCER. Vivió dentro de la tarjeta del diploma mientras esta
-  // era ancha; en una fila de 50px no cabe sin robarle sitio a la cifra,
-  // así que se queda en el saludo, que es donde se lee lo que el alumno
-  // ES —quién eres, a qué altura vas— y no lo que le queda por hacer.
-  const nivelLimpio = (perfil?.nivel ?? "").trim().toUpperCase();
-  const palabraNivel = PALABRA_NIVEL[nivelLimpio] ?? "";
+  // AQUÍ NO VA EL NIVEL MCER. Estuvo de chip junto al saludo —«B2 ·
+  // Intermedio alto»— y era la tercera cosa que leer antes de llegar a
+  // lo que se viene a hacer. No es un dato que el alumno necesite: no
+  // cambia nada de lo que puede hacer hoy y ya lo sabe. El nivel decide
+  // qué material recibe, y eso sigue funcionando igual sin enseñarlo.
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
@@ -166,26 +164,9 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
         )}
 
         <div className="mb-4 lg:mb-[22px]">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h1 className="font-display text-[22px] font-bold leading-[1.15] text-marca-tinta lg:text-[30px]">
-              {saludo}
-            </h1>
-
-            {/* El nivel, junto al nombre. Es contexto de identidad y no
-                una métrica: por eso va aquí y no en una casilla. */}
-            {nivelLimpio !== "" && (
-              <span className="inline-flex items-baseline gap-1.5 rounded-full bg-marca-verdeFondo px-2.5 py-1">
-                <span className="text-[12.5px] font-bold leading-none text-marca-verdeOsc">
-                  {nivelLimpio}
-                </span>
-                {palabraNivel !== "" && (
-                  <span className="text-[11.5px] leading-none text-marca-verdeOsc/80">
-                    {palabraNivel}
-                  </span>
-                )}
-              </span>
-            )}
-          </div>
+          <h1 className="font-display text-[22px] font-bold leading-[1.15] text-marca-tinta lg:text-[30px]">
+            {saludo}
+          </h1>
 
           <p className="mt-[5px] text-pretty text-[14px] leading-[1.4] text-marca-gris lg:mt-1.5 lg:text-[16px]">
             {subtitulo}
@@ -197,7 +178,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
             que viene después, y compartiendo caja con el curso se leía
             como un dato del curso. */}
         <div className="mb-3 lg:mb-5">
-          <BannerDiploma estado={diploma} tituloCurso={principal?.curso.titulo ?? ""} />
+          <BannerDiploma estado={diploma} />
         </div>
 
         {/* La franja entra como pieza ya renderizada: la pinta el

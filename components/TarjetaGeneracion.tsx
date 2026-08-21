@@ -106,10 +106,10 @@ export default function TarjetaGeneracion({
           {tarjeta.descripcion}
         </p>
 
-        {/* Mientras no toca, la tarjeta cuenta de qué depende. Va antes
-            del botón para que se lea primero el porqué y después el
-            botón apagado, y no al revés. */}
-        {tarjeta.espera && (
+        {/* Solo cuando la espera trae algo que el botón no dice ya. La
+            de "espera a tu próxima clase" no lo trae: ahí la tarjeta se
+            queda en título, descripción y botón apagado. */}
+        {tarjeta.espera?.nota && (
           <p className="mt-3 text-[13px] leading-[1.45] text-marca-gris lg:text-[13.5px]">
             {tarjeta.espera.nota}
           </p>

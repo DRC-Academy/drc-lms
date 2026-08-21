@@ -107,8 +107,6 @@ export type EstadoDiploma =
       total: number;
       /** Solo para el relleno de la barra. No se escribe en pantalla. */
       porcentaje: number;
-      /** Todavía no ha abierto ni una lección. Cambia el tono, no el dato. */
-      sinEmpezar: boolean;
     }
   | { estado: "conseguido"; total: number };
 
@@ -130,7 +128,6 @@ export function calcularDiploma(completadas: number, total: number): EstadoDiplo
     completadas: hechas,
     total,
     porcentaje: Math.round((hechas / total) * 100),
-    sinEmpezar: hechas === 0,
   };
 }
 
@@ -142,10 +139,20 @@ export function calcularDiploma(completadas: number, total: number): EstadoDiplo
 // pinta. Aquí además se lee entero de una vez, que es lo que hace falta
 // para revisar el tono sin abrir tres archivos.
 //
-// CUATRO ESTADOS Y CUATRO TONOS. Quien no ha empezado no tiene una
-// deuda de 191 lecciones: tiene un curso de 191 por delante. A quien le
-// queda una hay que decírselo. Y a quien ya lo tiene se le reconoce sin
-// prometerle un archivo que todavía no existe.
+// UNA LÍNEA Y NADA MÁS: "12 lecciones para tu diploma". El banner tuvo
+// también un pie con el avance ("llevas 12 de 191"), una nota lateral
+// que explicaba cuándo se emite y el nombre del curso en la etiqueta.
+// Cuatro textos para un dato que se entiende sin ninguno.
+//
+// Y los cuatro decían cosas que ya están dichas: el avance lo enseña la
+// barra, el nombre del curso lo dice la franja de debajo, y la regla de
+// emisión —el curso entero— no cambia nada de lo que el alumno puede
+// hacer hoy. Lo que sí cambia algo es el número, y por eso se queda solo.
+//
+// SIGUE HABIENDO CUATRO ESTADOS, aunque ya no cuatro tonos: quien no ha
+// empezado, quien va por la mitad, a quien le queda una y quien ya lo
+// tiene. La diferencia entre los tres primeros la carga el número, que
+// es donde se ve de verdad.
 // ---------------------------------------------------------------
 
 export type TextoDiploma = {
@@ -157,10 +164,6 @@ export type TextoDiploma = {
   cifra: number | null;
   /** Pegada a la cifra, o sola cuando no hay cifra. Concuerda con ella. */
   unidad: string;
-  /** Al final de la barra: por dónde va. */
-  pie: string;
-  /** La nota del lateral. En móvil baja bajo la barra. */
-  nota: string;
   /** Relleno de la barra, 0-100. */
   relleno: number;
 };
@@ -168,44 +171,18 @@ export type TextoDiploma = {
 export function textoDiploma(estado: EstadoDiploma): TextoDiploma | null {
   if (estado.estado === "sin-curso") return null;
 
+  // PROVISIONAL, hasta que exista el botón de descarga: reconoce el
+  // logro y no promete un archivo que todavía no se genera.
   if (estado.estado === "conseguido") {
-    // PROVISIONAL, hasta que exista el botón de descarga.
-    //
-    // Lo que NO puede hacer este texto: prometer un archivo que se
-    // genera, dar una fecha que nadie ha fijado, o mandar al profesor,
-    // que no es por donde va a llegar. Lo que sí: reconocer que ha
-    // terminado, que es un hecho y es suyo.
-    return {
-      cifra: null,
-      unidad: "Diploma conseguido",
-      pie: `${estado.total} lecciones, todas hechas`,
-      nota: "El diploma es tuyo. Te contamos enseguida cómo descargarlo.",
-      relleno: 100,
-    };
+    return { cifra: null, unidad: "Diploma conseguido", relleno: 100 };
   }
-
-  const unaSola = estado.restantes === 1;
 
   return {
     // Sin empezar la cifra es el curso entero. Mismo número que "te
     // faltan todas", contado como lo que es: el tamaño de lo que tiene
-    // por delante, no una deuda. La diferencia la cargan el pie y la
-    // nota, que es donde cabe.
+    // por delante, no una deuda.
     cifra: estado.restantes,
-    unidad: unaSola ? "lección para conseguirlo" : "lecciones para conseguirlo",
-    pie: estado.sinEmpezar
-      ? "aún no has empezado"
-      : `llevas ${estado.completadas} de ${estado.total}`,
-    nota: estado.sinEmpezar
-      ? "Empieza por la primera y esto se va llenando solo."
-      : unaSola
-        ? "La última. Ya está."
-        : "Se emite al completar el curso entero. Cada lección que cierras lo acerca.",
+    unidad: estado.restantes === 1 ? "lección para tu diploma" : "lecciones para tu diploma",
     relleno: estado.porcentaje,
   };
-}
-
-/** La última lección merece que la nota se lea distinto: en negrita. */
-export function esRecta(estado: EstadoDiploma): boolean {
-  return estado.estado === "en-curso" && estado.restantes === 1;
 }

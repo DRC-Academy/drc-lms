@@ -136,8 +136,11 @@ export const MODOS_HISTORICOS: ModoHistorico[] = ["repaso", "examen", "contexto"
 export type EsperaTarjeta = {
   /** Sustituye a `llamada` en el botón, que va desactivado. */
   etiquetaBoton: string;
-  /** Una línea que explica de qué depende. Nunca por qué "no puede". */
-  nota: string;
+  /**
+   * Una línea que explica de qué depende, o null cuando el botón ya lo
+   * dice. Nunca por qué "no puede".
+   */
+  nota: string | null;
 };
 
 /** La tarjeta única de generación. Null cuando no hay de dónde tirar. */
@@ -203,10 +206,10 @@ function describirFuentes(
   const frases: string[] = [];
 
   if (ultimaClase) {
-    frases.push(`lo que trabajaste el ${formatearFecha(ultimaClase.fechaClase)}`);
+    frases.push(`tu clase del ${formatearFecha(ultimaClase.fechaClase)}`);
     // El historial no se nombra con número de clases: al alumno no le
     // dice nada "tus últimas cuatro clases" y suena a expediente.
-    frases.push("lo que se te viene repitiendo de clases anteriores");
+    frases.push("lo que se te repite");
   }
   if (conContexto) frases.push("tu día a día");
   if (examen) frases.push(`el formato del ${NOMBRE_EXAMEN[examen]}`);
@@ -245,15 +248,15 @@ function redactarEspera(
     };
   }
 
-  // El vínculo con el profesor es el punto: lo siguiente que desbloquea
-  // esto es su próxima clase, no un contador. Sin nombre se cuenta
-  // igual, sin fingir que lo sabemos.
-  return {
-    etiquetaBoton: "Después de tu próxima clase",
-    nota: profesor
-      ? `Ya has practicado lo de tu última clase. En cuanto tengas la siguiente con ${profesor}, preparamos el próximo bloque.`
-      : "Ya has practicado lo de tu última clase. En cuanto tengas la siguiente, preparamos el próximo bloque.",
-  };
+  // SIN NOTA: el botón ya lo dice entero. Debajo hubo dos renglones
+  // —"Ya has practicado lo de tu última clase. En cuanto tengas la
+  // siguiente con Jimena, preparamos el próximo bloque."— que decían lo
+  // mismo que el botón apagado que tenían justo debajo, y lo decían en
+  // el sitio donde el alumno espera encontrar qué hacer ahora.
+  //
+  // El vínculo con el profesor se pierde, y es lo único que se pierde:
+  // vale menos que dejar la tarjeta en dos líneas.
+  return { etiquetaBoton: "Después de tu próxima clase", nota: null };
 }
 
 /**
@@ -298,7 +301,7 @@ export function calcularTarjeta(
     // Sin fuentes no se llega aquí, pero la frase aguanta el caso igual
     // antes que quedarse a medias en pantalla.
     descripcion: fuentes
-      ? `Diez ejercicios a partir de ${fuentes}.`
+      ? `Diez ejercicios con ${fuentes}.`
       : "Diez ejercicios hechos con lo que sabemos de ti.",
     llamada: "Preparar mi bloque",
     espera,
