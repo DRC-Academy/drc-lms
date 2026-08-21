@@ -9,9 +9,17 @@ import { textoDeEspera } from "@/lib/drip";
  * —código, título, contador— y en móvil se apila en tres, con el check a
  * la izquierda. El corte es el mismo que el del resto de la pantalla.
  *
- * El módulo en curso se distingue por fondo crema y borde discontinuo,
- * no por color de texto: tiene que reconocerse de un vistazo al abrir el
- * mes, sin leer nada.
+ * EL MÓDULO EN CURSO LLEVA BORDE VERDE, y es lo único de la lista que
+ * lo lleva. Antes era fondo crema con borde discontinuo y punto ámbar:
+ * un tercer color para decir «estás aquí» cuando el verde ya significa
+ * exactamente eso en toda la aplicación —es el color del botón que lleva
+ * a esta misma fila—. Ahora el borde, el punto, el número y el
+ * «Continuar →» son la misma cosa y el mismo verde.
+ *
+ * LO YA HECHO VA EN GRIS. Misma fila, sin blanco de tarjeta y sin check
+ * verde: se lee como archivo, no como tarea. Y no se pinta aquí en
+ * medio, sino dentro del desplegable de completados que monta
+ * `Temario`.
  */
 export default function FilaModulo({
   modulo,
@@ -40,12 +48,12 @@ export default function FilaModulo({
       ) : esActual ? (
         <span
           aria-hidden
-          className="mt-[3px] block h-[7px] w-[7px] shrink-0 rounded-full bg-temario-ambar min-[900px]:mt-0"
+          className="mt-[3px] block h-[7px] w-[7px] shrink-0 rounded-full bg-temario-verde min-[900px]:mt-0"
         />
       ) : hecho ? (
         <span
           aria-hidden
-          className="mt-[1px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-temario-tinte text-[10px] font-extrabold text-temario-verdeTexto min-[900px]:mt-0"
+          className="mt-[1px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-temario-circulo text-[10px] font-extrabold text-white min-[900px]:mt-0"
         >
           ✓
         </span>
@@ -59,7 +67,7 @@ export default function FilaModulo({
       <div className="min-w-0 flex-1 min-[900px]:flex min-[900px]:items-center min-[900px]:gap-4">
         <span
           className={`block text-[12px] font-extrabold leading-none min-[900px]:w-[78px] min-[900px]:shrink-0 ${
-            esActual ? "text-temario-ambarTexto" : "text-temario-tenue"
+            esActual ? "text-temario-verdeTexto" : "text-temario-tenue"
           }`}
         >
           MÓDULO {modulo.numero}
@@ -73,7 +81,9 @@ export default function FilaModulo({
           {modulo.titulo}
         </span>
 
-        {disponible && (
+        {/* Lo completado no lleva cuenta: «5 lecciones · 5 hechas» es
+            decir dos veces lo que ya dice el check. */}
+        {disponible && !hecho && (
           <span className="mt-[5px] block text-[11.5px] font-medium text-temario-medio min-[900px]:mt-0 min-[900px]:whitespace-nowrap min-[900px]:text-[12.5px]">
             {meta}
           </span>
@@ -107,8 +117,12 @@ export default function FilaModulo({
       // ahí y cuándo llega, no que se pueda tocar.
       "border border-temario-borde bg-temario-rail/50 text-temario-suave"
     : esActual
-      ? "border border-dashed border-temario-cremaBorde bg-temario-crema"
-      : "border border-temario-bordeFila bg-white hover:border-temario-bordeHover hover:bg-temario-filaHover";
+      ? "border-[1.5px] border-temario-verde bg-white"
+      : hecho
+        ? // En gris y sin blanco: sigue siendo un enlace —se repasa
+          // desde aquí— pero no compite con lo que queda por hacer.
+          "border border-temario-bordeFila bg-temario-rail/40 text-temario-suave hover:border-temario-bordeHover"
+        : "border border-temario-bordeFila bg-white hover:border-temario-bordeHover hover:bg-temario-filaHover";
 
   // Sin lecciones no hay a dónde entrar: se pinta apagado en vez de
   // llevar a una pantalla vacía.

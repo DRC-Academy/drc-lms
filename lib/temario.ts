@@ -91,7 +91,6 @@ export type MesTemario = {
   /** El rótulo grande de la cabecera: el tema, o los módulos que abarca. */
   titulo: string;
   semanas: SemanaTemario[];
-  totalModulos: number;
   totalLecciones: number;
   completadas: number;
   porcentaje: number;
@@ -108,11 +107,9 @@ export type MesTemario = {
 
 export type Temario = {
   meses: MesTemario[];
-  totalModulos: number;
   totalLecciones: number;
   completadas: number;
   porcentaje: number;
-  totalSemanas: number;
   /** Dónde va el alumno ahora, o null si el curso está terminado o vacío. */
   actual: {
     mes: number;
@@ -265,7 +262,6 @@ export function construirTemario(arbol: ArbolCurso): Temario {
       tema,
       titulo: tema ?? (primero !== undefined ? `Módulos ${primero} a ${ultimo}` : `Mes ${numero}`),
       semanas,
-      totalModulos: delMes.length,
       totalLecciones,
       completadas,
       porcentaje: porcentajeDe(completadas, totalLecciones),
@@ -281,13 +277,9 @@ export function construirTemario(arbol: ArbolCurso): Temario {
 
   return {
     meses,
-    totalModulos: modulos.length,
     totalLecciones: arbol.total,
     completadas: arbol.completadas,
     porcentaje: porcentajeDe(arbol.completadas, arbol.total),
-    // Semanas de verdad, contando las que existen en cada mes: un mes a
-    // medio cargar no debe inflar el titular con semanas vacías.
-    totalSemanas: meses.reduce((suma, mes) => suma + mes.semanas.length, 0),
     actual: actual
       ? {
           mes: actual.mes,

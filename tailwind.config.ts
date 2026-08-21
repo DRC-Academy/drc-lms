@@ -61,15 +61,13 @@ const config: Config = {
           /** Mes en curso en la lista del temario. Ya no hay panel oscuro:
            *  el plan lo pinta ahora `Banner`. */
           oscuro: "#10221A",
-          // Acción
+          // Acción, y desde ahora también «estás aquí»: el borde y el
+          // punto del módulo en curso en la lista del temario.
           verde: "#1DA34B",
           verdeTexto: "#14603A",
-          tinte: "#E4F3EA",
-          // El módulo en curso
+          /** El mes en curso en la línea de recorrido, y solo ahí. */
           ambar: "#E9B429",
           ambarTexto: "#8A7A2E",
-          crema: "#FDFBEE",
-          cremaBorde: "#DFD4A2",
           // Tinta y grises
           tinta: "#0F1A14",
           medio: "#6B756E",

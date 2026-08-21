@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState, type ReactNode } from "react";
-import type { MesTemario, Temario as DatosTemario } from "@/lib/temario";
+import type { MesTemario, ModuloTemario, Temario as DatosTemario } from "@/lib/temario";
 import PanelPlan from "@/components/curso/PanelPlan";
 import LineaProgreso from "@/components/curso/LineaProgreso";
 import FilaModulo from "@/components/curso/FilaModulo";
@@ -94,7 +94,11 @@ export default function Temario({
 
       {/* ---------------------------- BARRA DE SECCIÓN ---------------------------- */}
       <div className="mt-[22px] flex items-center justify-between gap-5 min-[900px]:mt-[34px]">
-        <h2 className="text-[11px] font-extrabold uppercase leading-none tracking-[0.16em] text-temario-suave min-[900px]:text-[12px]">
+        {/* EN TINTA Y NO EN GRIS. Es el único título que queda en la
+            pantalla desde que se fue la cabecera del curso, así que ya no
+            es un rótulo de sección entre otros: es el que dice qué es
+            todo lo que viene debajo. */}
+        <h2 className="text-[11px] font-extrabold uppercase leading-none tracking-[0.16em] text-temario-tinta min-[900px]:text-[12px]">
           Programa mes a mes
         </h2>
         <div className="hidden items-center gap-2 min-[900px]:flex">
@@ -157,6 +161,10 @@ function Mes({
   onAlternar: (numero: number) => void;
   refCallback: (nodo: HTMLDivElement | null) => void;
 }) {
+  // Lo que el alumno ya cerró sale de la lista y se recoge en un solo
+  // desplegable, en el orden del curso. Ver `Completados`.
+  const hechos = mes.semanas.flatMap((semana) => semana.modulos).filter((modulo) => modulo.hecho);
+
   const circulo =
     mes.estado === "completado"
       ? "bg-temario-verde text-white"
@@ -215,11 +223,6 @@ function Mes({
               {mes.titulo}
             </span>
 
-            <span className="mt-[5px] block text-[11.5px] font-medium text-temario-medio tabular-nums min-[900px]:hidden">
-              {mes.totalModulos} {mes.totalModulos === 1 ? "módulo" : "módulos"} · {mes.totalLecciones}{" "}
-              {mes.totalLecciones === 1 ? "lección" : "lecciones"}
-            </span>
-
             {/* Un mes entero por abrir se dice aquí, para no obligar a
                 desplegarlo solo para descubrir que no toca todavía. */}
             {/* Un mes ya completado no necesita saber cuándo se abre:
@@ -232,10 +235,10 @@ function Mes({
             )}
           </span>
 
-          <span className="hidden whitespace-nowrap text-[13px] font-medium text-temario-medio tabular-nums min-[900px]:block">
-            {mes.totalModulos} {mes.totalModulos === 1 ? "módulo" : "módulos"} · {mes.totalLecciones}{" "}
-            {mes.totalLecciones === 1 ? "lección" : "lecciones"}
-          </span>
+          {/* SIN «8 MÓDULOS · 32 LECCIONES». Estaba aquí y otra vez
+              debajo del título en móvil, y decía el tamaño de lo que hay
+              —no lo que el alumno lleva—, que es lo que cuenta la barra
+              de al lado en la única unidad que importa: lecciones. */}
 
           <span className="hidden w-[132px] shrink-0 min-[900px]:block">
             <span
@@ -264,29 +267,95 @@ function Mes({
         {/* ----------------------------- SEMANAS ----------------------------- */}
         {abierto && (
           <div className="px-1 pb-2.5 pt-1.5 min-[900px]:pl-2.5 min-[900px]:pr-0">
-            {mes.semanas.map((semana) => (
-              <div key={semana.numero} className="pt-3.5 min-[900px]:pt-4">
-                <div className="mb-2 flex items-center gap-3">
-                  <span className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-temario-suave">
-                    Semana {semana.numero}
-                  </span>
-                  <span aria-hidden className="h-px flex-1 bg-temario-borde" />
-                  <span className="text-[11.5px] font-medium text-temario-medio tabular-nums">
-                    {semana.modulos.length} {semana.modulos.length === 1 ? "módulo" : "módulos"} ·{" "}
-                    {semana.totalLecciones} {semana.totalLecciones === 1 ? "lección" : "lecciones"}
-                  </span>
-                </div>
+            {hechos.length > 0 && <Completados modulos={hechos} slug={slug} />}
 
-                <ul className="flex flex-col gap-1.5">
-                  {semana.modulos.map((modulo) => (
-                    <FilaModulo key={modulo.id} modulo={modulo} slug={slug} />
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {mes.semanas.map((semana) => {
+              // Una semana entera hecha no deja cabecera vacía: sus
+              // módulos están arriba, en el desplegable.
+              const pendientes = semana.modulos.filter((modulo) => !modulo.hecho);
+              if (pendientes.length === 0) return null;
+
+              return (
+                <div key={semana.numero} className="pt-3.5 min-[900px]:pt-4">
+                  <div className="mb-2 flex items-center gap-3">
+                    <span className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-temario-suave">
+                      Semana {semana.numero}
+                    </span>
+                    <span aria-hidden className="h-px flex-1 bg-temario-borde" />
+                  </div>
+
+                  <ul className="flex flex-col gap-1.5">
+                    {pendientes.map((modulo) => (
+                      <FilaModulo key={modulo.id} modulo={modulo} slug={slug} />
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * LO YA HECHO, RECOGIDO EN UNA LÍNEA.
+ *
+ * Un mes por la mitad enseñaba ocho filas, y cuatro de ellas eran
+ * trabajo terminado: ocupaban el mismo alto, el mismo blanco y el mismo
+ * borde que lo que queda por hacer, así que había que leerlas para
+ * descartarlas. En los meses cerrados eran las ocho.
+ *
+ * Ahora se cuentan en una sola línea gris y se abren si el alumno
+ * quiere. Repasar un módulo sigue estando a un clic —el desplegable no
+ * los borra, y dentro cada fila lleva su enlace— pero deja de ser lo
+ * primero que se ve al abrir un mes.
+ *
+ * VA ARRIBA Y NO ABAJO. Son los módulos más antiguos del mes; al
+ * abrirlo, la lista vuelve a leerse en el orden del curso, que es el
+ * orden en el que está escrito el temario.
+ *
+ * CADA MES TIENE EL SUYO Y EMPIEZA CERRADO. El estado vive aquí dentro y
+ * no en `Temario`: no hace falta recordarlo ni compartirlo, y cerrar el
+ * mes y volver a abrirlo devuelve la vista limpia, que es lo que se
+ * espera de algo que se ha recogido a propósito.
+ */
+function Completados({ modulos, slug }: { modulos: ModuloTemario[]; slug: string }) {
+  const [abierto, setAbierto] = useState(false);
+
+  return (
+    <div className="pt-3.5 min-[900px]:pt-4">
+      <button
+        type="button"
+        onClick={() => setAbierto((previo) => !previo)}
+        aria-expanded={abierto}
+        className="flex min-h-[40px] w-full items-center gap-3 rounded-[12px] border border-temario-borde bg-temario-rail/60 px-4 py-2 text-left transition-colors hover:border-temario-bordeHover min-[900px]:gap-4 min-[900px]:px-[18px]"
+      >
+        <span
+          aria-hidden
+          className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-temario-circulo text-[10px] font-extrabold text-white"
+        >
+          ✓
+        </span>
+
+        <span className="flex-1 text-[12.5px] font-semibold text-temario-suave min-[900px]:text-[13px]">
+          {modulos.length}{" "}
+          {modulos.length === 1 ? "módulo completado" : "módulos completados"}
+        </span>
+
+        <span aria-hidden className="shrink-0 text-[10px] text-temario-suave">
+          {abierto ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {abierto && (
+        <ul className="mt-1.5 flex flex-col gap-1.5">
+          {modulos.map((modulo) => (
+            <FilaModulo key={modulo.id} modulo={modulo} slug={slug} />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

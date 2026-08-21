@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { exigirSesion } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
@@ -60,8 +59,6 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
   const arbol = await arbolDelCurso(alumnoId, curso, fechaDrip);
   const temario = construirTemario(arbol);
 
-  const inicio = sesion.rol === "alumno" ? `/alumno/${sesion.alumnoId}` : "/";
-
   return (
     // La cabecera entera —navegación incluida— la pone el layout del
     // curso, y es la misma que en el resto de las pantallas del alumno.
@@ -69,40 +66,20 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
     // hacía desaparecer Inicio, Mi curso y Práctica al entrar.
     <div className="flex-1 bg-temario-fondo text-temario-tinta">
       <main className="mx-auto w-full max-w-[1240px] px-4 pb-14 pt-6 min-[900px]:px-11 min-[900px]:pb-16 min-[900px]:pt-10">
-        <Link
-          href={arbol.leccionActual ? `/curso/${curso.slug}/${arbol.leccionActual}` : inicio}
-          className="text-[13px] font-semibold text-temario-enlace transition-colors hover:text-temario-tinta min-[900px]:text-[14px]"
-        >
-          ← {arbol.leccionActual ? "Volver a la lección" : "Volver al inicio"}
-        </Link>
+        {/* SIN CABECERA DE PÁGINA. Aquí había un bloque entero antes de
+            llegar al contenido: «← Volver a la lección», el epígrafe
+            «Curso completo», el título del curso a 42px y los tres
+            contadores («45 módulos · 191 lecciones · 23 semanas»).
 
-        {/* ------------------------------ CABECERA ------------------------------ */}
-        <header className="mt-3 flex flex-col gap-2 min-[900px]:mt-[22px] min-[900px]:flex-row min-[900px]:items-end min-[900px]:justify-between min-[900px]:gap-10">
-          <div className="min-w-0">
-            <p className="hidden text-[11.5px] font-extrabold uppercase leading-none tracking-[0.18em] text-temario-suave min-[900px]:block">
-              Curso completo
-            </p>
-            <h1 className="text-pretty font-display text-[26px] font-extrabold leading-[1.1] tracking-[-0.02em] min-[900px]:mt-[9px] min-[900px]:text-[42px] min-[900px]:leading-[1.05] min-[900px]:tracking-[-0.025em]">
-              {curso.titulo}
-            </h1>
-          </div>
+            Ninguno de los cuatro decía algo que el alumno no supiera ya:
+            en qué curso está lo dice la cabecera fija —la pestaña «Mi
+            curso» va marcada—, volver a la lección es exactamente lo que
+            hace el botón «Continuar» de la franja de abajo, y el tamaño
+            del curso lo cuenta el banner del diploma en lecciones, que
+            es la unidad en la que se avanza.
 
-          {/* Los tres contadores salen de los datos, nunca fijos: si el
-              curso cambia de tamaño, el titular se ajusta solo. */}
-          <p className="flex items-center gap-2.5 text-[12.5px] font-medium text-temario-medio tabular-nums min-[900px]:shrink-0 min-[900px]:text-[13.5px]">
-            <span>
-              {temario.totalModulos} {temario.totalModulos === 1 ? "módulo" : "módulos"}
-            </span>
-            <span aria-hidden className="text-temario-separador">·</span>
-            <span>
-              {temario.totalLecciones} {temario.totalLecciones === 1 ? "lección" : "lecciones"}
-            </span>
-            <span aria-hidden className="text-temario-separador">·</span>
-            <span>
-              {temario.totalSemanas} {temario.totalSemanas === 1 ? "semana" : "semanas"}
-            </span>
-          </p>
-        </header>
+            Lo que se gana es que la franja del plan —«Mes 1 · Semana 3 ·
+            Módulo 5», con su botón— es lo primero de la pantalla. */}
 
         {/* EL DIPLOMA, TAMBIÉN AQUÍ. El mismo banner que el inicio, sin
             cambiarle una coma: es la misma meta y tiene que reconocerse

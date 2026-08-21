@@ -33,8 +33,10 @@ export default function PanelPlan({ temario, slug }: { temario: Temario; slug: s
       ? "Has terminado el curso"
       : "Todavía sin contenido";
 
+  // Sin margen arriba: desde que la pantalla no tiene cabecera propia,
+  // esta franja es lo primero que hay bajo la barra de navegación.
   return (
-    <div className="mt-4 min-[900px]:mt-6">
+    <div>
       <Banner
         eyebrow={`Tu plan de ${meses.length} ${meses.length === 1 ? "mes" : "meses"}`}
         title={titulo}
