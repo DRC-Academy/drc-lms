@@ -21,6 +21,7 @@ Dónde vive hoy el copy, para saber dónde tocar:
 | `lib/diploma.ts` | Los cuatro estados del banner del diploma: cifra, unidad, pie y nota |
 | `lib/generacion.ts` | Los cinco textos de etapa mientras se genera un bloque |
 | `lib/drip.ts` | «Disponible mañana» / «Disponible en N días», en el temario y en la línea de progreso |
+| `lib/ruta.ts` | Las paradas de «Para ti»: qué tipo es cada una y su rótulo |
 | `lib/faq.ts` | Las 35 preguntas y respuestas de la ayuda, y el mensaje de WhatsApp |
 | `lib/correo.ts` | El email del enlace de acceso |
 | Los JSX | Todo lo demás |
@@ -983,228 +984,159 @@ El umbral de «dominado» es **80%** (`lib/progreso.ts:18`).
 
 `app/practica/page.tsx` · `components/PanelPractica.tsx`
 
-Orden: por dónde iba → cómo va → qué más hay.
+**LA PANTALLA ES UNA RUTA.** Era un tablero: una franja con el bloque en curso,
+una tarjeta con la última clase, cuatro casillas de métrica, otra tarjeta para
+generar y una lista con todos los bloques. Cinco piezas contando el mismo estado
+con cinco muebles, y tres de ellas peleándose por ser la acción — mientras la
+pantalla *afirmaba* estar hecha con lo del alumno sin enseñar nada suyo.
 
-### 10.1 Cabecera
+Ahora hay tres cosas, en este orden, y una cuarta que solo aparece cuando toca:
 
-> **Para ti**
+| Pieza | Qué es | Dónde |
+|---|---|---|
+| **Las fichas** | Lo acumulado: racha, nivel, dominados | `components/practica/HudPractica.tsx` |
+| **La ruta** | El camino con la parada de hoy desplegada | `components/practica/Ruta.tsx` |
+| **Ya realizados** | Las medallas, cerradas | `components/practica/Medallas.tsx` |
+| **Alargar tu ruta** | La generación, al pie | `components/TarjetasGeneracion.tsx` |
+
+Es además la única pantalla con **superficie de color**: el campo verde claro
+(`marca-ruta` #EDF7F0) con dos formas de fondo. «Para ti» es la única pantalla
+hecha para un solo alumno y era la que peor lo transmitía.
+
+### 10.1 Las fichas
+
+Tres, redondas, y ninguna se pinta a cero — un «0 días seguidos» no es un dato,
+es un reproche.
+
+> 🔥 **12** días seguidos   ⬢⬢⬡⬡ **B1** intermedio   🏅 **6** bloques dominados
+
+| Ficha | De dónde sale | Estado |
+|---|---|---|
+| Días seguidos | Fechas de `progreso` y `avance` (`lib/racha.ts`) | **Incompleta a propósito**, ver abajo |
+| Nivel MCER | `perfil.nivel` y sus cuatro tramos | Real |
+| Bloques dominados | `numerosDePractica`, umbral del 80% | Real |
+
+> **La racha se queda corta y es deliberado.** Las fechas disponibles son una
+> POR BLOQUE —la del último movimiento—, así que si el alumno tocó el mismo
+> bloque cinco días seguidos aquí consta un solo día. Por eso `racha()` no
+> devuelve nada por debajo de dos días. Para que sea exacta hace falta un
+> registro de actividad diaria que hoy no existe: una fila por alumno y día,
+> escrita desde `/api/progreso` y `/api/progreso-leccion`. Ninguna otra
+> mecánica de juego está inventada: no hay XP ni niveles fabricados.
+
+### 10.2 El hero
+
+> PARA MARTA · MARTES 20 DE AGOSTO
+> **Tu ruta de esta semana**
+> Sale de tus clases con **Aoife**. Nadie más en la academia tiene esta ruta.
+
+Sin perfil: «Para ti» y «Sale de tus clases y de lo que sabemos de ti».
+
+### 10.3 La ruta
+
+Un camino con paradas. **La línea verde llega hasta donde ha llegado el alumno**;
+lo que queda va en traza discontinua.
+
+> Tu ruta · 5 paradas                              vas por la 3 de 5
 >
-> Ejercicios hechos contigo dentro: tu perfil, tus clases y lo que se te viene
-> repitiendo. No es el curso, que es igual para todos: es lo tuyo.
+> ✓────────✓            ⬤(3)          ○ ······· 🔒
+> Reported  Phrasal   ESTÁS AQUÍ       4        Se abre con
+> speech    verbs                               tu próxima clase
 
-### 10.2 Fila destacada
+| Parada | Marca | Rótulo |
+|---|---|---|
+| Hecha | círculo verde con ✓ | el título del bloque |
+| Actual | círculo blanco de 92px con aro ámbar y su número | el título |
+| Pendiente | círculo blanco con borde y su número | el título |
+| Bloqueada | círculo discontinuo con candado | «Se abre con tu próxima clase» |
+| Resumen | círculo con «+N» | «N paradas hechas» |
 
-`components/practica/FilaDestacada.tsx`. Franja a la izquierda, tarjeta crema de
-la última clase a la derecha.
+- **Las hechas de más se agrupan.** A partir de dos, el resto se recoge en un
+  solo nodo «+N» al principio: sin ese tope, un alumno de seis meses abre «Para
+  ti» y se encuentra treinta puntos.
+- **El lienzo es 1000×200 y escala entero.** El SVG va a `width:100%` con su
+  relación de aspecto y las paradas se colocan en porcentaje de esa misma caja.
+  Lo único que no escala son los nodos, que llevan medida fija porque son zona
+  táctil.
+- **En móvil el camino no se pinta**: a 358px seis nodos con rótulo se pisan. Se
+  sustituye por una línea — «Tu ruta: 2 hechas · 2 por delante · 1 esperando a tu
+  próxima clase.»
 
-**Con bloque sin terminar:**
+**La parada de hoy** se despliega en una tarjeta blanca dentro del mismo campo:
 
-> · SIGUE POR AQUÍ
-> **{título del bloque}**
-> {área} · Bloque {n} de {total}
+> PARADA 3 · GRAMÁTICA · 10 EJERCICIOS
+> **Preguntas indirectas en pasado**
 > {intro del bloque}
+>                                   [ **Seguir la ruta** ]
+>                                   Lo que escribas al final lo lee Aoife
+>                                   antes de vuestra próxima clase.
+
+**Ruta terminada** (ninguna parada actual) — no se deja el hueco:
+
+> ✓  RUTA COMPLETA
+> **Te has hecho la ruta entera**
+> La siguiente sale de tu próxima clase con {profesor}. Mientras tanto, cualquier
+> parada se puede repetir.
+
+**Sin ninguna parada** — lo ven 86 de 168 alumnos:
+
+> Tu ruta · aún sin paradas
+> *(el camino en traza discontinua, con la primera parada abierta y el resto insinuado)*
 >
-> [ **Continuar** ]  Lo dejaste a medias
-> *(o [ **Empezar** ]  Es por donde toca seguir, si no lo ha tocado)*
->
-> — columna derecha —
-> **{total}** bloques / preparados para ti
-> *(una marca por bloque)*
-> {n} ya empezados  ·  *o* «ninguno empezado todavía»
+> PARADA 1
+> **Tu ruta empieza con tu primera clase**
+> En cuanto {profesor} analice lo que trabajéis, aparece aquí tu primera parada:
+> diez ejercicios hechos con lo tuyo.
 
-**Con todos los bloques terminados:**
+Generando: el titular pasa a «Preparando tu primera parada…» y el cuerpo a «En
+menos de un minuto la tienes aquí.»
 
-> · POR HOY, HECHO
-> **Has terminado tu práctica de hoy**
-> Los {n} bloques, terminados
->
-> Tu práctica se vuelve a generar con lo de tu siguiente clase. Mientras tanto,
-> puedes repasar cualquiera de los bloques de abajo.
+### 10.4 Ya realizados
 
-*(sin botón)*
+`components/practica/Medallas.tsx`. `<details>` nativo, **cerrado**.
 
-**Sin ningún bloque:** la franja no se pinta y la tarjeta de la clase ocupa el
-ancho entero.
+> ▸ **Ya realizados**                        ✓✓★    6 bloques
 
-### 10.3 Tarjeta de la última clase
+Los bloques hechos **no se ven**: ocupaban lo mismo que los pendientes, así que
+la lista parecía el doble de larga. Y al abrirlo no vuelven a ser una lista: son
+medallas, con la misma regla de siempre.
 
-`lib/modos.ts:324`. Tarjeta discontinua, tres redacciones:
-
-| Situación | Titular | Cuerpo |
+| Medalla | Cuándo | Color |
 |---|---|---|
-| Sin clase analizada | **Todavía no hay clase que repasar** | En cuanto tu profesor analice tu primera clase, preparamos aquí un bloque con lo que trabajasteis. |
-| Clase nueva sin practicar | **Tienes clase nueva** | {profesor} trabajó contigo {tema} el {fecha}. Ahí abajo puedes prepararte el bloque con lo que trabajasteis. |
-| Ya practicada | **Ya lo has practicado** | {profesor} trabajó contigo {tema} el {fecha}. En cuanto tengas la siguiente clase, preparamos el próximo bloque. |
+| Sello de oro | 100% | `marca-examen` con aro `marca-amarillo` |
+| Check verde | ≥ 80% (dominado) | `marca-verdeFondo` con aro `marca-verde` |
+| Guion arena | < 80% (practicado) | `marca-calidoFondo` con aro `marca-calidoSegmento` |
 
-Sin perfil, la frase se dice sin nombre: «Trabajaste {tema} el {fecha}.»
+Cada medalla enlaza a su bloque. Al pie:
 
-Encima de todo: `TU ÚLTIMA CLASE`.
+> Pulsa cualquiera para repetirlo. Repetir no baja la medalla: se queda la mejor.
 
-### 10.4 Cómo va tu sesión
+### 10.5 Alargar tu ruta
 
-`components/practica/SesionPractica.tsx`. Cuatro casillas. **No se pinta si el
-alumno no tiene ni un bloque.**
+La generación baja del centro al pie. Con ruta empezada es una **oferta**, no un
+rival del botón de la parada de hoy.
 
-> **Cómo va tu sesión**
+> **Alargar tu ruta** — Cuando tengas clase nueva, se le añade una parada más.
 
-| Casilla | Cifra | Pie (escritorio / móvil) |
-|---|---|---|
-| Bloques de hoy / «De hoy» | {n} de {total} | «ninguno terminado todavía» / «sin terminar aún» — «los tienes todos hechos» — «los que ya has cerrado» / «terminados» |
-| En progreso | {n} bloques | «no tienes ninguno a medias» / «ninguno a medias» — «retómalos antes de abrir otros» / «retómalos primero» |
-| Bloques dominados / «Dominados» | {n} de {practicados} | «de los que has practicado» / «dominados» |
-| Nivel MCER | {B1} intermedio | «todo lo de hoy va a este nivel» / «tu nivel» |
-
-Sin haber practicado nunca, la casilla de dominados enseña `—`.
-
-### 10.5 Tu práctica de hoy
-
-`components/TarjetasGeneracion.tsx`
-
-> **Tu práctica de hoy** — Diez ejercicios, hechos con lo que sabemos de ti.
->
-> ---
-> ● HECHO PARA TI
-> **Tu bloque de práctica**
-> Diez ejercicios a partir de {fuentes}.
->                                            [ **Preparar mi bloque** ]
-
-Es la misma tarjeta del inicio (§5.3), con los mismos estados de espera, avance
-y error, pero a lo ancho.
-
-**Si ya tiene bloque pero no nos ha contado a qué se dedica**, una línea suelta
-debajo:
-
-> ¿Nos cuentas a qué te dedicas? Con eso ambientamos parte de tus ejercicios en
-> tus situaciones del día a día. [Completar mi perfil]
-
-*(la línea desaparece entera si no hay enlace de formulario)*
+Sin ninguna parada, el rótulo pasa a **«Tu primera parada»** y la bajada a la de
+siempre. La tarjeta, sus estados de espera, generación y error son los de §5.3 a
+§5.6, sin cambios.
 
 ### 10.6 Sin ninguna fuente — la invitación al perfil
 
-Sustituye a la tarjeta. Es **el único sitio del producto** donde se invita a
-completar el perfil.
+Igual que antes (§5.6 para los dos avisos): la tarjeta de «Cuéntanos un poco de
+ti», que sigue siendo el único sitio del producto donde se invita a completar el
+perfil.
 
-El subtítulo de la sección cambia a:
+### 10.7 Lo que desapareció
 
-> En cuanto sepamos un poco más de ti, esto se llena de práctica hecha para ti.
-
-**Con enlace de formulario:**
-
-> ● EMPIEZA POR AQUÍ
->
-> **Cuéntanos un poco de ti**
->
-> Con saber a qué te dedicas y qué quieres conseguir con el inglés, preparamos
-> ejercicios con tus situaciones de verdad en lugar de frases de libro. Lo notas
-> desde el primer bloque.
->
-> [ **Completar mi perfil** ]
-
-**Sin enlace** (123 de 169 alumnos no tienen token utilizable), la tarjeta se
-queda y el botón se cambia por el aviso que redacta `lib/modos.ts:87`:
-
-| Caso | Titular | Cuerpo |
-|---|---|---|
-| Nunca se le mandó | **¿Nos cuentas a qué te dedicas?** | {profesor} te enviará por correo un formulario para conocerte mejor. Con eso preparamos también ejercicios con tus situaciones del día a día. |
-| Se le mandó y caducó | **Busca el formulario en tu correo** | {profesor} te lo envió el {fecha}. Si no lo encuentras o el enlace ya no funciona, pídeselo otra vez. |
-
-Sin profesor en la ficha, la frase empieza por «Tu profesor».
-
-### 10.7 Tus bloques
-
-> **Tus bloques** — Cada bloque va de reconocer la forma a producirla tú solo.
->                                                            {n} BLOQUES
-
-**Sin ningún bloque** (y sin estar generando), hueco discontinuo:
-
-> **Tu práctica se prepara después de tu primera clase**
->
-> En cuanto tu profesor analice lo que trabajáis, aquí aparecen tus bloques:
-> ejercicios hechos con lo tuyo, no material de catálogo.
-
-**Con bloques** (`components/ListaBloques.tsx`), una fila cada uno:
-
-> 01  GRAMÁTICA  `Dominado 90%`
-> **{título}**
-> {intro}
-> `Reconocer` → `Transformar` → `Producir`
->                                              [ **Empezar** ]
-
-Estados de la píldora:
-
-| Estado | Píldora | Botón | Dónde sale |
-|---|---|---|---|
-| Generado en esta visita, sin empezar | `Nuevo` (ámbar) + borde ámbar | Empezar | Pendientes |
-| Sin empezar | `Sin empezar` (gris) | Empezar | Pendientes |
-| A medias | `En progreso` (verde claro) | Continuar | Pendientes |
-| Cerrado con ≥80% | `Dominado {n}%` (verde) | Repasar | Desplegable |
-| Cerrado por debajo del 80% | `Practicado {n}%` (arena) | Repasar | Desplegable |
-
-Solo el primero de **lo pendiente** lleva el botón sólido. Si no queda nada
-pendiente, no lo lleva ninguno.
-
-### 10.7.1 El desplegable de lo ya hecho
-
-Lo cerrado no se mezcla con lo que queda por hacer: se recoge detrás de una
-fila discontinua, al final de la lista.
-
-> `(2)`  Ver los que ya has hecho                                    ▼
-
-Abierto:
-
-> `(2)`  Ocultar los que ya has hecho                                ▲
->
-> *(las mismas filas de bloque, con su número original y su botón «Repasar»)*
-
-Con uno solo: «Ver el que ya has hecho» / «Ocultar el que ya has hecho».
-
-Reglas:
-
-- **Hecho = cerrado con un intento completo**, no «dominado». Es la misma regla
-  que la casilla «Bloques de hoy · los que ya has cerrado» de arriba, para que
-  los dos números de la pantalla no se contradigan.
-- La **numeración no cambia**: un bloque que era el `03` sigue siendo el `03`
-  dentro del desplegable.
-- El bloque **bloqueado por la próxima clase nunca se recoge**, aunque conste
-  cerrado: se enseña justamente para que se sepa que está ahí.
-- Si **no hay nada hecho**, o si **está todo hecho**, no hay desplegable: la
-  lista se queda plana.
-- Es un `<details>` nativo: funciona sin JavaScript y se anuncia como
-  desplegable en lector de pantalla.
-
-Para lector de pantalla, antes de las fases: «Vas por la fase 2 de 3. Las tres
-fases del bloque: » o «Sin empezar. Las tres fases del bloque: ».
-
-**Último bloque bloqueado** (cuando hay más de uno), fila apagada y discontinua:
-
-> {título en gris}
-> Se desbloquea después de tu próxima clase.
->                                              [ Aún no ]  *(inerte)*
-
-Bajo la lista, **solo mientras quede algo por cerrar**:
-
-> Cuando termines los {n}, tu práctica se vuelve a generar con lo de tu
-> siguiente clase.
-
-Terminados todos, esa línea desaparece: lo que hay que decir entonces —que la
-próxima clase trae bloque nuevo— ya lo dicen la franja de arriba y la barra de
-abajo.
-
-### 10.8 Barra fija de continuar
-
-Al pie de `/practica`, siempre a la vista (`components/Banner.tsx:99`):
-
-> · SIGUE POR AQUÍ
-> **{título del bloque en curso}**            [ **Continuar** ]
-
-Cuando no queda ninguno sin cerrar:
-
-> · POR HOY, HECHO
-> **Has terminado tu práctica de hoy**        *(sin botón)*
-
-No se pinta mientras se está generando.
-
----
+| Pieza | Por qué |
+|---|---|
+| `components/practica/SesionPractica.tsx` | Las cuatro casillas medían la SESIÓN —bloques de hoy, en progreso—, o sea el uso del producto. Las fichas miden lo acumulado. |
+| `components/practica/FilaDestacada.tsx` | La franja y la tarjeta de la última clase. Su trabajo lo hace la parada de hoy. |
+| `components/ListaBloques.tsx` | La lista entera. Los pendientes son paradas; los hechos, medallas. |
+| La barra fija de continuar | Con una sola acción en pantalla no hay a qué volver. |
+| `resumenUltimaClase()` en `lib/modos.ts` | Redactaba la tarjeta crema que ya no existe. Sigue exportada, sin uso. |
 
 # 11 · Ayuda (panel flotante)
 

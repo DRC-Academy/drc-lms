@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; background: #F4F7F4; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+    .dsp { font-family: 'Radio Canada Big', 'Radio Canada', system-ui, sans-serif; }
+    .casilla { border-radius: 14px; border: 1px solid #E2E8E4; background: #FFFFFF; padding: 20px; }
+    .etq { font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; line-height: 1; color: #7A8A80; }
+    .cifra { margin: 10px 0 0; display: flex; align-items: baseline; gap: 4px; }
+    .num { font-family: 'Radio Canada Big', sans-serif; font-size: 34px; font-weight: 700; line-height: 1; color: #12211A; font-variant-numeric: tabular-nums; }
+    .uni { font-size: 15px; font-weight: 500; color: #7A8A80; }
+    .esc { margin-top: 14px; height: 6px; border-radius: 3px; background: #E8EEE9; overflow: hidden; }
+    .pie { margin: 9px 0 0; font-size: 12.5px; line-height: 1.35; color: #7A8A80; }
+  </style>
+</helmet>
+
+<div style="width: 1240px; background: #F4F7F4; padding: 32px 36px; box-sizing: border-box;">
+
+  <p style="margin: 0 0 20px; font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; color: #7A8A80;">Ahora · lo que hay en producción</p>
+
+  <h1 class="dsp" style="margin: 0; font-size: 30px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; color: #12211A;">Para ti</h1>
+  <p style="margin: 6px 0 0; max-width: 720px; font-size: 15px; line-height: 1.45; color: #5F6F66;">Ejercicios hechos contigo dentro: tu perfil, tus clases y lo que se te viene repitiendo. No es el curso, que es igual para todos: es lo tuyo.</p>
+
+  <!-- La fila destacada: franja + tarjeta crema de la clase. -->
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; margin-top: 24px;">
+    <section style="padding: 26px 28px; border-radius: 16px; background: #12211A; box-shadow: 0 16px 34px rgba(18, 33, 26, 0.16);">
+      <p style="margin: 0; display: flex; align-items: center; gap: 8px;">
+        <span style="width: 6px; height: 6px; border-radius: 999px; background: #A9DFB7;"></span>
+        <span style="font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; color: #A9DFB7;">Sigue por aquí</span>
+      </p>
+      <h2 class="dsp" style="margin: 12px 0 0; font-size: 28px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; color: #FFFFFF;">Preguntas indirectas en pasado</h2>
+      <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,0.82);">Gramática · Bloque 2 de 4</p>
+      <p style="margin: 10px 0 0; max-width: 560px; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.9);">Lo que se te cruzó el lunes: mantener el orden de sujeto y verbo cuando la pregunta va dentro de otra frase.</p>
+      <div style="display: flex; align-items: center; gap: 18px; margin-top: 24px;">
+        <span style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 14px 32px; border-radius: 999px; background: #37C25A; color: #06240F; font-size: 16px; font-weight: 700;">Continuar</span>
+        <span style="font-size: 14px; color: rgba(255,255,255,0.82);">Lo dejaste a medias</span>
+      </div>
+    </section>
+
+    <section style="border-radius: 16px; border: 1.5px dashed #D9D0A8; background: #FFFDF5; padding: 18px;">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1; color: #9A7B00;">Tu última clase</span>
+      <h2 class="dsp" style="margin: 10px 0 0; font-size: 19px; font-weight: 700; line-height: 1.2; color: #12211A;">Tienes clase nueva</h2>
+      <p style="margin: 7px 0 0; font-size: 14px; line-height: 1.45; color: #5F6F66;">Aoife trabajó contigo Reported speech el 18 de agosto. Ahí abajo puedes prepararte el bloque con lo que trabajasteis.</p>
+    </section>
+  </div>
+
+  <!-- Las cuatro casillas: esto es lo que se quita. -->
+  <h2 class="dsp" style="margin: 28px 0 16px; font-size: 19px; font-weight: 700; color: #12211A;">Cómo va tu sesión</h2>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px;">
+    <div class="casilla">
+      <span class="etq">Bloques de hoy</span>
+      <p class="cifra"><span class="num">1</span><span class="uni">de 4</span></p>
+      <div class="esc"><span style="display: block; height: 100%; width: 25%; background: #1E9E3A;"></span></div>
+      <p class="pie">los que ya has cerrado</p>
+    </div>
+    <div class="casilla">
+      <span class="etq">En progreso</span>
+      <p class="cifra"><span class="num">1</span><span class="uni">bloque</span></p>
+      <div class="esc"><span style="display: block; height: 100%; width: 25%; background: #A9DFB7;"></span></div>
+      <p class="pie">retómalos antes de abrir otros</p>
+    </div>
+    <div class="casilla">
+      <span class="etq">Bloques dominados</span>
+      <p class="cifra"><span class="num">6</span><span class="uni">de 9</span></p>
+      <div class="esc"><span style="display: block; height: 100%; width: 67%; background: #1E9E3A;"></span></div>
+      <p class="pie">de los que has practicado</p>
+    </div>
+    <div class="casilla">
+      <span class="etq">Nivel MCER</span>
+      <p class="cifra"><span class="num">B1</span><span class="uni">intermedio</span></p>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 14px;">
+        <span style="height: 6px; border-radius: 3px; background: #A9DFB7;"></span>
+        <span style="height: 6px; border-radius: 3px; background: #1E9E3A;"></span>
+        <span style="height: 6px; border-radius: 3px; background: #E8EEE9;"></span>
+        <span style="height: 6px; border-radius: 3px; background: #E8EEE9;"></span>
+      </div>
+      <p class="pie">todo lo de hoy va a este nivel</p>
+    </div>
+  </div>
+
+  <!-- Y una tercera tarjeta con la generación. -->
+  <h2 class="dsp" style="margin: 28px 0 16px; font-size: 19px; font-weight: 700; color: #12211A;">Tu práctica de hoy</h2>
+  <div style="display: flex; align-items: center; gap: 24px; border-radius: 14px; border: 1px solid #E2E8E4; background: #FFFFFF; padding: 24px;">
+    <div style="min-width: 0; flex: 1;">
+      <p style="margin: 0; display: flex; align-items: center; gap: 8px;">
+        <span style="width: 7px; height: 7px; border-radius: 999px; background: #1E9E3A;"></span>
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1; color: #5F6F66;">Hecho para ti</span>
+      </p>
+      <h3 class="dsp" style="margin: 12px 0 0; font-size: 20px; font-weight: 700; line-height: 1.2; color: #12211A;">Tu bloque de práctica</h3>
+      <p style="margin: 8px 0 0; font-size: 15px; line-height: 1.5; color: #4C5C53;">Diez ejercicios a partir de lo que trabajaste el 18 de agosto, lo que se te viene repitiendo de clases anteriores, tu día a día y el formato del B2 First.</p>
+    </div>
+    <span style="display: inline-flex; align-items: center; justify-content: center; min-height: 46px; flex-shrink: 0; padding: 0 28px; border-radius: 999px; background: #1E9E3A; color: #FFFFFF; font-size: 15px; font-weight: 600;">Preparar mi bloque</span>
+  </div>
+
+  <p style="margin: 26px 0 0; max-width: 80ch; font-size: 14px; line-height: 1.55; color: #5F6F66; text-wrap: pretty;"><strong style="font-weight: 600; color: #12211A;">Qué falla.</strong> La página <em>afirma</em> que está hecha con lo tuyo y no enseña ni una sola cosa tuya. Lo único personal —«Aoife trabajó contigo Reported speech»— va en una tarjeta lateral de 340px, y las cuatro casillas que se llevan el centro de la pantalla son un panel de métricas: cifras sobre el uso del producto, no sobre tu inglés. La frase que de verdad prueba la promesa —«a partir de tu clase, tu día a día y tu examen»— está enterrada en el párrafo de una tercera tarjeta.</p>
+
+  <p style="margin: 8px 0 0; max-width: 80ch; font-size: 14px; line-height: 1.55; color: #5F6F66; text-wrap: pretty;"><strong style="font-weight: 600; color: #12211A;">Y hay tres piezas compitiendo</strong> por ser la acción: la franja, la tarjeta crema y la de generar. Ninguna gana.</p>
+
+</div>
+</x-dc>
+</body>
+</html>

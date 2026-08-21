@@ -1,0 +1,207 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; background: #F4F7F4; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+    .dsp { font-family: 'Radio Canada Big', 'Radio Canada', system-ui, sans-serif; }
+
+    /* --- el HUD: tres fichas, no tres casillas --- */
+    .ficha { display: flex; align-items: center; gap: 11px; padding: 11px 18px 11px 14px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E8E4; }
+    .ficha-n { font-family: 'Radio Canada Big', sans-serif; font-size: 20px; font-weight: 800; line-height: 1; color: #12211A; font-variant-numeric: tabular-nums; }
+    .ficha-t { font-size: 13.5px; font-weight: 500; line-height: 1.2; color: #5F6F66; }
+
+    /* --- los nodos de la ruta --- */
+    .nodo { position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 999px; }
+    .etiqueta { position: absolute; transform: translateX(-50%); width: 168px; text-align: center; font-size: 13px; line-height: 1.35; }
+    .hex { display: block; width: 13px; height: 13px; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; background: #F4F7F4; color: #12211A;">
+
+  <!-- ============================== CABECERA ============================== -->
+  <header style="display: flex; align-items: center; gap: 40px; height: 68px; padding: 0 36px; background: #FFFFFF; border-bottom: 1px solid #E2E8E4;">
+    <img src="logo-drc.png" alt="DRC Academy" style="height: 32px; width: auto; flex-shrink: 0;">
+    <nav style="display: flex; align-items: center; gap: 28px; height: 100%;">
+      <span style="display: flex; align-items: center; height: 100%; font-size: 15px; font-weight: 500; color: #5F6F66;">Inicio</span>
+      <span style="display: flex; align-items: center; height: 100%; font-size: 15px; font-weight: 500; color: #5F6F66;">Mi curso</span>
+      <span style="display: flex; align-items: center; height: 100%; font-size: 15px; font-weight: 600; color: #12211A; box-shadow: inset 0 -2px 0 #1E9E3A;">Para ti</span>
+    </nav>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
+      <span style="font-size: 14px; color: #5F6F66;">Salir</span>
+      <span style="font-size: 14px; font-weight: 500; color: #12211A;">Marta Ibáñez</span>
+      <span style="display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: #12211A; color: #FFFFFF; font-size: 13px; font-weight: 600;">M</span>
+    </div>
+  </header>
+
+  <main style="max-width: 1440px; padding: 30px 36px 48px;">
+
+    <!-- ================================ HUD ================================
+         Tres fichas redondas, no tres casillas cuadradas con barra. Dicen
+         lo mismo que decían las casillas que se quitan, pero en el
+         registro del juego: lo que llevas acumulado, no cómo va la sesión. -->
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+      <div class="ficha" style="background: #FFF8E1; border-color: #E9DCA9;">
+        <span aria-hidden style="display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: #FFC400;">
+          <svg viewBox="0 0 20 20" style="width: 17px; height: 17px;" fill="none" stroke="#12211A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 17.5c2.8 0 5-2.1 5-4.8 0-3.4-3.2-4.7-2.6-8.2-2 .6-3.4 2.3-3.4 4.1 0 1-.7 1.6-1.3 1.1-.6-.5-.8-1.4-.7-2.2C5.9 8.7 5 10.6 5 12.7c0 2.7 2.2 4.8 5 4.8Z"></path>
+          </svg>
+        </span>
+        <span>
+          <span class="ficha-n" style="color: #12211A;">12</span>
+          <span class="ficha-t" style="display: block; margin-top: 3px; color: #6B5A2E;">días seguidos</span>
+        </span>
+      </div>
+
+      <div class="ficha">
+        <span aria-hidden style="display: flex; align-items: center; gap: 3px;">
+          <svg class="hex" viewBox="0 0 12 14" fill="#1E9E3A"><path d="M6 0l5.2 3v8L6 14 .8 11V3z"/></svg>
+          <svg class="hex" viewBox="0 0 12 14" fill="#1E9E3A"><path d="M6 0l5.2 3v8L6 14 .8 11V3z"/></svg>
+          <svg class="hex" viewBox="0 0 12 14" fill="#DCE4DE"><path d="M6 0l5.2 3v8L6 14 .8 11V3z"/></svg>
+          <svg class="hex" viewBox="0 0 12 14" fill="#DCE4DE"><path d="M6 0l5.2 3v8L6 14 .8 11V3z"/></svg>
+        </span>
+        <span>
+          <span class="ficha-n">B1</span>
+          <span class="ficha-t" style="display: block; margin-top: 3px;">intermedio</span>
+        </span>
+      </div>
+
+      <div class="ficha">
+        <span aria-hidden style="display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: #F0FAF2;">
+          <svg viewBox="0 0 18 18" style="width: 17px; height: 17px;" fill="none" stroke="#1E9E3A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="7" r="4.6"></circle><path d="M6.4 11.2 5.4 16l3.6-1.9 3.6 1.9-1-4.8"></path>
+          </svg>
+        </span>
+        <span>
+          <span class="ficha-n">6</span>
+          <span class="ficha-t" style="display: block; margin-top: 3px;">bloques dominados</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- ================================ HERO ================================ -->
+    <div style="margin-top: 30px;">
+      <p style="margin: 0; font-size: 11.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #14722A;">Para Marta · martes 20 de agosto</p>
+      <h1 class="dsp" style="margin: 13px 0 0; font-size: 46px; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; color: #12211A;">Tu ruta de esta semana</h1>
+      <p style="margin: 12px 0 0; max-width: 62ch; font-size: 17px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">Sale de tu clase del lunes con <strong style="font-weight: 600; color: #12211A;">Aoife</strong>. Nadie más en la academia tiene esta ruta.</p>
+    </div>
+
+    <!-- ================================ LA RUTA ================================
+         El camino ES la pantalla. Cinco paradas: lo que ya cerraste, dónde
+         estás y lo que viene, incluida la que todavía no se abre. La línea
+         verde llega hasta donde has llegado tú. -->
+    <section style="position: relative; margin-top: 26px; border-radius: 28px; background: #EDF7F0; border: 1px solid #CFE8D8; padding: 34px 40px 36px; overflow: hidden;">
+
+      <!-- Un par de formas de fondo, muy suaves: es lo que separa esto de
+           una tarjeta blanca más. -->
+      <span aria-hidden style="position: absolute; right: -80px; top: -110px; width: 320px; height: 320px; border-radius: 999px; background: #E0F1E7;"></span>
+      <span aria-hidden style="position: absolute; left: -60px; bottom: -140px; width: 260px; height: 260px; border-radius: 999px; background: #E5F4EB;"></span>
+
+      <div style="position: relative;">
+        <p style="margin: 0 0 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #14722A;">Tu ruta · 5 paradas</p>
+
+        <!-- El lienzo del camino -->
+        <div style="position: relative; width: 1288px; height: 236px;">
+          <svg viewBox="0 0 1288 236" style="position: absolute; inset: 0; width: 1288px; height: 236px;" fill="none">
+            <!-- lo que queda -->
+            <path d="M644 150 C745 188 848 116 940 66 C1035 22 1130 72 1210 130" stroke="#C4DECF" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 16"></path>
+            <!-- lo recorrido -->
+            <path d="M78 135 C170 92 258 62 348 72 C450 83 545 112 644 150" stroke="#1E9E3A" stroke-width="6" stroke-linecap="round"></path>
+          </svg>
+
+          <!-- PARADA 1 · hecha -->
+          <span class="nodo" style="left: 78px; top: 135px; width: 54px; height: 54px; background: #1E9E3A; box-shadow: 0 6px 14px rgba(30,158,58,0.28);">
+            <svg viewBox="0 0 20 20" style="width: 22px; height: 22px;" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"></path></svg>
+          </span>
+          <span class="etiqueta" style="left: 78px; top: 176px; color: #14722A; font-weight: 600;">Reported speech</span>
+
+          <!-- PARADA 2 · hecha -->
+          <span class="nodo" style="left: 348px; top: 72px; width: 54px; height: 54px; background: #1E9E3A; box-shadow: 0 6px 14px rgba(30,158,58,0.28);">
+            <svg viewBox="0 0 20 20" style="width: 22px; height: 22px;" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"></path></svg>
+          </span>
+          <span class="etiqueta" style="left: 348px; top: 113px; color: #14722A; font-weight: 600;">Phrasal verbs</span>
+
+          <!-- PARADA 3 · AQUÍ -->
+          <span class="nodo" style="left: 644px; top: 150px; width: 92px; height: 92px; background: #FFFFFF; border: 5px solid #FFC400; box-shadow: 0 12px 28px rgba(18,33,26,0.16);">
+            <span class="dsp" style="font-size: 27px; font-weight: 800; line-height: 1; color: #12211A;">3</span>
+          </span>
+          <span style="position: absolute; left: 644px; top: 88px; transform: translateX(-50%); white-space: nowrap; border-radius: 999px; background: #FFC400; padding: 6px 14px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1; color: #12211A;">Estás aquí</span>
+
+          <!-- PARADA 4 · pendiente -->
+          <span class="nodo" style="left: 940px; top: 66px; width: 54px; height: 54px; background: #FFFFFF; border: 2px solid #C4DECF;">
+            <span class="dsp" style="font-size: 17px; font-weight: 800; line-height: 1; color: #8A9891;">4</span>
+          </span>
+          <span class="etiqueta" style="left: 940px; top: 107px; color: #5F6F66;">Correos con clientes</span>
+
+          <!-- PARADA 5 · cerrada -->
+          <span class="nodo" style="left: 1210px; top: 130px; width: 54px; height: 54px; background: #F4F7F4; border: 2px dashed #C4DECF;">
+            <svg viewBox="0 0 20 20" style="width: 19px; height: 19px;" fill="none" stroke="#8A9891" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4.5" y="8.5" width="11" height="7.5" rx="2"></rect><path d="M7 8.5V6.5a3 3 0 0 1 6 0v2"></path>
+            </svg>
+          </span>
+          <span class="etiqueta" style="left: 1210px; top: 171px; color: #7A8A80;">Se abre con tu próxima clase</span>
+        </div>
+
+        <!-- La parada de hoy, abierta. Va dentro del mismo campo: es el
+             nodo grande, desplegado. -->
+        <article style="display: flex; align-items: center; gap: 36px; margin-top: 14px; border-radius: 20px; background: #FFFFFF; border: 1px solid #DCE9E1; box-shadow: 0 14px 32px -18px rgba(18,33,26,0.28); padding: 26px 30px;">
+          <div style="min-width: 0; flex: 1;">
+            <p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 9px;">
+              <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #9A7B00;">Parada 3 · gramática</span>
+              <span style="width: 3px; height: 3px; border-radius: 999px; background: #C9D6CD;"></span>
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1; color: #7A8A80;">10 ejercicios</span>
+            </p>
+            <h2 class="dsp" style="margin: 13px 0 0; font-size: 32px; font-weight: 800; line-height: 1.08; letter-spacing: -0.025em; color: #12211A; text-wrap: balance;">Preguntas indirectas en pasado</h2>
+            <p style="margin: 11px 0 0; max-width: 56ch; font-size: 15.5px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">Se te cruzaban el lunes. Los ejemplos van sobre tus llamadas y correos con clientes.</p>
+
+            <!-- Progreso dentro de la parada, en segmentos: se ve avanzar. -->
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 18px;">
+              <span style="display: block; height: 7px; flex: 1; border-radius: 999px; background: #1E9E3A;"></span>
+              <span style="display: block; height: 7px; flex: 1; border-radius: 999px; background: #1E9E3A;"></span>
+              <span style="display: block; height: 7px; flex: 1; border-radius: 999px; background: #1E9E3A;"></span>
+              <span style="display: block; height: 7px; flex: 1; border-radius: 999px; background: #1E9E3A;"></span>
+              <span style="display: block; height: 7px; flex: 1; border-radius: 999px; background: #A9DFB7;"></span>
+              <span style="display: block; height: 7px; flex: 1; border-radius: 999px; background: #E2E8E4;"></span>
+              <span style="display: block; height: 7px; flex: 1; border-radius: 999px; background: #E2E8E4;"></span>
+              <span style="display: block; height: 7px; flex: 1; border-radius: 999px; background: #E2E8E4;"></span>
+              <span style="display: block; height: 7px; flex: 1; border-radius: 999px; background: #E2E8E4;"></span>
+              <span style="display: block; height: 7px; flex: 1; border-radius: 999px; background: #E2E8E4;"></span>
+              <span style="margin-left: 8px; flex-shrink: 0; font-size: 13.5px; font-weight: 600; color: #5F6F66; font-variant-numeric: tabular-nums;">4 de 10</span>
+            </div>
+          </div>
+
+          <div style="flex-shrink: 0; text-align: center;">
+            <span style="display: inline-flex; align-items: center; justify-content: center; min-height: 58px; padding: 0 46px; border-radius: 999px; background: #1E9E3A; color: #FFFFFF; font-size: 17.5px; font-weight: 700; box-shadow: 0 8px 20px rgba(30,158,58,0.32);">Seguir la ruta</span>
+            <p style="margin: 12px 0 0; max-width: 22ch; font-size: 13px; line-height: 1.45; color: #7A8A80;">Lo que escribas al final lo lee Aoife antes del jueves.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================== YA REALIZADOS ==============================
+         Cerrado. Los bloques hechos no se ven; lo que se ve es cuántos
+         llevas y una insignia por cada uno cuando lo abres. -->
+    <div style="display: flex; align-items: center; gap: 14px; min-height: 60px; margin-top: 18px; padding: 14px 22px; border-radius: 16px; border: 1px solid #E2E8E4; background: #FFFFFF;">
+      <span aria-hidden style="flex-shrink: 0; font-size: 11px; color: #7A8A80;">▸</span>
+      <span style="flex: 1; font-size: 16px; font-weight: 700; color: #12211A;">Ya realizados</span>
+      <span aria-hidden style="display: flex; align-items: center; gap: -6px;">
+        <span style="display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: #F0FAF2; border: 2px solid #FFFFFF; font-size: 12px; font-weight: 700; color: #14722A;">✓</span>
+        <span style="display: grid; place-items: center; width: 30px; height: 30px; margin-left: -8px; border-radius: 999px; background: #F0FAF2; border: 2px solid #FFFFFF; font-size: 12px; font-weight: 700; color: #14722A;">✓</span>
+        <span style="display: grid; place-items: center; width: 30px; height: 30px; margin-left: -8px; border-radius: 999px; background: #FFF8E1; border: 2px solid #FFFFFF; font-size: 12px; font-weight: 700; color: #9A7B00;">★</span>
+      </span>
+      <span style="flex-shrink: 0; font-size: 14px; color: #5F6F66; font-variant-numeric: tabular-nums;">6 bloques</span>
+    </div>
+
+  </main>
+</div>
+</x-dc>
+</body>
+</html>

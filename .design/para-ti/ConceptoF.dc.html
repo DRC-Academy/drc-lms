@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; background: #F4F7F4; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+    .dsp { font-family: 'Radio Canada Big', 'Radio Canada', system-ui, sans-serif; }
+    .cajon-osc { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 14px 20px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.04); }
+  </style>
+</helmet>
+
+<div style="width: 1240px; background: #F4F7F4; padding: 32px 36px; box-sizing: border-box;">
+
+  <p style="margin: 0 0 24px; font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; color: #7A8A80;">F · Modo enfoque</p>
+
+  <!-- La pantalla entera en tinta. No es una franja dentro de una página
+       clara: es la página. -->
+  <div style="border-radius: 20px; background: #12211A; padding: 46px 48px 40px; box-shadow: 0 24px 50px -18px rgba(18, 33, 26, 0.4);">
+    <div style="max-width: 720px;">
+
+      <p style="margin: 0; font-size: 11.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #A9DFB7;">Marta · martes 20 de agosto</p>
+
+      <p class="dsp" style="margin: 20px 0 0; font-size: 27px; font-weight: 600; line-height: 1.35; letter-spacing: -0.015em; color: rgba(255,255,255,0.92); text-wrap: pretty;">
+        Lo de hoy sale de tu clase del lunes con <span style="color: #A9DFB7;">Aoife</span>: se te cruzaban las <span style="color: #A9DFB7;">preguntas indirectas</span>.
+      </p>
+
+      <h2 class="dsp" style="margin: 34px 0 0; font-size: 52px; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; color: #FFFFFF; text-wrap: balance;">Preguntas indirectas en pasado</h2>
+
+      <p style="margin: 20px 0 0; max-width: 56ch; font-size: 17px; line-height: 1.55; color: rgba(255,255,255,0.78); text-wrap: pretty;">Diez ejercicios sobre llamadas y correos con clientes. Vas por la fase de transformar.</p>
+
+      <div style="display: flex; align-items: center; gap: 14px; margin-top: 30px;">
+        <span style="display: block; height: 4px; width: 96px; border-radius: 999px; background: #37C25A;"></span>
+        <span style="display: block; height: 4px; width: 96px; border-radius: 999px; background: #37C25A;"></span>
+        <span style="display: block; height: 4px; width: 96px; border-radius: 999px; background: rgba(255,255,255,0.22);"></span>
+        <span style="margin-left: 6px; font-size: 13.5px; color: rgba(255,255,255,0.7);">fase 2 de 3</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 26px; margin-top: 36px;">
+        <span style="display: inline-flex; align-items: center; justify-content: center; min-height: 56px; flex-shrink: 0; padding: 0 46px; border-radius: 999px; background: #37C25A; color: #06240F; font-size: 17.5px; font-weight: 700; box-shadow: 0 6px 16px rgba(0,0,0,0.28);">Continuar</span>
+        <p style="margin: 0; min-width: 0; font-size: 14.5px; line-height: 1.5; color: rgba(255,255,255,0.7); text-wrap: pretty;">Lo que escribas al final lo lee Aoife<br>antes de vuestra próxima clase.</p>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 40px;">
+        <div class="cajon-osc" style="flex: 1;">
+          <span aria-hidden style="flex-shrink: 0; font-size: 11px; color: rgba(255,255,255,0.5);">▸</span>
+          <span style="flex: 1; font-size: 14.5px; font-weight: 600; color: #FFFFFF;">Ya realizados</span>
+          <span style="flex-shrink: 0; font-size: 13px; color: rgba(255,255,255,0.6);">6</span>
+        </div>
+        <div class="cajon-osc" style="flex: 1;">
+          <span aria-hidden style="flex-shrink: 0; font-size: 11px; color: rgba(255,255,255,0.5);">▸</span>
+          <span style="flex: 1; font-size: 14.5px; font-weight: 600; color: #FFFFFF;">Sin empezar</span>
+          <span style="flex-shrink: 0; font-size: 13px; color: rgba(255,255,255,0.6);">2</span>
+        </div>
+        <div class="cajon-osc" style="flex: 1;">
+          <span aria-hidden style="flex-shrink: 0; font-size: 11px; color: rgba(255,255,255,0.5);">▸</span>
+          <span style="flex: 1; font-size: 14.5px; font-weight: 600; color: #FFFFFF;">Cómo se hace</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="margin: 26px 0 0; max-width: 76ch; font-size: 14px; line-height: 1.55; color: #5F6F66; text-wrap: pretty;"><strong style="font-weight: 600; color: #12211A;">Por qué.</strong> Es el giro más visible de los tres: «Para ti» pasa a ser la única pantalla oscura del producto, y eso solo ya la separa del curso —que es lo mismo para todos— sin decir una palabra. La tinta apaga el resto de la interfaz y deja el bloque como único objeto; el titular puede irse a 52px porque no compite con nada.</p>
+
+  <p style="margin: 8px 0 0; max-width: 76ch; font-size: 14px; line-height: 1.55; color: #5F6F66; text-wrap: pretty;"><strong style="font-weight: 600; color: #12211A;">En contra.</strong> La tinta significa hoy «la franja destacada», la pieza donde está la acción principal de cada pantalla. Convertirla en el fondo de una sección entera le quita ese significado en todo el producto —es la misma razón por la que se descartó el diploma en tinta— y obliga a repensar dónde va el verde de acción aquí dentro.</p>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -96,12 +96,12 @@ export default async function PaginaPractica() {
 
         <PanelPractica
           alumnoId={alumnoId}
+          // El nombre y el profesor van al saludo y al pie de la parada
+          // de hoy: son lo que hace que la ruta se lea como suya y no
+          // como una pantalla más del producto.
+          nombre={perfil?.nombre.trim() ?? ""}
+          profesor={perfil?.profesor.trim() ?? ""}
           tarjeta={tarjeta}
-          // La tarjeta crema de arriba habla solo de su clase, no de las
-          // cuatro fuentes del bloque, así que se redacta aparte. Está
-          // "ya practicada" cuando la tarjeta trae espera, que con la
-          // regla única significa exactamente eso.
-          resumenClase={resumenUltimaClase(perfil, ultimaClase, tarjeta?.espera != null)}
           conContexto={tieneContexto(perfil)}
           bloques={bloques}
           progreso={progreso}

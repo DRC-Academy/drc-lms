@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; background: #F4F7F4; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+    .dsp { font-family: 'Radio Canada Big', 'Radio Canada', system-ui, sans-serif; }
+    .rotulo { margin: 0 0 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1; color: #7A8A80; }
+    .insignia { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 132px; }
+    .medalla { display: grid; place-items: center; width: 62px; height: 62px; border-radius: 999px; }
+    .nodo { position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 999px; }
+  </style>
+</helmet>
+
+<div style="width: 1240px; background: #F4F7F4; padding: 32px 36px; box-sizing: border-box; display: flex; flex-direction: column; gap: 34px;">
+
+  <!-- ==================== 1 · «YA REALIZADOS», ABIERTO ==================== -->
+  <div>
+    <p class="rotulo">Ya realizados · abierto</p>
+
+    <div style="border-radius: 16px; border: 1px solid #E2E8E4; background: #FFFFFF; overflow: hidden;">
+      <div style="display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 14px 22px; border-bottom: 1px solid #EDF1EE;">
+        <span aria-hidden style="flex-shrink: 0; font-size: 11px; color: #7A8A80;">▾</span>
+        <span style="flex: 1; font-size: 16px; font-weight: 700; color: #12211A;">Ya realizados</span>
+        <span style="flex-shrink: 0; font-size: 14px; color: #5F6F66; font-variant-numeric: tabular-nums;">6 bloques</span>
+      </div>
+
+      <!-- Insignias, no filas. Un bloque cerrado deja de ser trabajo
+           pendiente y pasa a ser algo que tienes; enseñarlo con el mismo
+           mueble que los que quedan por hacer es lo que hacía que la
+           lista pareciera el doble de larga de lo que era. -->
+      <div style="display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 26px 22px 24px;">
+
+        <span class="insignia">
+          <span class="medalla" style="background: #FFF8E1; border: 2px solid #FFC400;">
+            <svg viewBox="0 0 18 18" style="width: 30px; height: 30px;" fill="none" stroke="#9A7B00" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4.6"></circle><path d="M6.4 11.2 5.4 16l3.6-1.9 3.6 1.9-1-4.8"></path></svg>
+          </span>
+          <span style="text-align: center;">
+            <span style="display: block; font-size: 13.5px; font-weight: 600; line-height: 1.3; color: #12211A;">Reported speech</span>
+            <span style="display: block; margin-top: 3px; font-size: 12px; font-weight: 700; color: #9A7B00; font-variant-numeric: tabular-nums;">100%</span>
+          </span>
+        </span>
+
+        <span class="insignia">
+          <span class="medalla" style="background: #F0FAF2; border: 2px solid #1E9E3A;">
+            <svg viewBox="0 0 20 20" style="width: 26px; height: 26px;" fill="none" stroke="#1E9E3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"></path></svg>
+          </span>
+          <span style="text-align: center;">
+            <span style="display: block; font-size: 13.5px; font-weight: 600; line-height: 1.3; color: #12211A;">Phrasal verbs formales</span>
+            <span style="display: block; margin-top: 3px; font-size: 12px; font-weight: 700; color: #14722A; font-variant-numeric: tabular-nums;">90%</span>
+          </span>
+        </span>
+
+        <span class="insignia">
+          <span class="medalla" style="background: #F0FAF2; border: 2px solid #1E9E3A;">
+            <svg viewBox="0 0 20 20" style="width: 26px; height: 26px;" fill="none" stroke="#1E9E3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"></path></svg>
+          </span>
+          <span style="text-align: center;">
+            <span style="display: block; font-size: 13.5px; font-weight: 600; line-height: 1.3; color: #12211A;">Condicionales tipo 2</span>
+            <span style="display: block; margin-top: 3px; font-size: 12px; font-weight: 700; color: #14722A; font-variant-numeric: tabular-nums;">85%</span>
+          </span>
+        </span>
+
+        <!-- Practicado pero sin dominar: misma colección, otra medalla.
+             Es la distinción que ya existe en el producto (el 80%). -->
+        <span class="insignia">
+          <span class="medalla" style="background: #FBF7EF; border: 2px solid #D8CDB4;">
+            <span style="font-size: 20px; font-weight: 700; color: #6B5A2E;">—</span>
+          </span>
+          <span style="text-align: center;">
+            <span style="display: block; font-size: 13.5px; font-weight: 600; line-height: 1.3; color: #12211A;">Artículos e incontables</span>
+            <span style="display: block; margin-top: 3px; font-size: 12px; font-weight: 700; color: #6B5A2E; font-variant-numeric: tabular-nums;">60%</span>
+          </span>
+        </span>
+
+        <span class="insignia">
+          <span class="medalla" style="background: #F0FAF2; border: 2px solid #1E9E3A;">
+            <svg viewBox="0 0 20 20" style="width: 26px; height: 26px;" fill="none" stroke="#1E9E3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"></path></svg>
+          </span>
+          <span style="text-align: center;">
+            <span style="display: block; font-size: 13.5px; font-weight: 600; line-height: 1.3; color: #12211A;">Vocabulario de reuniones</span>
+            <span style="display: block; margin-top: 3px; font-size: 12px; font-weight: 700; color: #14722A; font-variant-numeric: tabular-nums;">95%</span>
+          </span>
+        </span>
+
+        <span class="insignia">
+          <span class="medalla" style="background: #F0FAF2; border: 2px solid #1E9E3A;">
+            <svg viewBox="0 0 20 20" style="width: 26px; height: 26px;" fill="none" stroke="#1E9E3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"></path></svg>
+          </span>
+          <span style="text-align: center;">
+            <span style="display: block; font-size: 13.5px; font-weight: 600; line-height: 1.3; color: #12211A;">Small talk con clientes</span>
+            <span style="display: block; margin-top: 3px; font-size: 12px; font-weight: 700; color: #14722A; font-variant-numeric: tabular-nums;">88%</span>
+          </span>
+        </span>
+      </div>
+
+      <p style="margin: 0; padding: 0 22px 22px; font-size: 13.5px; color: #7A8A80;">Pulsa cualquiera para repetirlo. Repetir no baja la medalla: se queda la mejor.</p>
+    </div>
+  </div>
+
+  <!-- ==================== 2 · ALUMNO SIN NADA TODAVÍA ==================== -->
+  <div>
+    <p class="rotulo">Alumno nuevo · 86 de 168 abren aquí</p>
+
+    <section style="position: relative; border-radius: 28px; background: #EDF7F0; border: 1px solid #CFE8D8; padding: 34px 40px 36px; overflow: hidden;">
+      <span aria-hidden style="position: absolute; right: -80px; top: -110px; width: 320px; height: 320px; border-radius: 999px; background: #E0F1E7;"></span>
+
+      <div style="position: relative;">
+        <p style="margin: 0 0 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #14722A;">Tu ruta · aún sin paradas</p>
+
+        <!-- La ruta existe, vacía. Es lo que convierte «no tienes nada» en
+             «esto está por llenarse»: se ve la forma de lo que viene. -->
+        <div style="position: relative; width: 1088px; height: 190px;">
+          <svg viewBox="0 0 1088 190" style="position: absolute; inset: 0; width: 1088px; height: 190px;" fill="none">
+            <path d="M70 120 C160 80 250 55 340 66 C440 78 520 104 610 132 C700 160 790 100 880 60 C950 28 1000 62 1020 100" stroke="#C4DECF" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 16"></path>
+          </svg>
+          <span class="nodo" style="left: 70px; top: 120px; width: 76px; height: 76px; background: #FFFFFF; border: 4px dashed #A9CFB8;">
+            <svg viewBox="0 0 20 20" style="width: 26px; height: 26px;" fill="none" stroke="#1E9E3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4.2v11.6M4.2 10h11.6"></path></svg>
+          </span>
+          <span class="nodo" style="left: 340px; top: 66px; width: 46px; height: 46px; background: #E4F1E9; border: 2px dashed #C4DECF;"></span>
+          <span class="nodo" style="left: 610px; top: 132px; width: 46px; height: 46px; background: #E4F1E9; border: 2px dashed #C4DECF;"></span>
+          <span class="nodo" style="left: 880px; top: 60px; width: 46px; height: 46px; background: #E4F1E9; border: 2px dashed #C4DECF;"></span>
+        </div>
+
+        <article style="display: flex; align-items: center; gap: 36px; margin-top: 6px; border-radius: 20px; background: #FFFFFF; border: 1px solid #DCE9E1; box-shadow: 0 14px 32px -18px rgba(18,33,26,0.28); padding: 26px 30px;">
+          <div style="min-width: 0; flex: 1;">
+            <p style="margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #9A7B00;">Parada 1</p>
+            <h2 class="dsp" style="margin: 13px 0 0; font-size: 30px; font-weight: 800; line-height: 1.08; letter-spacing: -0.025em; color: #12211A; text-wrap: balance;">Tu ruta empieza con tu primera clase</h2>
+            <p style="margin: 11px 0 0; max-width: 62ch; font-size: 15.5px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">En cuanto Aoife analice lo que trabajéis, aparece aquí tu primera parada: diez ejercicios hechos con lo tuyo. Mientras tanto puedes contarnos a qué te dedicas, y los ejemplos irán sobre tu día a día desde el primer bloque.</p>
+          </div>
+          <span style="display: inline-flex; align-items: center; justify-content: center; min-height: 54px; flex-shrink: 0; padding: 0 34px; border-radius: 999px; background: #1E9E3A; color: #FFFFFF; font-size: 16.5px; font-weight: 700; box-shadow: 0 8px 20px rgba(30,158,58,0.32);">Completar mi perfil</span>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== 3 · RUTA TERMINADA ==================== -->
+  <div>
+    <p class="rotulo">Ruta terminada · esperando la próxima clase</p>
+
+    <section style="position: relative; border-radius: 28px; background: #EDF7F0; border: 1px solid #CFE8D8; padding: 30px 40px 32px; overflow: hidden;">
+      <span aria-hidden style="position: absolute; right: -80px; top: -120px; width: 320px; height: 320px; border-radius: 999px; background: #E0F1E7;"></span>
+      <div style="position: relative; display: flex; align-items: center; gap: 34px;">
+        <span style="display: grid; place-items: center; width: 84px; height: 84px; flex-shrink: 0; border-radius: 999px; background: #1E9E3A; box-shadow: 0 10px 24px rgba(30,158,58,0.32);">
+          <svg viewBox="0 0 20 20" style="width: 38px; height: 38px;" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"></path></svg>
+        </span>
+        <div style="min-width: 0; flex: 1;">
+          <p style="margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #14722A;">Ruta completa · 5 de 5</p>
+          <h2 class="dsp" style="margin: 12px 0 0; font-size: 30px; font-weight: 800; line-height: 1.08; letter-spacing: -0.025em; color: #12211A;">Te has hecho la ruta entera</h2>
+          <p style="margin: 10px 0 0; max-width: 62ch; font-size: 15.5px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">La siguiente sale de tu próxima clase con Aoife. Mientras tanto, cualquiera de las paradas se puede repetir.</p>
+        </div>
+        <span style="display: inline-flex; align-items: center; justify-content: center; min-height: 50px; flex-shrink: 0; padding: 0 30px; border-radius: 999px; border: 1.5px solid #1E9E3A; background: #FFFFFF; color: #14722A; font-size: 15.5px; font-weight: 700;">Ver mis medallas</span>
+      </div>
+    </section>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; background: #F4F7F4; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+    .dsp { font-family: 'Radio Canada Big', 'Radio Canada', system-ui, sans-serif; }
+    .fecha { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1; color: #8A9891; }
+  </style>
+</helmet>
+
+<div style="width: 1240px; background: #F4F7F4; padding: 32px 36px; box-sizing: border-box;">
+
+  <p style="margin: 0 0 20px; font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; color: #7A8A80;">B · El hilo</p>
+
+  <p style="margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #14722A;">Para Marta · B1 intermedio</p>
+  <h1 class="dsp" style="margin: 12px 0 0; font-size: 38px; font-weight: 800; line-height: 1.08; letter-spacing: -0.025em; color: #12211A;">Tú y Aoife, desde marzo</h1>
+  <p style="margin: 12px 0 0; max-width: 68ch; font-size: 17px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">Cada clase deja algo pendiente y cada bloque lo recoge. Esto es ese hilo, en orden.</p>
+
+  <!-- El hilo: clase → lo que quedó → el bloque que salió. -->
+  <div style="margin-top: 28px; display: grid; grid-template-columns: 130px 1fr; gap: 0;">
+
+    <!-- ENTRADA 1 -->
+    <div style="padding-top: 4px;">
+      <p class="fecha">18 ago</p>
+    </div>
+    <div style="border-left: 2px solid #E2E8E4; padding: 0 0 26px 26px; position: relative;">
+      <span style="position: absolute; left: -7px; top: 4px; width: 12px; height: 12px; border-radius: 999px; background: #1E9E3A; border: 3px solid #F4F7F4;"></span>
+      <p style="margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1; color: #14722A;">Clase con Aoife</p>
+      <h2 class="dsp" style="margin: 10px 0 0; font-size: 22px; font-weight: 700; line-height: 1.2; color: #12211A;">Reported speech</h2>
+
+      <div style="margin-top: 14px; border-radius: 14px; background: #FFFDF5; border: 1px solid #EFE3C0; padding: 16px 18px;">
+        <p style="margin: 0; font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; color: #9A7B00;">Lo que quedó suelto</p>
+        <p style="margin: 9px 0 0; font-size: 16px; line-height: 1.45; color: #12211A; text-wrap: pretty;">Se te cuela el orden de la pregunta directa dentro de la indirecta.</p>
+      </div>
+
+      <div style="margin-top: 14px; display: flex; align-items: center; gap: 24px; border-radius: 14px; border: 1px solid #E2E8E4; background: #FFFFFF; padding: 20px 22px;">
+        <div style="min-width: 0; flex: 1;">
+          <p style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1; color: #5F6F66;">El bloque que salió de ahí</p>
+          <h3 class="dsp" style="margin: 9px 0 0; font-size: 19px; font-weight: 700; line-height: 1.2; color: #12211A;">Preguntas indirectas en pasado</h3>
+          <p style="margin: 6px 0 0; font-size: 14px; line-height: 1.45; color: #4C5C53;">Lo dejaste en transformar. Lo que escribas al final lo lee Aoife antes de la próxima.</p>
+        </div>
+        <span style="display: inline-flex; align-items: center; justify-content: center; min-height: 46px; flex-shrink: 0; padding: 0 30px; border-radius: 999px; background: #1E9E3A; color: #FFFFFF; font-size: 15px; font-weight: 700;">Continuar</span>
+      </div>
+    </div>
+
+    <!-- ENTRADA 2 -->
+    <div style="padding-top: 4px;">
+      <p class="fecha">11 ago</p>
+    </div>
+    <div style="border-left: 2px solid #E2E8E4; padding: 0 0 26px 26px; position: relative;">
+      <span style="position: absolute; left: -6px; top: 5px; width: 10px; height: 10px; border-radius: 999px; background: #C9D6CD; border: 3px solid #F4F7F4;"></span>
+      <p style="margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1; color: #7A8A80;">Clase con Aoife</p>
+      <h2 class="dsp" style="margin: 10px 0 0; font-size: 20px; font-weight: 700; line-height: 1.2; color: #5F6F66;">Phrasal verbs en registro formal</h2>
+      <p style="margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: #7A8A80;">Su bloque lo cerraste con un 90%. <span style="font-weight: 600; color: #14722A; text-decoration: underline; text-underline-offset: 2px;">Repasarlo</span></p>
+    </div>
+
+  </div>
+
+  <p style="margin: 24px 0 0; max-width: 76ch; font-size: 14px; line-height: 1.55; color: #5F6F66; text-wrap: pretty;"><strong style="font-weight: 600; color: #12211A;">Por qué.</strong> Es el más personal de los tres: no afirma que la práctica sale de tus clases, lo <em>enseña</em> en orden cronológico, con el nombre de tu profesora en cada entrada. Convierte «Para ti» en un registro de vuestra relación, que es lo que de verdad no se puede copiar entre alumnos.</p>
+
+  <p style="margin: 8px 0 0; max-width: 76ch; font-size: 14px; line-height: 1.55; color: #5F6F66; text-wrap: pretty;"><strong style="font-weight: 600; color: #12211A;">En contra.</strong> Depende de que haya historial: un alumno con una sola clase ve un hilo de una entrada, y 86 de 168 alumnos no tienen ningún bloque generado todavía. Y hace de la pantalla algo para leer, cuando la mayoría entra a continuar lo que dejó a medias.</p>
+
+</div>
+</x-dc>
+</body>
+</html>

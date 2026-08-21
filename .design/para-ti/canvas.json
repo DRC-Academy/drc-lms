@@ -1,0 +1,52 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Tu ruta" },
+    { "id": "page-2", "name": "Rondas anteriores" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Tu ruta · escritorio", "page": "page-1", "x": 0, "y": 0, "w": 1440, "h": 1070 },
+    { "file": "Movil.dc.html", "title": "Tu ruta · móvil 390", "page": "page-1", "x": 1520, "y": 0, "w": 390, "h": 1330 },
+    { "file": "Estados.dc.html", "title": "Los tres estados que deciden", "page": "page-1", "x": 0, "y": 1450, "w": 1240, "h": 1620 },
+
+    { "file": "Ahora.dc.html", "title": "Ahora · lo que se quita", "page": "page-2", "x": 0, "y": 0, "w": 1240, "h": 1080 },
+    { "file": "ConceptoE.dc.html", "title": "2ª ronda · E · La nota de tu profesora", "page": "page-2", "x": 1320, "y": 0, "w": 1240, "h": 1120 },
+    { "file": "ConceptoF.dc.html", "title": "2ª ronda · F · Modo enfoque", "page": "page-2", "x": 2640, "y": 0, "w": 1240, "h": 900 },
+    { "file": "ConceptoB.dc.html", "title": "1ª ronda · B · El hilo", "page": "page-2", "x": 0, "y": 1200, "w": 1240, "h": 900 },
+    { "file": "ConceptoC.dc.html", "title": "1ª ronda · C · El mapa", "page": "page-2", "x": 1320, "y": 1200, "w": 1240, "h": 720 }
+  ],
+  "annotations": [
+    {
+      "id": "brief-3",
+      "x": 0,
+      "y": -300,
+      "w": 660,
+      "page": "page-1",
+      "text": "PARA TI · tercera ronda\n\nLas dos anteriores fallaban en lo mismo: eran sobrias y seguían siendo un resumen. Esta cambia las dos cosas.\n\nLA PANTALLA ES UNA RUTA. Cinco paradas: lo que cerraste, dónde estás y lo que viene, incluida la que no se abre hasta tu próxima clase. La línea verde llega hasta donde has llegado tú, y avanza cada vez que entras.\n\nLo personal deja de contarse y se ve: es TU ruta, TU racha, TUS medallas. Nadie más tiene estas cinco paradas.\n\nLos bloques ya realizados no se ven: están en «Ya realizados», cerrado. Al abrirlo no son una lista de tareas otra vez, son medallas.\n\nColor, formas de fondo, nodos grandes y titular a 46px. Se aleja del resto de la aplicación a propósito."
+    },
+    {
+      "id": "datos",
+      "x": 2000,
+      "y": 0,
+      "w": 400,
+      "page": "page-1",
+      "text": "QUÉ SE SOSTIENE CON DATOS REALES\n\nImportante antes de construir nada:\n\n· LA RUTA — real. Son los bloques que ya tiene el alumno, con sus estados. La parada cerrada es el bloque que hoy sale «Aún no».\n· MEDALLAS Y % — real. Sale de `progreso` y del umbral del 80% que ya existe.\n· NIVEL B1 y sus hexágonos — real. Es el nivel MCER y sus cuatro tramos, que ya se pintan en las casillas de hoy.\n· RACHA DE 12 DÍAS — DERIVABLE, no existe. Los timestamps están (`completado_en`, `actualizado_en`, `completada_en`), pero hay que calcularla y decidir qué cuenta como día activo: ¿abrir un ejercicio? ¿cerrar un bloque? ¿una lección del curso también?\n\nNo he inventado ninguna mecánica sin dato detrás: nada de XP ni de niveles de juego."
+    },
+    {
+      "id": "sobre-estados",
+      "x": 1320,
+      "y": 1450,
+      "w": 400,
+      "page": "page-1",
+      "text": "LOS TRES ESTADOS QUE DECIDEN SI ESTO FUNCIONA\n\n1. «YA REALIZADOS» ABIERTO. Insignias, no filas. Un bloque cerrado deja de ser trabajo pendiente y pasa a ser algo que tienes. La medalla ámbar es el 100%; la verde, dominado; la arena, practicado por debajo del 80% — la misma distinción que ya existe en el producto.\n\n2. ALUMNO SIN NADA. Lo abren 86 de 168. La ruta se pinta vacía, con la forma de lo que viene: convierte «no tienes nada» en «esto está por llenarse». Es el estado que más va a decidir si la idea gusta.\n\n3. RUTA TERMINADA. Sin esto, el día que cierras la última parada la pantalla se queda sin su única pieza."
+    },
+    {
+      "id": "anteriores",
+      "x": 0,
+      "y": -180,
+      "w": 620,
+      "page": "page-2",
+      "text": "RONDAS ANTERIORES\n\nSe quedan por lo que sirvieron: «Ahora» documenta lo que se quita —las cuatro casillas de métrica y las tres piezas compitiendo por ser la acción— y de B y C salió el hallazgo de que Gestión guarda errores, puntos débiles y ocupación de cada alumno sin enseñárselos nunca.\n\nNada de esto es la propuesta. Está aquí para no volver a proponerlo."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

@@ -122,6 +122,8 @@ export default function TarjetasGeneracion({
   onReintentar,
   urlFormulario,
   avisoFormulario,
+  titulo,
+  bajada,
 }: {
   /** Null cuando no hay ninguna fuente de la que tirar. */
   tarjeta: TarjetaPractica | null;
@@ -148,6 +150,14 @@ export default function TarjetasGeneracion({
   urlFormulario: string | null;
   /** Qué decirle cuando no hay enlace. Lo redacta el servidor. */
   avisoFormulario: AvisoFormulario;
+  /**
+   * El rótulo de la sección. Cambia con el sitio que ocupa: al pie de la
+   * ruta ya no es «tu práctica de hoy» —eso es la parada de arriba— sino
+   * la oferta de alargarla.
+   */
+  titulo?: string;
+  /** La línea de debajo. Sin ella se usa la de siempre. */
+  bajada?: string;
 }) {
   const generando = estado === "generando";
 
@@ -166,12 +176,13 @@ export default function TarjetasGeneracion({
           id="titulo-practica"
           className="shrink-0 font-display text-[17px] font-bold text-marca-tinta lg:text-[19px]"
         >
-          Tu práctica de hoy
+          {titulo ?? "Tu práctica de hoy"}
         </h2>
         <p className="mt-1 text-pretty text-[14px] leading-[1.4] text-marca-gris lg:mt-0 lg:text-[15px]">
-          {tarjeta
-            ? "Diez ejercicios, hechos con lo que sabemos de ti."
-            : "En cuanto sepamos un poco más de ti, esto se llena de práctica hecha para ti."}
+          {bajada ??
+            (tarjeta
+              ? "Diez ejercicios, hechos con lo que sabemos de ti."
+              : "En cuanto sepamos un poco más de ti, esto se llena de práctica hecha para ti.")}
         </p>
       </div>
 

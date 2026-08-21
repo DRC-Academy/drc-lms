@@ -164,6 +164,25 @@ const config: Config = {
           // cometiendo una infracción. El rojo es para lo que hay que
           // arreglar ya, y aquí no hay nada roto.
           // ---------------------------------------------------------------
+          // ---------------------------------------------------------------
+          // EL CAMPO DE LA RUTA («Para ti»)
+          //
+          // La única superficie con color de la aplicación fuera de la
+          // franja. «Para ti» es la pantalla que está hecha para un solo
+          // alumno, y era la que peor lo transmitía: cuatro casillas de
+          // métrica sobre el mismo gris que todo lo demás. Este verde
+          // clarísimo la separa sin tocar el significado de nada —el
+          // verde de acción sigue destacando encima— y las dos formas de
+          // fondo le dan el aire que le faltaba.
+          // ---------------------------------------------------------------
+          ruta: "#EDF7F0",
+          rutaBorde: "#CFE8D8",
+          rutaForma: "#E0F1E7",
+          rutaForma2: "#E5F4EB",
+          /** Borde de la tarjeta blanca sobre el campo verde. */
+          rutaTarjeta: "#DCE9E1",
+          /** Trazo y nodos de lo que aún no se ha andado. */
+          rutaTrazo: "#C4DECF",
           calido: "#C0A97A",
           calidoFondo: "#FBF7EF",
           calidoBadge: "#EFE3C0",
