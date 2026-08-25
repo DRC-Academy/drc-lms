@@ -597,6 +597,16 @@ export type Recorrido = {
    * pintar una tarjeta vacía con ella.
    */
   totalClases: number;
+  /**
+   * La cifra que enseña "Clases hechas".
+   *
+   * Es `max(mayor class_number, número de filas)`, exactamente como la
+   * calcula Gestión. Casi siempre acaba siendo el número de filas,
+   * porque `class_number` está vacío en 858 de las 867, pero el máximo
+   * está para el alumno que sí lo trae y lo trae más alto: si su ficha
+   * dice que va por la clase 30 y solo hay 22 análisis, ha dado 30.
+   */
+  clasesContadas: number;
 };
 
 /**
@@ -622,27 +632,38 @@ export async function obtenerRecorrido(alumnoId: string): Promise<Recorrido> {
 
   if (error) {
     console.error("[gestion] No se pudo leer el recorrido de class_analyses:", error.message);
-    return { clases: [], totalClases: 0 };
+    return { clases: [], totalClases: 0, clasesContadas: 0 };
   }
 
   const filas = data ?? [];
   const clases: ClaseDelRecorrido[] = [];
+  let mayorNumero = 0;
 
   for (const fila of filas) {
+    const numeroCrudo = Number(fila.class_number);
+    const numero = Number.isFinite(numeroCrudo) && numeroCrudo > 0 ? numeroCrudo : null;
+
+    // El mayor `class_number` se busca en TODAS las filas, también en
+    // las que no tienen informe: una clase numerada cuenta como dada
+    // aunque su análisis fallara.
+    if (numero !== null && numero > mayorNumero) mayorNumero = numero;
+
     const titulo = comoTexto(fila.class_title).trim();
     const resumen = comoTexto(fila.class_summary).trim();
     if (titulo === "" && resumen === "") continue;
-
-    const numero = Number(fila.class_number);
 
     clases.push({
       id: comoTexto(fila.id),
       fechaClase: comoTexto(fila.class_date),
       titulo,
       resumen,
-      numero: Number.isFinite(numero) && numero > 0 ? numero : null,
+      numero,
     });
   }
 
-  return { clases, totalClases: filas.length };
+  return {
+    clases,
+    totalClases: filas.length,
+    clasesContadas: Math.max(mayorNumero, filas.length),
+  };
 }
