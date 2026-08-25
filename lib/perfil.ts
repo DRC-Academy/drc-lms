@@ -162,3 +162,27 @@ export function formatearFecha(iso: string): string {
 
   return `${dia} de ${MESES[mes - 1]}`;
 }
+
+/**
+ * Como `formatearFecha` pero con el año: "19 de agosto de 2026".
+ *
+ * El recorrido de clases se remonta meses —hay alumnos con clases desde
+ * hace más de un año— y ahí "19 de agosto" a secas es ambiguo. En la
+ * última clase no lo era, porque es reciente por definición, y por eso
+ * aquella se queda corta y esta existe aparte.
+ *
+ * Se parte la cadena igual que allí, y por el mismo motivo: construir un
+ * `Date` desde un ISO corto lo ancla a UTC y en España retrocede un día.
+ */
+export function formatearFechaLarga(iso: string): string {
+  const partes = iso.slice(0, 10).split("-");
+  if (partes.length !== 3) return iso;
+
+  const dia = Number(partes[2]);
+  const mes = Number(partes[1]);
+  const anio = Number(partes[0]);
+  if (!Number.isFinite(dia) || !Number.isFinite(mes) || mes < 1 || mes > 12) return iso;
+  if (!Number.isFinite(anio)) return iso;
+
+  return `${dia} de ${MESES[mes - 1]} de ${anio}`;
+}

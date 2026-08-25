@@ -536,3 +536,104 @@ export function anterioresA(
 
   return salida;
 }
+
+// ---------------------------------------------------------------
+// EL RECORRIDO CLASE A CLASE
+//
+// Es la pieza central de la pantalla de progreso, y la única del
+// producto que ninguna aplicación puede copiar: es la prueba de que hay
+// un profesor que estuvo delante y escribió lo que pasó.
+//
+// NO SE REUTILIZA `historialDeClases`, aunque lea la misma tabla. Aquel
+// filtra por `errors_detected` y corta en cinco filas porque busca
+// patrones de error para el generador de bloques; aquí se quiere lo
+// contrario: el resumen de cada clase y todas las que haya. Compartir
+// una consulta habría obligado a una de las dos a pedir de más.
+//
+// COLUMNAS NOMBRADAS, NUNCA `*`: `class_analyses` guarda el transcript
+// entero, decenas de miles de caracteres por clase. Tampoco se piden
+// `errors_detected`, `progress_notes`, `risk_signal` ni
+// `risk_explanation`: la ficha del profesor no se le enseña al alumno,
+// que es la misma línea que traza Gestión en su página pública.
+//
+// QUÉ CUENTA COMO CLASE ENSEÑABLE: que el análisis traiga título o
+// resumen. Y no `analysis_status = 'ready'`, que es como filtra el
+// generador: hay filas `ready` con el resumen vacío, y el criterio que
+// importa aquí es si hay algo que leer, no en qué estado quedó el
+// proceso.
+// ---------------------------------------------------------------
+
+/** Una clase tal y como se le enseña al alumno. */
+export type ClaseDelRecorrido = {
+  /** `class_analyses.id`. Sirve de clave de lista y de nada más. */
+  id: string;
+  fechaClase: string;
+  titulo: string;
+  resumen: string;
+  /** Casi siempre null: la columna está vacía en 858 de 867 filas. */
+  numero: number | null;
+};
+
+export type Recorrido = {
+  /** Las clases con informe, de la más reciente a la más antigua. */
+  clases: ClaseDelRecorrido[];
+  /**
+   * TODAS las clases registradas, tengan informe o no.
+   *
+   * Es mayor que `clases.length` y a propósito: hoy 351 de 867 análisis
+   * fallaron, y comprobado que NO son reintentos de una misma clase
+   * —solo 3 comparten alumno y fecha con una fila correcta—, sino clases
+   * reales cuyo informe no llegó a escribirse. Esa clase ocurrió y el
+   * alumno la dio, así que contarla es lo honesto; lo que no se puede es
+   * pintar una tarjeta vacía con ella.
+   */
+  totalClases: number;
+};
+
+/**
+ * Tope de filas que se traen. Ningún alumno pasa hoy de 22, así que no
+ * recorta a nadie: está para que un día raro no se traiga media tabla.
+ */
+const MAXIMO_CLASES = 200;
+
+/**
+ * El recorrido de un alumno. Nunca lanza: sin recorrido la pantalla
+ * enseña su estado vacío, que es una frase, no un error.
+ */
+export async function obtenerRecorrido(alumnoId: string): Promise<Recorrido> {
+  const { data, error } = await soloLectura("class_analyses")
+    .select("id, class_number, class_title, class_summary, class_date, analyzed_at")
+    .eq("student_id", alumnoId)
+    // Hay alumnos con dos clases el mismo día; `analyzed_at` desempata
+    // para que el orden no cambie entre recargas.
+    .order("class_date", { ascending: false })
+    .order("analyzed_at", { ascending: false })
+    .limit(MAXIMO_CLASES)
+    .returns<Fila[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo leer el recorrido de class_analyses:", error.message);
+    return { clases: [], totalClases: 0 };
+  }
+
+  const filas = data ?? [];
+  const clases: ClaseDelRecorrido[] = [];
+
+  for (const fila of filas) {
+    const titulo = comoTexto(fila.class_title).trim();
+    const resumen = comoTexto(fila.class_summary).trim();
+    if (titulo === "" && resumen === "") continue;
+
+    const numero = Number(fila.class_number);
+
+    clases.push({
+      id: comoTexto(fila.id),
+      fechaClase: comoTexto(fila.class_date),
+      titulo,
+      resumen,
+      numero: Number.isFinite(numero) && numero > 0 ? numero : null,
+    });
+  }
+
+  return { clases, totalClases: filas.length };
+}

@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import ChatAyuda from "@/components/ChatAyuda";
 
-export type SeccionActiva = "inicio" | "curso" | "practica";
+export type SeccionActiva = "inicio" | "curso" | "practica" | "progreso";
 
 // ---------------------------------------------------------------
 // EL LOGOTIPO
@@ -33,11 +33,18 @@ const LOGO = { ancho: 121, alto: 32 };
 /**
  * Barra de marca y navegación.
  *
- * Tres secciones para el alumno —Inicio, Mi curso y Para ti— porque el
- * producto son dos cosas que conviven: el curso enseña contenido
- * estructurado y la otra genera ejercicios a partir de su perfil y de
- * sus clases. Si la navegación solo nombrara una, la otra parecería un
- * anexo.
+ * Cuatro secciones para el alumno —Inicio, Mi curso, Para ti y su
+ * progreso— porque el producto son tres cosas que conviven: el curso
+ * enseña contenido estructurado, "Para ti" genera ejercicios a partir de
+ * su perfil y de sus clases, y el progreso le devuelve lo que su
+ * profesor ha escrito de él clase a clase. Si la navegación solo
+ * nombrara una, las otras parecerían un anexo.
+ *
+ * LA CUARTA ES LA QUE MENOS SE PARECE A LAS DEMÁS, y por eso va la
+ * última: en las tres primeras el alumno HACE algo y en esta lee. Es
+ * también la única que no nació aquí —vivía en DRC Gestión, detrás de un
+ * enlace que había que pedirle al profesor—, así que hasta ahora la
+ * mayoría de los alumnos no sabía que existía.
  *
  * SE LLAMA "PARA TI" Y NO "PRÁCTICA". Lo que la distingue del curso no
  * es que se practique —en el curso también— sino que está hecha con lo
@@ -99,6 +106,13 @@ export default function Cabecera({
             ? [{ clave: "curso" as const, texto: "Mi curso", href: `/curso/${cursoSlug}` }]
             : []),
           { clave: "practica" as const, texto: "Para ti", href: "/practica" },
+          // NOMBRE PROVISIONAL. "Mi ficha" quedó descartado —suena a
+          // expediente administrativo y el contenido es justo lo
+          // contrario— y el definitivo está sin decidir. Se cambia en
+          // esta línea, con un límite medido: a 320px cada celda de la
+          // barra inferior mide 77,5px, así que la etiqueta no pasa de
+          // unos 12 caracteres a 12px sin tocar a la de al lado.
+          { clave: "progreso" as const, texto: "Mi progreso", href: "/progreso" },
         ]
       : [];
 
@@ -135,7 +149,15 @@ export default function Cabecera({
                   key={enlace.clave}
                   href={enlace.href}
                   aria-current={seccion === enlace.clave ? "page" : undefined}
-                  className={`flex h-full items-center text-[15px] transition-colors ${
+                  // `whitespace-nowrap` Y `shrink-0`: SIN ELLOS LA
+                  // NAVEGACIÓN SE PARTE. Estos enlaces y el título del
+                  // curso comparten fila, y cuando no caben los dos cede
+                  // el que puede: sin esto, "Mi curso" y "Para ti" se
+                  // rompían en dos líneas a 1024px con un título largo
+                  // —pasaba ya con tres secciones— mientras el título se
+                  // quedaba entero. Quien tiene que ceder es el título,
+                  // que para eso lleva `min-w-0 truncate`.
+                  className={`flex h-full shrink-0 items-center whitespace-nowrap text-[15px] transition-colors ${
                     seccion === enlace.clave
                       ? "font-semibold text-marca-tinta shadow-[inset_0_-2px_0_#1E9E3A]"
                       : "font-medium text-marca-gris hover:text-marca-tinta"
@@ -294,7 +316,7 @@ function BarraCurso({ contexto, compacto }: { contexto: ContextoCurso; compacto?
  * El hueco al final de la página lo reserva `globals.css` mirando si
  * esta barra existe, para que ninguna pantalla tenga que acordarse.
  *
- * Los iconos son SVG a mano, de un solo trazo y sin librería: son tres.
+ * Los iconos son SVG a mano, de un solo trazo y sin librería: son cuatro.
  */
 function NavegacionInferior({
   enlaces,
@@ -322,7 +344,12 @@ function NavegacionInferior({
             }`}
           >
             <Icono seccion={enlace.clave} activo={activo} />
-            {enlace.texto}
+            {/* GUARDARRAÍL, no una solución. Las cuatro etiquetas de hoy
+                caben con holgura hasta 320px —está medido—, pero la
+                rejilla es `minmax(0,1fr)` y sin esto una etiqueta larga
+                desbordaría su celda por encima de la vecina en vez de
+                recortarse. */}
+            <span className="max-w-full truncate">{enlace.texto}</span>
           </Link>
         );
       })}
@@ -355,6 +382,17 @@ function Icono({ seccion, activo }: { seccion: SeccionActiva; activo: boolean })
         <>
           <circle cx="9" cy="9" r="6.5" stroke={trazo} fill={relleno} />
           <path d="M9 5.6v3.6l2.3 1.4" stroke={activo ? "#FFFFFF" : trazo} />
+        </>
+      )}
+      {/* Progreso: tres barras que suben. Es la escalera de la pantalla
+          reducida a lo que se distingue en 18 píxeles. Con trazo grueso y
+          sin relleno, porque tres rectángulos rellenos a este tamaño se
+          leen como un bloque macizo y no como una progresión. */}
+      {seccion === "progreso" && (
+        <>
+          <path d="M3.4 14.6v-3.1" stroke={trazo} strokeWidth="2.2" />
+          <path d="M9 14.6V7.8" stroke={trazo} strokeWidth="2.2" />
+          <path d="M14.6 14.6V4.3" stroke={trazo} strokeWidth="2.2" />
         </>
       )}
     </svg>
