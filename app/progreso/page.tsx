@@ -1,13 +1,24 @@
 import { redirect } from "next/navigation";
 import { obtenerPerfil, obtenerRecorrido } from "@/lib/gestion";
-import { nivelMcer } from "@/lib/recorrido";
+import { calcularEstimacion, nivelEfectivo } from "@/lib/estimacion";
 import { exigirSesion } from "@/lib/sesion-servidor";
 import { cursosAsignados } from "@/lib/cursos-servidor";
 import Cabecera from "@/components/Cabecera";
 import Resumen from "@/components/progreso/Resumen";
 import Recorrido from "@/components/progreso/Recorrido";
+import Ritmo from "@/components/progreso/Ritmo";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * A dónde lleva "Amplía tu plan". Configurable sin tocar código.
+ *
+ * SIN `NEXT_PUBLIC_`, al revés que en Gestión, porque allí el banner es
+ * un componente de cliente y aquí la pantalla entera se resuelve en el
+ * servidor. Una URL no es un secreto, pero si no hace falta cruzar al
+ * navegador, no cruza.
+ */
+const URL_AMPLIAR = process.env.URL_AMPLIAR_PLAN || "https://drcacademy.com/mi-cuenta";
 
 /**
  * El progreso del alumno, como cuarta sección.
@@ -46,6 +57,28 @@ export default async function PaginaProgreso() {
 
   const primerNombre = perfil?.nombre.trim().split(/\s+/)[0] ?? "";
 
+  // EL NIVEL, CON LA PRIORIDAD DE GESTIÓN. La columna `nivel` de la
+  // vista es lo que tecleó quien dio de alta al alumno, que allí es la
+  // fuente de MENOR prioridad. Con las dos columnas nuevas se aplica la
+  // misma regla y el alumno sale en el mismo peldaño en las dos
+  // pantallas; sin ellas esto se queda exactamente en lo de antes.
+  const nivel = perfil
+    ? nivelEfectivo(perfil.nivelFicha, perfil.nivelPrueba, perfil.nivel)
+    : null;
+
+  // Null mientras no se corra `gestion-vista-perfil-ritmo.sql` (faltan
+  // las horas), y también cuando el alumno ya está en C2 o ya está en el
+  // nivel del examen que prepara. En los tres casos no hay banner, que
+  // es preferible a inventarle una fecha.
+  const estimacion = perfil
+    ? calcularEstimacion({
+        nivelActual: nivel,
+        horasSemanales: perfil.horasSemanales,
+        // Los mismos tres textos que mira Gestión, en el mismo orden.
+        textosDelPlan: [perfil.planContratado, perfil.objetivoSetter, perfil.objetivoPerfil],
+      })
+    : null;
+
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
       <Cabecera
@@ -66,13 +99,24 @@ export default async function PaginaProgreso() {
           Tu nivel, las clases que has hecho y lo que habéis trabajado en cada una.
         </p>
 
-        <Resumen nivel={nivelMcer(perfil?.nivel)} totalClases={recorrido.totalClases} />
+        <Resumen nivel={nivel} totalClases={recorrido.totalClases} />
 
         <Recorrido
           clases={recorrido.clases}
           totalClases={recorrido.totalClases}
           profesor={perfil?.profesor ?? ""}
         />
+
+        {/* EL RITMO VA DESPUÉS DEL RECORRIDO, y en Gestión va antes de su
+            línea de tiempo. El cambio es a propósito.
+            Allí la pantalla es un informe que se manda por enlace y se
+            lee de una vez. Aquí es una sección del producto a la que el
+            alumno entra por su cuenta, y lo que ha venido a ver es lo que
+            su profesor escribió de él. Un bloque oscuro con una oferta
+            por delante lo obliga a pasar por caja para llegar a lo suyo.
+            Detrás, la oferta llega cuando ya ha visto lo que le estamos
+            dando, que además es cuando mejor se recibe. */}
+        {estimacion && <Ritmo estimacion={estimacion} urlAmpliar={URL_AMPLIAR} />}
       </main>
     </div>
   );

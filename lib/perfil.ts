@@ -28,6 +28,21 @@ export function comoTextoOpcional(valor: unknown): string | null {
   return valor.trim() === "" ? null : valor;
 }
 
+/**
+ * Un entero de la vista, o null. PostgREST puede devolver un número
+ * como cadena según el tipo de la columna, así que se acepta cualquiera
+ * de las dos formas y se descarta lo que no dé un entero positivo.
+ *
+ * El cero se trata como ausencia, no como cero: "cero horas a la semana"
+ * no es un plan, es un dato que falta.
+ */
+export function comoEnteroOpcional(valor: unknown): number | null {
+  const numero = typeof valor === "number" ? valor : Number(comoTextoOpcional(valor));
+  if (!Number.isFinite(numero)) return null;
+  const entero = Math.round(numero);
+  return entero > 0 ? entero : null;
+}
+
 export function comoBooleano(valor: unknown): boolean {
   return valor === true;
 }

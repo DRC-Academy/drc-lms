@@ -19,6 +19,7 @@ import {
   asGuiaProxima,
   asObject,
   comoBooleano,
+  comoEnteroOpcional,
   comoTexto,
   comoTextoOpcional,
 } from "@/lib/perfil";
@@ -49,6 +50,14 @@ function aPerfil(fila: Fila): PerfilAlumno {
     focoRecomendado: comoTextoOpcional(fila.foco_recomendado),
     respuestasFormulario: asObject(fila.respuestas_formulario),
     tienePerfil: comoBooleano(fila.tiene_perfil),
+    // Las cuatro del banner de ritmo. Como el token, aguantan que la
+    // vista todavía no las tenga: los conversores devuelven null en vez
+    // de romper, y sin ellas la pantalla enseña menos, no falla.
+    // Ver `supabase/gestion-vista-perfil-ritmo.sql`.
+    horasSemanales: comoEnteroOpcional(fila.horas_semanales),
+    planContratado: comoTextoOpcional(fila.plan_contratado),
+    nivelFicha: comoTextoOpcional(fila.nivel_ficha),
+    nivelPrueba: comoTextoOpcional(fila.nivel_prueba),
     // `comoTextoOpcional` devuelve null si no es una cadena, así que
     // aguanta que la columna todavía no exista en la vista de Gestión.
     formToken: comoTextoOpcional(fila.form_token),

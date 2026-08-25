@@ -719,6 +719,31 @@ export type PerfilAlumno = {
   respuestasFormulario: Record<string, unknown> | null;
   tienePerfil: boolean;
   /**
+   * Horas de clase a la semana del plan que está dando de verdad. Las
+   * pone Gestión en la vista resolviendo antes qué assignment manda y si
+   * cuentan las celdas del calendario o el número contratado.
+   *
+   * NULL MIENTRAS NO SE CORRA `supabase/gestion-vista-perfil-ritmo.sql`,
+   * y sin ellas no hay banner de ritmo: no hay entre qué dividir. El
+   * resto de la pantalla de progreso funciona igual. Mismo trato que
+   * `formToken`, y por el mismo motivo: el orden de despliegue da igual.
+   */
+  horasSemanales: number | null;
+  /**
+   * `assignments.plan`, que NO es lo mismo que `plan`. Aquel es el texto
+   * del producto de WooCommerce; este es el plan que el equipo tiene
+   * apuntado, y es uno de los tres textos donde Gestión busca si el
+   * alumno prepara un examen.
+   *
+   * Existe para que la meta salga idéntica en las dos pantallas. Con los
+   * textos que el LMS ya tenía, difería en 10 de 174 alumnos.
+   */
+  planContratado: string | null;
+  /** `student_profiles.current_level`. Hoy relleno en 1 de 174. */
+  nivelFicha: string | null;
+  /** `student_profiles.level_test_cefr`, la prueba de nivel. Hoy 12 de 174. */
+  nivelPrueba: string | null;
+  /**
    * Token del formulario de perfil que este alumno puede usar ahora, o
    * null si no tiene ninguno utilizable —que es el caso de 123 de los
    * 169—. Lo resuelve Gestión en la propia vista: el más reciente sin
