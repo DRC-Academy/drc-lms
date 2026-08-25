@@ -6,7 +6,7 @@
 -- motivo que `gestion-vista-perfil-token.sql`: el LMS depende de lo que
 -- hace, y si vive en el otro lado nadie de este recuerda que existe.
 --
--- QUÉ AÑADE: cuatro columnas al final de la vista.
+-- QUÉ AÑADE: cinco columnas al final de la vista.
 --
 --   horas_semanales   horas de clase a la semana del plan que el alumno
 --                     está dando de verdad. Hoy salen las 174.
@@ -14,11 +14,12 @@
 --   plan_contratado   `assignments.plan` de esa misma fila. NO es lo
 --                     mismo que la columna `plan` que ya tiene la vista.
 --
+--   nivel_profesor    `student_profiles.teacher_confirmed_level`. Hoy: 0 de 174.
 --   nivel_ficha       `student_profiles.current_level`.   Hoy: 1 de 174.
 --   nivel_prueba      `student_profiles.level_test_cefr`. Hoy: 12 de 174.
 --
 -- ---------------------------------------------------------------
--- POR QUÉ HACEN FALTA LAS CUATRO
+-- POR QUÉ HACEN FALTA LAS CINCO
 --
 -- HORAS_SEMANALES es el bloqueo de verdad. El banner divide las horas
 -- que le faltan al alumno entre las que hace por semana, y sin ese
@@ -42,20 +43,29 @@
 -- previsión en el LMS y ninguna en su informe de Gestión no tiene forma
 -- de saber cuál de las dos nos creemos.
 --
--- NIVEL_FICHA Y NIVEL_PRUEBA son el mismo problema, un escalón antes.
+-- LAS TRES DE NIVEL son el mismo problema, un escalón antes.
 -- `vista_perfil_alumno.nivel` es literalmente `assignments.student_level`
 -- (comprobado: coincide en los 174), que en la regla de Gestión
 -- (`lib/effectiveLevel.ts`) es la fuente de MENOR prioridad: lo que
--- tecleó quien dio de alta al alumno. Con estas dos columnas el LMS
+-- tecleó quien dio de alta al alumno. Con estas tres columnas el LMS
 -- aplica la misma prioridad que Gestión y coloca al alumno en el mismo
 -- peldaño. Hoy difieren en 9 alumnos, y como el nivel actual es de
 -- donde salen las horas que faltan, esos 9 verían dos previsiones
 -- distintas de su propio futuro.
 --
--- NO SE AÑADE `teacher_confirmed_level`, que es la primera de esa
--- prioridad, PORQUE NO EXISTE: `supabase-teacher-level.sql` nunca se
--- corrió y la columna devuelve 42703. Si algún día se corre, se añade
--- aquí y el LMS la recoge sin desplegar nada, igual que con el token.
+-- `NIVEL_PROFESOR` VA AUNQUE HOY NO SIRVA PARA NADA. Es la primera de
+-- la prioridad y está vacía en los 174: `supabase-teacher-level.sql` se
+-- corrió (la columna existe, ya no da 42703) pero ningún profesor ha
+-- confirmado todavía un nivel. Se añade ahora, con la vista abierta,
+-- porque el día que el primer profesor lo use el LMS se separaría de
+-- Gestión en silencio y justamente en el alumno cuyo nivel alguien se
+-- ha molestado en revisar.
+--
+-- NO SE USA `students.level`, que existe y está relleno en los 174. La
+-- ficha de Gestión no lo mira —solo lee `student_profiles` y
+-- `assignments`— y comparado con el nivel efectivo difiere en 9
+-- alumnos. Sacar el nivel de ahí es exactamente cómo se consigue que
+-- las dos pantallas digan cosas distintas.
 --
 -- LO QUE NO SE EXPONE, y conviene que siga así: el cálculo. Las horas
 -- de Cambridge, el multiplicador de práctica y las semanas por mes
@@ -112,7 +122,7 @@ select pg_get_viewdef('public.vista_perfil_alumno'::regclass, true);
 --     <las consultas del PASO 3>
 --   rollback;
 --
--- Comprueba que el PASO 3 devuelve 174 / 174 / 173 / 1 / 12 y haz
+-- Comprueba que el PASO 3 devuelve 174 / 174 / 173 / 0 / 1 / 12 y haz
 -- `rollback`. Si cuadra, repite con `commit`.
 --
 -- ESTE BLOQUE SE APOYA EN EL ANTERIOR. Si `gestion-vista-perfil-token.sql`
@@ -131,7 +141,7 @@ begin
     from information_schema.columns
     where table_schema = 'public'
       and table_name   = 'vista_perfil_alumno'
-      and column_name in ('horas_semanales', 'plan_contratado', 'nivel_ficha', 'nivel_prueba')
+      and column_name in ('horas_semanales', 'plan_contratado', 'nivel_profesor', 'nivel_ficha', 'nivel_prueba')
   ) then
     raise notice 'vista_perfil_alumno ya tiene las columnas del ritmo. No se toca nada.';
     return;
@@ -163,10 +173,11 @@ begin
     create or replace view public.vista_perfil_alumno%s as
     select
       base.*,
-      asg.horas           as horas_semanales,
-      asg.plan            as plan_contratado,
-      fic.current_level   as nivel_ficha,
-      fic.level_test_cefr as nivel_prueba
+      asg.horas                   as horas_semanales,
+      asg.plan                    as plan_contratado,
+      fic.teacher_confirmed_level as nivel_profesor,
+      fic.current_level           as nivel_ficha,
+      fic.level_test_cefr         as nivel_prueba
     from (%s) as base
 
     -- La assignment que describe el plan que está dando de verdad: la
@@ -199,7 +210,7 @@ begin
     -- La ficha de IA, solo por sus dos columnas de nivel. Un alumno
     -- puede no tenerla: 137 de los 174 la tienen.
     left join lateral (
-      select sp.current_level, sp.level_test_cefr
+      select sp.teacher_confirmed_level, sp.current_level, sp.level_test_cefr
       from public.student_profiles sp
       where sp.student_id = base.alumno_id
       limit 1
@@ -216,11 +227,16 @@ $$;
 --
 -- Con los datos del 24-08-2026 esto tiene que dar:
 --
---   alumnos            174
---   con_horas          174
---   con_plan           173
---   con_nivel_ficha      1
---   con_nivel_prueba    12
+--   alumnos              174
+--   con_horas            174
+--   con_plan             173
+--   con_nivel_profesor     0
+--   con_nivel_ficha        1
+--   con_nivel_prueba      12
+--
+-- con_nivel_profesor a cero es lo esperado y no un fallo del join: la
+-- columna existe desde que se corrio supabase-teacher-level.sql, pero
+-- todavia no la ha rellenado ningun profesor.
 --
 -- `con_plan` es uno menos que `alumnos` y está bien: hay un alumno con
 -- assignment cuyo `plan` está vacío. Ese verá el banner igual, con la
@@ -235,6 +251,7 @@ select
   count(*)                                                as alumnos,
   count(horas_semanales)                                  as con_horas,
   count(nullif(btrim(coalesce(plan_contratado, '')), '')) as con_plan,
+  count(nullif(btrim(coalesce(nivel_profesor, '')), ''))  as con_nivel_profesor,
   count(nullif(btrim(coalesce(nivel_ficha, '')), ''))     as con_nivel_ficha,
   count(nullif(btrim(coalesce(nivel_prueba, '')), ''))    as con_nivel_prueba
 from public.vista_perfil_alumno;

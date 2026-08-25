@@ -353,32 +353,44 @@ export function enMeses(cantidad: number): string {
 // ---------------------------------------------------------------
 // EL NIVEL EFECTIVO
 //
-// Port de `lib/effectiveLevel.ts` de Gestión, recortado a lo que el LMS
-// puede ver. Gana el primero que contenga un código MCER de verdad, no
-// el primero que esté relleno: los campos de nivel son texto libre y en
-// producción `assignments.student_level` dice cosas como "Inglés
-// general" o "B1 Exámenes". Un campo relleno pero sin MCER dentro no es
-// un nivel, y si ganara por estar relleno taparía a uno posterior que sí
-// lo tiene.
+// Port de `lib/effectiveLevel.ts` de Gestión. Gana el primero que
+// contenga un código MCER de verdad, no el primero que esté relleno: los
+// campos de nivel son texto libre y en producción
+// `assignments.student_level` dice cosas como "Inglés general" o "B1
+// Exámenes". Un campo relleno pero sin MCER dentro no es un nivel, y si
+// ganara por estar relleno taparía a uno posterior que sí lo tiene.
 //
-// FALTA `teacher_confirmed_level`, que en Gestión va primero. No existe
-// en la base: `supabase-teacher-level.sql` nunca se corrió. Cuando se
-// corra, se añade a la vista y se mete aquí delante del resto.
+// LA PRIORIDAD, de más a menos:
+//
+//   1. nivel_profesor  lo que confirmó el profesor tras las primeras
+//                      clases. Manda sobre todo lo demás.
+//   2. nivel_ficha     la columna histórica de la ficha de IA.
+//   3. nivel_prueba    la prueba de nivel automática.
+//   4. nivel           lo que tecleó quien dio de alta al alumno.
+//
+// NO SE MIRA `students.level`, aunque exista y esté relleno en los 174.
+// La ficha de Gestión no lo lee, y comparado con esta regla difiere en 9
+// alumnos: usarlo sería la forma más rápida de que las dos pantallas le
+// enseñen al mismo alumno dos niveles distintos.
 // ---------------------------------------------------------------
 
 /**
  * El nivel del alumno, con la misma prioridad que usa Gestión.
  *
- * Los tres argumentos llegan de `vista_perfil_alumno`. Los dos primeros
- * solo existen si se corrió `gestion-vista-perfil-ritmo.sql`; sin ellos
- * esto se queda en el de siempre, que es lo que el LMS enseñaba antes.
+ * Los cuatro argumentos llegan de `vista_perfil_alumno`. Los tres
+ * primeros solo existen si se corrió `gestion-vista-perfil-ritmo.sql`;
+ * sin ellos esto cae en el último, que es lo que el LMS enseñaba antes.
  */
 export function nivelEfectivo(
+  nivelProfesor: string | null,
   nivelFicha: string | null,
   nivelPrueba: string | null,
   nivelDelAlta: string
 ): NivelMcer | null {
   return (
-    nivelMcer(nivelFicha) ?? nivelMcer(nivelPrueba) ?? nivelMcer(nivelDelAlta)
+    nivelMcer(nivelProfesor) ??
+    nivelMcer(nivelFicha) ??
+    nivelMcer(nivelPrueba) ??
+    nivelMcer(nivelDelAlta)
   );
 }

@@ -58,7 +58,9 @@ export default async function PaginaProgreso() {
   // fuente de MENOR prioridad. Con las dos columnas nuevas se aplica la
   // misma regla y el alumno sale en el mismo peldaño en las dos
   // pantallas; sin ellas esto se queda en el de siempre.
-  const nivel = perfil ? nivelEfectivo(perfil.nivelFicha, perfil.nivelPrueba, perfil.nivel) : null;
+  const nivel = perfil
+    ? nivelEfectivo(perfil.nivelProfesor, perfil.nivelFicha, perfil.nivelPrueba, perfil.nivel)
+    : null;
 
   // Null mientras no se corra `gestion-vista-perfil-ritmo.sql` (faltan
   // las horas), y también cuando el alumno ya está en C2 o ya está en el

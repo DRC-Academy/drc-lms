@@ -739,6 +739,16 @@ export type PerfilAlumno = {
    * textos que el LMS ya tenía, difería en 10 de 174 alumnos.
    */
   planContratado: string | null;
+  /**
+   * `student_profiles.teacher_confirmed_level`: el nivel que confirma el
+   * profesor tras las primeras clases, y el que manda sobre todos los
+   * demás en la regla de Gestión.
+   *
+   * Hoy está vacío en los 174. La columna existe —ya no da 42703— pero
+   * ningún profesor la ha usado todavía. Viaja igualmente para que el
+   * día que alguien la rellene el LMS no se quede atrás en silencio.
+   */
+  nivelProfesor: string | null;
   /** `student_profiles.current_level`. Hoy relleno en 1 de 174. */
   nivelFicha: string | null;
   /** `student_profiles.level_test_cefr`, la prueba de nivel. Hoy 12 de 174. */
