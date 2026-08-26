@@ -16,18 +16,29 @@ export default function BotonCompletar({
   siguienteId,
   className,
   children,
+  foco = null,
 }: {
   leccionId: string;
   cursoSlug: string;
   siguienteId: string | null;
   className: string;
   children: ReactNode;
+  /**
+   * El contexto de revisión, que viaja en el formulario para que la
+   * ruta lo devuelva en su redirección. Sin esto, el equipo se cae de
+   * la ficha en la primera lección que avanza.
+   *
+   * NO AUTORIZA NADA: la ruta decide si escribe mirando la cookie, no
+   * este campo. Ver `app/api/progreso-leccion`.
+   */
+  foco?: string | null;
 }) {
   return (
     <form action="/api/progreso-leccion" method="post" className="contents">
       <input type="hidden" name="leccionId" value={leccionId} />
       <input type="hidden" name="slug" value={cursoSlug} />
       <input type="hidden" name="siguiente" value={siguienteId ?? ""} />
+      <input type="hidden" name="alumno" value={foco ?? ""} />
       <button type="submit" className={className}>
         {children}
       </button>

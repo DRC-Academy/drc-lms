@@ -48,6 +48,7 @@ export default function FlujoEjercicios({
   cursoSlug,
   siguienteId,
   alSalir,
+  foco = null,
 }: {
   ejercicios: EjercicioVista[];
   /** false para el equipo: revisa el curso, no lo cursa. */
@@ -58,6 +59,8 @@ export default function FlujoEjercicios({
   cursoSlug: string;
   siguienteId: string | null;
   alSalir: () => void;
+  /** Contexto de revisión. Ver `lib/foco.ts`. */
+  foco?: string | null;
 }) {
   const unificados = useMemo(() => ejercicios.map(desdeCurso), [ejercicios]);
 
@@ -128,6 +131,7 @@ export default function FlujoEjercicios({
               leccionId={leccionId}
               cursoSlug={cursoSlug}
               siguienteId={siguienteId}
+              foco={foco}
               className="w-full rounded-full btn-verde px-8 py-[15px] text-[16px] font-semibold min-[1100px]:order-2 min-[1100px]:w-auto"
             >
               Completar y seguir

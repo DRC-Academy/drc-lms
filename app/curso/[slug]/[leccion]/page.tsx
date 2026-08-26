@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-import { exigirSesion } from "@/lib/sesion-servidor";
+import { focoActual } from "@/lib/sesion-servidor";
+import { conFoco } from "@/lib/foco";
 import { obtenerPerfil } from "@/lib/gestion";
 import { cursoPorSlug, cursosAsignados, leccionParaVer } from "@/lib/cursos-servidor";
 import { sinDripEn } from "@/lib/accesos-manuales";
@@ -18,8 +19,10 @@ export default async function PaginaLeccion({
 }: {
   params: { slug: string; leccion: string };
 }) {
-  const sesion = await exigirSesion();
-  const alumnoId = sesion.rol === "alumno" ? sesion.alumnoId : "";
+  // Quién es el alumno de esta lección: él mismo, el revisado, o nadie
+  // —el equipo repasando contenido—. Ver la cabecera equivalente en
+  // `app/curso/[slug]/page.tsx`.
+  const { sesion, alumnoId, paraEnlaces } = await focoActual();
 
   // ---------------------------------------------------------------
   // DOS OLAS, NO SIETE ESPERAS
@@ -40,7 +43,7 @@ export default async function PaginaLeccion({
   // aparece en el cierre de los ejercicios.
   const [curso, perfil] = await Promise.all([
     cursoPorSlug(params.slug),
-    sesion.rol === "alumno" ? obtenerPerfil(sesion.alumnoId) : Promise.resolve(null),
+    alumnoId ? obtenerPerfil(alumnoId) : Promise.resolve(null),
   ]);
 
   if (!curso) notFound();
@@ -60,14 +63,15 @@ export default async function PaginaLeccion({
   // del `redirect`.
 
   const [suyos, vista] = await Promise.all([
-    sesion.rol === "alumno" && perfil
-      ? cursosAsignados(perfil.plan, perfil.nivel, alumnoId)
-      : Promise.resolve([]),
+    perfil ? cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : Promise.resolve([]),
     leccionParaVer(alumnoId, curso, params.leccion, fechaDrip),
   ]);
 
-  if (sesion.rol === "alumno" && !suyos.some((c) => c.id === curso.id)) {
-    redirect(`/alumno/${sesion.alumnoId}`);
+  // El guard del plan vale igual en revisión: si el alumno no puede
+  // abrir este curso, el espejo tampoco. Sin alumno —equipo repasando
+  // contenido— no hay plan contra el que comprobar y se entra.
+  if (alumnoId && !suyos.some((c) => c.id === curso.id)) {
+    redirect(`/alumno/${alumnoId}`);
   }
 
   if (!vista) notFound();
@@ -77,7 +81,7 @@ export default async function PaginaLeccion({
   // al temario, que es donde pone cuándo la tendrá. Llegar aquí es raro:
   // en la pantalla del curso la fila no es un enlace. Pasa con un enlace
   // viejo, con el botón atrás o escribiendo la URL a mano.
-  if (!vista.disponible) redirect(`/curso/${curso.slug}`);
+  if (!vista.disponible) redirect(conFoco(`/curso/${curso.slug}`, paraEnlaces));
 
   const {
     leccion,
@@ -132,7 +136,12 @@ export default async function PaginaLeccion({
       siguienteId={siguienteId}
       anteriorId={anteriorId}
       esUltimaDelModulo={posicion === hermanas.length - 1}
+      // Solo el alumno deja constancia. En revisión se responde igual
+      // —hace falta para poder revisar el ejercicio— pero no se guarda
+      // nada: lo impone además `app/api/intento-ejercicio`, que mira la
+      // cookie y no esto.
       registrarIntentos={sesion.rol === "alumno"}
+      foco={paraEnlaces}
       profesor={perfil?.profesor.trim() ?? ""}
     />
   );

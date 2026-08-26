@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { sesionActual } from "@/lib/sesion-servidor";
+import { focoActual, sesionActual } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { cursoPorSlug, progresoDelCurso } from "@/lib/cursos-servidor";
 import Cabecera from "@/components/Cabecera";
@@ -67,11 +67,18 @@ async function CabeceraDelCurso({ slug }: { slug: string }) {
   const sesion = await sesionActual();
   if (!sesion) return <CabeceraCargando />;
 
-  const alumnoId = sesion.rol === "alumno" ? sesion.alumnoId : "";
+  // De quién habla la pantalla. Para el alumno es él; para el equipo que
+  // llegó desde una ficha, el alumno revisado; y para el equipo que abrió
+  // un curso a pelo, nadie —cadena vacía— que es el caso de revisar el
+  // contenido sin mirar a ninguna persona en concreto.
+  //
+  // El layout NO recibe `searchParams`, así que el parámetro llega por la
+  // cabecera que pone el middleware. Ver `lib/foco.ts`.
+  const { alumnoId, revisando, paraEnlaces } = await focoActual();
 
   const [curso, perfil] = await Promise.all([
     cursoPorSlug(slug),
-    sesion.rol === "alumno" ? obtenerPerfil(sesion.alumnoId) : Promise.resolve(null),
+    alumnoId ? obtenerPerfil(alumnoId) : Promise.resolve(null),
   ]);
 
   if (!curso) return <CabeceraCargando />;
@@ -90,10 +97,14 @@ async function CabeceraDelCurso({ slug }: { slug: string }) {
   return (
     <Cabecera
       nombre={nombre || undefined}
-      alumnoId={sesion.rol === "alumno" ? sesion.alumnoId : null}
+      // Vacío solo para el equipo revisando contenido sin ficha: ahí no
+      // hay secciones que ofrecer porque no hay alumno del que hablar.
+      alumnoId={alumnoId || null}
       cursoSlug={curso.slug}
       seccion="curso"
       contexto={{ titulo: curso.titulo, completadas, total }}
+      foco={paraEnlaces}
+      revisando={revisando}
     />
   );
 }

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import ChatAyuda from "@/components/ChatAyuda";
+import { conFoco } from "@/lib/foco";
 
 export type SeccionActiva = "inicio" | "curso" | "practica" | "progreso";
 
@@ -57,9 +58,16 @@ const LOGO = { ancho: 121, alto: 32 };
  * no la barra de direcciones. La clave interna `practica` se queda por
  * lo mismo: nombra el destino, no el rótulo.
  *
- * El equipo NO ve la navegación: entra por el buscador y va saltando de
- * ficha en ficha, así que "Mi curso" no significa nada para él. Le queda
- * la barra con el logotipo y nada más.
+ * EL EQUIPO SÍ VE LA NAVEGACIÓN, y antes no. Cuando entraba en una ficha
+ * se quedaba en el inicio: sin `alumnoId` no había enlaces, así que "Mi
+ * curso" y "Para ti" no existían y el producto solo se podía revisar por
+ * la mitad. Ahora `alumnoId` es EL ALUMNO DEL QUE HABLA LA PANTALLA —el
+ * revisado, no el de la sesión— y las cuatro secciones aparecen igual,
+ * con `foco` colgando de cada enlace para que sigan apuntando a esa
+ * persona y no salten a la identidad de quien mira.
+ *
+ * En el buscador sigue sin haber navegación, y es lo correcto: ahí
+ * todavía no hay ningún alumno del que hablar.
  *
  * EN MÓVIL LA NAVEGACIÓN SE VA ABAJO. Antes ocupaba una segunda fila
  * pegada a la cabecera; ahí competía con el saludo y empujaba el banner
@@ -84,9 +92,16 @@ export default function Cabecera({
   cursoSlug,
   seccion,
   contexto,
+  foco = null,
+  revisando = false,
 }: {
   nombre?: string;
-  /** El alumno de la sesión. null en el equipo: no navega por secciones. */
+  /**
+   * EL ALUMNO DEL QUE HABLA LA PANTALLA, que no siempre es el de la
+   * sesión: cuando el equipo revisa una ficha es el alumno revisado.
+   * null solo cuando no hay ninguno —el equipo en el buscador—, y
+   * entonces no hay secciones que ofrecer.
+   */
   alumnoId?: string | null;
   /** El curso que abre "Mi curso". Sin él, el enlace no se pinta. */
   cursoSlug?: string | null;
@@ -97,6 +112,13 @@ export default function Cabecera({
    * fallo que esto viene a arreglar.
    */
   contexto?: ContextoCurso | null;
+  /**
+   * El contexto de revisión que tienen que conservar los enlaces, o null
+   * cuando es el alumno en su propio producto. Ver `lib/foco.ts`.
+   */
+  foco?: string | null;
+  /** Pinta la tira de revisión y cambia lo que dice la identidad. */
+  revisando?: boolean;
 }) {
   const enlaces =
     alumnoId != null
@@ -113,10 +135,14 @@ export default function Cabecera({
           // barra inferior mide 77,5px, así que la etiqueta no pasa de
           // unos 12 caracteres a 12px sin tocar a la de al lado.
           { clave: "progreso" as const, texto: "Mi progreso", href: "/progreso" },
-        ]
+        ].map((enlace) => ({ ...enlace, href: conFoco(enlace.href, foco) }))
       : [];
 
   const inicial = nombre?.trim()[0]?.toUpperCase() ?? "";
+
+  // Dentro del curso, el título y la barra enlazan al temario. Se calcula
+  // una vez: lo pintan la fila de escritorio y la de móvil.
+  const hrefCurso = cursoSlug ? conFoco(`/curso/${cursoSlug}`, foco) : "#";
 
   return (
     <>
@@ -127,8 +153,13 @@ export default function Cabecera({
           tiene que estar siempre, que esté también después de bajar. */}
       <header className="sticky top-0 z-30 border-b border-marca-borde bg-white/[0.96] backdrop-blur-md">
         <div className="mx-auto flex h-[60px] max-w-contenido items-center gap-4 px-4 sm:h-[68px] sm:gap-10 sm:px-9">
+          {/* EL LOGOTIPO LLEVA AL INICIO, que es la convención de toda la
+              web y aquí además es la única salida que cabe en la
+              cabecera de móvil. Ya enlazaba antes; lo que cambia es que
+              ahora conserva el contexto de revisión, así que al equipo
+              no le devuelve a su buscador a mitad de una ficha. */}
           <Link
-            href={alumnoId != null ? `/alumno/${alumnoId}` : "/"}
+            href={alumnoId != null ? conFoco(`/alumno/${alumnoId}`, foco) : "/"}
             className="flex shrink-0 items-center rounded-lg transition-opacity hover:opacity-70"
           >
             <Image
@@ -177,7 +208,7 @@ export default function Cabecera({
           {contexto && (
             <div className="ml-auto hidden min-w-0 items-center gap-3 lg:flex">
               <Link
-                href={cursoSlug ? `/curso/${cursoSlug}` : "#"}
+                href={hrefCurso}
                 className="min-w-0 truncate text-[13.5px] font-medium text-marca-tinta transition-colors hover:text-marca-verdeOsc"
                 title={contexto.titulo}
               >
@@ -218,7 +249,13 @@ export default function Cabecera({
                 >
                   {inicial}
                 </span>
-                <span className="sr-only">Practicando como {nombre}</span>
+                {/* El avatar lleva la inicial del alumno del que habla la
+                    pantalla, así que en revisión NO es "practicando
+                    como": quien mira no es esa persona y un lector de
+                    pantalla no tiene la tira de arriba a la vista. */}
+                <span className="sr-only">
+                  {revisando ? `Ficha de ${nombre}, en revisión` : `Practicando como ${nombre}`}
+                </span>
               </p>
             )}
           </div>
@@ -237,7 +274,7 @@ export default function Cabecera({
           <div className="border-t border-marca-borde bg-marca-niebla px-4 py-[7px] lg:hidden">
             <div className="mx-auto flex max-w-contenido items-center gap-2.5">
               <Link
-                href={cursoSlug ? `/curso/${cursoSlug}` : "#"}
+                href={hrefCurso}
                 className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-marca-tinta"
               >
                 {contexto.titulo}
@@ -246,6 +283,20 @@ export default function Cabecera({
             </div>
           </div>
         )}
+        {/* LA TIRA DE REVISIÓN, LA ÚLTIMA FILA DE LA CABECERA.
+            Va aquí dentro y no en cada página a propósito: es la única
+            forma de que salga en TODAS —inicio, temario, lección,
+            bloque, "Para ti" y "Mi progreso"— sin que ninguna tenga que
+            acordarse. Antes esto era un aviso suelto dentro de la
+            lección, así que el equipo sabía que estaba revisando en la
+            única pantalla donde ya era evidente y no lo sabía en
+            ninguna de las otras.
+
+            Y ES PARTE DE LA CABECERA PEGAJOSA, así que no se va con el
+            scroll: de quién es la ficha no es un dato que se lea una vez
+            al entrar, es el que evita confundir a dos alumnos después de
+            veinte minutos saltando entre fichas. */}
+        {revisando && <TiraRevision nombre={nombre} />}
       </header>
 
       {enlaces.length > 0 && <NavegacionInferior enlaces={enlaces} seccion={seccion} />}
@@ -258,6 +309,57 @@ export default function Cabecera({
           ponerla. */}
       {enlaces.length > 0 && <ChatAyuda nombre={nombre?.trim() ?? ""} />}
     </>
+  );
+}
+
+/**
+ * De quién es la ficha, que es una revisión, y cómo salir de ella.
+ *
+ * LAS TRES COSAS EN UNA FILA, y las tres hacen falta:
+ *
+ *   · EL NOMBRE, porque revisar es saltar de ficha en ficha y a la
+ *     tercera ya no se sabe cuál está abierta. Va en negrita y primero.
+ *   · QUE NADA SE GUARDA, porque el equipo está a punto de pulsar
+ *     "Marcar como completada" en el curso de otra persona y tiene
+ *     derecho a saber que eso no le toca el progreso. La regla la
+ *     cumplen las rutas que escriben, cada una mirando la cookie; esto
+ *     es contarlo, no imponerlo.
+ *   · LA SALIDA AL BUSCADOR, porque es la única que no depende de en qué
+ *     pantalla esté: dentro de una lección no hay ningún otro enlace que
+ *     lleve fuera del alumno.
+ *
+ * EN ÁMBAR Y NO EN VERDE. El verde es el color de las acciones del
+ * alumno en todo el producto; esta barra dice justo lo contrario —que lo
+ * que se ve no es de quien mira— y tiene que leerse como una advertencia
+ * suave. Es la misma pareja de tonos que ya usaba el aviso de la
+ * lección, que es lo que esto sustituye.
+ */
+function TiraRevision({ nombre }: { nombre?: string }) {
+  const quien = nombre?.trim();
+
+  return (
+    <div className="border-t border-marca-examenBorde bg-marca-examen">
+      <div className="mx-auto flex max-w-contenido items-center gap-x-3 gap-y-1 px-4 py-[7px] sm:px-9">
+        <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-marca-amarillo" />
+
+        <p className="min-w-0 flex-1 truncate text-[12.5px] leading-[1.35] text-marca-tinta sm:text-[13px]">
+          {/* Sin nombre —un alumno con clases y sin fila en la vista de
+              perfiles— se dice igual que es una revisión: perder el
+              nombre no puede hacer que el aviso desaparezca. */}
+          <strong className="font-semibold">
+            {quien ? `Revisando la ficha de ${quien}` : "Revisando una ficha"}
+          </strong>
+          <span className="hidden sm:inline"> · Nada de lo que hagas aquí se guarda.</span>
+        </p>
+
+        <Link
+          href="/"
+          className="shrink-0 whitespace-nowrap text-[12.5px] font-semibold text-marca-verdeOsc underline-offset-4 transition-colors hover:underline sm:text-[13px]"
+        >
+          Salir de la revisión
+        </Link>
+      </div>
+    </div>
   );
 }
 

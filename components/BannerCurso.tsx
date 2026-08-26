@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { conFoco } from "@/lib/foco";
 import type { EstadoCurso } from "@/lib/cursos-servidor";
 import { partirModulo } from "@/lib/modulo";
 import { etiquetaPosicion, ubicarModulo } from "@/lib/temario";
@@ -31,7 +32,17 @@ import Banner from "@/components/Banner";
  *
  * Se renderiza en el servidor: no tiene estado ni interacción.
  */
-export default function BannerCurso({ estados }: { estados: EstadoCurso[] }) {
+export default function BannerCurso({
+  estados,
+  foco = null,
+}: {
+  estados: EstadoCurso[];
+  /**
+   * El contexto de revisión que conservan los enlaces al curso, o null
+   * cuando es el alumno en su ficha. Ver `lib/foco.ts`.
+   */
+  foco?: string | null;
+}) {
   // Sin curso asignado no hay banner. En su lugar, una línea sobria: el
   // alumno no ha hecho nada mal y no se le habla como si fuera un error.
   // Esto es una tarjeta, no una franja: no lleva verde ni amarillo.
@@ -53,7 +64,10 @@ export default function BannerCurso({ estados }: { estados: EstadoCurso[] }) {
   const empezado = completadas > 0;
   const terminado = siguiente === null && total > 0;
 
-  const destino = siguiente ? `/curso/${curso.slug}/${siguiente.id}` : `/curso/${curso.slug}`;
+  const destino = conFoco(
+    siguiente ? `/curso/${curso.slug}/${siguiente.id}` : `/curso/${curso.slug}`,
+    foco
+  );
 
   const etiqueta = terminado
     ? "Curso completado"
@@ -109,7 +123,7 @@ export default function BannerCurso({ estados }: { estados: EstadoCurso[] }) {
         <p key={otro.curso.id} className="mt-3 px-1 text-[14px] leading-[1.5] text-marca-gris">
           También tienes acceso a{" "}
           <Link
-            href={`/curso/${otro.curso.slug}`}
+            href={conFoco(`/curso/${otro.curso.slug}`, foco)}
             className="font-medium text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
           >
             {otro.curso.titulo}

@@ -161,6 +161,10 @@ export default function PanelAlumno({
           idsNuevos={recienGenerados.map((bloque) => bloque.id)}
           idsTerminados={idsTerminados}
           alumnoId={alumnoId}
+          // El equipo revisando: sus enlaces a «Para ti» tienen que seguir
+          // apuntando a este alumno. Sale de lo que ya sabe el panel, sin
+          // prop nueva, y para el alumno es null como en todas partes.
+          foco={esAdministrador ? alumnoId : null}
           generando={generando}
           // El botón de arriba se puede pulsar: decide si el hueco vacío
           // lo señala o cuenta de qué depende.

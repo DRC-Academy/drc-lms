@@ -1,5 +1,6 @@
 import { etiquetaPosicion, type Temario } from "@/lib/temario";
 import Banner from "@/components/Banner";
+import { conFoco } from "@/lib/foco";
 
 /**
  * La franja del plan, arriba del temario.
@@ -24,7 +25,16 @@ import Banner from "@/components/Banner";
  * Ya no necesita ser cliente: sin la rejilla no hay nada que pulsar
  * dentro. Se renderiza en el servidor como el resto de banners.
  */
-export default function PanelPlan({ temario, slug }: { temario: Temario; slug: string }) {
+export default function PanelPlan({
+  temario,
+  slug,
+  foco = null,
+}: {
+  temario: Temario;
+  slug: string;
+  /** Contexto de revisión. Ver `lib/foco.ts`. */
+  foco?: string | null;
+}) {
   const { actual, meses } = temario;
 
   const titulo = actual
@@ -45,7 +55,7 @@ export default function PanelPlan({ temario, slug }: { temario: Temario; slug: s
           actual?.destino
             ? {
                 label: "Continuar",
-                href: `/curso/${slug}/${actual.destino}`,
+                href: conFoco(`/curso/${slug}/${actual.destino}`, foco),
                 srSuffix: actual.titulo,
               }
             : undefined

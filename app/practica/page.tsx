@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { nivelDeBloque } from "@/lib/perfil";
@@ -9,7 +8,7 @@ import {
   tieneContexto,
   urlFormulario,
 } from "@/lib/modos";
-import { exigirSesion } from "@/lib/sesion-servidor";
+import { exigirFoco } from "@/lib/sesion-servidor";
 import {
   leerBloquesGenerados,
   leerProgresoAlumno,
@@ -24,10 +23,17 @@ export const dynamic = "force-dynamic";
 /**
  * La práctica, como sección propia.
  *
- * Siempre es la del alumno de la sesión: no hay `/practica/{id}` porque
- * la práctica se genera del perfil y la última clase de quien entra, y
- * no tiene sentido "ver la práctica de otro". El equipo, que no es
- * alumno de nada, se va al buscador.
+ * SIGUE SIN HABER `/practica/{id}`, y ahora hay que explicar por qué.
+ * La práctica se genera del perfil y de las clases de UN alumno, así que
+ * durante mucho tiempo bastó con sacarlo de la cookie y mandar al equipo
+ * al buscador. Eso dejaba media revisión sin hacer: el equipo podía ver
+ * la ficha de alguien pero no lo que esa persona se encuentra en "Para
+ * ti", que es lo que distingue al producto.
+ *
+ * El alumno viaja ahora en `?alumno=`, no en la ruta, y la diferencia no
+ * es cosmética: una ruta propia sugeriría que hay una práctica "de otro"
+ * que se puede visitar, y lo que hay es la MISMA pantalla mirada desde
+ * fuera. Ver `lib/foco.ts`.
  *
  * MISMO MARCO QUE EL INICIO: fondo `marca-niebla`, columna
  * `max-w-contenido` y los mismos márgenes laterales. Esta pantalla vivía
@@ -41,15 +47,23 @@ export const dynamic = "force-dynamic";
  * de elegir por dónde seguir.
  */
 export default async function PaginaPractica() {
-  const sesion = await exigirSesion();
-  if (sesion.rol !== "alumno") redirect("/");
-
-  const alumnoId = sesion.alumnoId;
+  // El alumno del que habla la pantalla: él mismo, o el que el equipo
+  // está revisando. Sin ninguno de los dos —equipo sin ficha elegida—
+  // esto redirige al buscador, que es lo que ya hacía.
+  //
+  // LO QUE SE GENERE AQUÍ REVISANDO NO ES DEL ALUMNO. No hace falta
+  // ninguna comprobación en esta página: `app/api/generar-bloque` mira
+  // la cookie, ve que quien pide no es alumno y marca el bloque como
+  // `generado_por_equipo`, que lo deja fuera de la lista del alumno, de
+  // su espera entre generaciones y del panel.
+  const { sesion, alumnoId, revisando, paraEnlaces } = await exigirFoco();
 
   const [datos, progreso, generados, ultimaGeneracion] = await Promise.all([
     obtenerAlumno(alumnoId),
     leerProgresoAlumno(alumnoId),
-    leerBloquesGenerados(alumnoId),
+    // Con el rol, igual que en la ficha: los bloques que el equipo
+    // genera para revisar solo salen en la lista de quien los generó.
+    leerBloquesGenerados(alumnoId, sesion.rol === "admin"),
     leerUltimaGeneracion(alumnoId),
   ]);
 
@@ -72,6 +86,8 @@ export default async function PaginaPractica() {
         alumnoId={alumnoId}
         cursoSlug={cursos[0]?.slug ?? null}
         seccion="practica"
+        foco={paraEnlaces}
+        revisando={revisando}
       />
 
       {/* El hueco de abajo es para la barra fija: 120px es lo que mide con

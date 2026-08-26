@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { exigirSesion } from "@/lib/sesion-servidor";
+import { focoActual } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { arbolDelCurso, cursoPorSlug, cursosAsignados } from "@/lib/cursos-servidor";
 import { sinDripEn } from "@/lib/accesos-manuales";
@@ -31,27 +31,47 @@ export const dynamic = "force-dynamic";
  * en el servidor. Al cliente solo le llega qué pintar y qué abrir.
  */
 export default async function IndiceCurso({ params }: { params: { slug: string } }) {
-  const sesion = await exigirSesion();
+  // La tira de "estás revisando" la pone la cabecera, que vive en el
+  // layout: aquí solo hace falta de quién es el curso y qué colgar de
+  // los enlaces para no perderlo al entrar en una lección.
+  const { alumnoId, paraEnlaces } = await focoActual();
 
   const curso = await cursoPorSlug(params.slug);
   if (!curso) notFound();
 
-  // El equipo entra en cualquier curso para revisarlo, pero sin progreso
-  // propio: no es alumno de nada. Se le pinta todo como pendiente.
-  const alumnoId = sesion.rol === "alumno" ? sesion.alumnoId : "";
-  const perfil = sesion.rol === "alumno" ? await obtenerPerfil(sesion.alumnoId) : null;
+  // ---------------------------------------------------------------
+  // QUIÉN ES EL ALUMNO DE ESTA PANTALLA
+  //
+  // Tres casos, y los tres pasan por el mismo código de aquí abajo:
+  //
+  //   · El alumno en su curso. El de siempre.
+  //   · EL EQUIPO REVISANDO UNA FICHA: `alumnoId` es el del alumno
+  //     revisado, así que todo lo que sigue —progreso, drip, guard del
+  //     plan— se resuelve con SUS datos. Es un espejo fiel: lo que el
+  //     equipo ve es lo que ve esa persona, incluidos los módulos que
+  //     todavía no tiene abiertos.
+  //   · El equipo sin ficha, que abre un curso para revisar su
+  //     contenido. `alumnoId` vacío: sin progreso y sin drip, el curso
+  //     entero abierto. Es lo que hacía antes y no se toca.
+  //
+  // No hay una rama por caso a propósito: la diferencia entera cabe en
+  // qué vale `alumnoId`, y multiplicar ramas es cómo se consigue que el
+  // equipo acabe viendo algo distinto de lo que ve el alumno.
+  // ---------------------------------------------------------------
+  const perfil = alumnoId ? await obtenerPerfil(alumnoId) : null;
 
-  // Un alumno solo abre los cursos de su plan. Sin esto, el slug sería
-  // decorativo y cualquiera se leería el temario de los otros niveles.
-  if (sesion.rol === "alumno") {
+  // Solo los cursos de su plan. Sin esto el slug sería decorativo y
+  // cualquiera se leería el temario de los otros niveles. Se aplica
+  // también en revisión: el alumno no puede abrir este curso, así que el
+  // espejo tampoco.
+  if (alumnoId) {
     const suyos = perfil ? await cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : [];
-    if (!suyos.some((c) => c.id === curso.id)) redirect(`/alumno/${sesion.alumnoId}`);
+    if (!suyos.some((c) => c.id === curso.id)) redirect(`/alumno/${alumnoId}`);
   }
 
-  // El equipo no es alumno de nada: sin fecha, ve el curso entero. Es
-  // justo lo que necesita para revisarlo. Y un alumno al que le hayan
-  // abierto este curso entero llega aquí por el mismo camino: `null`
-  // como fecha es lo que `lib/drip.ts` entiende por "sin espera".
+  // Sin alumno no hay fecha y se ve el curso entero. Y un alumno al que
+  // le hayan abierto este curso entero llega aquí por el mismo camino:
+  // `null` como fecha es lo que `lib/drip.ts` entiende por "sin espera".
   const fechaDrip = (await sinDripEn(alumnoId, curso.id))
     ? null
     : comoFecha(perfil?.fechaInicio);
@@ -87,11 +107,14 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
             tenía: está en la pantalla donde se avanza.
 
             Se pinta en el servidor y entra en `Temario` por prop, que es
-            cliente. El equipo lo ve con su progreso a cero, como todo lo
-            demás de esta pantalla: no es alumno de nada. */}
+            cliente. El equipo sin ficha lo ve con el progreso a cero,
+            como todo lo demás de esta pantalla: no es alumno de nada.
+            Revisando una ficha lo ve con el progreso real de ese alumno,
+            que es de lo que va el espejo. */}
         <Temario
           temario={temario}
           slug={curso.slug}
+          foco={paraEnlaces}
           diploma={
             <BannerDiploma estado={calcularDiploma(temario.completadas, temario.totalLecciones)} />
           }

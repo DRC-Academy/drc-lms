@@ -37,9 +37,30 @@
      hueco se reserva aquí y solo cuando la barra existe: las pantallas
      del equipo y el acceso no la llevan.
      --------------------------------------------------------------- */
+  /* ---------------------------------------------------------------
+     LA ALTURA DE ESA BARRA, COMO VARIABLE
+
+     Hacía falta porque el hueco del final de la página no es lo único
+     que depende de ella. Una barra `sticky bottom-0` —la de «Marcar como
+     completada» de la lección— se ancla al borde de la VENTANA, y el
+     `padding-bottom` de aquí abajo no mueve la ventana: la barra
+     aparcaba exactamente donde está la navegación y quedaba debajo, con
+     el botón principal de la pantalla tapado en móvil.
+
+     Con la altura en una variable, quien se apoye en el suelo la suma y
+     ninguno de los dos tiene que saber el número del otro. Vale 0 cuando
+     no hay navegación —escritorio, pantallas del equipo, acceso— así que
+     la suma es correcta en todos los casos sin escribir ninguna
+     excepción.
+     --------------------------------------------------------------- */
+  :root {
+    --nav-inferior: 0px;
+  }
+
   @media (max-width: 1023px) {
     body:has(nav[data-nav-inferior]) {
-      padding-bottom: 78px;
+      --nav-inferior: 78px;
+      padding-bottom: var(--nav-inferior);
     }
   }
 

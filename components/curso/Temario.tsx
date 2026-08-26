@@ -21,10 +21,18 @@ import { textoDeEspera } from "@/lib/drip";
 export default function Temario({
   temario,
   slug,
+  foco = null,
   diploma,
 }: {
   temario: DatosTemario;
   slug: string;
+  /**
+   * El contexto de revisión que conservan los enlaces a cada módulo, o
+   * null cuando es el alumno en su curso. Viaja pegado a `slug` porque
+   * los dos existen para lo mismo: construir el href de una lección.
+   * Ver `lib/foco.ts`.
+   */
+  foco?: string | null;
   /**
    * El banner del diploma, renderizado en el servidor. Entra por prop y
    * no se importa aquí para que siga siendo servidor: este componente es
@@ -78,7 +86,7 @@ export default function Temario({
 
   return (
     <>
-      <PanelPlan temario={temario} slug={slug} />
+      <PanelPlan temario={temario} slug={slug} foco={foco} />
 
       {/* EL RECORRIDO Y LA META, en ese orden y las dos fuera de la
           franja. La línea dice dónde estás en los seis meses; el diploma,
@@ -125,6 +133,7 @@ export default function Temario({
             key={mes.numero}
             mes={mes}
             slug={slug}
+            foco={foco}
             abierto={!!abiertos[mes.numero]}
             ultimo={i === temario.meses.length - 1}
             onAlternar={alternarMes}
@@ -149,6 +158,7 @@ export default function Temario({
 function Mes({
   mes,
   slug,
+  foco,
   abierto,
   ultimo,
   onAlternar,
@@ -156,6 +166,7 @@ function Mes({
 }: {
   mes: MesTemario;
   slug: string;
+  foco: string | null;
   abierto: boolean;
   ultimo: boolean;
   onAlternar: (numero: number) => void;
@@ -267,7 +278,7 @@ function Mes({
         {/* ----------------------------- SEMANAS ----------------------------- */}
         {abierto && (
           <div className="px-1 pb-2.5 pt-1.5 min-[900px]:pl-2.5 min-[900px]:pr-0">
-            {hechos.length > 0 && <Completados modulos={hechos} slug={slug} />}
+            {hechos.length > 0 && <Completados modulos={hechos} slug={slug} foco={foco} />}
 
             {mes.semanas.map((semana) => {
               // Una semana entera hecha no deja cabecera vacía: sus
@@ -286,7 +297,7 @@ function Mes({
 
                   <ul className="flex flex-col gap-1.5">
                     {pendientes.map((modulo) => (
-                      <FilaModulo key={modulo.id} modulo={modulo} slug={slug} />
+                      <FilaModulo key={modulo.id} modulo={modulo} slug={slug} foco={foco} />
                     ))}
                   </ul>
                 </div>
@@ -321,7 +332,15 @@ function Mes({
  * mes y volver a abrirlo devuelve la vista limpia, que es lo que se
  * espera de algo que se ha recogido a propósito.
  */
-function Completados({ modulos, slug }: { modulos: ModuloTemario[]; slug: string }) {
+function Completados({
+  modulos,
+  slug,
+  foco,
+}: {
+  modulos: ModuloTemario[];
+  slug: string;
+  foco: string | null;
+}) {
   const [abierto, setAbierto] = useState(false);
 
   return (
@@ -352,7 +371,7 @@ function Completados({ modulos, slug }: { modulos: ModuloTemario[]; slug: string
       {abierto && (
         <ul className="mt-1.5 flex flex-col gap-1.5">
           {modulos.map((modulo) => (
-            <FilaModulo key={modulo.id} modulo={modulo} slug={slug} />
+            <FilaModulo key={modulo.id} modulo={modulo} slug={slug} foco={foco} />
           ))}
         </ul>
       )}

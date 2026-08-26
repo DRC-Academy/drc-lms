@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { LeccionIndice } from "@/lib/cursos-servidor";
+import { conFoco } from "@/lib/foco";
 
 /**
  * El lateral de lecciones del módulo.
@@ -24,6 +25,7 @@ export default function LateralLecciones({
   cursoTotal,
   replegado,
   alVolver,
+  foco = null,
 }: {
   lecciones: LeccionIndice[];
   actualId: string;
@@ -36,6 +38,8 @@ export default function LateralLecciones({
   replegado: boolean;
   /** Vuelve a la teoría desde el carril. */
   alVolver: () => void;
+  /** Contexto de revisión que conservan los enlaces. Ver `lib/foco.ts`. */
+  foco?: string | null;
 }) {
   const hechas = lecciones.filter((l) => l.completada).length;
   const porcentaje = lecciones.length > 0 ? Math.round((hechas / lecciones.length) * 100) : 0;
@@ -58,7 +62,7 @@ export default function LateralLecciones({
           {lecciones.map((leccion) => (
             <li key={leccion.id}>
               <Link
-                href={`/curso/${cursoSlug}/${leccion.id}`}
+                href={conFoco(`/curso/${cursoSlug}/${leccion.id}`, foco)}
                 aria-label={leccion.titulo}
                 aria-current={leccion.id === actualId ? "page" : undefined}
                 className={`block h-3.5 w-3.5 rounded-full border-[1.5px] transition-colors ${
@@ -107,14 +111,19 @@ export default function LateralLecciones({
       <ol className="flex-1 overflow-y-auto px-3 pb-4 pt-3">
         {lecciones.map((leccion) => (
           <li key={leccion.id}>
-            <ItemLeccion leccion={leccion} actual={leccion.id === actualId} cursoSlug={cursoSlug} />
+            <ItemLeccion
+              leccion={leccion}
+              actual={leccion.id === actualId}
+              cursoSlug={cursoSlug}
+              foco={foco}
+            />
           </li>
         ))}
       </ol>
 
       <div className="border-t border-marca-nieblaOscura px-[18px] pb-4 pt-3.5">
         <Link
-          href={`/curso/${cursoSlug}`}
+          href={conFoco(`/curso/${cursoSlug}`, foco)}
           className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-marca-borde bg-marca-niebla px-3 py-[11px] text-[13.5px] font-semibold text-marca-tinta transition-colors hover:bg-marca-nieblaOscura"
         >
           Ver el curso completo
@@ -145,6 +154,7 @@ export function ItemLeccion({
   cursoSlug,
   compacto,
   alElegir,
+  foco = null,
 }: {
   leccion: LeccionIndice;
   actual: boolean;
@@ -152,10 +162,12 @@ export function ItemLeccion({
   /** En el panel de móvil el texto baja un punto. */
   compacto?: boolean;
   alElegir?: () => void;
+  /** Contexto de revisión. Ver `lib/foco.ts`. */
+  foco?: string | null;
 }) {
   return (
     <Link
-      href={`/curso/${cursoSlug}/${leccion.id}`}
+      href={conFoco(`/curso/${cursoSlug}/${leccion.id}`, foco)}
       onClick={alElegir}
       aria-current={actual ? "page" : undefined}
       className={`mb-0.5 flex items-start gap-[11px] rounded-r-[10px] border-l-[2.5px] py-3 pl-3.5 pr-3 transition-colors ${

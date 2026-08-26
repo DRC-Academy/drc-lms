@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
@@ -25,6 +24,21 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   // Antes de leer nada: un alumno solo abre su propia ficha, aunque
   // escriba otro id en la barra de direcciones. El equipo, cualquiera.
   const sesion = await exigirAccesoAFicha(params.id);
+
+  // ---------------------------------------------------------------
+  // AQUÍ EMPIEZA LA REVISIÓN
+  //
+  // Esta pantalla es la puerta: el equipo llega desde el buscador y de
+  // aquí sale hacia el curso, "Para ti" y "Mi progreso". El id ya está
+  // en la ruta, así que la ficha no necesita el parámetro; lo necesitan
+  // los enlaces que salen de ella, que es lo que evita que la
+  // navegación salte a la identidad de quien mira.
+  //
+  // Para el alumno esto es null y no cambia absolutamente nada: sus
+  // enlaces siguen siendo los de siempre.
+  // ---------------------------------------------------------------
+  const revisando = sesion.rol === "admin";
+  const foco = revisando ? params.id : null;
 
   // Gestión primero: de su `plan` y su `nivel` sale qué cursos le tocan,
   // así que la consulta de cursos no puede ir en el mismo lote.
@@ -127,9 +141,13 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
     <div className="flex min-h-screen flex-col bg-marca-niebla">
       <Cabecera
         nombre={nombre || undefined}
-        alumnoId={sesion.alumnoId}
+        // El de la ficha, no el de la sesión: es lo que le da navegación
+        // al equipo sin sacarlo del alumno que está revisando.
+        alumnoId={params.id}
         cursoSlug={estadosCurso[0]?.curso.slug ?? null}
         seccion="inicio"
+        foco={foco}
+        revisando={revisando}
       />
 
       <main className="mx-auto w-full max-w-contenido flex-1 px-4 pb-8 pt-[18px] lg:px-9 lg:pb-11 lg:pt-8">
@@ -142,16 +160,18 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
             por pantalla y 172 detrás del buscador convertían cualquier
             captura en una fuga. Aquí es una ficha abierta a propósito, de
             una en una, y solo para el equipo —el alumno ya sabe su
-            correo, así que enseñárselo sería ruido—. */}
-        {sesion.rol === "admin" && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
-            <Link
-              href="/"
-              className="text-[14px] text-marca-gris transition-colors hover:text-marca-tinta"
-            >
-              ← Cambiar de alumno
-            </Link>
+            correo, así que enseñárselo sería ruido—.
 
+            YA NO LLEVA "← Cambiar de alumno". No porque estorbara, sino
+            porque era la única salida al buscador y solo existía en esta
+            pantalla: el equipo que entraba en el curso o en "Para ti" se
+            quedaba sin ella. Ahora la ofrece la tira de revisión de la
+            cabecera, en todas y siempre en el mismo sitio. Dejar aquí
+            además un segundo enlace al mismo destino, con otro rótulo y a
+            dos dedos del primero, es justo lo contrario de que la salida
+            se reconozca. */}
+        {sesion.rol === "admin" && (
+          <div className="mb-4 flex flex-wrap items-center justify-end gap-x-4 gap-y-1.5">
             {perfil?.email && (
               <a
                 href={`mailto:${perfil.email}`}
@@ -191,7 +211,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           generadosIniciales={generados}
           idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}
-          banner={<BannerCurso estados={estadosCurso} />}
+          banner={<BannerCurso estados={estadosCurso} foco={foco} />}
         />
 
       </main>

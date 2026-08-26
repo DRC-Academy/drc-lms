@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ModuloTemario } from "@/lib/temario";
 import { textoDeEspera } from "@/lib/drip";
+import { conFoco } from "@/lib/foco";
 
 /**
  * Un módulo dentro de su semana.
@@ -24,9 +25,12 @@ import { textoDeEspera } from "@/lib/drip";
 export default function FilaModulo({
   modulo,
   slug,
+  foco = null,
 }: {
   modulo: ModuloTemario;
   slug: string;
+  /** Contexto de revisión, para no perder al alumno al abrir la lección. */
+  foco?: string | null;
 }) {
   const { esActual, hecho, totalLecciones, completadas, disponible } = modulo;
 
@@ -141,7 +145,10 @@ export default function FilaModulo({
 
   return (
     <li>
-      <Link href={`/curso/${slug}/${modulo.destino}`} className={`${base} ${aspecto} w-full`}>
+      <Link
+        href={conFoco(`/curso/${slug}/${modulo.destino}`, foco)}
+        className={`${base} ${aspecto} w-full`}
+      >
         {contenido}
         <span className="sr-only">
           {hecho ? "Repasar" : esActual ? "Continuar" : "Empezar"} el módulo {modulo.numero}

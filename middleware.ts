@@ -27,6 +27,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { NOMBRE_COOKIE, abrirSesion } from "@/lib/sesion";
+import { CABECERA_URL } from "@/lib/foco";
 
 /**
  * Lo único a lo que se llega sin haber entrado.
@@ -54,16 +55,49 @@ function esPublica(ruta: string): boolean {
   return PUBLICAS.some((publica) => ruta === publica || ruta.startsWith(`${publica}/`));
 }
 
+/**
+ * La URL de la petición, reenviada a los componentes de servidor.
+ *
+ * HACE FALTA POR LOS LAYOUTS. Una página recibe `searchParams`, pero un
+ * layout no: es la limitación del App Router que impide que
+ * `app/curso/[slug]/layout.tsx` —donde vive la cabecera con la
+ * navegación— sepa a qué alumno apunta el contexto de revisión.
+ *
+ * Sacar la cabecera del layout para que fuera una página la que lea el
+ * parámetro deshace el arreglo que la puso ahí: volvería a
+ * re-renderizarse en cada salto de lección. Así que lo que viaja es la
+ * URL, y `focoActual()` la lee desde los dos sitios por igual.
+ *
+ * Va en la petición y no en la respuesta: es un dato de entrada para el
+ * servidor, no algo que el navegador deba ver.
+ *
+ * `set` Y NO `append`, QUE ES LA PARTE QUE IMPORTA: si el visitante manda
+ * su propia cabecera con este nombre, aquí se PISA con la URL de verdad.
+ * Sin eso, lo que llegaría al servidor sería una URL elegida por quien
+ * pregunta. Hoy no habría con qué aprovecharlo —a un alumno se le ignora
+ * el foco entero, ver `focoActual`— pero el que lea esta cabecera dentro
+ * de un año no tiene por qué volver a comprobarlo.
+ *
+ * Por lo mismo pasan por aquí TAMBIÉN las rutas públicas, que no leen
+ * nada de esto: así no queda ni un camino por el que la cabecera llegue
+ * al servidor con un valor que no haya puesto el middleware.
+ */
+function conUrl(peticion: NextRequest) {
+  const cabeceras = new Headers(peticion.headers);
+  cabeceras.set(CABECERA_URL, peticion.nextUrl.toString());
+  return NextResponse.next({ request: { headers: cabeceras } });
+}
+
 export async function middleware(peticion: NextRequest) {
   const { pathname } = peticion.nextUrl;
 
   // El `matcher` ya las deja fuera. Se repite aquí porque un matcher es
   // una expresión regular larga y fácil de romper sin darse cuenta:
   // esta comprobación es la que se lee.
-  if (esPublica(pathname)) return NextResponse.next();
+  if (esPublica(pathname)) return conUrl(peticion);
 
   const sesion = await abrirSesion(peticion.cookies.get(NOMBRE_COOKIE)?.value);
-  if (sesion) return NextResponse.next();
+  if (sesion) return conUrl(peticion);
 
   // A la API se le contesta con un 401, no con una redirección: quien
   // la llama es `fetch`, y una redirección a HTML le llegaría como una

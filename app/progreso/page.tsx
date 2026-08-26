@@ -1,7 +1,6 @@
-import { redirect } from "next/navigation";
 import { obtenerPerfil, obtenerRecorrido } from "@/lib/gestion";
 import { calcularEstimacion, nivelEfectivo } from "@/lib/estimacion";
-import { exigirSesion } from "@/lib/sesion-servidor";
+import { exigirFoco } from "@/lib/sesion-servidor";
 import { cursosAsignados } from "@/lib/cursos-servidor";
 import Cabecera from "@/components/Cabecera";
 import Ficha from "@/components/progreso/Ficha";
@@ -28,20 +27,20 @@ const URL_AMPLIAR = process.env.URL_AMPLIAR_PLAN || "https://drcacademy.com/mi-c
  *
  * AQUÍ NO HACE FALTA TOKEN. Allí la pantalla se abre desde un enlace que
  * manda el profesor y `progress_tokens` es lo que autoriza; aquí el LMS
- * ya sabe quién ha entrado, así que la sección es suya sin más. Por eso
- * tampoco hay `/progreso/{id}`, igual que en "Para ti": el progreso es
- * el de quien mira, y el equipo, que no es alumno de nada, se va al
- * buscador.
+ * ya sabe quién ha entrado, así que la sección es suya sin más. Y
+ * tampoco hay `/progreso/{id}`, igual que en "Para ti": cuando el equipo
+ * revisa, el alumno viaja en `?alumno=` —ver `lib/foco.ts`— porque no es
+ * otra pantalla, es la misma mirada desde fuera.
  *
  * ESTA PÁGINA SOLO ORQUESTA. Lee, calcula la estimación y reparte; no
  * decide nada sobre qué se enseña. Eso está dentro de la ficha, en el
  * mismo sitio donde lo tiene Gestión.
  */
 export default async function PaginaProgreso() {
-  const sesion = await exigirSesion();
-  if (sesion.rol !== "alumno") redirect("/");
-
-  const alumnoId = sesion.alumnoId;
+  // Igual que "Para ti": el alumno de la sesión, o el que el equipo está
+  // revisando. Esta pantalla es de solo lectura —no hay nada que
+  // guardar— así que la revisión no necesita ninguna precaución extra.
+  const { alumnoId, revisando, paraEnlaces } = await exigirFoco();
 
   const [perfil, recorrido] = await Promise.all([
     obtenerPerfil(alumnoId),
@@ -82,6 +81,8 @@ export default async function PaginaProgreso() {
         alumnoId={alumnoId}
         cursoSlug={cursos[0]?.slug ?? null}
         seccion="progreso"
+        foco={paraEnlaces}
+        revisando={revisando}
       />
 
       <Ficha

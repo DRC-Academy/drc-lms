@@ -11,6 +11,7 @@ import IndiceLeccion from "@/components/leccion/IndiceLeccion";
 import FlujoEjercicios from "@/components/leccion/FlujoEjercicios";
 import BotonCompletar from "@/components/leccion/BotonCompletar";
 import Banner from "@/components/Banner";
+import { conFoco } from "@/lib/foco";
 
 /**
  * La pantalla de lección entera: teoría, ejercicios y cierre.
@@ -40,6 +41,7 @@ export default function VistaLeccion({
   esUltimaDelModulo,
   registrarIntentos,
   profesor,
+  foco = null,
 }: {
   cursoSlug: string;
   cursoCompletadas: number;
@@ -57,6 +59,11 @@ export default function VistaLeccion({
   esUltimaDelModulo: boolean;
   registrarIntentos: boolean;
   profesor: string;
+  /**
+   * El contexto de revisión que conservan los enlaces de esta pantalla.
+   * null para el alumno, que es el caso normal. Ver `lib/foco.ts`.
+   */
+  foco?: string | null;
 }) {
   const hayTeoria = contenidoHtml.trim() !== "";
   const hayEjercicios = ejercicios.length > 0;
@@ -141,6 +148,7 @@ export default function VistaLeccion({
           cursoTotal={cursoTotal}
           replegado={enEjercicios}
           alVolver={() => setEnEjercicios(false)}
+          foco={foco}
         />
 
         {enEjercicios ? (
@@ -152,6 +160,7 @@ export default function VistaLeccion({
               leccionId={leccion.id}
               cursoSlug={cursoSlug}
               siguienteId={siguienteId}
+              foco={foco}
               alSalir={() => {
                 setEnEjercicios(false);
                 window.scrollTo({ top: 0 });
@@ -165,18 +174,18 @@ export default function VistaLeccion({
                   en la del medio a 680px y el vídeo rompiendo a lo ancho.
                   Ver `globals.css`. */}
               <div className="columna-leccion flex-1 px-4 pb-6 pt-7 min-[1100px]:px-14 min-[1100px]:pb-6 min-[1100px]:pt-10">
-                {/* Antes iba debajo del botón de completar, donde se leía
-                    cuando ya lo habías pulsado. Va arriba, que es cuando
-                    sirve de algo. */}
-                {!registrarIntentos && (
-                  <p className="mb-5 flex items-center gap-2.5 rounded-[12px] border border-marca-examenBorde bg-marca-examen px-4 py-3 text-[13.5px] leading-[1.4] text-marca-tinta">
-                    <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-marca-amarillo" />
-                    <span>
-                      <strong className="font-semibold">Estás viendo el curso como equipo.</strong>{" "}
-                      Nada de lo que marques aquí guarda progreso.
-                    </span>
-                  </p>
-                )}
+                {/* AQUÍ HABÍA UN AVISO DE «estás viendo el curso como
+                    equipo», y se ha ido a la cabecera. No por sitio:
+                    porque era el ÚNICO de la aplicación. El equipo sabía
+                    que estaba revisando dentro de una lección —la
+                    pantalla donde menos falta hace, porque acaba de
+                    entrar desde la ficha— y no lo sabía en el temario, ni
+                    en «Para ti», ni en «Mi progreso», que son las tres
+                    donde sí se olvida.
+
+                    Ahora lo dice la tira de `components/Cabecera.tsx`,
+                    que sale en todas y además nombra al alumno y ofrece
+                    la salida. Ver `TiraRevision`. */}
 
                 <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
                   Lección {posicion + 1} de {hermanas.length}
@@ -251,15 +260,29 @@ export default function VistaLeccion({
                   elige el que no deja constancia de que ha hecho la
                   lección, que es justo el que no queremos que elija.
                   Para volver atrás sí hace falta la flecha: no hay otra. */}
-              <div data-barra-inferior className="sticky bottom-0 border-t border-marca-borde bg-white/[0.94] backdrop-blur-md">
+              {/* SE APOYA SOBRE LA NAVEGACIÓN, NO DEBAJO. `bottom-0`
+                  ancla esta barra al borde de la ventana, que en móvil
+                  es justo donde está la barra de secciones: el botón
+                  principal de la lección quedaba tapado por ella y la
+                  única salida al inicio, inalcanzable. `--nav-inferior`
+                  vale 78px cuando esa navegación existe y 0 cuando no
+                  —ver `globals.css`—, así que esto sirve igual en
+                  escritorio, donde no hay nada debajo. */}
+              <div
+                data-barra-inferior
+                className="sticky bottom-[var(--nav-inferior)] border-t border-marca-borde bg-white/[0.94] backdrop-blur-md"
+              >
                 <div className="mx-auto w-full max-w-[calc(680px+7rem)] px-3.5 pb-4 pt-3 min-[1100px]:px-14 min-[1100px]:py-3.5">
                   <div className="flex items-center gap-3 min-[1100px]:gap-4">
-                    <FlechaLeccion href={anteriorId ? `/curso/${cursoSlug}/${anteriorId}` : null} />
+                    <FlechaLeccion
+                      href={anteriorId ? conFoco(`/curso/${cursoSlug}/${anteriorId}`, foco) : null}
+                    />
 
                     <BotonCompletar
                       leccionId={leccion.id}
                       cursoSlug={cursoSlug}
                       siguienteId={siguienteId}
+                      foco={foco}
                       className="flex-1 rounded-full btn-verde px-6 py-[13px] text-center text-[15px] font-semibold min-[1100px]:py-3.5 min-[1100px]:text-[15.5px]"
                     >
                       <span className="min-[1100px]:hidden">
@@ -326,6 +349,7 @@ export default function VistaLeccion({
                     leccion={h}
                     actual={h.id === leccion.id}
                     cursoSlug={cursoSlug}
+                    foco={foco}
                     compacto
                     alElegir={() => setPanel(false)}
                   />
@@ -335,7 +359,7 @@ export default function VistaLeccion({
 
             <div className="border-t border-marca-nieblaOscura px-[18px] pb-5 pt-3.5">
               <Link
-                href={`/curso/${cursoSlug}`}
+                href={conFoco(`/curso/${cursoSlug}`, foco)}
                 className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-marca-borde bg-marca-niebla px-3 py-[13px] text-[14px] font-semibold text-marca-tinta"
               >
                 Ver el curso completo

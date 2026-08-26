@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { conFoco } from "@/lib/foco";
 import { Fragment } from "react";
 import type { Bloque } from "@/lib/data";
 
@@ -65,6 +66,7 @@ export default function BloquesGenerados({
   idsNuevos,
   idsTerminados,
   alumnoId,
+  foco = null,
   generando,
   puedeGenerar,
   totalPractica,
@@ -77,6 +79,8 @@ export default function BloquesGenerados({
   /** Los que ya ha cerrado con un intento completo. Desaparecen de aquí. */
   idsTerminados: string[];
   alumnoId: string;
+  /** Contexto de revisión de los enlaces a «Para ti». Ver `lib/foco.ts`. */
+  foco?: string | null;
   /** Con true se enseña el hueco animado del que está en camino. */
   generando: boolean;
   /**
@@ -136,12 +140,19 @@ export default function BloquesGenerados({
         {generando ? (
           <EsqueletoBloque />
         ) : pendiente ? (
-          <TarjetaPendiente bloque={pendiente} esNuevo={esNuevo} alumnoId={alumnoId} restantes={restantes} />
+          <TarjetaPendiente
+            bloque={pendiente}
+            esNuevo={esNuevo}
+            alumnoId={alumnoId}
+            foco={foco}
+            restantes={restantes}
+          />
         ) : (
           <HuecoVacio
             sinNinguno={bloques.length === 0}
             puedeGenerar={puedeGenerar}
             totalPractica={totalPractica}
+            foco={foco}
           />
         )}
       </div>
@@ -160,11 +171,13 @@ function TarjetaPendiente({
   bloque,
   esNuevo,
   alumnoId,
+  foco,
   restantes,
 }: {
   bloque: Bloque;
   esNuevo: boolean;
   alumnoId: string;
+  foco: string | null;
   restantes: number;
 }) {
   return (
@@ -232,7 +245,7 @@ function TarjetaPendiente({
           <p className="text-center text-[13px] leading-[1.4] text-marca-gris">
             y {restantes} más en{" "}
             <Link
-              href="/practica"
+              href={conFoco("/practica", foco)}
               className="font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
             >
               Para ti
@@ -256,10 +269,12 @@ function HuecoVacio({
   sinNinguno,
   puedeGenerar,
   totalPractica,
+  foco,
 }: {
   sinNinguno: boolean;
   puedeGenerar: boolean;
   totalPractica: number;
+  foco: string | null;
 }) {
   const titulo = sinNinguno ? "Todavía no has preparado ninguno" : "Los has hecho todos";
 
@@ -302,7 +317,7 @@ function HuecoVacio({
           <p className="mt-3 text-[13.5px] leading-[1.45] text-marca-gris">
             Puedes repetir cualquiera desde{" "}
             <Link
-              href="/practica"
+              href={conFoco("/practica", foco)}
               className="font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
             >
               Para ti

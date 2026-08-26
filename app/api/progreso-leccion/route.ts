@@ -16,6 +16,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
 import { completarLeccion } from "@/lib/cursos-servidor";
+import { conFoco, leerFoco } from "@/lib/foco";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,11 +40,21 @@ export async function POST(peticion: NextRequest) {
 
   // El equipo revisa cursos, no los cursa: lo que marque no es progreso
   // de nadie. Mismo criterio que en `app/api/progreso`.
+  //
+  // EL ALUMNO SALE DE LA COOKIE, y el campo `alumno` del formulario NO
+  // entra en esta decisión ni en la escritura: solo se devuelve en la
+  // redirección para que el equipo no se caiga de la ficha que estaba
+  // revisando. Si viniera de fuera y se usara para escribir, cualquiera
+  // marcaría lecciones en el curso de otro.
   if (sesion.rol === "alumno") {
     await completarLeccion(sesion.alumnoId, leccionId);
   }
 
-  const destino = UUID.test(siguiente) ? `/curso/${slug}/${siguiente}` : `/curso/${slug}`;
+  const destino = conFoco(
+    UUID.test(siguiente) ? `/curso/${slug}/${siguiente}` : `/curso/${slug}`,
+    // Al alumno no se le cuelga nunca: su navegación no lleva parámetro.
+    sesion.rol === "alumno" ? null : leerFoco(String(datos.get("alumno") ?? ""))
+  );
 
   // 303 y no 307: el 307 conservaría el método y el navegador repetiría
   // el POST contra la lección siguiente.

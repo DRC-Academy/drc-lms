@@ -20,6 +20,11 @@ export default async function PaginaBloque({
   // guard que la ficha, o se colaría por aquí lo que se cierra allí.
   const sesion = await exigirAccesoAFicha(params.id);
 
+  // Igual que en la ficha: el id ya está en la ruta, y el foco existe
+  // para que los enlaces que salen de aquí no pierdan al alumno.
+  const revisando = sesion.rol === "admin";
+  const foco = revisando ? params.id : null;
+
   const datos = await obtenerAlumno(params.id);
   if (!datos) notFound();
 
@@ -48,9 +53,11 @@ export default async function PaginaBloque({
       <>
         <Cabecera
           nombre={nombre}
-          alumnoId={sesion.alumnoId}
+          alumnoId={params.id}
           cursoSlug={cursoSlug}
           seccion="practica"
+          foco={foco}
+          revisando={revisando}
         />
         <div className="mx-auto max-w-md px-6 pt-16 text-center">
           <div className="tarjeta">
@@ -88,9 +95,11 @@ export default async function PaginaBloque({
     <div className="flex min-h-dvh flex-col">
       <Cabecera
         nombre={nombre}
-        alumnoId={sesion.alumnoId}
+        alumnoId={params.id}
         cursoSlug={cursoSlug}
         seccion="practica"
+        foco={foco}
+        revisando={revisando}
       />
       <Practica bloque={bloque} alumnoId={params.id} profesor={datos.perfil?.profesor ?? ""} />
     </div>
