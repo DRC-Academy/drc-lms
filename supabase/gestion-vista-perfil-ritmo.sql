@@ -120,10 +120,11 @@ select pg_get_viewdef('public.vista_perfil_alumno'::regclass, true);
 --   begin;
 --     <el bloque do $$ … $$;>
 --     <las consultas del PASO 3>
+--     <las consultas del PASO 4>
 --   rollback;
 --
--- Comprueba que el PASO 3 devuelve 174 / 174 / 173 / 0 / 1 / 12 y haz
--- `rollback`. Si cuadra, repite con `commit`.
+-- Comprueba que el PASO 3 devuelve 174 / 174 / 173 / 0 / 1 / 12 y que el
+-- PASO 4 no protesta, y haz `rollback`. Si cuadra, repite con `commit`.
 --
 -- ESTE BLOQUE SE APOYA EN EL ANTERIOR. Si `gestion-vista-perfil-token.sql`
 -- ya se corrió, sus dos columnas están dentro de `base.*` y siguen
@@ -263,6 +264,76 @@ select horas_semanales, count(*) as alumnos
 from public.vista_perfil_alumno
 group by horas_semanales
 order by horas_semanales;
+
+
+-- ---------------------------------------------------------------
+-- PASO 4 — COMPROBAR QUE LA VISTA SIGUE CERRADA
+--
+-- `create or replace view` NO borra los permisos: no es un drop más un
+-- create, así que los grants sobreviven al reemplazo. Lo que sí se
+-- pierde, y en silencio, son las OPCIONES de la vista, y entre ellas
+-- `security_invoker`. El bloque del PASO 2 las vuelve a poner, pero
+-- esto es justamente la clase de cosa que hay que ver comprobada y no
+-- prometida: por debajo de esta vista están `assignments` y
+-- `student_profiles`, con datos de alumnos y de profesores.
+--
+-- LO QUE TIENE QUE SALIR:
+--
+--   · las dos filas de roles con `puede_leer` y `puede_escribir` en false;
+--   · `security_invoker=on` entre las opciones, si estaba antes de correr
+--     el PASO 2 (el bloque avisa por `notice` de cuáles conservó);
+--   · el mismo propietario de siempre.
+--
+-- EL LMS NO SE ENTERA DE NADA DE ESTO y tiene que seguir sin enterarse:
+-- entra con la service role key, que salta el RLS y no pasa ni por
+-- `anon` ni por `authenticated`. Que esos dos roles sigan cerrados es
+-- lo que separa "una vista interna que lee el LMS" de "una vista que
+-- puede leer cualquiera con la clave pública del proyecto". Ver la
+-- cabecera de `lib/supabase-server.ts`.
+-- ---------------------------------------------------------------
+
+-- `has_table_privilege` y no `information_schema.role_table_grants`: el
+-- segundo lista los grants escritos a nombre del rol y se le escapan los
+-- que llegan por `grant … to public` o heredados de otro rol. Esto
+-- contesta la pregunta que importa —¿puede leer, sí o no?— y no cuál fue
+-- la sentencia que lo permitió.
+select
+  rol,
+  has_table_privilege(rol::name, 'public.vista_perfil_alumno', 'select') as puede_leer,
+  has_table_privilege(rol::name, 'public.vista_perfil_alumno', 'insert') as puede_escribir
+from unnest(array['anon', 'authenticated']) as rol;
+
+-- Las opciones y el propietario, que es lo que el reemplazo sí puede
+-- haberse llevado por delante.
+select
+  pg_get_userbyid(c.relowner)                                    as propietario,
+  coalesce(array_to_string(c.reloptions, ', '), '(sin opciones)') as opciones
+from pg_class c
+where c.oid = 'public.vista_perfil_alumno'::regclass;
+
+-- Y por si las dos filas de arriba se leen de pasada en una rejilla
+-- larga, esto avisa a gritos.
+--
+-- ES UNA ALARMA, NO UNA VUELTA ATRÁS: si ya hiciste `commit` del PASO 2,
+-- la excepción no deshace nada, solo te impide no verlo. Dentro del
+-- ensayo en seco sí aborta la transacción, que es donde quieres que
+-- salte.
+do $$
+declare
+  abiertos text;
+begin
+  select string_agg(rol, ', ' order by rol)
+    into abiertos
+  from unnest(array['anon', 'authenticated']) as rol
+  where has_table_privilege(rol::name, 'public.vista_perfil_alumno', 'select');
+
+  if abiertos is not null then
+    raise exception 'vista_perfil_alumno quedó legible para: %. Revócalo antes de seguir.', abiertos;
+  end if;
+
+  raise notice 'vista_perfil_alumno sigue cerrada a anon y authenticated.';
+end
+$$;
 
 
 -- ---------------------------------------------------------------
