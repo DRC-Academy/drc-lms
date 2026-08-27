@@ -5,22 +5,27 @@
 // MCER y los hitos de clase, que son constantes del negocio, no datos.
 // Las lecturas están en `lib/gestion.ts`.
 //
-// LO QUE TODAVÍA NO ESTÁ, Y POR QUÉ NO ES UN OLVIDO
+// DÓNDE ESTÁ LA ESTIMACIÓN, QUE AQUÍ NO ESTÁ
 //
-// Faltan tres cosas de la ficha de Gestión: las horas semanales, el
-// nivel meta y la estimación de cuánto queda para el siguiente nivel.
-// Las tres salen de `assignments`, que NO está en el contrato de
+// Las horas semanales, el nivel meta y cuánto le queda al alumno para
+// alcanzarlo NO viven en este archivo: están en `lib/estimacion.ts`.
+// Aquí solo la escalera y los hitos, que son constantes de seis y de
+// cuatro valores.
+//
+// Las horas salen de `assignments`, que NO está en el contrato de
 // `lib/supabase-server.ts` —el LMS solo puede leer dos vistas y
-// `class_analyses`—, así que el LMS no puede calcularlas sin que antes
-// se amplíe `vista_perfil_alumno` en la base de Gestión.
+// `class_analyses`—, así que hubo que ampliar `vista_perfil_alumno` en
+// la base de Gestión: `supabase/gestion-vista-perfil-ritmo.sql`. Por
+// ese contrato viajan HECHOS (horas, plan contratado, columnas de
+// nivel); la fórmula no cruza.
 //
-// El cálculo en sí vive en `lib/progressEstimate.ts` de Gestión, y ese
-// archivo dice de sí mismo que es la única fuente de verdad. Copiarlo
-// aquí duplicaría una cifra sobre el futuro del alumno: el día que allí
-// se ajuste el multiplicador de práctica, las dos pantallas le
-// prometerían fechas distintas. Cuando se exponga, lo que cruce el
-// contrato debería ser el RESULTADO (nivel meta y horas que faltan), no
-// la fórmula.
+// El cálculo se COPIÓ, no se expuso. `lib/progressEstimate.ts` de
+// Gestión sigue siendo la única fuente de verdad y `lib/estimacion.ts`
+// es un port literal suyo, con la advertencia de siempre: si allí se
+// ajusta el multiplicador de práctica y aquí no, las dos pantallas le
+// prometen al mismo alumno fechas distintas y no hay compilador que lo
+// note. El porqué de copiar en vez de calcular en SQL está en la
+// cabecera de `lib/estimacion.ts`.
 // ---------------------------------------------------------------
 
 /** Los seis peldaños, de menos a más. Es la escala oficial. */
