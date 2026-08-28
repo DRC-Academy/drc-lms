@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { normalizarRespuesta } from "@/lib/validarBloque";
 import type { EjercicioUnificado } from "@/lib/ejercicio-unificado";
 
@@ -23,8 +24,9 @@ import type { EjercicioUnificado } from "@/lib/ejercicio-unificado";
  *
  * NO SABE DE DÓNDE VIENEN LOS EJERCICIOS. Recibe `EjercicioUnificado[]`,
  * ya normalizados por `lib/ejercicio-unificado.ts`. Lo que cambia entre
- * las dos pantallas entra por props: el lateral, la pantalla de cierre y
- * qué hacer con cada suceso que haya que guardar.
+ * las dos pantallas entra por props: el lateral, la pantalla de cierre,
+ * a dónde vuelve la salida y qué hacer con cada suceso que haya que
+ * guardar.
  */
 
 const NUMEROS = ["cero", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez"];
@@ -91,8 +93,7 @@ export default function VisorEjercicios({
   ejercicios,
   lateral,
   cierre,
-  alSalir,
-  textoSalir = "Salir",
+  volver,
   notaAlPie,
   alSuceso,
   guardarIntentos = true,
@@ -118,8 +119,21 @@ export default function VisorEjercicios({
     verEjercicio: (i: number) => void;
     acertado: (i: number) => boolean;
   }) => ReactNode;
-  alSalir: () => void;
-  textoSalir?: string;
+  /**
+   * LA SALIDA. A dónde vuelve el alumno cuando quiere dejar esto.
+   *
+   * Es un enlace y no un `onClick` a propósito: el destino es la sección
+   * de la que ha entrado —el curso o "Para ti"— y las dos son rutas de
+   * verdad. Con un callback cada visor se inventaba su salida, que es
+   * como la práctica acabó devolviendo al inicio desde una pantalla a la
+   * que se llega desde "Para ti".
+   *
+   * EL TEXTO DICE EL DESTINO, no "Atrás". Un "← Atrás" dentro de un
+   * bloque de diez ejercicios no se sabe si retrocede un ejercicio,
+   * cierra el bloque o sale de la sección, y esas tres cosas están a la
+   * vez en esta pantalla.
+   */
+  volver: { texto: string; href: string };
   /**
    * Una línea al pie del ejercicio. La usa la práctica para anclar el
    * bloque a la clase de la que salió: es lo que recuerda que esto no es
@@ -395,9 +409,30 @@ export default function VisorEjercicios({
       {/* El mismo ancho, el mismo padding y la misma tipografía que la
           columna de texto de la lección: el `7rem` que se suma es el
           padding lateral, para que la caja mida de verdad sus 760px. */}
-      <div className="mx-auto flex w-full max-w-[calc(760px+7rem)] flex-1 flex-col px-4 pb-6 pt-6 min-[1100px]:px-14 min-[1100px]:pt-[34px]">
+      <div className="mx-auto flex w-full max-w-[calc(760px+7rem)] flex-1 flex-col px-4 pb-6 pt-4 min-[1100px]:px-14 min-[1100px]:pt-[26px]">
+        {/* ------------------------------- LA SALIDA -------------------------------
+            LO PRIMERO DE LA COLUMNA, en las dos vistas y con el mismo
+            tratamiento. Aquí se entraba y no se salía: quedaba un "Salir"
+            de texto gris al final de la fila del progreso —que no decía a
+            dónde— y, por debajo de 1100px, ni siquiera el carril lateral
+            con su flecha. La navegación de abajo llevaba a la sección,
+            pero eso es cambiar de sitio, no volver por donde has venido.
+
+            NO ES PEGAJOSA, y es a propósito: encima ya hay dos filas
+            fijas —la cabecera y, en el curso, el contexto— y una tercera
+            se come un tercio de una pantalla de 375px. Al entrar está a
+            la vista, que es cuando se busca la salida; después, la fila
+            del progreso de aquí abajo dice que esto se acaba. */}
+        <Link
+          href={volver.href}
+          className="inline-flex items-center gap-1.5 self-start rounded-full border border-marca-borde bg-white px-3.5 py-[7px] text-[13px] font-semibold text-marca-tinta transition-colors hover:bg-marca-niebla min-[1100px]:text-[13.5px]"
+        >
+          <span aria-hidden>←</span>
+          {volver.texto}
+        </Link>
+
         {/* ------------------------------ PROGRESO ------------------------------ */}
-      <div className="flex items-center gap-4 min-[1100px]:gap-5">
+      <div className="mt-4 flex items-center gap-4 min-[1100px]:mt-[18px] min-[1100px]:gap-5">
         <span className="shrink-0 text-[13px] font-semibold text-marca-gris tabular-nums">
           Ejercicio {indice + 1} de {ejercicios.length}
         </span>
@@ -417,13 +452,6 @@ export default function VisorEjercicios({
             />
           ))}
         </div>
-        <button
-          type="button"
-          onClick={alSalir}
-          className="shrink-0 text-[13.5px] text-marca-grisSuave transition-colors hover:text-marca-tinta"
-        >
-          {textoSalir}
-        </button>
       </div>
 
       <div className="flex flex-1 flex-col">

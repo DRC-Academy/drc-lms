@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { conFoco } from "@/lib/foco";
 import { desdeCurso } from "@/lib/ejercicio-unificado";
 import type { EjercicioVista } from "@/lib/ejercicios";
 import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
@@ -58,6 +59,11 @@ export default function FlujoEjercicios({
   leccionId: string;
   cursoSlug: string;
   siguienteId: string | null;
+  /**
+   * Vuelve a la TEORÍA de esta lección. No es la salida de la pantalla
+   * —esa la pone el visor y lleva al curso— sino el camino de vuelta al
+   * texto que los ejercicios acompañan, que es otro sitio y otra cosa.
+   */
   alSalir: () => void;
   /** Contexto de revisión. Ver `lib/foco.ts`. */
   foco?: string | null;
@@ -73,7 +79,12 @@ export default function FlujoEjercicios({
   return (
     <VisorEjercicios
       ejercicios={unificados}
-      alSalir={alSalir}
+      // AL CURSO, no a la lección. El alumno entra en los ejercicios
+      // desde la lección, pero la lección es una pantalla de paso: la
+      // sección de la que ha salido —y la que la navegación nombra— es
+      // el curso. Para volver al texto de esta lección están la flecha
+      // del carril lateral y la de la barra de móvil.
+      volver={{ texto: "Volver al curso", href: conFoco(`/curso/${cursoSlug}`, foco) }}
       alSuceso={alSuceso}
       guardarIntentos={registrarIntentos}
       cierre={({ aciertos, total, repetir, verEjercicio, acertado }) => (

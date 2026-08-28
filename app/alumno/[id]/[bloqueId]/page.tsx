@@ -101,7 +101,12 @@ export default async function PaginaBloque({
         foco={foco}
         revisando={revisando}
       />
-      <Practica bloque={bloque} alumnoId={params.id} profesor={datos.perfil?.profesor ?? ""} />
+      <Practica
+        bloque={bloque}
+        alumnoId={params.id}
+        profesor={datos.perfil?.profesor ?? ""}
+        foco={foco}
+      />
     </div>
   );
 }

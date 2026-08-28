@@ -116,6 +116,29 @@ export default function VistaLeccion({
           constante en móvil la da la barra de navegación de abajo. */}
       <div className="border-b border-marca-borde bg-white px-3.5 py-2.5 min-[1100px]:hidden">
         <div className="flex items-center gap-3">
+          {/* VOLVER A LA TEORÍA, la contrapartida en móvil de la flecha
+              del carril lateral, que por debajo de 1100px no existe.
+              Aquí y no en la salida del visor porque son dos destinos
+              distintos: aquélla saca del curso, ésta devuelve al texto
+              de esta misma lección.
+
+              Solo si hay teoría: en una lección que es solo ejercicios
+              se entra directamente al flujo y no hay nada a lo que
+              volver. */}
+          {enEjercicios && hayTeoria && (
+            <button
+              type="button"
+              onClick={() => {
+                setEnEjercicios(false);
+                window.scrollTo({ top: 0 });
+              }}
+              aria-label="Volver a la teoría de la lección"
+              className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] border border-marca-borde bg-marca-niebla text-[14px] leading-none text-marca-tinta transition-colors hover:bg-marca-nieblaOscura"
+            >
+              ←
+            </button>
+          )}
+
           <div className="min-w-0 flex-1">
             {enEjercicios ? (
               <TiraProgreso texto="Ejercicios" hechos={hechasModulo} total={hermanas.length} />

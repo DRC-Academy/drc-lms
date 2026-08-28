@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { Bloque } from "@/lib/data";
+import { conFoco } from "@/lib/foco";
 import { UMBRAL_DOMINADO } from "@/lib/progreso";
 import { anotarParadaCerrada } from "@/lib/cierre-ruta";
 import { desdePractica } from "@/lib/ejercicio-unificado";
@@ -32,12 +32,19 @@ export default function Practica({
   bloque,
   alumnoId,
   profesor,
+  foco = null,
 }: {
   bloque: Bloque;
   alumnoId: string;
   profesor?: string;
+  /**
+   * Contexto de revisión. Hace falta AQUÍ y no solo en la cabecera: la
+   * salida lleva a `/practica`, que saca el alumno del que habla del
+   * parámetro y no de la ruta. Sin esto, al equipo revisando le
+   * devolvería su propia práctica. Ver `lib/foco.ts`.
+   */
+  foco?: string | null;
 }) {
-  const router = useRouter();
   const unificados = useMemo(() => bloque.ejercicios.map(desdePractica), [bloque.ejercicios]);
 
   /**
@@ -109,8 +116,10 @@ export default function Practica({
     <div className="flex flex-1 flex-col bg-marca-niebla">
       <VisorEjercicios
         ejercicios={unificados}
-        textoSalir="Salir"
-      alSalir={() => router.push(`/alumno/${alumnoId}`)}
+        // A "PARA TI", que es de donde se entra. Antes esto era un
+        // "Salir" que llevaba al inicio: no era el sitio del que venía
+        // el alumno y el rótulo tampoco lo decía.
+        volver={{ texto: "Volver a Para ti", href: conFoco("/practica", foco) }}
       alSuceso={alSuceso}
       // Ancla el ejercicio a la clase de la que salió. Dato secundario:
       // una línea, sin adornos. En la fase de producir no se enseña,
