@@ -62,6 +62,12 @@
       --nav-inferior: 78px;
       padding-bottom: var(--nav-inferior);
     }
+
+    /* El pie de la ruta es otra barra fija, y se apila encima de la
+       navegación: mientras exista, el hueco del final crece con ella. */
+    body.con-pie-ruta {
+      padding-bottom: calc(var(--nav-inferior) + 76px);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -433,5 +439,175 @@
 
   .celebra {
     animation: celebrar 0.52s cubic-bezier(0.2, 0.85, 0.3, 1.1) both;
+  }
+
+  /* ---------------------------------------------------------------
+     EL MOVIMIENTO DE LA RUTA
+
+     Cuatro gestos, y la regla que los mantiene adultos es de REPARTO,
+     no de intensidad: cada uno tiene UN SOLO DUEÑO en la pantalla.
+     Pulsa un nodo, no siete. Marcha un tramo —el que sale de donde
+     estás—, no los quince que quedan. Con veinte paradas se mueve
+     exactamente lo mismo que con siete.
+
+     Todos los estados base son el estado FINAL y los keyframes solo
+     definen el `from`, así que apagarlos con prefers-reduced-motion
+     deja la pantalla como termina, sin escribir un segundo diseño.
+     --------------------------------------------------------------- */
+
+  /* 1 · EL PULSO de la parada disponible. Crece y se apaga; no
+     parpadea. Un parpadeo es el idioma de los errores, y aquí no hay
+     nada roto. 2,8s es el ritmo de una respiración. */
+  @keyframes ruta-halo {
+    0% {
+      box-shadow: 0 0 0 0 rgba(255, 196, 0, 0.46);
+    }
+    70% {
+      box-shadow: 0 0 0 22px rgba(255, 196, 0, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(255, 196, 0, 0);
+    }
+  }
+
+  @keyframes ruta-latido {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    42% {
+      transform: scale(1.035);
+    }
+  }
+
+  /* El arco del candado abierto se levanta con el mismo pulso. */
+  @keyframes ruta-arco {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    42% {
+      transform: translateY(-1px);
+    }
+  }
+
+  .ruta-halo {
+    display: block;
+    border-radius: 9999px;
+    animation: ruta-halo 2.8s cubic-bezier(0.25, 0.6, 0.35, 1) 900ms infinite;
+  }
+
+  .ruta-latido {
+    display: block;
+    animation: ruta-latido 2.8s cubic-bezier(0.4, 0, 0.4, 1) 900ms infinite;
+  }
+
+  .ruta-arco {
+    animation: ruta-arco 2.8s cubic-bezier(0.4, 0, 0.4, 1) 900ms infinite;
+  }
+
+  /* 2 · LA MARCHA. Las piedras del tramo que viene se desplazan en el
+     sentido del avance. Lineal y lentísima: es una corriente, no un
+     «cargando». */
+  @keyframes ruta-marcha {
+    to {
+      stroke-dashoffset: -31;
+    }
+  }
+
+  .ruta-marcha {
+    animation: ruta-marcha 2.4s linear 900ms infinite;
+  }
+
+  /* 3 · LA ENTRADA. Los tramos se encienden en orden y cada nodo entra
+     detrás del suyo: el camino se recorre solo al cargar. El desfase lo
+     corta el componente a los nueve nodos. */
+  @keyframes ruta-asomar {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes ruta-entrada {
+    from {
+      opacity: 0;
+      transform: translateY(9px) scale(0.9);
+    }
+  }
+
+  @keyframes ruta-brotar {
+    from {
+      opacity: 0;
+      transform: translateY(-7px);
+    }
+  }
+
+  .ruta-asoma {
+    animation: ruta-asomar 380ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  .ruta-entra {
+    display: block;
+    animation: ruta-entrada 420ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  .ruta-brota {
+    animation: ruta-brotar 380ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  /* 4 · EL PIE QUE DEVUELVE, y su flecha señalando hacia dónde está la
+     parada disponible cuando se ha ido de la pantalla. */
+  @keyframes ruta-subir {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+
+  @keyframes ruta-bota {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(3px);
+    }
+  }
+
+  @keyframes ruta-bota-arriba {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+
+  .ruta-sube {
+    animation: ruta-subir 260ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  .ruta-bota {
+    animation: ruta-bota 1.9s ease-in-out infinite;
+  }
+
+  .ruta-bota-arriba {
+    animation: ruta-bota-arriba 1.9s ease-in-out infinite;
+  }
+
+  /* El nodo es un botón físico: se hunde al pulsarlo. */
+  .ruta-disco {
+    transition: transform 0.09s ease;
+  }
+
+  .ruta-nodo:active .ruta-disco {
+    transform: translateY(3px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ruta-disco {
+      transition: none;
+    }
   }
 }
