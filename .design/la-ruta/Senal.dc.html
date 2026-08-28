@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@400;500;600;700&family=Radio+Canada+Big:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+    .h { font-family: 'Radio Canada Big', 'Radio Canada', sans-serif; font-weight: 700; letter-spacing: -0.02em; color: #12211A; }
+    .etq { margin: 0; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; line-height: 1; }
+
+    @keyframes halo {
+      0%   { box-shadow: 0 0 0 0 rgba(255,196,0,0.52); }
+      65%  { box-shadow: 0 0 0 18px rgba(255,196,0,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,196,0,0); }
+    }
+    .halo { animation: halo 2.6s cubic-bezier(0.25,0.6,0.35,1) infinite; }
+    @keyframes arco { 0%, 100% { transform: translateY(0); } 42% { transform: translateY(-1px); } }
+    .arco { animation: arco 2.6s cubic-bezier(0.4,0,0.4,1) infinite; }
+    @media (prefers-reduced-motion: reduce) { .halo, .arco { animation: none !important; } }
+
+    .capa { border-radius: 16px; background: #FFFFFF; border: 1px solid #E2E8E4; padding: 18px 20px; }
+    .num { display: grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; border-radius: 999px; background: #12211A; color: #FFFFFF; font-family: 'Radio Canada Big', sans-serif; font-size: 12px; font-weight: 700; }
+  </style>
+</helmet>
+
+<div style="width: 1060px; background: #F4F7F4; padding: 44px 44px 48px; box-sizing: border-box;">
+
+  <p class="etq" style="color: #14722A;">Puntos 2 y 6 · la parada disponible</p>
+  <h1 class="h" style="margin: 12px 0 0; font-size: 36px; line-height: 1.06;">Cinco señales a la vez, no una</h1>
+  <p style="margin: 12px 0 0; max-width: 78ch; font-size: 16px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">Ninguna señal sola aguanta: una flecha se ignora a la tercera visita, un color se pierde si el alumno no distingue bien el ámbar, y una animación no existe para quien la tiene desactivada. Se apilan cinco, y <strong style="font-weight: 600; color: #24352C;">cuatro de las cinco funcionan sin movimiento y sin color</strong>. Las mismas cinco en los dos anchos: lo único que cambia es el tamaño.</p>
+
+  <!-- ============================== LA MUESTRA ============================== -->
+  <div style="margin-top: 32px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;">
+
+    <!-- MÓVIL -->
+    <div style="border: 1px solid #CFE8D8; border-radius: 24px; background: #EDF7F0; padding: 22px 0 26px; overflow: hidden;">
+      <p class="etq" style="color: #14722A; padding: 0 22px;">Móvil · en el sendero vertical</p>
+
+      <div style="position: relative; margin-top: 52px; height: 190px;">
+        <svg aria-hidden="true" viewBox="0 0 366 100" preserveAspectRatio="none" style="position: absolute; left: 0; top: -80px; width: 100%; height: 80px;" fill="none">
+          <path d="M 309 0 C 309 52, 183 52, 183 100" stroke="#D9EDE1" stroke-width="17" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <path d="M 309 0 C 309 52, 183 52, 183 100" stroke="#1E9E3A" stroke-width="6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+        </svg>
+        <svg aria-hidden="true" viewBox="0 0 366 100" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;" fill="none">
+          <path d="M 183 0 C 183 52, 57 52, 57 100" stroke="#D9EDE1" stroke-width="17" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <path d="M 183 0 C 183 52, 57 52, 57 100" stroke="#C4DECF" stroke-width="6" stroke-linecap="round" stroke-dasharray="0.5 15" vector-effect="non-scaling-stroke"/>
+        </svg>
+
+        <span style="position: absolute; left: 50%; top: -47px; transform: translateX(-50%); z-index: 4;">
+          <span style="position: relative; display: inline-flex; align-items: center; border-radius: 999px; background: #FFC400; padding: 7px 15px; font-size: 12.5px; font-weight: 700; color: #12211A; box-shadow: 0 4px 0 #E0A800, 0 8px 16px rgba(18,33,26,0.16); white-space: nowrap;">
+            Estás aquí
+            <span aria-hidden="true" style="position: absolute; left: 50%; bottom: -4px; width: 10px; height: 10px; transform: translateX(-50%) rotate(45deg); background: #FFC400;"></span>
+          </span>
+        </span>
+        <span class="halo" style="position: absolute; left: 50%; top: 0; transform: translate(-50%, -50%); z-index: 3; display: block;">
+          <span style="position: relative; display: grid; place-items: center; width: 76px; height: 76px; border-radius: 999px; background: #F0FAF2; border: 5px solid #FFC400; box-shadow: 0 6px 0 #E0A800, 0 16px 28px rgba(18,33,26,0.20);">
+            <svg viewBox="0 0 20 20" style="width: 36px; height: 36px;" fill="none" stroke="#1E9E3A" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="9" width="11" height="7.5" rx="2"/><path class="arco" d="M7 9V6.6a3 3 0 0 1 5.8-1"/></svg>
+          </span>
+        </span>
+
+        <!-- Una pendiente, para comparar tamaño y posición -->
+        <span style="position: absolute; left: 15.5%; top: 100%; transform: translate(-50%, -50%); z-index: 2;">
+          <span style="position: relative; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #FFFFFF; border: 2px solid #C4DECF; box-shadow: 0 4px 0 #DFEBE4;">
+            <span style="font-family: 'Radio Canada Big', sans-serif; font-size: 18px; font-weight: 700; color: #7A8A80;">4</span>
+          </span>
+        </span>
+      </div>
+
+      <p style="margin: 10px 22px 0; font-size: 13.5px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">En el mapa no hay texto al lado de ningún nodo, y por eso nada se puede superponer al sendero por largo que sea un título.</p>
+    </div>
+
+    <!-- ESCRITORIO -->
+    <div style="border: 1px solid #CFE8D8; border-radius: 24px; background: #EDF7F0; padding: 22px 0 26px; overflow: hidden;">
+      <p class="etq" style="color: #14722A; padding: 0 22px;">Escritorio · lo único que cambia</p>
+
+      <div style="position: relative; margin-top: 60px; height: 176px;">
+        <svg aria-hidden="true" viewBox="0 0 480 176" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;" fill="none">
+          <path d="M 60 40 C 130 40, 130 122, 200 122 C 270 122, 270 40, 340 40 C 400 40, 420 70, 440 96" stroke="#DCEEE4" stroke-width="14" stroke-linecap="round"/>
+          <path d="M 60 40 C 130 40, 130 122, 200 122" stroke="#1E9E3A" stroke-width="6" stroke-linecap="round"/>
+          <path d="M 200 122 C 270 122, 270 40, 340 40 C 400 40, 420 70, 440 96" stroke="#C4DECF" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 16"/>
+        </svg>
+
+        <span style="position: absolute; left: 12.5%; top: 22.7%; transform: translate(-50%, -50%);">
+          <span style="position: relative; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 999px; background: #1E9E3A; box-shadow: 0 6px 14px rgba(30,158,58,0.28);">
+            <svg viewBox="0 0 20 20" style="width: 20px; height: 20px;" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"/></svg>
+          </span>
+        </span>
+
+        <span style="position: absolute; left: 41.7%; top: 69.3%; transform: translate(-50%, -50%); z-index: 3;">
+          <span class="halo" style="position: relative; display: grid; place-items: center; width: 94px; height: 94px; border-radius: 999px; background: #F0FAF2; border: 6px solid #FFC400; box-shadow: 0 6px 0 #E0A800, 0 18px 30px rgba(18,33,26,0.20);">
+            <svg viewBox="0 0 20 20" style="width: 43px; height: 43px;" fill="none" stroke="#1E9E3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="9" width="11" height="7.5" rx="2"/><path class="arco" d="M7 9V6.6a3 3 0 0 1 5.8-1"/></svg>
+          </span>
+        </span>
+        <span style="position: absolute; left: 41.7%; top: calc(69.3% - 58px); transform: translate(-50%, -100%); z-index: 4;">
+          <span style="position: relative; display: inline-flex; align-items: center; border-radius: 999px; background: #FFC400; padding: 7px 15px; font-size: 12.5px; font-weight: 700; color: #12211A; box-shadow: 0 6px 16px rgba(18,33,26,0.14); white-space: nowrap;">
+            Estás aquí
+            <span aria-hidden="true" style="position: absolute; left: 50%; bottom: -5px; width: 11px; height: 11px; transform: translateX(-50%) rotate(45deg); background: #FFC400;"></span>
+          </span>
+        </span>
+
+        <span style="position: absolute; left: 70.8%; top: 22.7%; transform: translate(-50%, -50%);">
+          <span style="position: relative; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 999px; background: #FFFFFF; border: 2px solid #C4DECF;">
+            <span style="font-family: 'Radio Canada Big', sans-serif; font-size: 16px; font-weight: 700; color: #8A9891;">4</span>
+          </span>
+        </span>
+      </div>
+
+      <p style="margin: 8px 22px 0; font-size: 13.5px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">Se le añaden la chapa y el aro, y el nodo pasa de 54 a 86px con el candado abierto dentro. El camino, las bandas y la tarjeta se quedan exactamente como están hoy.</p>
+    </div>
+  </div>
+
+  <!-- ============================== LAS CAPAS ============================== -->
+  <div style="margin-top: 26px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px;">
+
+    <div class="capa">
+      <div style="display: flex; align-items: center; gap: 11px;">
+        <span class="num">1</span>
+        <p class="h" style="margin: 0; font-size: 16.5px;">La posición</p>
+        <span style="margin-left: auto; font-size: 11px; font-weight: 700; color: #14722A; background: #F0FAF2; border-radius: 999px; padding: 4px 10px;">sin color · sin movimiento</span>
+      </div>
+      <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">En móvil es la <strong style="font-weight: 600; color: #24352C;">única parada en el centro del sendero</strong>: todas las demás cuelgan a izquierda o derecha. La asimetría rota se ve antes de leer nada, y sobrevive a un móvil en blanco y negro.</p>
+    </div>
+
+    <div class="capa">
+      <div style="display: flex; align-items: center; gap: 11px;">
+        <span class="num">2</span>
+        <p class="h" style="margin: 0; font-size: 16.5px;">El tamaño</p>
+        <span style="margin-left: auto; font-size: 11px; font-weight: 700; color: #14722A; background: #F0FAF2; border-radius: 999px; padding: 4px 10px;">sin color · sin movimiento</span>
+      </div>
+      <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">76px frente a 46px en móvil; 100 frente a 54 en escritorio: <strong style="font-weight: 600; color: #24352C;">más del triple de área</strong>. Además es el único con fondo verde claro y con el aro ámbar grueso, y el único que arrastra una tarjeta blanca detrás.</p>
+    </div>
+
+    <div class="capa">
+      <div style="display: flex; align-items: center; gap: 11px;">
+        <span class="num">3</span>
+        <p class="h" style="margin: 0; font-size: 16.5px;">El candado abierto</p>
+        <span style="margin-left: auto; font-size: 11px; font-weight: 700; color: #14722A; background: #F0FAF2; border-radius: 999px; padding: 4px 10px;">sin movimiento</span>
+      </div>
+      <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">La última parada lleva un candado <strong style="font-weight: 600; color: #24352C;">cerrado</strong> y esta lleva el mismo candado <strong style="font-weight: 600; color: #24352C;">abierto</strong>, en verde. Así el mapa entero se lee como una secuencia de cerraduras: lo hecho lleva marca, lo que espera lleva número, lo que aún no existe está cerrado con llave y lo que puedes abrir <em style="font-style: normal; font-weight: 600;">ya está abierto</em>. Es la única pieza de la pantalla que dice «entra», y el verde no significa otra cosa en toda la aplicación.</p>
+    </div>
+
+    <div class="capa">
+      <div style="display: flex; align-items: center; gap: 11px;">
+        <span class="num">4</span>
+        <p class="h" style="margin: 0; font-size: 16.5px;">La chapa</p>
+        <span style="margin-left: auto; font-size: 11px; font-weight: 700; color: #14722A; background: #F0FAF2; border-radius: 999px; padding: 4px 10px;">sin movimiento</span>
+      </div>
+      <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">«Estás aquí», en ámbar, con la punta apuntando al nodo. Es la flecha que pedías, pero con palabras: una flecha sola señala, una chapa señala <em style="font-style: normal; font-weight: 600;">y dice qué</em>. El ámbar es acento, nunca acción — el verde sigue siendo lo único que se pulsa.</p>
+    </div>
+
+    <div class="capa" style="grid-column: span 2;">
+      <div style="display: flex; align-items: center; gap: 11px;">
+        <span class="num">5</span>
+        <p class="h" style="margin: 0; font-size: 16.5px;">El aro que respira</p>
+        <span style="margin-left: auto; font-size: 11px; font-weight: 700; color: #9A7B00; background: #FBF7EF; border-radius: 999px; padding: 4px 10px;">se apaga con prefers-reduced-motion</span>
+      </div>
+      <p style="margin: 10px 0 0; max-width: 92ch; font-size: 14px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">Un anillo ámbar que crece 18px y se apaga, cada 2,6 segundos. <strong style="font-weight: 600; color: #24352C;">Crece, no parpadea.</strong> Un parpadeo es el lenguaje de los errores y de las notificaciones sin leer: en una pantalla donde nada está roto, alarma. Un aro que se expande es el lenguaje de los mapas, y a 2,6s es lento como una respiración —lo bastante para que se note por el rabillo del ojo, no tanto como para molestar mientras se lee la tarjeta que hay debajo.</p>
+    </div>
+  </div>
+
+  <!-- ============================== POR QUÉ NO ============================== -->
+  <div style="margin-top: 26px; border-radius: 20px; background: #FFFFFF; border: 1px solid #E2E8E4; padding: 24px 26px;">
+    <p class="h" style="margin: 0; font-size: 19px;">Lo que se descartó, y por qué</p>
+    <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px;">
+      <div>
+        <p style="margin: 0; font-size: 14px; font-weight: 700; color: #24352C;">Una flecha animada que rebota</p>
+        <p style="margin: 7px 0 0; font-size: 13.5px; line-height: 1.55; color: #5F6F66; text-wrap: pretty;">Es el gesto más reconocible de los mapas de videojuego y también el más aniñado. Con un alumno de 58 años delante, una flecha saltando es exactamente la señal equivocada.</p>
+      </div>
+      <div>
+        <p style="margin: 0; font-size: 14px; font-weight: 700; color: #24352C;">Apagar el resto del sendero</p>
+        <p style="margin: 7px 0 0; font-size: 13.5px; line-height: 1.55; color: #5F6F66; text-wrap: pretty;">Destacaría igual, pero a costa de lo andado. Ver de dónde vienes es media razón para que esto sea un camino y no una lista, y bajarlo de opacidad lo tira.</p>
+      </div>
+      <div>
+        <p style="margin: 0; font-size: 14px; font-weight: 700; color: #24352C;">Un contador o un «te toca»</p>
+        <p style="margin: 7px 0 0; font-size: 13.5px; line-height: 1.55; color: #5F6F66; text-wrap: pretty;">«Llevas 3 días sin entrar» es vigilancia, y «te toca» es una orden. La chapa dice dónde estás, no lo que deberías haber hecho ya.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1060,"height":1080}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

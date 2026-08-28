@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@400;500;600;700&family=Radio+Canada+Big:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+    .h { font-family: 'Radio Canada Big', 'Radio Canada', sans-serif; font-weight: 700; letter-spacing: -0.02em; color: #12211A; }
+    .no { border: 1px solid #E2E8E4; border-radius: 18px; background: #FFFFFF; padding: 20px 22px; }
+    .etq { margin: 0; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; line-height: 1; }
+  </style>
+</helmet>
+
+<div style="width: 900px; background: #F4F7F4; padding: 40px 40px 44px; box-sizing: border-box;">
+
+  <p class="etq" style="color: #14722A;">Punto 4 · la última parada</p>
+  <h1 class="h" style="margin: 11px 0 0; font-size: 34px; line-height: 1.06;">El candado no pide nada</h1>
+  <p style="margin: 11px 0 0; max-width: 72ch; font-size: 15.5px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">El alumno no puede abrirla. Depende de que su profesora suba la clase siguiente. Todo lo que parezca una palanca —un botón apagado, un aviso, una barra que se llena— le está diciendo que hay algo que hacer, y no lo hay. Tres formas de contarlo mal, y la que se queda.</p>
+
+  <!-- ============================ LO QUE NO ============================ -->
+  <div style="margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px;">
+
+    <div class="no">
+      <div style="display: flex; align-items: center; gap: 7px;">
+        <svg viewBox="0 0 16 16" style="width: 15px; height: 15px; flex-shrink: 0;" fill="none" stroke="#8A9891" stroke-width="1.8" stroke-linecap="round"><path d="M5 5l6 6M11 5l-6 6"/></svg>
+        <p class="etq" style="color: #7A8A80;">Un botón apagado</p>
+      </div>
+      <div style="margin-top: 16px; border-radius: 13px; background: #F4F7F4; padding: 15px 14px;">
+        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #8A9891;">Parada 7</p>
+        <p style="margin: 6px 0 0; font-size: 13px; line-height: 1.45; color: #9BA8A1;">Se abre con tu próxima clase.</p>
+        <span style="display: flex; align-items: center; justify-content: center; margin-top: 13px; min-height: 42px; border-radius: 999px; background: #E8EEE9; color: #9BA8A1; font-size: 14.5px; font-weight: 700;">Desbloquear</span>
+      </div>
+      <p style="margin: 14px 0 0; font-size: 13px; line-height: 1.5; color: #5F6F66;">Un botón, aunque esté gris, es una promesa. El alumno lo pulsa, no pasa nada, y aprende que la pantalla le miente.</p>
+    </div>
+
+    <div class="no">
+      <div style="display: flex; align-items: center; gap: 7px;">
+        <svg viewBox="0 0 16 16" style="width: 15px; height: 15px; flex-shrink: 0;" fill="none" stroke="#8A9891" stroke-width="1.8" stroke-linecap="round"><path d="M5 5l6 6M11 5l-6 6"/></svg>
+        <p class="etq" style="color: #7A8A80;">Un aviso</p>
+      </div>
+      <div style="margin-top: 16px; border-radius: 13px; background: #F4F7F4; padding: 15px 14px;">
+        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #8A9891;">Parada 7</p>
+        <p style="margin: 6px 0 0; font-size: 13px; line-height: 1.45; color: #9BA8A1;">Se abre con tu próxima clase.</p>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 13px;">
+          <span style="font-size: 13px; color: #9BA8A1;">Avisarme</span>
+          <span style="display: block; width: 38px; height: 22px; border-radius: 999px; background: #DCE4DE; position: relative;"><span style="position: absolute; left: 2px; top: 2px; width: 18px; height: 18px; border-radius: 999px; background: #FFFFFF;"></span></span>
+        </div>
+      </div>
+      <p style="margin: 14px 0 0; font-size: 13px; line-height: 1.5; color: #5F6F66;">Le da algo que hacer para acabar donde estaba. Y si el correo llega tarde, o no llega, la promesa se rompe fuera de la pantalla.</p>
+    </div>
+
+    <div class="no">
+      <div style="display: flex; align-items: center; gap: 7px;">
+        <svg viewBox="0 0 16 16" style="width: 15px; height: 15px; flex-shrink: 0;" fill="none" stroke="#8A9891" stroke-width="1.8" stroke-linecap="round"><path d="M5 5l6 6M11 5l-6 6"/></svg>
+        <p class="etq" style="color: #7A8A80;">Una barra que se llena</p>
+      </div>
+      <div style="margin-top: 16px; border-radius: 13px; background: #F4F7F4; padding: 15px 14px;">
+        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #8A9891;">Parada 7</p>
+        <p style="margin: 6px 0 0; font-size: 13px; line-height: 1.45; color: #9BA8A1;">1 de 2 clases para desbloquear.</p>
+        <span style="display: block; margin-top: 13px; height: 8px; border-radius: 999px; background: #E8EEE9; overflow: hidden;"><span style="display: block; width: 50%; height: 8px; background: #C4DECF;"></span></span>
+      </div>
+      <p style="margin: 14px 0 0; font-size: 13px; line-height: 1.5; color: #5F6F66;">Convierte una clase con una persona en una moneda para desbloquear contenido. Es la gamificación que este producto no quiere.</p>
+    </div>
+  </div>
+
+  <!-- ============================ LO QUE SÍ ============================ -->
+  <div style="margin-top: 26px; border: 1px solid #CFE8D8; border-radius: 24px; background: #EDF7F0; padding: 26px 28px;">
+    <div style="display: flex; align-items: center; gap: 7px;">
+      <svg viewBox="0 0 16 16" style="width: 15px; height: 15px; flex-shrink: 0;" fill="none" stroke="#1E9E3A" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5l2.8 2.8L12 6"/></svg>
+      <p class="etq" style="color: #14722A;">Lo que se queda</p>
+    </div>
+
+    <div style="display: flex; gap: 24px; margin-top: 20px; align-items: flex-start;">
+
+      <!-- El nodo, en su fila del carril -->
+      <div style="flex-shrink: 0; width: 300px; border-radius: 18px; background: #FFFFFF; border: 1px solid #DCE9E1; padding: 18px 18px 20px;">
+        <div style="display: flex; gap: 12px;">
+          <div style="display: flex; flex-direction: column; align-items: center; width: 34px; flex-shrink: 0;">
+            <span style="width: 2px; height: 16px; background: repeating-linear-gradient(#C4DECF 0 5px, transparent 5px 12px);"></span>
+            <span style="position: relative; display: grid; place-items: center; width: 26px; height: 26px; margin-top: 3px; border-radius: 999px; background: #F4F7F4; border: 2px dashed #C4DECF;">
+              <svg viewBox="0 0 20 20" style="width: 14px; height: 14px;" fill="none" stroke="#8A9891" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.6" y="8.8" width="10.8" height="7.4" rx="2"/><path d="M7 8.8V6.6a3 3 0 0 1 6 0v2.2"/></svg>
+            </span>
+          </div>
+          <div style="flex: 1; min-width: 0; padding-top: 16px;">
+            <p style="margin: 0; font-size: 15px; font-weight: 500; line-height: 1.28; color: #8A9891;">Se abre con tu próxima clase</p>
+            <p style="margin: 4px 0 0; font-size: 12px; color: #9BA8A1;">La prepara Aoife</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- El andén cuando la seleccionas -->
+      <div style="flex: 1; min-width: 0; border-radius: 18px; background: #FFFFFF; border: 1px solid #DCE9E1; border-top: 3px solid #DCE9E1; padding: 20px 22px 22px; box-shadow: 0 14px 32px -18px rgba(18,33,26,0.28);">
+        <div style="display: flex; align-items: center; gap: 9px;">
+          <span style="display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: #F4F7F4; border: 1px solid #E2E8E4; font-family: 'Radio Canada Big', sans-serif; font-size: 13px; font-weight: 700; color: #9BA8A1;">A</span>
+          <p class="etq" style="color: #7A8A80;">Parada 7 · aún no está</p>
+        </div>
+        <h2 class="h" style="margin: 12px 0 0; font-size: 25px; line-height: 1.1; color: #24352C;">Se abre con tu próxima clase</h2>
+        <p style="margin: 9px 0 0; font-size: 14.5px; line-height: 1.48; color: #4C5C53; text-wrap: pretty;">Aoife la prepara cuando suba lo que trabajéis el jueves. Sale de esa clase, así que hasta entonces no existe.</p>
+        <div style="margin-top: 14px; display: flex; gap: 9px; align-items: flex-start; border-radius: 13px; background: #F4F7F4; padding: 12px 13px;">
+          <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px;" fill="none" stroke="#7A8A80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.3"/><path d="M8 7.3v3.9"/><path d="M8 4.9v.25"/></svg>
+          <p style="margin: 0; font-size: 12.5px; line-height: 1.45; color: #5F6F66;">No tienes que hacer nada: te la encuentras aquí abierta.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 22px; padding-top: 20px; border-top: 1px solid #CFE8D8;">
+      <p style="margin: 0; font-size: 14.5px; line-height: 1.6; color: #24352C; text-wrap: pretty;"><strong style="font-weight: 700;">Las cuatro reglas.</strong> El sujeto de la frase es <em style="font-style: normal; font-weight: 600;">Aoife</em>, nunca el alumno ni «el sistema» — si el que actúa es una persona, esperar deja de ser un bloqueo. No hay ningún elemento pulsable dentro de la parada. Se dice cuándo («cuando suba lo que trabajéis el jueves»), no un contador. Y se cierra diciendo explícitamente que no hay nada que hacer, porque es la pregunta que se está haciendo mientras lo lee.</p>
+    </div>
+  </div>
+
+  <!-- ======================= Y CUANDO SÍ SE ABRE ======================= -->
+  <div style="margin-top: 22px; border-radius: 20px; background: #FFFFFF; border: 1px solid #E2E8E4; padding: 24px 26px;">
+    <p class="etq" style="color: #14722A;">Y cuando se abre</p>
+    <div style="display: flex; align-items: center; gap: 24px; margin-top: 18px;">
+      <span style="position: relative; display: grid; place-items: center; width: 66px; height: 66px; flex-shrink: 0; border-radius: 999px; background: #1E9E3A; color: #FFFFFF; box-shadow: 0 0 0 7px rgba(30,158,58,0.10), 0 10px 22px rgba(30,158,58,0.30);">
+        <svg viewBox="0 0 20 20" style="width: 26px; height: 26px;" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="9" width="11" height="7.5" rx="2"/><path d="M7 9V6.6a3 3 0 0 1 5.8-1"/></svg>
+      </span>
+      <div style="flex: 1; min-width: 0;">
+        <h3 class="h" style="margin: 0; font-size: 22px; line-height: 1.12;">Tu clase del jueves con Aoife ya está aquí</h3>
+        <p style="margin: 8px 0 0; font-size: 14.5px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">El candado se abre, el nodo se enciende en verde y aparece el único botón que ha tenido nunca esta parada. Es el único cambio de estado de la pantalla, así que se ve desde lejos.</p>
+      </div>
+      <a href="#" style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; min-height: 52px; border-radius: 999px; background: #1E9E3A; color: #FFFFFF; padding: 0 30px; font-size: 16px; font-weight: 700; box-shadow: 0 8px 20px rgba(30,158,58,0.32);">Preparar la parada 7</a>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":900,"height":1180}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

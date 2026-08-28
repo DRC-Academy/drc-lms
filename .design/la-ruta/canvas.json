@@ -1,0 +1,63 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "El movimiento" },
+    { "id": "page-2", "name": "Escritorio, señal y escala" },
+    { "id": "page-3", "name": "Las personas" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "El mapa · móvil 390 · funciona", "page": "page-1", "x": 0, "y": 0, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "Movimiento.dc.html", "title": "El sistema de movimiento", "page": "page-1", "x": 490, "y": 0, "w": 1120, "h": 1760, "is_interactive": true },
+
+    { "file": "Escritorio.dc.html", "title": "Escritorio · misma distribución, con movimiento", "page": "page-2", "x": 0, "y": 0, "w": 1440, "h": 940 },
+    { "file": "Escala.dc.html", "title": "Punto 5 · veinte paradas y cuánto scroll", "page": "page-2", "x": 1540, "y": 0, "w": 1020, "h": 1560 },
+    { "file": "Senal.dc.html", "title": "La señal de la parada disponible", "page": "page-2", "x": 2660, "y": 0, "w": 1060, "h": 1380 },
+    { "file": "Candado.dc.html", "title": "El candado", "page": "page-2", "x": 3820, "y": 0, "w": 900, "h": 1300 },
+
+    { "file": "PersonasA.dc.html", "title": "A · La firma", "page": "page-3", "x": 0, "y": 0, "w": 860, "h": 1060 },
+    { "file": "PersonasB.dc.html", "title": "B · El retrato", "page": "page-3", "x": 960, "y": 0, "w": 860, "h": 1340 },
+    { "file": "PersonasC.dc.html", "title": "C · La voz", "page": "page-3", "x": 1920, "y": 0, "w": 860, "h": 1400 }
+  ],
+  "annotations": [
+    {
+      "id": "movimiento",
+      "x": 0,
+      "y": -430,
+      "w": 660,
+      "page": "page-1",
+      "text": "EL MOVIMIENTO Y EL PLEGADO · la distribución no se toca\n\nSerpenteante en escritorio, mapa vertical en móvil: igual que estaba. Lo que se añade son cuatro gestos, y la regla que los mantiene adultos es de REPARTO, no de intensidad: cada gesto tiene un único dueño en la pantalla.\n\n· PULSO — 2,8 s en bucle. Halo que se abre y se apaga, y el disco respirando con él. Crece, no parpadea: un parpadeo es el idioma de los errores. UNO: la parada disponible.\n· MARCHA — 2,4 s lineal. Las piedras se desplazan en el sentido del avance. UNO: el tramo que sale de donde estás. Los demás quietos, y por eso veinte paradas no hacen ruido.\n· ENTRADA — 420 ms por nodo, 70 ms de desfase, cortado a los nueve. Máximo 1,16 s, tenga 7 paradas o 20.\n· CIERRE — 1,08 s. Se llena el disco, se traza la marca, el tramo se colorea hasta la siguiente y allí se enciende el aro.\n\nLAS DOS PALANCAS DE ARRIBA DEL ARTBOARD:\n\n· PARADAS (4 a 20) — sube a 12 o a 20 y aparecen los desplegables. El mapa nunca pinta más de NUEVE nodos: grupo · 2 hechas · disponible · 3 pendientes · grupo · candado. Tócalos y el camino crece ahí mismo; el nodo pasa a ser un «−» para volver a plegarlo. Al desplegar se corrige el scroll, así que lo que tenías bajo el dedo no se mueve.\n\n· MOVIMIENTO — lo apaga todo, igual que prefers-reduced-motion. La pantalla se queda exactamente como termina, porque el estado base de cada elemento YA es el estado final.\n\nY PRUEBA A CERRAR: pulsa «Seguir la ruta» y verás el cierre entero, con el turno pasando a la siguiente. Aléjate de la parada disponible y sube el pie con una FLECHA que apunta hacia dónde se ha quedado."
+    },
+    {
+      "id": "no-hay",
+      "x": 490,
+      "y": -230,
+      "w": 560,
+      "page": "page-1",
+      "text": "LO QUE SE QUEDÓ FUERA, A PROPÓSITO\n\nConfeti al cerrar una parada. Un contador que sube. Un sello o una medalla. Un sonido. Que el camino entero se ilumine de golpe.\n\nLos cinco son recompensa, y la recompensa aquí ya existe y tiene nombre: la persona que va a leer lo que el alumno escriba al final del bloque. Un mecanismo que compita con eso resta, aunque se vea bien.\n\nLo que sí se toma del género es la sensación de progresión —el camino que avanza— y la respuesta a las acciones. Nada más."
+    },
+    {
+      "id": "escritorio-nota",
+      "x": 0,
+      "y": -300,
+      "w": 620,
+      "page": "page-2",
+      "text": "EL ESCRITORIO: MISMA DISTRIBUCIÓN, MISMOS TIEMPOS\n\nEl camino serpenteante, las bandas alternas y la tarjeta ancha se quedan exactamente como estaban. Lo que se añade es el mismo sistema de movimiento del móvil, con los mismos valores: pulso de 2,8 s, marcha de 2,4 s, entrada de 420 ms con 70 de desfase.\n\nUn solo bloque de @keyframes para los dos anchos. Si mañana el pulso hay que subirlo a 3,2 s, se toca en un sitio.\n\nAquí la flecha indicadora no hace falta: el camino entero cabe en la primera pantalla, así que la parada disponible nunca se sale. En móvil sí, y por eso existe el pie."
+    },
+    {
+      "id": "personas-nota",
+      "x": 0,
+      "y": -320,
+      "w": 700,
+      "page": "page-3",
+      "text": "LAS PERSONAS · qué queda después de las dos decisiones\n\nSIN FOTOS Y SIN INICIALES EN LOS NODOS, EL MAPA SE QUEDA SIN NADIE. Es una consecuencia real de los dos últimos cambios, no una queja: el sendero vuelve a ser discos y líneas, que es de donde partía el encargo.\n\nLo que queda de gente vive en la TARJETA: la chapa de 30px junto a la etiqueta y el texto («hecha con Liam», «lo lee Aoife»). Sigue siendo atribución, pero ya no se ve recorriendo la ruta.\n\nY eso mueve la decisión: A pierde su sitio, B se queda solo con el retrato de la tarjeta, y C —la voz de la profesora, sin ninguna cara— es la única que sigue entera, porque nunca necesitó nada en el mapa. Si «que haya humanos» sigue siendo un objetivo, hoy pasa por C.\n\n---\n\nSIN FOTOS, ADEMÁS: La recomendación de pedir tres retratos queda descartada, y con ella el argumento más fuerte de A —que el monograma se convertía en foto sin tocar el diseño—. Lo que queda de A es lo que ya valía por sí solo: la ATRIBUCIÓN.\n\nCada bloque guarda de qué clase salió y quién la dio —claseOrigen: { fecha, profesor }, en lib/data.ts:55— y eso no se le ha enseñado nunca al alumno. La parada 1 la dio Liam y la 3 Aoife. El monograma pone ese dato en el mapa.\n\nY el sistema ya tiene la paleta para pintarlo sin inventar color: marca-calido, calidoFondo y calidoBadgeTexto están declarados en tailwind.config.ts y no los usa esta pantalla.\n\nLO HONESTO: esto no son caras, son firmas. Si «que haya humanos» significa que se vean personas, sin foto ninguna dirección lo cumple del todo. La que más se acerca es C —una frase de la profesora suena más a persona que una inicial— y es también la única que pide trabajo fuera del diseño.\n\nEl nodo de la parada disponible ya no lleva la inicial del alumno: lleva el candado abierto."
+    },
+    {
+      "id": "candado-abierto",
+      "x": 0,
+      "y": -250,
+      "w": 620,
+      "page": "page-2",
+      "text": "EL NODO DISPONIBLE: CANDADO ABIERTO, Y MÁS GRANDE\n\nDonde antes había una «M» va un candado ABIERTO en verde, con el arco levantándose 1px al ritmo del pulso. Y ahora pesa de verdad:\n\n· 76px contra 46 en móvil (antes 68). Más del TRIPLE de área que un nodo normal.\n· 100px contra 54 en escritorio (antes 92).\n· Fondo verde clarísimo —marca-verdeFondo #F0FAF2, que el sistema ya usa para «lo que toca ahora»— en vez de blanco: es el único disco del mapa que no es ni blanco ni verde macizo.\n· Aro ámbar de 5-6px en vez de 4, y canto macizo más alto.\n\nEl icono no es nuevo: es el que ya usa components/practica/Ruta.tsx para el estado «lista para abrir». Se reutiliza tal cual.\n\nY el mapa entero pasa a leerse como una secuencia de cerraduras: lo hecho lleva marca, lo que espera lleva número, lo que aún no existe está CERRADO con llave, y lo que puedes abrir YA ESTÁ ABIERTO. Antes el candado del final no rimaba con nada.\n\nFUERA LAS INICIALES DE LOS NODOS. Las chapitas de profesor (la «S» de la 4) se han quitado de los nodos en los dos anchos. El nodo del candado final también: era una «A» con una cerradura encima, y ahora es solo la cerradura. La chapa de 30px de la TARJETA se ha dejado — dilo si también sobra."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

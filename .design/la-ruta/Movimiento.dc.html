@@ -1,0 +1,387 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@400;500;600;700&family=Radio+Canada+Big:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+    .h { font-family: 'Radio Canada Big', 'Radio Canada', sans-serif; font-weight: 700; letter-spacing: -0.02em; color: #12211A; }
+    .etq { margin: 0; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; line-height: 1; }
+    .caja { border-radius: 20px; background: #FFFFFF; border: 1px solid #E2E8E4; padding: 24px 26px; }
+    .campo { border-radius: 18px; background: #EDF7F0; border: 1px solid #CFE8D8; }
+    .dato { font-variant-numeric: tabular-nums; font-weight: 600; color: #14722A; }
+    .repite {
+      display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 16px;
+      border-radius: 999px; background: #FFFFFF; border: 1.5px solid #1E9E3A; color: #14722A;
+      font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+    }
+    .repite:hover { background: #1E9E3A; color: #FFFFFF; }
+
+    /* ---- los cuatro gestos, con los mismos valores que la pantalla ---- */
+    @keyframes halo {
+      0%   { box-shadow: 0 0 0 0 rgba(255,196,0,0.46); }
+      70%  { box-shadow: 0 0 0 22px rgba(255,196,0,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,196,0,0); }
+    }
+    @keyframes latido { 0%, 100% { transform: scale(1); } 42% { transform: scale(1.035); } }
+    @keyframes arco { 0%, 100% { transform: translateY(0); } 42% { transform: translateY(-1px); } }
+    @keyframes marcha { to { stroke-dashoffset: -31; } }
+    @keyframes asomar { from { opacity: 0; } }
+    @keyframes entrada { from { opacity: 0; transform: translateY(9px) scale(0.9); } }
+    @keyframes brotar { from { opacity: 0; transform: translateY(-7px); } }
+    @keyframes llenar { from { transform: scale(0.2); opacity: 0; } 55% { opacity: 1; } to { transform: scale(1); opacity: 1; } }
+    @keyframes trazar { from { stroke-dashoffset: 26; } }
+    @keyframes teñir { from { stroke-dashoffset: 2000; } }
+    @keyframes ascender { from { opacity: 0; transform: scale(0.72); } }
+    @keyframes apagaAro { to { border-color: #1E9E3A; } }
+
+    .halo { display: block; border-radius: 999px; animation: halo 2.8s cubic-bezier(0.25,0.6,0.35,1) infinite; }
+    .latido { display: block; animation: latido 2.8s cubic-bezier(0.4,0,0.4,1) infinite; }
+    .arco { animation: arco 2.8s cubic-bezier(0.4,0,0.4,1) infinite; }
+    .marcha { animation: marcha 2.4s linear infinite; }
+    .asoma { animation: asomar 380ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .entra { display: block; animation: entrada 420ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .brota { animation: brotar 380ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .llena { animation: llenar 360ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .traza { stroke-dasharray: 26; animation: trazar 280ms cubic-bezier(0.6,0,0.4,1) 200ms both; }
+    .tiñe { stroke-dasharray: 2000; animation: teñir 480ms cubic-bezier(0.5,0,0.3,1) 200ms both; }
+    .apaga { animation: apagaAro 360ms linear both; }
+    .asciende { display: block; animation: ascender 380ms cubic-bezier(0.2,0.8,0.3,1) 700ms both; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .halo, .latido, .arco, .marcha, .asoma, .entra, .brota,
+      .llena, .traza, .tiñe, .apaga, .asciende { animation: none !important; }
+      .traza, .tiñe { stroke-dasharray: none !important; }
+    }
+  </style>
+</helmet>
+
+<div style="width: 1120px; background: #F4F7F4; padding: 44px 44px 48px; box-sizing: border-box;">
+
+  <p class="etq" style="color: #14722A;">El sistema de movimiento</p>
+  <h1 class="h" style="margin: 12px 0 0; font-size: 36px; line-height: 1.06;">Cuatro gestos, y cada uno con un solo dueño</h1>
+  <p style="margin: 12px 0 0; max-width: 80ch; font-size: 16px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">La distribución no se toca: serpenteante en escritorio, mapa vertical en móvil. Lo que se añade es movimiento, y la regla que lo mantiene adulto es de reparto, no de intensidad: <strong style="font-weight: 600; color: #24352C;">cada gesto tiene un único dueño en la pantalla</strong>. Pulsa un nodo, no siete. Marcha un tramo, no los quince que quedan. Por eso con veinte paradas se mueve exactamente lo mismo que con siete.</p>
+
+  <!-- ============================== LA TABLA ============================== -->
+  <div class="caja" style="margin-top: 30px;">
+    <div style="display: grid; grid-template-columns: 168px 1fr 108px 168px 1fr; gap: 14px 18px; font-size: 13.5px; line-height: 1.45;">
+      <span class="etq" style="color: #7A8A80;">Gesto</span>
+      <span class="etq" style="color: #7A8A80;">Qué hace</span>
+      <span class="etq" style="color: #7A8A80;">Duración</span>
+      <span class="etq" style="color: #7A8A80;">Curva</span>
+      <span class="etq" style="color: #7A8A80;">Cuántos a la vez</span>
+
+      <span style="grid-column: 1 / -1; height: 1px; background: #EDF1EE;"></span>
+
+      <span style="font-weight: 600; color: #12211A;">Pulso</span>
+      <span style="color: #4C5C53;">Halo que se abre y se apaga, y el disco respirando con él</span>
+      <span class="dato">2,8 s · bucle</span>
+      <span style="color: #5F6F66; font-family: ui-monospace, monospace; font-size: 12px;">(.25, .6, .35, 1)</span>
+      <span style="color: #4C5C53;"><strong style="font-weight: 600; color: #24352C;">Uno.</strong> La parada disponible</span>
+
+      <span style="grid-column: 1 / -1; height: 1px; background: #EDF1EE;"></span>
+
+      <span style="font-weight: 600; color: #12211A;">Marcha</span>
+      <span style="color: #4C5C53;">Las piedras se desplazan en el sentido del avance</span>
+      <span class="dato">2,4 s · bucle</span>
+      <span style="color: #5F6F66; font-family: ui-monospace, monospace; font-size: 12px;">linear</span>
+      <span style="color: #4C5C53;"><strong style="font-weight: 600; color: #24352C;">Uno.</strong> El tramo que sale de donde estás</span>
+
+      <span style="grid-column: 1 / -1; height: 1px; background: #EDF1EE;"></span>
+
+      <span style="font-weight: 600; color: #12211A;">Entrada</span>
+      <span style="color: #4C5C53;">Tramos y nodos se encienden en orden, siguiendo el camino</span>
+      <span class="dato">420 ms · +70 ms</span>
+      <span style="color: #5F6F66; font-family: ui-monospace, monospace; font-size: 12px;">(.2, .8, .3, 1)</span>
+      <span style="color: #4C5C53;">Todos, una vez, y el desfase se corta a los 9</span>
+
+      <span style="grid-column: 1 / -1; height: 1px; background: #EDF1EE;"></span>
+
+      <span style="font-weight: 600; color: #12211A;">Cierre</span>
+      <span style="color: #4C5C53;">Se llena el disco, se traza la marca, el tramo se colorea y se enciende la siguiente</span>
+      <span class="dato">1,08 s · una vez</span>
+      <span style="color: #5F6F66; font-family: ui-monospace, monospace; font-size: 12px;">varias</span>
+      <span style="color: #4C5C53;"><strong style="font-weight: 600; color: #24352C;">Uno.</strong> Solo al cerrar una parada</span>
+    </div>
+  </div>
+
+  <!-- ========================= PULSO Y MARCHA ========================= -->
+  <div style="margin-top: 22px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px;">
+
+    <div class="caja">
+      <p class="h" style="margin: 0; font-size: 19px;">1 · El pulso</p>
+      <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">Crece y se apaga; no parpadea. Un parpadeo es el idioma de los errores y de las notificaciones sin leer, y aquí no hay nada roto. A 2,8 s va al ritmo de una respiración: se ve por el rabillo del ojo y no molesta mientras lees la tarjeta de debajo.</p>
+
+      <div class="campo" style="margin-top: 18px; display: flex; align-items: center; justify-content: space-around; padding: 34px 20px;">
+        <div style="text-align: center;">
+          <span class="halo" style="display: inline-block;">
+            <span class="latido">
+              <span style="position: relative; display: grid; place-items: center; width: 76px; height: 76px; border-radius: 999px; background: #F0FAF2; border: 5px solid #FFC400; box-shadow: 0 6px 0 #E0A800, 0 16px 28px rgba(18,33,26,0.20);">
+                <svg viewBox="0 0 20 20" style="width: 36px; height: 36px;" fill="none" stroke="#1E9E3A" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="9" width="11" height="7.5" rx="2"/><path class="arco" d="M7 9V6.6a3 3 0 0 1 5.8-1"/></svg>
+              </span>
+            </span>
+          </span>
+          <p style="margin: 22px 0 0; font-size: 12.5px; font-weight: 600; color: #14722A;">Con movimiento</p>
+        </div>
+        <div style="text-align: center;">
+          <span style="position: relative; display: grid; place-items: center; width: 76px; height: 76px; border-radius: 999px; background: #F0FAF2; border: 5px solid #FFC400; box-shadow: 0 6px 0 #E0A800, 0 16px 28px rgba(18,33,26,0.20);">
+            <svg viewBox="0 0 20 20" style="width: 36px; height: 36px;" fill="none" stroke="#1E9E3A" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="9" width="11" height="7.5" rx="2"/><path d="M7 9V6.6a3 3 0 0 1 5.8-1"/></svg>
+          </span>
+          <p style="margin: 22px 0 0; font-size: 12.5px; font-weight: 600; color: #8A9891;">Sin movimiento</p>
+        </div>
+      </div>
+      <p style="margin: 14px 0 0; font-size: 13px; line-height: 1.5; color: #5F6F66;">Sin el pulso la parada sigue siendo inconfundible: es la única en el centro del camino, la única al doble de tamaño y la única con el candado abierto. El movimiento es la quinta señal, no la primera.</p>
+    </div>
+
+    <div class="caja">
+      <p class="h" style="margin: 0; font-size: 19px;">2 · La marcha</p>
+      <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">Solo el tramo que sale de donde estás. Es lineal y lentísima —una corriente, no un «cargando»— y va en el sentido del avance, así que además de vivo, señala. Lo andado, macizo; lo que falta, piedras.</p>
+
+      <div class="campo" style="margin-top: 18px; padding: 26px 0;">
+        <svg viewBox="0 0 366 116" preserveAspectRatio="none" style="width: 100%; height: 116px;" fill="none">
+          <path d="M 40 24 C 40 62, 183 62, 183 82" stroke="#D9EDE1" stroke-width="17" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <path d="M 40 24 C 40 62, 183 62, 183 82" stroke="#1E9E3A" stroke-width="6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <path d="M 183 82 C 183 102, 326 102, 326 24" stroke="#D9EDE1" stroke-width="17" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <path class="marcha" d="M 183 82 C 183 102, 326 102, 326 24" stroke="#C4DECF" stroke-width="6" stroke-linecap="round" stroke-dasharray="0.5 15" vector-effect="non-scaling-stroke"/>
+        </svg>
+        <div style="display: flex; justify-content: space-between; padding: 6px 24px 0; font-size: 12px; font-weight: 600;">
+          <span style="color: #14722A;">Andado</span>
+          <span style="color: #8A9891;">Lo que viene</span>
+        </div>
+      </div>
+      <p style="margin: 14px 0 0; font-size: 13px; line-height: 1.5; color: #5F6F66;">Los tramos siguientes al que viene se quedan quietos. Es lo que evita que veinte paradas se conviertan en quince líneas moviéndose a la vez.</p>
+    </div>
+  </div>
+
+  <!-- ========================= LA ENTRADA ========================= -->
+  <div class="caja" style="margin-top: 22px;">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;">
+      <div style="flex: 1; min-width: 0;">
+        <p class="h" style="margin: 0; font-size: 19px;">3 · La entrada escalonada</p>
+        <p style="margin: 10px 0 0; max-width: 74ch; font-size: 14px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">Cada tramo se enciende 70 ms detrás del anterior y su nodo entra 110 ms después del tramo: el camino se recorre solo al cargar, sin que nadie haga nada. El desfase se corta a los nueve nodos, así que veinte paradas no tardan más en armarse que siete — como mucho 1,16 s de principio a fin.</p>
+      </div>
+      <button type="button" class="repite" onClick="{{ repetirEntrada }}">
+        <svg viewBox="0 0 16 16" style="width: 14px; height: 14px;" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.9-4.1"/><path d="M13.8 2.2v3.4h-3.4"/></svg>
+        Verla otra vez
+      </button>
+    </div>
+
+    <div class="campo" style="margin-top: 18px; padding: 30px 0 26px;">
+      <div style="position: relative; height: 130px;">
+        <svg viewBox="0 0 1000 130" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;" fill="none">
+          <sc-for list="{{ tramos }}" as="s" hint-placeholder-count="6">
+            <g class="{{ entrada }}" style="animation-delay: {{ s.retraso }};">
+              <path d="{{ s.d }}" stroke="#D9EDE1" stroke-width="15" stroke-linecap="round"/>
+              <path d="{{ s.d }}" stroke="{{ s.trazo }}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{ s.guion }}"/>
+            </g>
+          </sc-for>
+        </svg>
+        <sc-for list="{{ nodos }}" as="n" hint-placeholder-count="7">
+          <span class="{{ entradaNodo }}" style="position: absolute; left: {{ n.x }}; top: {{ n.y }}; transform: translate(-50%, -50%); animation-delay: {{ n.retraso }};">
+            <span style="display: grid; place-items: center; {{ n.estilo }}">
+              <sc-if value="{{ n.activa }}" hint-placeholder-val="{{ false }}">
+                <svg viewBox="0 0 20 20" style="width: 23px; height: 23px;" fill="none" stroke="#1E9E3A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="9" width="11" height="7.5" rx="2"/><path d="M7 9V6.6a3 3 0 0 1 5.8-1"/></svg>
+              </sc-if>
+              <sc-if value="{{ n.hecha }}" hint-placeholder-val="{{ true }}">
+                <svg viewBox="0 0 20 20" style="width: 17px; height: 17px;" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"/></svg>
+              </sc-if>
+              <sc-if value="{{ n.candado }}" hint-placeholder-val="{{ false }}">
+                <svg viewBox="0 0 20 20" style="width: 15px; height: 15px;" fill="none" stroke="#8A9891" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.6" y="8.8" width="10.8" height="7.4" rx="2"/><path d="M7 8.8V6.6a3 3 0 0 1 6 0v2.2"/></svg>
+              </sc-if>
+              <sc-if value="{{ n.numerada }}" hint-placeholder-val="{{ false }}">{{ n.dentro }}</sc-if>
+            </span>
+          </span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================= EL CIERRE ========================= -->
+  <div class="caja" style="margin-top: 22px;">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;">
+      <div style="flex: 1; min-width: 0;">
+        <p class="h" style="margin: 0; font-size: 19px;">4 · Al cerrar una parada</p>
+        <p style="margin: 10px 0 0; max-width: 74ch; font-size: 14px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">Poco más de un segundo. El disco se llena, se traza la marca, el tramo se colorea hasta la siguiente y allí se enciende el aro. <strong style="font-weight: 600; color: #24352C;">No hay premio: hay avance.</strong> Ni confeti, ni un sello, ni un número que sube — lo que pasa es que el camino llega un poco más lejos, que es exactamente lo que ha pasado de verdad.</p>
+      </div>
+      <button type="button" class="repite" onClick="{{ repetirCierre }}">
+        <svg viewBox="0 0 16 16" style="width: 14px; height: 14px;" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.9-4.1"/><path d="M13.8 2.2v3.4h-3.4"/></svg>
+        Verlo otra vez
+      </button>
+    </div>
+
+    <div class="campo" style="margin-top: 18px; padding: 34px 0 30px;">
+      <div style="position: relative; height: 120px;">
+        <svg viewBox="0 0 1000 120" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;" fill="none">
+          <path d="M 250 40 C 250 88, 620 88, 620 40" stroke="#D9EDE1" stroke-width="15" stroke-linecap="round"/>
+          <path d="M 250 40 C 250 88, 620 88, 620 40" stroke="#C4DECF" stroke-width="6" stroke-linecap="round" stroke-dasharray="0.5 15"/>
+          <path class="{{ cierre }}" d="M 250 40 C 250 88, 620 88, 620 40" stroke="#1E9E3A" stroke-width="6" stroke-linecap="round"/>
+        </svg>
+
+        <!-- La que se cierra -->
+        <span style="position: absolute; left: 25%; top: 33.3%; transform: translate(-50%, -50%);">
+          <span class="{{ cierreAro }}" style="position: relative; display: grid; place-items: center; width: 76px; height: 76px; border-radius: 999px; background: #F0FAF2; border: 5px solid #FFC400; box-shadow: 0 6px 0 #E0A800, 0 16px 28px rgba(18,33,26,0.20);">
+            <svg viewBox="0 0 20 20" style="width: 36px; height: 36px;" fill="none" stroke="#1E9E3A" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="9" width="11" height="7.5" rx="2"/><path d="M7 9V6.6a3 3 0 0 1 5.8-1"/></svg>
+            <span class="{{ cierreLlena }}" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: 100%; height: 100%; border-radius: 999px; background: #1E9E3A;">
+              <svg viewBox="0 0 20 20" style="width: 26px; height: 26px;" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path class="{{ cierreTraza }}" d="M5 10.5l3.5 3.5L15 7"/></svg>
+            </span>
+          </span>
+        </span>
+
+        <!-- La que hereda el turno -->
+        <span style="position: absolute; left: 62%; top: 33.3%; transform: translate(-50%, -50%);">
+          <span class="{{ cierreAsciende }}">
+            <span style="position: relative; display: grid; place-items: center; width: 76px; height: 76px; border-radius: 999px; background: #F0FAF2; border: 5px solid #FFC400; box-shadow: 0 6px 0 #E0A800, 0 16px 28px rgba(18,33,26,0.20);">
+              <svg viewBox="0 0 20 20" style="width: 36px; height: 36px;" fill="none" stroke="#1E9E3A" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="9" width="11" height="7.5" rx="2"/><path d="M7 9V6.6a3 3 0 0 1 5.8-1"/></svg>
+            </span>
+          </span>
+        </span>
+      </div>
+
+      <!-- La línea de tiempo, con los números que hay en el CSS -->
+      <div style="margin: 6px 40px 0; display: flex; flex-direction: column; gap: 7px;">
+        <sc-for list="{{ pasos }}" as="p" hint-placeholder-count="4">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <span style="width: 96px; flex-shrink: 0; font-size: 12px; font-weight: 600; color: #24352C;">{{ p.nombre }}</span>
+            <span style="position: relative; flex: 1; height: 8px; border-radius: 999px; background: #DCEEE4;">
+              <span style="position: absolute; top: 0; left: {{ p.izq }}; width: {{ p.ancho }}; height: 8px; border-radius: 999px; background: {{ p.color }};"></span>
+            </span>
+            <span style="width: 118px; flex-shrink: 0; text-align: right; font-size: 12px; color: #5F6F66; font-variant-numeric: tabular-nums;">{{ p.rango }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================= LAS DOS REGLAS ========================= -->
+  <div style="margin-top: 22px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px;">
+
+    <div class="caja">
+      <p class="h" style="margin: 0; font-size: 19px;">Si el sistema pide menos movimiento</p>
+      <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">Todo estático, sin excepciones. Y no hace falta escribir un segundo diseño para eso: <strong style="font-weight: 600; color: #24352C;">el estado base de cada elemento ya es el estado final</strong>, y las animaciones solo definen el <code style="font-family: ui-monospace, monospace; font-size: 12.5px; background: #F4F7F4; padding: 1px 5px; border-radius: 5px;">from</code>. Apagarlas deja la pantalla exactamente como termina.</p>
+      <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">Cerrar una parada sigue funcionando: cambia de estado sin transición, que es lo correcto — la información no era la animación.</p>
+      <pre style="margin: 14px 0 0; padding: 14px 16px; border-radius: 12px; background: #12211A; color: #A9DFB7; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; overflow-x: auto;">@media (prefers-reduced-motion: reduce) {
+  .halo, .latido, .marcha, .asoma, .entra,
+  .brota, .llena, .traza, .tiñe, .asciende {
+    animation: none !important;
+  }
+}</pre>
+    </div>
+
+    <div class="caja">
+      <p class="h" style="margin: 0; font-size: 19px;">Y nada bloquea nada</p>
+      <ul style="margin: 12px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: #4C5C53;">
+        <li>Todo es <code style="font-family: ui-monospace, monospace; font-size: 12.5px; background: #F4F7F4; padding: 1px 5px; border-radius: 5px;">opacity</code>, <code style="font-family: ui-monospace, monospace; font-size: 12.5px; background: #F4F7F4; padding: 1px 5px; border-radius: 5px;">transform</code> y <code style="font-family: ui-monospace, monospace; font-size: 12.5px; background: #F4F7F4; padding: 1px 5px; border-radius: 5px;">stroke-dashoffset</code>: se compone, no se recalcula el layout.</li>
+        <li>Ninguna animación pone <code style="font-family: ui-monospace, monospace; font-size: 12.5px; background: #F4F7F4; padding: 1px 5px; border-radius: 5px;">pointer-events: none</code>. Durante la entrada ya se puede pulsar cualquier parada; durante el cierre, también — lo único que no se puede es cerrarla dos veces.</li>
+        <li>El desfase máximo es de 1,16 s, y el botón principal está disponible desde el primer fotograma: quien llega con prisa no espera a nadie.</li>
+        <li>Sin librerías. CSS y SVG, y los tiempos viven en un solo bloque de <code style="font-family: ui-monospace, monospace; font-size: 12.5px; background: #F4F7F4; padding: 1px 5px; border-radius: 5px;">@keyframes</code> compartido por los dos anchos.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top: 22px; border-radius: 20px; background: #FBF7EF; border: 1px solid #EFE3C0; padding: 22px 26px;">
+    <p style="margin: 0; font-size: 14.5px; line-height: 1.6; color: #4C5C53;"><strong style="font-weight: 700; color: #6B5A2E;">Lo que se quedó fuera, a propósito:</strong> confeti al cerrar una parada, un contador que sube, un sello o medalla, un sonido, y que el camino entero se ilumine de golpe. Los cinco son recompensa, y la recompensa aquí ya existe y tiene nombre: la persona que va a leer lo que el alumno escriba. Un mecanismo que compita con eso resta, aunque se vea bien.</p>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1120,"height":1760}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { e: 1, c: 1 };
+  }
+
+  /** Quitar la clase y devolverla en el fotograma siguiente reinicia la
+   *  animación sin duplicar keyframes. */
+  relanzar(clave) {
+    const self = this;
+    const cambio = {};
+    cambio[clave] = 0;
+    this.setState(cambio);
+    requestAnimationFrame(function () {
+      const vuelta = {};
+      vuelta[clave] = 1;
+      self.setState(vuelta);
+    });
+  }
+
+  renderVals() {
+    const self = this;
+
+    // Seis tramos y siete nodos, con las bandas del escritorio.
+    const bandas = [40, 26, 40, 26, 40, 26, 40];
+    const xs = [70, 225, 380, 535, 690, 845, 960];
+    const tramos = [];
+    for (let i = 0; i < 6; i++) {
+      tramos.push({
+        d: 'M ' + xs[i] + ' ' + (bandas[i] === 40 ? 40 : 100) + ' C ' + xs[i] + ' 70, ' + xs[i + 1] + ' 70, ' + xs[i + 1] + ' ' + (bandas[i + 1] === 40 ? 40 : 100),
+        trazo: i < 2 ? '#1E9E3A' : '#C4DECF',
+        guion: i < 2 ? 'none' : '0.5 15',
+        retraso: (i * 70) + 'ms'
+      });
+    }
+
+    const nodos = xs.map(function (x, i) {
+      const hecha = i < 2;
+      const activa = i === 2;
+      const candado = i === 6;
+      let estilo = 'border-radius: 999px; width: ' + (activa ? 54 : 40) + 'px; height: ' + (activa ? 54 : 40) + 'px;';
+      if (activa) estilo += ' background: #FFFFFF; border: 3.5px solid #FFC400; box-shadow: 0 4px 0 #E0A800;';
+      else if (hecha) estilo += ' background: #1E9E3A; box-shadow: 0 3px 0 #14722A;';
+      else if (candado) estilo += ' background: #F1F5F2; border: 2px dashed #C4DECF; box-shadow: 0 3px 0 #E2EDE6;';
+      else estilo += ' background: #FFFFFF; border: 2px solid #C4DECF; box-shadow: 0 3px 0 #DFEBE4;';
+
+      const numerada = !activa && !hecha && !candado;
+
+      return {
+        x: ((x / 1000) * 100) + '%',
+        y: ((bandas[i] === 40 ? 40 : 100) / 130 * 100) + '%',
+        estilo: estilo + ' font-family: Radio Canada Big, sans-serif; font-size: 14px; font-weight: 700; color: #7A8A80;',
+        activa: activa,
+        hecha: hecha,
+        candado: candado,
+        numerada: numerada,
+        dentro: numerada ? String(i + 1) : '',
+        retraso: (i * 70 + 110) + 'ms'
+      };
+    });
+
+    const pasos = [
+      { nombre: 'Se llena', izq: '0%', ancho: '33%', color: '#1E9E3A', rango: '0 → 360 ms' },
+      { nombre: 'Se traza', izq: '18%', ancho: '26%', color: '#37C25A', rango: '200 → 480 ms' },
+      { nombre: 'Se colorea', izq: '18%', ancho: '44%', color: '#1E9E3A', rango: '200 → 680 ms' },
+      { nombre: 'Se enciende', izq: '65%', ancho: '35%', color: '#FFC400', rango: '700 → 1.080 ms' }
+    ];
+
+    const e = this.state.e === 1;
+    const c = this.state.c === 1;
+
+    return {
+      tramos: tramos,
+      nodos: nodos,
+      pasos: pasos,
+
+      entrada: e ? 'asoma' : '',
+      entradaNodo: e ? 'entra' : '',
+
+      cierre: c ? 'tiñe' : '',
+      cierreLlena: c ? 'llena' : '',
+      cierreTraza: c ? 'traza' : '',
+      cierreAro: c ? 'apaga' : '',
+      cierreAsciende: c ? 'asciende' : '',
+
+      repetirEntrada: function () { self.relanzar('e'); },
+      repetirCierre: function () { self.relanzar('c'); }
+    };
+  }
+}
+</script>
+</body>
+</html>

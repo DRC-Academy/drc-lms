@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@400;500;600;700&family=Radio+Canada+Big:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+    .cara { display: grid; place-items: center; border-radius: 999px; font-family: 'Radio Canada Big', sans-serif; font-weight: 700; line-height: 1; }
+    .h { font-family: 'Radio Canada Big', 'Radio Canada', sans-serif; font-weight: 700; letter-spacing: -0.02em; color: #12211A; }
+  </style>
+</helmet>
+
+<div style="width: 860px; background: #F4F7F4; padding: 40px 40px 44px; box-sizing: border-box;">
+
+  <p style="margin: 0; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; line-height: 1; color: #6B5A2E;">Personas · dirección A</p>
+  <h1 class="h" style="margin: 11px 0 0; font-size: 34px; line-height: 1.06;">La firma, ahora solo en la tarjeta</h1>
+  <p style="margin: 11px 0 0; font-size: 15.5px; line-height: 1.55; color: #4C5C53; text-wrap: pretty;">Quitadas las iniciales de los nodos, esta dirección se queda con un solo sitio donde vivir: la tarjeta de la parada. Sigue apoyada en un dato que ya existe —<code style="font-family: ui-monospace, monospace; font-size: 13.5px; background: #FFFFFF; border: 1px solid #E2E8E4; padding: 1px 6px; border-radius: 5px;">claseOrigen: { fecha, profesor }</code>, en <code style="font-family: ui-monospace, monospace; font-size: 13.5px; background: #FFFFFF; border: 1px solid #E2E8E4; padding: 1px 6px; border-radius: 5px;">lib/data.ts:55</code>— y que nunca se le ha enseñado al alumno.</p>
+
+  <!-- ============================ EL MAPA, LIMPIO ============================ -->
+  <div style="margin-top: 26px; border: 1px solid #CFE8D8; border-radius: 22px; background: #EDF7F0; padding: 22px 0 22px; overflow: hidden;">
+    <p style="margin: 0 0 12px; padding: 0 22px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; color: #14722A;">En el sendero ya no hay nadie</p>
+
+    <div style="position: relative; height: 176px; margin-top: 34px;">
+      <svg aria-hidden="true" viewBox="0 0 366 100" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 58%;" fill="none">
+        <path d="M 57 0 C 57 52, 183 52, 183 100" stroke="#D9EDE1" stroke-width="17" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+        <path d="M 57 0 C 57 52, 183 52, 183 100" stroke="#1E9E3A" stroke-width="6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <svg aria-hidden="true" viewBox="0 0 366 100" preserveAspectRatio="none" style="position: absolute; left: 0; top: 58%; width: 100%; height: 42%;" fill="none">
+        <path d="M 183 0 C 183 52, 309 52, 309 100" stroke="#D9EDE1" stroke-width="17" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+        <path d="M 183 0 C 183 52, 309 52, 309 100" stroke="#C4DECF" stroke-width="6" stroke-linecap="round" stroke-dasharray="0.5 15" vector-effect="non-scaling-stroke"/>
+      </svg>
+
+      <span style="position: absolute; left: 15.5%; top: 0; transform: translate(-50%, -50%); z-index: 2;">
+        <span style="display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #1E9E3A; box-shadow: 0 4px 0 #14722A, 0 9px 16px rgba(30,158,58,0.22);">
+          <svg viewBox="0 0 20 20" style="width: 21px; height: 21px;" fill="none" stroke="#FFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"/></svg>
+        </span>
+      </span>
+
+      <span style="position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); z-index: 3;">
+        <span style="display: grid; place-items: center; width: 76px; height: 76px; border-radius: 999px; background: #F0FAF2; border: 5px solid #FFC400; box-shadow: 0 6px 0 #E0A800, 0 16px 28px rgba(18,33,26,0.20);">
+          <svg viewBox="0 0 20 20" style="width: 36px; height: 36px;" fill="none" stroke="#1E9E3A" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="9" width="11" height="7.5" rx="2"/><path d="M7 9V6.6a3 3 0 0 1 5.8-1"/></svg>
+        </span>
+      </span>
+
+      <span style="position: absolute; left: 84.5%; top: 100%; transform: translate(-50%, -50%); z-index: 2;">
+        <span style="display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #FFFFFF; border: 2px solid #C4DECF; box-shadow: 0 4px 0 #DFEBE4;">
+          <span style="font-family: 'Radio Canada Big', sans-serif; font-size: 18px; font-weight: 700; color: #7A8A80;">4</span>
+        </span>
+      </span>
+    </div>
+
+    <p style="margin: 26px 22px 0; font-size: 13px; line-height: 1.5; color: #5F6F66; text-wrap: pretty;">Marca, candado abierto y número. El mapa gana en limpieza y el nodo disponible manda mucho más ahora que nada le compite alrededor — pero la ruta vuelve a ser lo que era al principio de todo esto: <strong style="font-weight: 600; color: #24352C;">discos y líneas, sin nadie dentro</strong>.</p>
+  </div>
+
+  <!-- ========================= DONDE SÍ QUEDA GENTE ========================= -->
+  <div style="margin-top: 20px; border-radius: 20px; background: #FFFFFF; border: 1px solid #DCE9E1; border-top: 3px solid #FFC400; padding: 22px 24px; box-shadow: 0 14px 32px -18px rgba(18,33,26,0.28);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="cara" style="width: 30px; height: 30px; background: #FBF7EF; border: 1px solid #EFE3C0; font-size: 13px; color: #6B5A2E;">A</span>
+      <p style="margin: 0; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: #9A7B00;">Parada 3 · de tu clase del 24 jul</p>
+    </div>
+    <h2 class="h" style="margin: 12px 0 0; font-size: 26px; line-height: 1.09;">Condicionales 2 y 3</h2>
+    <p style="margin: 10px 0 0; font-size: 14.5px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">Este es el único sitio donde queda una persona: la chapa de 30px junto a la etiqueta, y el pie que dice que Aoife va a leer lo que escribas. No se ha tocado.</p>
+  </div>
+
+  <div style="margin-top: 16px; border-radius: 18px; background: #FBF7EF; border: 1px solid #EFE3C0; padding: 20px 22px;">
+    <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #4C5C53;"><strong style="font-weight: 700; color: #6B5A2E;">Decisión pendiente:</strong> esa chapa de la tarjeta es la hermana pequeña de las que se acaban de quitar. Si molestaba en los nodos, puede molestar aquí — dilo y se va, y entonces la persona queda solo en el texto («hecha con Liam», «lo lee Aoife»), que sigue siendo atribución aunque no se vea.</p>
+  </div>
+
+  <!-- ============================== BALANCE ============================== -->
+  <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;">
+    <div style="border-radius: 18px; background: #FFFFFF; border: 1px solid #E2E8E4; padding: 20px 22px;">
+      <p style="margin: 0; font-size: 13.5px; font-weight: 700; color: #14722A;">Lo que se gana al quitarlas</p>
+      <ul style="margin: 9px 0 0; padding-left: 18px; font-size: 13.5px; line-height: 1.6; color: #4C5C53;">
+        <li>El nodo disponible destaca mucho más: nada le compite al lado.</li>
+        <li>Con veinte paradas el mapa deja de tener veinte letritas sueltas.</li>
+        <li>Una inicial a 21px era, siendo honestos, poco legible y menos identificable.</li>
+      </ul>
+    </div>
+    <div style="border-radius: 18px; background: #FFFFFF; border: 1px solid #E2E8E4; padding: 20px 22px;">
+      <p style="margin: 0; font-size: 13.5px; font-weight: 700; color: #9A7B00;">Lo que se pierde</p>
+      <ul style="margin: 9px 0 0; padding-left: 18px; font-size: 13.5px; line-height: 1.6; color: #4C5C53;">
+        <li>Ya no se ve de un vistazo que la ruta la han hecho tres personas distintas.</li>
+        <li>Con las fotos también descartadas, «que haya humanos» se queda sin ninguna pieza en el mapa.</li>
+        <li>Si eso importa, la dirección viva pasa a ser <strong style="font-weight: 600; color: #24352C;">C</strong>: la voz de la profesora dentro de la tarjeta.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":860,"height":1040}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

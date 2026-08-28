@@ -1,0 +1,235 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@400;500;600;700&family=Radio+Canada+Big:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+    .h { font-family: 'Radio Canada Big', 'Radio Canada', sans-serif; font-weight: 700; letter-spacing: -0.02em; color: #12211A; }
+    .etq { margin: 0; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; line-height: 1; }
+    .disco { display: grid; place-items: center; border-radius: 999px; }
+  </style>
+</helmet>
+
+<div style="width: 1020px; background: #F4F7F4; padding: 44px 44px 48px; box-sizing: border-box;">
+
+  <p class="etq" style="color: #14722A;">Punto 5 · cuando la ruta se alarga</p>
+  <h1 class="h" style="margin: 12px 0 0; font-size: 36px; line-height: 1.06;">Veinte paradas: 1,8 pantallas de mapa</h1>
+  <p style="margin: 12px 0 0; max-width: 78ch; font-size: 16px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">Quitar el texto del sendero abarató el scroll de golpe: sin rótulos al lado, los nodos caben cada 96px en vez de cada 128. El mapa completo de veinte paradas mide 2.260px —tres pantallas y media, demasiado— y plegado se queda en 1.200, poco más de pantalla y media. Y como la vista arranca anclada en la parada disponible, <strong style="font-weight: 600; color: #24352C;">el alumno no paga ni un píxel de ese scroll para llegar al botón</strong>.</p>
+
+  <div style="display: flex; gap: 36px; margin-top: 34px; align-items: flex-start;">
+
+    <!-- ======================= EL MAPA PLEGADO, A ESCALA ======================= -->
+    <div style="flex-shrink: 0; width: 390px;">
+      <p class="etq" style="color: #6B5A2E; margin-bottom: 12px;">A escala real · 390px de ancho</p>
+      <div style="position: relative; border: 1px solid #CFE8D8; border-radius: 24px; background: #EDF7F0; padding: 17px 0 22px; overflow: hidden;">
+        <span aria-hidden="true" style="position: absolute; right: -94px; top: -116px; width: 280px; height: 280px; border-radius: 999px; background: #E0F1E7;"></span>
+        <span aria-hidden="true" style="position: absolute; left: -86px; top: 40%; width: 220px; height: 220px; border-radius: 999px; background: #E5F4EB;"></span>
+
+        <div style="position: relative;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 0 16px;">
+            <p style="margin: 0; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; line-height: 1; color: #14722A;">Tu ruta · 20 paradas</p>
+            <p style="margin: 0; flex-shrink: 0; font-size: 12.5px; font-weight: 600; color: #14722A;">vas por la 14 de 20</p>
+          </div>
+
+          <div style="position: relative; margin-top: 40px;">
+            <sc-for list="{{ tramos }}" as="t" hint-placeholder-count="5">
+              <div style="position: relative; {{ t.alto }}">
+
+                <svg aria-hidden="true" viewBox="0 0 366 100" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 0;" fill="none">
+                  <path d="{{ t.d }}" stroke="#D9EDE1" stroke-width="17" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+                  <path d="{{ t.d }}" stroke="{{ t.trazo }}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{ t.guion }}" vector-effect="non-scaling-stroke"/>
+                </svg>
+
+                <span style="position: absolute; left: {{ t.banda }}; top: 0; transform: translate(-50%, -50%); z-index: 3;">
+                  <sc-if value="{{ t.esActiva }}" hint-placeholder-val="{{ true }}">
+                    <span style="position: absolute; left: 50%; bottom: 100%; margin-bottom: 13px; transform: translateX(-50%);">
+                      <span style="position: relative; display: inline-flex; align-items: center; border-radius: 999px; background: #FFC400; padding: 7px 15px; font-size: 12.5px; font-weight: 700; color: #12211A; box-shadow: 0 4px 0 #E0A800, 0 8px 16px rgba(18,33,26,0.16); white-space: nowrap;">
+                        Estás aquí
+                        <span aria-hidden="true" style="position: absolute; left: 50%; bottom: -4px; width: 10px; height: 10px; transform: translateX(-50%) rotate(45deg); background: #FFC400;"></span>
+                      </span>
+                    </span>
+                  </sc-if>
+
+                  <span style="position: relative; display: block;">
+                    <span class="disco" style="{{ t.estiloDisco }}">
+                      <sc-if value="{{ t.esActiva }}" hint-placeholder-val="{{ true }}">
+                        <svg viewBox="0 0 20 20" style="width: 36px; height: 36px;" fill="none" stroke="#1E9E3A" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="4.5" y="9" width="11" height="7.5" rx="2"/>
+                          <path d="M7 9V6.6a3 3 0 0 1 5.8-1"/>
+                        </svg>
+                      </sc-if>
+                      <sc-if value="{{ t.esHecha }}" hint-placeholder-val="{{ false }}">
+                        <svg viewBox="0 0 20 20" style="width: 21px; height: 21px;" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"/></svg>
+                      </sc-if>
+                      <sc-if value="{{ t.esCandado }}" hint-placeholder-val="{{ false }}">
+                        <svg viewBox="0 0 20 20" style="width: 19px; height: 19px;" fill="none" stroke="#8A9891" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.6" y="8.8" width="10.8" height="7.4" rx="2"/><path d="M7 8.8V6.6a3 3 0 0 1 6 0v2.2"/></svg>
+                      </sc-if>
+                      <sc-if value="{{ t.esPendiente }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-family: 'Radio Canada Big', sans-serif; font-size: 18px; font-weight: 700; line-height: 1; color: #7A8A80;">{{ t.n }}</span>
+                      </sc-if>
+                      <sc-if value="{{ t.esGrupo }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-family: 'Radio Canada Big', sans-serif; font-size: 15px; font-weight: 700; line-height: 1; {{ t.colorGrupo }}">+{{ t.agrupadas }}</span>
+                      </sc-if>
+                    </span>
+                  </span>
+                </span>
+
+                <sc-if value="{{ t.esActiva }}" hint-placeholder-val="{{ true }}">
+                  <div style="position: relative; z-index: 2; padding: 62px 12px 34px;">
+                    <div style="border-radius: 18px; background: #FFFFFF; border: 1px solid #DCE9E1; border-top: 3px solid #FFC400; padding: 17px 18px 18px; box-shadow: 0 16px 34px -18px rgba(18,33,26,0.32);">
+                      <div style="display: flex; align-items: center; gap: 9px;">
+                        <span style="display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 999px; background: #FBF7EF; border: 1px solid #EFE3C0; font-family: 'Radio Canada Big', sans-serif; font-size: 13px; font-weight: 700; color: #6B5A2E;">A</span>
+                        <p style="margin: 0; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.13em; line-height: 1.35; color: #9A7B00;">Parada 14 · de tu clase del 25 ago</p>
+                      </div>
+                      <h2 class="h" style="margin: 12px 0 0; font-size: 26px; line-height: 1.09;">Matices de obligación</h2>
+                      <p style="margin: 10px 0 0; font-size: 14.5px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">Must, have to y should no son intercambiables cuando le pides algo a un cliente.</p>
+                      <a href="#" style="display: flex; align-items: center; justify-content: center; margin-top: 17px; min-height: 52px; border-radius: 999px; background: #1E9E3A; color: #FFFFFF; font-size: 16.5px; font-weight: 700; box-shadow: 0 4px 0 #14722A, 0 10px 20px rgba(30,158,58,0.26);">Seguir la ruta</a>
+                      <p style="margin: 10px 0 0; text-align: center; font-size: 12.5px; line-height: 1.4; color: #7A8A80;">Diez ejercicios. Lo que escribas al final lo lee Aoife.</p>
+                    </div>
+                  </div>
+                </sc-if>
+
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== LAS REGLAS ============================== -->
+    <div style="flex: 1; min-width: 0;">
+
+      <div style="border-radius: 20px; background: #FFFFFF; border: 1px solid #E2E8E4; padding: 24px 26px;">
+        <p class="h" style="margin: 0; font-size: 19px;">Cuánto scroll es aceptable</p>
+        <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding-bottom: 12px; border-bottom: 1px solid #EDF1EE;">
+            <span style="font-size: 14.5px; color: #4C5C53;">7 paradas, sin plegar</span>
+            <span style="flex-shrink: 0; font-size: 14.5px; font-weight: 600; color: #14722A; font-variant-numeric: tabular-nums;">1.010px · 1,5 pantallas</span>
+          </div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding-bottom: 12px; border-bottom: 1px solid #EDF1EE;">
+            <span style="font-size: 14.5px; color: #4C5C53;">20 paradas, plegado</span>
+            <span style="flex-shrink: 0; font-size: 14.5px; font-weight: 600; color: #14722A; font-variant-numeric: tabular-nums;">1.200px · 1,8 pantallas</span>
+          </div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding-bottom: 12px; border-bottom: 1px solid #EDF1EE;">
+            <span style="font-size: 14.5px; color: #8A9891;">20 paradas, sin plegar</span>
+            <span style="flex-shrink: 0; font-size: 14.5px; font-weight: 600; color: #9A7B00; font-variant-numeric: tabular-nums;">2.260px · 3,4 pantallas</span>
+          </div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px;">
+            <span style="font-size: 14.5px; font-weight: 600; color: #24352C;">Scroll para llegar al botón</span>
+            <span style="flex-shrink: 0; font-size: 14.5px; font-weight: 700; color: #14722A;">cero, siempre</span>
+          </div>
+        </div>
+        <p style="margin: 16px 0 0; font-size: 13.5px; line-height: 1.55; color: #5F6F66; text-wrap: pretty;">Pantalla y media de mapa es aceptable porque nadie está obligado a recorrerla: la vista abre anclada en la parada disponible y el pie que vuelve mantiene el botón a un dedo desde cualquier punto del scroll.</p>
+      </div>
+
+      <div style="margin-top: 20px; border-radius: 20px; background: #FFFFFF; border: 1px solid #E2E8E4; padding: 24px 26px;">
+        <p class="h" style="margin: 0; font-size: 19px;">Qué se pliega y qué no</p>
+        <ul style="margin: 14px 0 0; padding-left: 20px; font-size: 14.5px; line-height: 1.62; color: #4C5C53;">
+          <li><strong style="font-weight: 600; color: #24352C;">Detrás, dos hechas.</strong> El resto se agrupa en un nodo verde «+11». Es el <code style="font-family: ui-monospace, monospace; font-size: 13px; background: #F4F7F4; padding: 1px 5px; border-radius: 5px;">HECHAS_A_LA_VISTA = 2</code> que ya existe en <code style="font-family: ui-monospace, monospace; font-size: 13px; background: #F4F7F4; padding: 1px 5px; border-radius: 5px;">lib/ruta.ts</code>: la regla ya está escrita, no hay que inventarla.</li>
+          <li><strong style="font-weight: 600; color: #24352C;">Delante, tres pendientes.</strong> Suficiente para ver que el camino sigue. Lo que sobre se agrupa en un nodo de traza discontinua «+2».</li>
+          <li><strong style="font-weight: 600; color: #24352C;">Nunca se pliegan</strong> la parada disponible ni el candado. Una es adónde vas; el otro es la promesa de que la ruta crece.</li>
+          <li><strong style="font-weight: 600; color: #24352C;">Los grupos se abren al tocarlos</strong> y el mapa crece ahí mismo, con el nodo convertido en un «−» para volver a plegarlo. Nada se esconde: se pliega. Y al desplegar se corrige el scroll para que lo que tenías bajo el dedo no se mueva de sitio.</li>
+          <li><strong style="font-weight: 600; color: #24352C;">No hay «ver más» al pie</strong> ni paginación. El desplegable ES un nodo del camino, y por eso plegar no rompe la sensación de recorrido.</li>
+        </ul>
+      </div>
+
+      <div style="margin-top: 20px; border-radius: 20px; background: #EDF7F0; border: 1px solid #CFE8D8; padding: 24px 26px;">
+        <p class="h" style="margin: 0; font-size: 19px;">Nueve nodos como máximo</p>
+        <p style="margin: 12px 0 0; font-size: 14.5px; line-height: 1.6; color: #4C5C53; text-wrap: pretty;">Con esa regla el mapa nunca dibuja más de nueve nodos: <strong style="font-weight: 600; color: #24352C;">grupo · 2 hechas · disponible · 3 pendientes · grupo · candado</strong>. Con siete paradas no se pliega nada y salen siete. Con veinte salen nueve. Con doscientas, nueve.</p>
+        <p style="margin: 12px 0 0; font-size: 14.5px; line-height: 1.6; color: #4C5C53; text-wrap: pretty;">Es la misma idea que ya usa el escritorio, donde el camino serpenteante tiene un tope de siete. Dos anchos, dos dibujos, una sola regla detrás.</p>
+        <p style="margin: 12px 0 0; font-size: 14.5px; line-height: 1.6; color: #4C5C53; text-wrap: pretty;">Y es lo que evita que el movimiento haga ruido: <strong style="font-weight: 600; color: #24352C;">pulsa un solo nodo y marcha un solo tramo</strong>, tenga la ruta siete paradas o doscientas. El desfase de entrada también está cortado a nueve, así que la pantalla nunca tarda más de 1,16 s en armarse.</p>
+      </div>
+
+      <div style="margin-top: 20px; border-radius: 20px; background: #FBF7EF; border: 1px solid #EFE3C0; padding: 22px 26px;">
+        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #4C5C53;"><strong style="font-weight: 700; color: #6B5A2E;">Lo que no se hace:</strong> paginar el mapa, meterle scroll interno o cortarlo con un «ver más». Las tres rompen la sensación de recorrido, que es justo lo que se ha venido a construir. Plegar en un nodo no la rompe, porque el nodo <em style="font-style: normal; font-weight: 600;">sigue estando en el camino</em>.</p>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1020,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const brutas = [
+      { n: 0, tipo: 'resumen', agrupadas: 11, prof: '' },
+      { n: 12, tipo: 'hecha', prof: 'Sinéad' },
+      { n: 13, tipo: 'hecha', prof: 'Liam' },
+      { n: 14, tipo: 'actual', prof: 'Aoife' },
+      { n: 15, tipo: 'pendiente', prof: 'Liam' },
+      { n: 16, tipo: 'pendiente', prof: 'Aoife' },
+      { n: 17, tipo: 'pendiente', prof: 'Sinéad' },
+      { n: 0, tipo: 'resumen', agrupadas: 2, prof: '', futuro: true },
+      { n: 20, tipo: 'candado', prof: 'Aoife' }
+    ];
+
+    const X = { izq: 57, centro: 183, der: 309 };
+    const PCT = { izq: '15.5%', centro: '50%', der: '84.5%' };
+
+    let lado = 'izq';
+    const bandas = brutas.map(function (p) {
+      if (p.tipo === 'actual') return 'centro';
+      const actual = lado;
+      lado = lado === 'izq' ? 'der' : 'izq';
+      return actual;
+    });
+
+    return {
+      tramos: brutas.map(function (p, i) {
+        const esActiva = p.tipo === 'actual';
+        const esHecha = p.tipo === 'hecha';
+        const esCandado = p.tipo === 'candado';
+        const esGrupo = p.tipo === 'resumen';
+        const andado = esHecha || (esGrupo && !p.futuro);
+        const ultimo = i === brutas.length - 1;
+
+        let d = '';
+        if (!ultimo) {
+          const x1 = X[bandas[i]];
+          const x2 = X[bandas[i + 1]];
+          d = esActiva
+            ? 'M ' + x1 + ' 0 C ' + x1 + ' 76, ' + x2 + ' 80, ' + x2 + ' 100'
+            : 'M ' + x1 + ' 0 C ' + x1 + ' 52, ' + x2 + ' 52, ' + x2 + ' 100';
+        }
+
+        const medida = esActiva ? 76 : 46;
+        let disco = 'width: ' + medida + 'px; height: ' + medida + 'px;';
+        if (esActiva) disco += ' background: #F0FAF2; border: 5px solid #FFC400; box-shadow: 0 6px 0 #E0A800, 0 16px 28px rgba(18,33,26,0.20);';
+        else if (esHecha) disco += ' background: #1E9E3A; box-shadow: 0 4px 0 #14722A, 0 9px 16px rgba(30,158,58,0.22);';
+        else if (esCandado) disco += ' background: #F1F5F2; border: 2px dashed #C4DECF; box-shadow: 0 4px 0 #E2EDE6;';
+        else if (esGrupo && p.futuro) disco += ' background: #FFFFFF; border: 2px dashed #C4DECF; box-shadow: 0 4px 0 #DFEBE4;';
+        else if (esGrupo) disco += ' background: #FFFFFF; border: 2px solid #1E9E3A; box-shadow: 0 4px 0 #CFE8D8;';
+        else disco += ' background: #FFFFFF; border: 2px solid #C4DECF; box-shadow: 0 4px 0 #DFEBE4;';
+
+        return {
+          n: p.n,
+          agrupadas: p.agrupadas,
+          colorGrupo: p.futuro ? 'color: #8A9891;' : 'color: #14722A;',
+          banda: PCT[bandas[i]],
+          d: d,
+          trazo: andado ? '#1E9E3A' : '#C4DECF',
+          guion: andado ? 'none' : '0.5 15',
+          alto: esActiva ? '' : (ultimo ? 'min-height: 62px;' : 'min-height: 96px;'),
+          esActiva: esActiva,
+          esHecha: esHecha,
+          esCandado: esCandado,
+          esPendiente: p.tipo === 'pendiente',
+          esGrupo: esGrupo,
+          estiloDisco: disco
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,612 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@400;500;600;700&family=Radio+Canada+Big:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; text-decoration: none; }
+    a:hover { color: #12211A; }
+
+    /* ===============================================================
+       EL MOVIMIENTO, EN UN SITIO
+
+       Cuatro gestos. La regla que los mantiene adultos es de REPARTO:
+       cada gesto tiene un único dueño en la pantalla. Pulsa un nodo, no
+       siete. Marcha un tramo, no los quince que quedan. Con veinte
+       paradas se mueve exactamente lo mismo que con siete.
+       =============================================================== */
+    @keyframes halo {
+      0%   { box-shadow: 0 0 0 0 rgba(255,196,0,0.46); }
+      70%  { box-shadow: 0 0 0 22px rgba(255,196,0,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,196,0,0); }
+    }
+    @keyframes latido { 0%, 100% { transform: scale(1); } 42% { transform: scale(1.035); } }
+    /* El arco del candado abierto se levanta 1px con el mismo pulso. Es
+       lo que hace que el icono no sea un dibujo quieto dentro de un aro
+       que late. Quitar esta clase no rompe nada. */
+    @keyframes arco { 0%, 100% { transform: translateY(0); } 42% { transform: translateY(-1px); } }
+    @keyframes marcha { to { stroke-dashoffset: -31; } }
+    @keyframes asomar { from { opacity: 0; } }
+    @keyframes entrada { from { opacity: 0; transform: translateY(9px) scale(0.9); } }
+    @keyframes brotar { from { opacity: 0; transform: translateY(-7px); } }
+    @keyframes llenar { from { transform: scale(0.2); opacity: 0; } 55% { opacity: 1; } to { transform: scale(1); opacity: 1; } }
+    @keyframes trazar { from { stroke-dashoffset: 26; } }
+    @keyframes teñir { from { stroke-dashoffset: 2000; } }
+    @keyframes apagaAro { to { border-color: #1E9E3A; } }
+    @keyframes ascender { from { opacity: 0; transform: scale(0.72); } }
+    @keyframes subir { from { opacity: 0; transform: translateY(100%); } }
+    @keyframes bota { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+    @keyframes botaArriba { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+    .halo { display: block; border-radius: 999px; animation: halo 2.8s cubic-bezier(0.25,0.6,0.35,1) 900ms infinite; }
+    .latido { display: block; animation: latido 2.8s cubic-bezier(0.4,0,0.4,1) 900ms infinite; }
+    .arco { animation: arco 2.8s cubic-bezier(0.4,0,0.4,1) 900ms infinite; }
+    .marcha { animation: marcha 2.4s linear 900ms infinite; }
+    .asoma { animation: asomar 380ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .entra { display: block; animation: entrada 420ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .brota { animation: brotar 380ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .llena { animation: llenar 360ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .traza { stroke-dasharray: 26; animation: trazar 280ms cubic-bezier(0.6,0,0.4,1) 200ms both; }
+    .tiñe { stroke-dasharray: 2000; animation: teñir 480ms cubic-bezier(0.5,0,0.3,1) 200ms both; }
+    .apaga { animation: apagaAro 360ms linear both; }
+    .asciende { display: block; animation: ascender 380ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .sube { animation: subir 260ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .bota { animation: bota 1.9s ease-in-out infinite; }
+    .bota-arriba { animation: botaArriba 1.9s ease-in-out infinite; }
+
+    /* Si el sistema pide menos movimiento, no hay ninguno. Los estados
+       base ya son los finales, así que apagarlo lo deja todo como acaba. */
+    @media (prefers-reduced-motion: reduce) {
+      .halo, .latido, .arco, .marcha, .asoma, .entra, .brota, .llena, .traza,
+      .tiñe, .apaga, .asciende, .sube, .bota, .bota-arriba { animation: none !important; }
+      .traza, .tiñe { stroke-dasharray: none !important; }
+      .disco { transition: none !important; }
+    }
+
+    .sendero { overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .sendero::-webkit-scrollbar { display: none; }
+
+    .nodo { display: block; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .nodo:active .disco { transform: translateY(3px); }
+    .disco { position: relative; display: grid; place-items: center; border-radius: 999px; transition: transform 0.09s ease; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 390px; height: 844px; background: #F4F7F4; overflow: hidden;">
+
+  <div class="sendero" ref="{{ scrollerRef }}" onScroll="{{ onScroll }}" style="position: relative; height: 844px;">
+
+    <div style="padding: 22px 16px 0;">
+      <p style="margin: 0; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; line-height: 1; color: #14722A;">Para Marta · miércoles, 27 de agosto</p>
+      <h1 style="margin: 10px 0 0; font-family: 'Radio Canada Big', 'Radio Canada', sans-serif; font-size: 29px; font-weight: 700; line-height: 1.05; letter-spacing: -0.03em; color: #12211A; text-wrap: balance;">Tu ruta de esta semana</h1>
+      <p style="margin: 8px 0 0; font-size: 14.5px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">Sale de tus clases con <strong style="font-weight: 600; color: #12211A;">Aoife</strong>. Nadie más tiene esta ruta.</p>
+    </div>
+
+    <div style="position: relative; margin: 18px 12px 20px; border: 1px solid #CFE8D8; border-radius: 24px; background: #EDF7F0; padding: 17px 0 22px; overflow: hidden;">
+      <span aria-hidden="true" style="position: absolute; right: -94px; top: -116px; width: 280px; height: 280px; border-radius: 999px; background: #E0F1E7; pointer-events: none;"></span>
+      <span aria-hidden="true" style="position: absolute; left: -86px; top: 42%; width: 220px; height: 220px; border-radius: 999px; background: #E5F4EB; pointer-events: none;"></span>
+      <span aria-hidden="true" style="position: absolute; right: -70px; bottom: -90px; width: 200px; height: 200px; border-radius: 999px; background: #E0F1E7; pointer-events: none;"></span>
+
+      <div style="position: relative;">
+
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 0 16px;">
+          <p style="margin: 0; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; line-height: 1; color: #14722A;">Tu ruta · {{ total }} paradas</p>
+          <p style="margin: 0; flex-shrink: 0; font-size: 12.5px; font-weight: 600; color: #14722A;">{{ rotulo }}</p>
+        </div>
+
+        <div style="position: relative; margin-top: 40px;">
+          <sc-for list="{{ tramos }}" as="t" hint-placeholder-count="5">
+            <div data-n="{{ t.clave }}" data-activa="{{ t.marcador }}" style="position: relative; {{ t.alto }}">
+
+              <svg aria-hidden="true" viewBox="0 0 366 100" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 0;" fill="none">
+                <g class="asoma" style="animation-delay: {{ t.retrasoTramo }};">
+                  <path d="{{ t.d }}" stroke="#D9EDE1" stroke-width="17" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+                  <path class="{{ t.claseTrazo }}" d="{{ t.d }}" stroke="{{ t.trazo }}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{ t.guion }}" vector-effect="non-scaling-stroke"/>
+                  <sc-if value="{{ t.tiñendo }}" hint-placeholder-val="{{ false }}">
+                    <path class="tiñe" d="{{ t.d }}" stroke="#1E9E3A" stroke-width="6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+                  </sc-if>
+                </g>
+              </svg>
+
+              <span style="position: absolute; left: {{ t.banda }}; top: 0; transform: translate(-50%, -50%); z-index: 3;">
+
+                <sc-if value="{{ t.esActiva }}" hint-placeholder-val="{{ true }}">
+                  <span class="brota" style="position: absolute; left: 50%; bottom: 100%; margin-bottom: 13px; transform: translateX(-50%); animation-delay: {{ t.retrasoChapa }};">
+                    <span style="position: relative; display: inline-flex; align-items: center; border-radius: 999px; background: #FFC400; padding: 7px 15px; font-size: 12.5px; font-weight: 700; color: #12211A; box-shadow: 0 4px 0 #E0A800, 0 8px 16px rgba(18,33,26,0.16); white-space: nowrap;">
+                      Estás aquí
+                      <span aria-hidden="true" style="position: absolute; left: 50%; bottom: -4px; width: 10px; height: 10px; transform: translateX(-50%) rotate(45deg); background: #FFC400;"></span>
+                    </span>
+                  </span>
+                </sc-if>
+
+                <span class="entra" style="animation-delay: {{ t.retrasoNodo }};">
+                  <span class="{{ t.claseAscenso }}">
+                    <button type="button" class="nodo {{ t.claseHalo }}" onClick="{{ t.pick }}" aria-label="{{ t.rotuloNodo }}">
+                      <span class="{{ t.claseLatido }}">
+                        <span class="disco {{ t.claseApaga }}" style="{{ t.estiloDisco }}">
+
+                          <!-- EL CANDADO ABIERTO. La última parada lleva uno
+                               cerrado y esta lleva el mismo, abierto: el mapa
+                               se lee entero como una secuencia de cerraduras.
+                               En verde, que es lo único que significa «puedes
+                               entrar» en toda la aplicación. -->
+                          <sc-if value="{{ t.esActiva }}" hint-placeholder-val="{{ true }}">
+                            <svg viewBox="0 0 20 20" style="width: 36px; height: 36px;" fill="none" stroke="#1E9E3A" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="4.5" y="9" width="11" height="7.5" rx="2"/>
+                              <path class="{{ t.claseArco }}" d="M7 9V6.6a3 3 0 0 1 5.8-1"/>
+                            </svg>
+                          </sc-if>
+                          <sc-if value="{{ t.esHecha }}" hint-placeholder-val="{{ false }}">
+                            <svg viewBox="0 0 20 20" style="width: 21px; height: 21px;" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"/></svg>
+                          </sc-if>
+                          <sc-if value="{{ t.esCandado }}" hint-placeholder-val="{{ false }}">
+                            <svg viewBox="0 0 20 20" style="width: 19px; height: 19px;" fill="none" stroke="#8A9891" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.6" y="8.8" width="10.8" height="7.4" rx="2"/><path d="M7 8.8V6.6a3 3 0 0 1 6 0v2.2"/></svg>
+                          </sc-if>
+                          <sc-if value="{{ t.esPendiente }}" hint-placeholder-val="{{ false }}">
+                            <span style="font-family: 'Radio Canada Big', sans-serif; font-size: 18px; font-weight: 700; line-height: 1; color: #7A8A80;">{{ t.n }}</span>
+                          </sc-if>
+
+                          <!-- ======================= EL DESPLEGABLE =======================
+                               Un nodo más del camino, no un «ver más» al pie.
+                               Plegado dice cuántas guarda; abierto, un signo de
+                               menos para volver a plegarlas. -->
+                          <sc-if value="{{ t.esGrupoPlegado }}" hint-placeholder-val="{{ false }}">
+                            <span style="font-family: 'Radio Canada Big', sans-serif; font-size: 14px; font-weight: 700; line-height: 1; {{ t.colorGrupo }}">+{{ t.agrupadas }}</span>
+                          </sc-if>
+                          <sc-if value="{{ t.esGrupoAbierto }}" hint-placeholder-val="{{ false }}">
+                            <svg viewBox="0 0 20 20" style="width: 18px; height: 18px;" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5.5 10h9"/></svg>
+                          </sc-if>
+
+                          <sc-if value="{{ t.cerrando }}" hint-placeholder-val="{{ false }}">
+                            <span class="llena" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: 100%; height: 100%; border-radius: 999px; background: #1E9E3A;">
+                              <svg viewBox="0 0 20 20" style="width: 26px; height: 26px;" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path class="traza" d="M5 10.5l3.5 3.5L15 7"/></svg>
+                            </span>
+                          </sc-if>
+
+                        </span>
+                      </span>
+
+                      <sc-if value="{{ t.elegida }}" hint-placeholder-val="{{ false }}">
+                        <span aria-hidden="true" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: {{ t.aro }}; height: {{ t.aro }}; border-radius: 999px; border: 2px solid #9BB8A6;"></span>
+                      </sc-if>
+                    </button>
+                  </span>
+                </span>
+              </span>
+
+              <!-- El grupo no abre tarjeta: solo pliega y despliega. Pero
+                   dice lo que guarda, en una línea, junto a su nodo. -->
+              <sc-if value="{{ t.esGrupo }}" hint-placeholder-val="{{ false }}">
+                <div style="position: relative; z-index: 1; {{ t.margenGrupo }}">
+                  <p style="margin: -14px 0 0; font-size: 13.5px; font-weight: 600; line-height: 1.3; {{ t.colorGrupo }}">{{ t.tituloGrupo }}</p>
+                  <p style="margin: 3px 0 0; font-size: 12px; line-height: 1.3; color: #8A9891;">{{ t.pieGrupo }}</p>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ t.elegida }}" hint-placeholder-val="{{ true }}">
+                <div style="position: relative; z-index: 2; padding: {{ t.hueco }} 12px 34px;">
+                  <div style="border-radius: 18px; background: #FFFFFF; border: 1px solid #DCE9E1; border-top: 3px solid {{ filo }}; padding: 17px 18px 18px; box-shadow: 0 16px 34px -18px rgba(18,33,26,0.32);">
+                    <div style="display: flex; align-items: center; gap: 9px;">
+                      <span style="{{ caraTarjeta }}">{{ inicialTarjeta }}</span>
+                      <p style="margin: 0; min-width: 0; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.13em; line-height: 1.35; color: {{ colorEtiqueta }};">{{ etiqueta }}</p>
+                    </div>
+
+                    <h2 style="margin: 12px 0 0; font-family: 'Radio Canada Big', 'Radio Canada', sans-serif; font-size: 26px; font-weight: 700; line-height: 1.09; letter-spacing: -0.028em; color: {{ colorTitulo }}; text-wrap: balance;">{{ titulo }}</h2>
+
+                    <p style="margin: 10px 0 0; font-size: 14.5px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">{{ texto }}</p>
+
+                    <sc-if value="{{ hayBoton }}" hint-placeholder-val="{{ true }}">
+                      <div style="margin-top: 17px;">
+                        <button type="button" onClick="{{ cerrar }}" style="{{ estiloBoton }}">{{ boton }}</button>
+                        <p style="margin: 10px 0 0; text-align: center; font-size: 12.5px; line-height: 1.4; color: #7A8A80; text-wrap: pretty;">{{ pieBoton }}</p>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ hayNota }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top: 15px; display: flex; gap: 9px; align-items: flex-start; border-radius: 13px; background: #F4F7F4; padding: 12px 13px;">
+                        <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px;" fill="none" stroke="#7A8A80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.3"/><path d="M8 7.3v3.9"/><path d="M8 4.9v.25"/></svg>
+                        <p style="margin: 0; font-size: 12.5px; line-height: 1.45; color: #5F6F66;">{{ nota }}</p>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-if>
+
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin: 0 12px 24px; border: 1px solid #E2E8E4; border-radius: 16px; background: #FFFFFF; padding: 14px 17px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+      <p style="margin: 0; font-size: 14.5px; font-weight: 600; color: #24352C;">Paradas hechas <span style="color: #8A9891; font-weight: 500;">· {{ hechas }}</span></p>
+      <svg viewBox="0 0 16 16" style="width: 15px; height: 15px; flex-shrink: 0;" fill="none" stroke="#7A8A80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg>
+    </div>
+  </div>
+
+  <sc-if value="{{ mostrarPie }}" hint-placeholder-val="{{ true }}">
+    <div class="sube" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(255,255,255,0.97); border-top: 1px solid #E2E8E4; box-shadow: 0 -10px 26px -16px rgba(18,33,26,0.30); padding: 11px 14px 14px; display: flex; align-items: center; gap: 11px;">
+      <span class="{{ claseFlecha }}" style="flex-shrink: 0; display: grid; place-items: center; width: 26px; height: 26px;">
+        <svg viewBox="0 0 20 20" style="width: 20px; height: 20px;" fill="none" stroke="#9A7B00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ flecha }}"/></svg>
+      </span>
+      <span style="position: relative; display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 999px; background: #FFFFFF; border: 3px solid #FFC400; box-shadow: 0 3px 0 #E0A800;">
+        <svg viewBox="0 0 20 20" style="width: 19px; height: 19px;" fill="none" stroke="#1E9E3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4.5" y="9" width="11" height="7.5" rx="2"/>
+          <path d="M7 9V6.6a3 3 0 0 1 5.8-1"/>
+        </svg>
+      </span>
+      <span style="flex: 1; min-width: 0;">
+        <span style="display: block; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.13em; color: #9A7B00;">Parada {{ activaNum }} · estás aquí</span>
+        <span style="display: block; margin-top: 3px; font-size: 14px; font-weight: 600; line-height: 1.25; color: #12211A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ activaTitulo }}</span>
+      </span>
+      <button type="button" onClick="{{ volver }}" style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; min-height: 46px; border: 0; border-radius: 999px; background: #1E9E3A; color: #FFFFFF; padding: 0 20px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 0 #14722A;">Ir</button>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"paradas":{"editor":"int","default":7,"min":4,"max":20,"step":1,"section":"La ruta"},"movimiento":{"editor":"boolean","default":true,"section":"La ruta"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { avance: 0, sel: 0, lejos: false, haciaArriba: false, cerrando: 0, atras: false, delante: false };
+    this.anclado = false;
+  }
+
+  componentWillUnmount() { if (this.reloj) clearTimeout(this.reloj); }
+
+  /** Diecinueve temas reales y el candado, que siempre cierra la ruta. */
+  temas() {
+    return [
+      { t: 'Phrasal verbs con «get»', p: 'Liam', f: '11 jul', d: 'Los siete que más salen en una reunión: get across, get through y get by ya no se te escapan.' },
+      { t: 'Comparativos, opinión y acuerdo', p: 'Aoife', f: '17 jul', d: 'Comparar dos opciones y decir cuál prefieres sin sonar tajante.' },
+      { t: 'Condicionales 2 y 3', p: 'Aoife', f: '24 jul', d: 'Lo que se te atascó el jueves. El segundo habla de un presente que no es real; el tercero, de un pasado que ya no se puede cambiar.' },
+      { t: 'Interrumpir y ceder el turno en reuniones', p: 'Sinéad', f: '23 jul', d: 'Entrar en una reunión que ya ha empezado y devolver la palabra sin cortar a nadie.' },
+      { t: 'Contar lo que te dijeron', p: 'Liam', f: '18 jul', d: 'Pasar a reported speech lo que se dijo en una llamada, sin perder quién dijo qué.' },
+      { t: 'Preposiciones de tiempo', p: 'Aoife', f: '10 jul', d: 'In, on y at con fechas, plazos y horas. Es lo que más te corrige Aoife en los correos.' },
+      { t: 'Presente perfecto y pasado simple', p: 'Sinéad', f: '4 jul', d: 'Cuándo el pasado sigue tocando el presente y cuándo ya está cerrado.' },
+      { t: 'Pedir algo sin sonar brusco', p: 'Aoife', f: '27 jun', d: 'Could, would y las fórmulas que convierten una orden en una petición.' },
+      { t: 'Presentar datos sin leerlos', p: 'Liam', f: '20 jun', d: 'Comentar una gráfica en voz alta: subidas, caídas y lo que se mantiene.' },
+      { t: 'Voz pasiva en informes', p: 'Sinéad', f: '13 jun', d: 'Cuándo conviene que la acción pese más que quien la hizo.' },
+      { t: 'Matices de obligación', p: 'Aoife', f: '6 jun', d: 'Must, have to y should no son intercambiables cuando le pides algo a un cliente.' },
+      { t: 'Negociar una fecha de entrega', p: 'Sinéad', f: '30 may', d: 'Proponer, ceder y cerrar un plazo sin comprometerte de más.' },
+      { t: 'Conectores de contraste', p: 'Liam', f: '23 may', d: 'However, although y whereas: el mismo contraste con tres registros distintos.' },
+      { t: 'Explicar un retraso', p: 'Aoife', f: '16 may', d: 'Dar el motivo, la nueva fecha y lo que estás haciendo, en ese orden.' },
+      { t: 'Futuros: will, going to y presente continuo', p: 'Liam', f: '9 may', d: 'Los tres son futuro y ninguno significa lo mismo en una reunión.' },
+      { t: 'Dar malas noticias por correo', p: 'Sinéad', f: '2 may', d: 'Cómo se abre y cómo se cierra un correo que nadie quiere recibir.' },
+      { t: 'Cuantificadores con incontables', p: 'Aoife', f: '25 abr', d: 'Much, many, a few y a little con lo que no se puede contar.' },
+      { t: 'Cerrar una llamada con acuerdos', p: 'Liam', f: '18 abr', d: 'Resumir lo hablado y repartir quién hace qué antes de colgar.' },
+      { t: 'Verbos de opinión y su preposición', p: 'Sinéad', f: '11 abr', d: 'Think about, agree with, insist on: la preposición no es opcional.' }
+    ];
+  }
+
+  /** Por dónde va el alumno. Con la ruta corta, por la 3; con la larga,
+   *  a seis paradas del final, que es el caso que hay que aguantar. */
+  base(total) { return total <= 10 ? Math.min(3, total - 1) : total - 6; }
+
+  progresoDe(total) {
+    return Math.max(1, Math.min(total - 1, this.base(total) + this.state.avance));
+  }
+
+  renderVals() {
+    const self = this;
+    const mov = this.props.movimiento !== false;
+    const temas = this.temas();
+    const total = Math.max(4, Math.min(20, Math.round(this.props.paradas != null ? this.props.paradas : 7)));
+    const progreso = this.progresoDe(total);
+    const cerrando = this.state.cerrando;
+
+    // Las paradas: los temas que quepan, y el candado siempre el último.
+    const brutas = [];
+    for (let i = 0; i < total - 1; i++) {
+      brutas.push({ n: i + 1, tipo: i + 1 < progreso ? 'hecha' : (i + 1 === progreso ? 'actual' : 'pendiente'),
+        titulo: temas[i % temas.length].t, prof: temas[i % temas.length].p, fecha: temas[i % temas.length].f, texto: temas[i % temas.length].d });
+    }
+    brutas.push({ n: total, tipo: 'candado', titulo: 'Se abre con tu próxima clase', prof: 'Aoife', fecha: '',
+      texto: 'Aoife la prepara cuando suba lo que trabajéis el jueves. Sale de esa clase, así que hasta entonces no existe.' });
+
+    // ===================== EL PLEGADO =====================
+    // Dos hechas de contexto detrás y tres pendientes delante. Lo que
+    // sobra se agrupa en un nodo que ES parte del camino, no un «ver
+    // más» al pie: plegar no puede romper la sensación de recorrido.
+    const A_LA_VISTA_ATRAS = 2;
+    const A_LA_VISTA_DELANTE = 3;
+
+    const hechas = brutas.filter(function (p) { return p.tipo === 'hecha'; });
+    const activa = brutas.find(function (p) { return p.tipo === 'actual'; }) || null;
+    const pendientes = brutas.filter(function (p) { return p.tipo === 'pendiente'; });
+    const candado = brutas[brutas.length - 1];
+
+    const sobranAtras = Math.max(0, hechas.length - A_LA_VISTA_ATRAS);
+    const sobranDelante = Math.max(0, pendientes.length - A_LA_VISTA_DELANTE);
+    const abiertoAtras = this.state.atras;
+    const abiertoDelante = this.state.delante;
+
+    const visibles = [];
+    if (sobranAtras > 0) {
+      visibles.push({ grupo: 'atras', agrupadas: sobranAtras, abierto: abiertoAtras, clave: 'g-atras' });
+      if (abiertoAtras) visibles.push.apply(visibles, hechas.slice(0, sobranAtras));
+      visibles.push.apply(visibles, hechas.slice(sobranAtras));
+    } else {
+      visibles.push.apply(visibles, hechas);
+    }
+    if (activa) visibles.push(activa);
+    if (sobranDelante > 0) {
+      visibles.push.apply(visibles, pendientes.slice(0, A_LA_VISTA_DELANTE));
+      visibles.push({ grupo: 'delante', agrupadas: sobranDelante, abierto: abiertoDelante, clave: 'g-delante' });
+      if (abiertoDelante) visibles.push.apply(visibles, pendientes.slice(A_LA_VISTA_DELANTE));
+    } else {
+      visibles.push.apply(visibles, pendientes);
+    }
+    visibles.push(candado);
+
+    // La tarjeta va en la parada disponible, salvo que el alumno haya
+    // elegido otra que siga a la vista.
+    let sel = this.state.sel || (activa ? activa.n : total);
+    const visible = visibles.some(function (p) { return !p.grupo && p.n === sel; });
+    if (!visible) sel = activa ? activa.n : total;
+    const elegida = brutas.find(function (p) { return p.n === sel; }) || candado;
+
+    const X = { izq: 57, centro: 183, der: 309 };
+    const PCT = { izq: '15.5%', centro: '50%', der: '84.5%' };
+
+    let lado = 'izq';
+    const bandas = visibles.map(function (p) {
+      if (!p.grupo && p.tipo === 'actual') return 'centro';
+      const actual = lado;
+      lado = lado === 'izq' ? 'der' : 'izq';
+      return actual;
+    });
+
+    const paso = function (i) { return Math.min(i, 9) * 70; };
+
+    const tramos = visibles.map(function (p, i) {
+      const esGrupo = !!p.grupo;
+      const tipo = esGrupo ? 'grupo' : p.tipo;
+      const esActiva = tipo === 'actual';
+      const esHecha = tipo === 'hecha';
+      const esCandado = tipo === 'candado';
+      const grupoAtras = esGrupo && p.grupo === 'atras';
+      const elegido = !esGrupo && p.n === sel;
+      const ultimo = i === visibles.length - 1;
+      const seCierra = !esGrupo && cerrando === p.n;
+      const clave = esGrupo ? p.clave : String(p.n);
+
+      let d = '';
+      if (!ultimo) {
+        const x1 = X[bandas[i]];
+        const x2 = X[bandas[i + 1]];
+        d = elegido
+          ? 'M ' + x1 + ' 0 C ' + x1 + ' 76, ' + x2 + ' 80, ' + x2 + ' 100'
+          : 'M ' + x1 + ' 0 C ' + x1 + ' 52, ' + x2 + ' 52, ' + x2 + ' 100';
+      }
+
+      // El grupo de atrás está detrás: su tramo ya está andado.
+      const andado = esHecha || (grupoAtras);
+
+      // EL NODO DISPONIBLE PESA MÁS QUE NINGÚN OTRO: 76px contra 46, el
+      // fondo verde clarísimo que el sistema ya usa para «lo que toca
+      // ahora» (marca-verdeFondo), el aro ámbar más grueso y el canto
+      // macizo más alto. Antes se distinguía; ahora manda.
+      const medida = esActiva ? 76 : 46;
+      let disco = 'width: ' + medida + 'px; height: ' + medida + 'px;';
+      if (esActiva) disco += ' background: #F0FAF2; border: 5px solid #FFC400; box-shadow: 0 6px 0 #E0A800, 0 16px 28px rgba(18,33,26,0.20);';
+      else if (esHecha) disco += ' background: #1E9E3A; box-shadow: 0 4px 0 #14722A, 0 9px 16px rgba(30,158,58,0.22);';
+      else if (grupoAtras) disco += ' background: #FFFFFF; border: 2px solid #1E9E3A; box-shadow: 0 4px 0 #CFE8D8; color: #14722A;';
+      else if (esGrupo) disco += ' background: #FFFFFF; border: 2px dashed #C4DECF; box-shadow: 0 4px 0 #DFEBE4; color: #7A8A80;';
+      else if (esCandado) disco += ' background: #F1F5F2; border: 2px dashed #C4DECF; box-shadow: 0 4px 0 #E2EDE6;';
+      else disco += ' background: #FFFFFF; border: 2px solid #C4DECF; box-shadow: 0 4px 0 #DFEBE4;';
+
+      let alto;
+      if (elegido) alto = '';
+      else if (ultimo) alto = 'min-height: 62px;';
+      else if (esActiva) alto = 'min-height: 132px;';
+      else alto = 'min-height: 96px;';
+
+      const marchando = mov && esActiva && !ultimo && cerrando === 0;
+
+      let tituloGrupo = '', pieGrupo = '';
+      if (esGrupo) {
+        if (grupoAtras) {
+          tituloGrupo = p.abierto ? 'Plegar las hechas' : p.agrupadas + (p.agrupadas === 1 ? ' parada hecha' : ' paradas hechas');
+          pieGrupo = p.abierto ? 'Vuelven a un solo punto' : 'Tócalas para verlas en el camino';
+        } else {
+          tituloGrupo = p.abierto ? 'Plegar lo que viene' : p.agrupadas + (p.agrupadas === 1 ? ' parada más' : ' paradas más');
+          pieGrupo = p.abierto ? 'Vuelven a un solo punto' : 'Te esperan aquí';
+        }
+      }
+
+      return {
+        clave: clave,
+        n: esGrupo ? 0 : p.n,
+        agrupadas: p.agrupadas,
+        banda: PCT[bandas[i]],
+        d: d,
+        trazo: andado ? '#1E9E3A' : '#C4DECF',
+        guion: andado ? 'none' : '0.5 15',
+        claseTrazo: marchando ? 'marcha' : '',
+        tiñendo: seCierra && !ultimo,
+        alto: alto,
+        hueco: (esActiva ? 68 : 46) + 'px',
+        aro: (medida + 14) + 'px',
+        marcador: esActiva ? 'true' : 'no',
+        claseHalo: esActiva && mov && cerrando === 0 ? 'halo' : '',
+        claseLatido: esActiva && mov && cerrando === 0 ? 'latido' : '',
+        claseArco: esActiva && mov && cerrando === 0 ? 'arco' : '',
+        claseApaga: seCierra ? 'apaga' : '',
+        claseAscenso: esActiva && cerrando === 0 && self.recienAscendido === p.n ? 'asciende' : '',
+        cerrando: seCierra,
+        retrasoTramo: paso(i) + 'ms',
+        retrasoNodo: (paso(i) + 110) + 'ms',
+        retrasoChapa: (paso(i) + 320) + 'ms',
+        elegida: elegido,
+        esActiva: esActiva,
+        esHecha: esHecha,
+        esCandado: esCandado,
+        esPendiente: tipo === 'pendiente',
+        esGrupo: esGrupo,
+        esGrupoPlegado: esGrupo && !p.abierto,
+        esGrupoAbierto: esGrupo && p.abierto,
+        colorGrupo: grupoAtras ? 'color: #14722A;' : 'color: #5F6F66;',
+        tituloGrupo: tituloGrupo,
+        pieGrupo: pieGrupo,
+        rotuloNodo: esGrupo ? tituloGrupo : 'Parada ' + p.n + ': ' + p.titulo,
+        margenGrupo: bandas[i] === 'izq' ? 'margin: 0 5% 0 28%; text-align: left;' : 'margin: 0 28% 0 5%; text-align: right;',
+        estiloDisco: disco,
+        pick: function () {
+          const antes = self.arriba(clave);
+          if (esGrupo) {
+            const cambio = {};
+            cambio[p.grupo] = !p.abierto;
+            self.setState(cambio);
+          } else {
+            self.setState({ sel: p.n });
+          }
+          self.recolocar(clave, antes);
+        }
+      };
+    });
+
+    // ------------------------------- LA TARJETA -------------------------------
+    const tipoElegida = elegida.tipo;
+    let etiqueta, colorEtiqueta, filo, boton, pieBoton, nota, colorTitulo;
+
+    if (tipoElegida === 'actual') {
+      etiqueta = 'Parada ' + elegida.n + ' · de tu clase del ' + elegida.fecha;
+      colorEtiqueta = '#9A7B00'; filo = '#FFC400';
+      boton = cerrando === elegida.n ? 'Muy bien' : 'Seguir la ruta';
+      pieBoton = 'Diez ejercicios. Lo que escribas al final lo lee ' + elegida.prof + ' antes de vuestra próxima clase.';
+      colorTitulo = '#12211A'; nota = '';
+    } else if (tipoElegida === 'hecha') {
+      etiqueta = 'Parada ' + elegida.n + ' · hecha con ' + elegida.prof;
+      colorEtiqueta = '#14722A'; filo = '#1E9E3A';
+      boton = 'Volver a hacerla'; pieBoton = 'No cambia lo que ya tienes hecho.';
+      colorTitulo = '#12211A'; nota = '';
+    } else if (tipoElegida === 'pendiente') {
+      etiqueta = 'Parada ' + elegida.n + ' · te espera aquí';
+      colorEtiqueta = '#5F6F66'; filo = '#DCE9E1';
+      boton = null; pieBoton = '';
+      nota = activa ? 'Llegas a ella en cuanto cierres la parada ' + activa.n + '.' : 'Llegas a ella cuando sigas la ruta.';
+      colorTitulo = '#24352C';
+    } else {
+      etiqueta = 'Parada ' + elegida.n + ' · aún no está';
+      colorEtiqueta = '#7A8A80'; filo = '#DCE9E1';
+      boton = null; pieBoton = '';
+      nota = 'No tienes que hacer nada: te la encuentras aquí abierta.';
+      colorTitulo = '#24352C';
+    }
+
+    const apagadaT = tipoElegida === 'pendiente' || tipoElegida === 'candado';
+    const caraTarjeta = 'display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 999px; font-family: Radio Canada Big, sans-serif; font-size: 13px; font-weight: 700; line-height: 1;'
+      + (apagadaT ? ' background: #F4F7F4; border: 1px solid #E2E8E4; color: #9BA8A1;' : ' background: #FBF7EF; border: 1px solid #EFE3C0; color: #6B5A2E;');
+
+    const anclar = function (suave) {
+      const el = self.scroller;
+      if (!el) return;
+      const act = el.querySelector('[data-activa="true"]');
+      if (!act) return;
+      const destino = el.scrollTop + (act.getBoundingClientRect().top - el.getBoundingClientRect().top) - 150;
+      if (suave && el.scrollTo) el.scrollTo({ top: destino, behavior: 'smooth' });
+      else el.scrollTop = destino;
+    };
+
+    return {
+      total: total,
+      hechas: hechas.length,
+      rotulo: activa ? 'vas por la ' + activa.n + ' de ' + total : 'al día',
+      activaNum: activa ? activa.n : total,
+      activaTitulo: activa ? activa.titulo : '',
+      tramos: tramos,
+
+      filo: filo,
+      etiqueta: etiqueta,
+      colorEtiqueta: colorEtiqueta,
+      titulo: elegida.titulo,
+      colorTitulo: colorTitulo,
+      texto: elegida.texto,
+      inicialTarjeta: elegida.prof.charAt(0),
+      caraTarjeta: caraTarjeta,
+      hayBoton: boton !== null,
+      boton: boton,
+      pieBoton: pieBoton,
+      estiloBoton: (tipoElegida === 'hecha'
+        ? 'display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #1E9E3A; color: #14722A; font-family: inherit; font-size: 15.5px; font-weight: 700; cursor: pointer;'
+        : 'display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px; border: 0; border-radius: 999px; background: #1E9E3A; color: #FFFFFF; font-family: inherit; font-size: 16.5px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 0 #14722A, 0 10px 20px rgba(30,158,58,0.26);')
+        + (cerrando !== 0 ? ' opacity: 0.55;' : ''),
+      hayNota: boton === null,
+      nota: nota,
+
+      mostrarPie: activa !== null && cerrando === 0 && (sel !== activa.n || this.state.lejos),
+      claseFlecha: mov ? (this.state.haciaArriba ? 'bota-arriba' : 'bota') : '',
+      flecha: this.state.haciaArriba ? 'M10 16V4M4.5 9.5L10 4l5.5 5.5' : 'M10 4v12M4.5 10.5L10 16l5.5-5.5',
+
+      scrollerRef: function (el) {
+        self.scroller = el;
+        if (!el || self.anclado) return;
+        self.anclado = true;
+        anclar(false);
+      },
+
+      onScroll: function () {
+        const el = self.scroller;
+        if (!el) return;
+        const act = el.querySelector('[data-activa="true"]');
+        if (!act) { if (self.state.lejos) self.setState({ lejos: false }); return; }
+        const r = act.getBoundingClientRect();
+        const s = el.getBoundingClientRect();
+        const arriba = r.bottom < s.top + 130;
+        const abajo = r.top > s.bottom - 90;
+        const fuera = arriba || abajo;
+        if (fuera !== self.state.lejos || arriba !== self.state.haciaArriba) {
+          self.setState({ lejos: fuera, haciaArriba: arriba });
+        }
+      },
+
+      volver: function () {
+        if (!activa) return;
+        self.setState({ sel: activa.n });
+        requestAnimationFrame(function () { anclar(true); });
+      },
+
+      cerrar: function () {
+        if (!activa || cerrando !== 0 || tipoElegida !== 'actual') return;
+        const n = activa.n;
+        self.setState({ cerrando: n });
+        self.reloj = setTimeout(function () {
+          self.recienAscendido = n + 1;
+          self.setState({ cerrando: 0, avance: self.state.avance + 1, sel: n + 1 });
+        }, 700);
+      }
+    };
+  }
+
+  arriba(clave) {
+    const el = this.scroller;
+    if (!el) return null;
+    const fila = el.querySelector('[data-n="' + clave + '"]');
+    return fila ? fila.getBoundingClientRect().top : null;
+  }
+
+  /** Desplegar mueve muchas filas de sitio. Se mide el nodo tocado antes
+   *  y después y se corrige el scroll: el mapa crece, pero lo que tenías
+   *  bajo el dedo no se mueve. */
+  recolocar(clave, antes) {
+    const self = this;
+    const el = this.scroller;
+    if (!el || antes === null) return;
+    requestAnimationFrame(function () {
+      const ahora = self.arriba(clave);
+      if (ahora !== null) el.scrollTop += ahora - antes;
+    });
+  }
+}
+</script>
+</body>
+</html>

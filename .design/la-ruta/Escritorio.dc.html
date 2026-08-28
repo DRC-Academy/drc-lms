@@ -1,0 +1,212 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@400;500;600;700&family=Radio+Canada+Big:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #14722A; text-decoration: none; }
+    a:hover { color: #12211A; }
+
+    /* El mismo movimiento que en móvil, con los mismos tiempos: un solo
+       sistema para los dos anchos. Si se ajusta el pulso, se ajusta una
+       vez. */
+    @keyframes halo {
+      0%   { box-shadow: 0 0 0 0 rgba(255,196,0,0.42); }
+      70%  { box-shadow: 0 0 0 26px rgba(255,196,0,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,196,0,0); }
+    }
+    @keyframes latido { 0%, 100% { transform: scale(1); } 42% { transform: scale(1.03); } }
+    @keyframes arco { 0%, 100% { transform: translateY(0); } 42% { transform: translateY(-1.4px); } }
+    @keyframes marcha { to { stroke-dashoffset: -36; } }
+    @keyframes asomar { from { opacity: 0; } }
+    @keyframes entrada { from { opacity: 0; transform: translateY(9px) scale(0.9); } }
+    @keyframes brotar { from { opacity: 0; transform: translateY(-7px); } }
+
+    .halo { display: block; border-radius: 999px; animation: halo 2.8s cubic-bezier(0.25,0.6,0.35,1) 900ms infinite; }
+    .latido { display: block; animation: latido 2.8s cubic-bezier(0.4,0,0.4,1) 900ms infinite; }
+    .arco { animation: arco 2.8s cubic-bezier(0.4,0,0.4,1) 900ms infinite; }
+    .marcha { animation: marcha 2.4s linear 900ms infinite; }
+    .asoma { animation: asomar 380ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .entra { display: block; animation: entrada 420ms cubic-bezier(0.2,0.8,0.3,1) both; }
+    .brota { animation: brotar 380ms cubic-bezier(0.2,0.8,0.3,1) both; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .halo, .latido, .arco, .marcha, .asoma, .entra, .brota { animation: none !important; }
+    }
+
+    .rotulo { position: absolute; width: 176px; text-align: center; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; background: #F4F7F4; padding: 44px 100px 48px; box-sizing: border-box;">
+
+  <p style="margin: 0; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; line-height: 1; color: #14722A;">Para Marta · miércoles, 27 de agosto</p>
+  <h1 style="margin: 12px 0 0; font-family: 'Radio Canada Big', 'Radio Canada', sans-serif; font-size: 46px; font-weight: 700; line-height: 1.03; letter-spacing: -0.03em; color: #12211A;">Tu ruta de esta semana</h1>
+  <p style="margin: 12px 0 0; max-width: 62ch; font-size: 17px; line-height: 1.5; color: #4C5C53;">Sale de tus clases con <strong style="font-weight: 600; color: #12211A;">Aoife</strong>. Nadie más en la academia tiene esta ruta.</p>
+
+  <div style="position: relative; margin-top: 26px; border: 1px solid #CFE8D8; border-radius: 28px; background: #EDF7F0; padding: 34px 40px 36px; overflow: hidden;">
+    <span aria-hidden="true" style="position: absolute; right: -80px; top: -112px; width: 320px; height: 320px; border-radius: 999px; background: #E0F1E7; pointer-events: none;"></span>
+    <span aria-hidden="true" style="position: absolute; left: -64px; bottom: -144px; width: 256px; height: 256px; border-radius: 999px; background: #E5F4EB; pointer-events: none;"></span>
+
+    <div style="position: relative;">
+
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+        <p style="margin: 0; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; line-height: 1; color: #14722A;">Tu ruta · 7 paradas</p>
+        <p style="margin: 0; flex-shrink: 0; font-size: 12.5px; font-weight: 600; color: #14722A;">vas por la 3 de 7</p>
+      </div>
+
+      <!-- =============================== EL CAMINO ===============================
+           La distribución no cambia: mismo lienzo, mismas bandas, mismos
+           nodos. Lo que se añade es que el camino se enciende por tramos
+           al cargar y que el tramo que sale de donde estás va marchando. -->
+      <div style="position: relative; margin-top: 20px; height: 230px;">
+        <svg aria-hidden="true" viewBox="0 0 1240 230" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 230px;" fill="none">
+          <!-- El lecho del camino, entero -->
+          <g class="asoma">
+            <path d="M 70 160 C 161.7 160, 161.7 70, 253.3 70 C 345 70, 345 160, 436.7 160 C 528.3 160, 528.3 70, 620 70 C 711.7 70, 711.7 160, 803.3 160 C 895 160, 895 70, 986.7 70 C 1078.3 70, 1078.3 160, 1170 160" stroke="#DCEEE4" stroke-width="16" stroke-linecap="round"/>
+          </g>
+
+          <!-- Lo andado: macizo, y se enciende primero -->
+          <g class="asoma">
+            <path d="M 70 160 C 161.7 160, 161.7 70, 253.3 70 C 345 70, 345 160, 436.7 160" stroke="#1E9E3A" stroke-width="6" stroke-linecap="round"/>
+          </g>
+
+          <!-- EL TRAMO QUE VIENE: el único que se mueve en toda la pantalla -->
+          <g class="asoma" style="animation-delay: 140ms;">
+            <path class="marcha" d="M 436.7 160 C 528.3 160, 528.3 70, 620 70" stroke="#C4DECF" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 16"/>
+          </g>
+
+          <!-- El resto de lo que queda: quieto -->
+          <g class="asoma" style="animation-delay: 210ms;">
+            <path d="M 620 70 C 711.7 70, 711.7 160, 803.3 160 C 895 160, 895 70, 986.7 70 C 1078.3 70, 1078.3 160, 1170 160" stroke="#C4DECF" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 16"/>
+          </g>
+        </svg>
+
+        <!-- ------------------------ PARADA 1 · hecha · Liam ------------------------ -->
+        <span class="entra" style="position: absolute; left: 5.65%; top: 69.57%; transform: translate(-50%, -50%); animation-delay: 110ms;">
+          <span style="position: relative; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 999px; background: #1E9E3A; box-shadow: 0 4px 0 #14722A, 0 9px 16px rgba(30,158,58,0.24);">
+            <svg viewBox="0 0 20 20" style="width: 22px; height: 22px;" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"/></svg>
+          </span>
+        </span>
+        <span class="rotulo entra" style="left: 5.65%; top: calc(69.57% + 40px); transform: translate(-42%, 0); animation-delay: 110ms;">
+          <span style="display: block; font-size: 13.5px; font-weight: 600; line-height: 1.35; color: #14722A;">Phrasal verbs con «get»</span>
+          <span style="display: block; margin-top: 3px; font-size: 12px; color: #8A9891;">90% · Liam · 11 jul</span>
+        </span>
+
+        <!-- ------------------------ PARADA 2 · hecha · Aoife ------------------------ -->
+        <span class="entra" style="position: absolute; left: 20.43%; top: 30.43%; transform: translate(-50%, -50%); animation-delay: 180ms;">
+          <span style="position: relative; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 999px; background: #1E9E3A; box-shadow: 0 4px 0 #14722A, 0 9px 16px rgba(30,158,58,0.24);">
+            <svg viewBox="0 0 20 20" style="width: 22px; height: 22px;" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 7"/></svg>
+          </span>
+        </span>
+        <span class="rotulo entra" style="left: 20.43%; top: calc(30.43% - 40px); transform: translate(-50%, -100%); animation-delay: 180ms;">
+          <span style="display: block; font-size: 13.5px; font-weight: 600; line-height: 1.35; color: #14722A;">Comparativos, opinión y acuerdo</span>
+          <span style="display: block; margin-top: 3px; font-size: 12px; color: #8A9891;">80% · Aoife · 17 jul</span>
+        </span>
+
+        <!-- ================= PARADA 3 · LA DISPONIBLE · el alumno ================= -->
+        <span class="entra" style="position: absolute; left: 35.22%; top: 69.57%; transform: translate(-50%, -50%); z-index: 3; animation-delay: 250ms;">
+          <span class="halo">
+            <span class="latido">
+              <span style="position: relative; display: grid; place-items: center; width: 100px; height: 100px; border-radius: 999px; background: #F0FAF2; border: 6px solid #FFC400; box-shadow: 0 6px 0 #E0A800, 0 18px 30px rgba(18,33,26,0.20);">
+                <svg viewBox="0 0 20 20" style="width: 46px; height: 46px;" fill="none" stroke="#1E9E3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4.5" y="9" width="11" height="7.5" rx="2"/>
+                  <path class="arco" d="M7 9V6.6a3 3 0 0 1 5.8-1"/>
+                </svg>
+              </span>
+            </span>
+          </span>
+        </span>
+        <span class="brota" style="position: absolute; left: 35.22%; top: calc(69.57% - 62px); transform: translate(-50%, -100%); z-index: 4; animation-delay: 460ms;">
+          <span style="position: relative; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: #FFC400; padding: 7px 15px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.01em; color: #12211A; box-shadow: 0 4px 0 #E0A800, 0 8px 16px rgba(18,33,26,0.16); white-space: nowrap;">
+            Estás aquí
+            <span aria-hidden="true" style="position: absolute; left: 50%; bottom: -4px; width: 10px; height: 10px; transform: translateX(-50%) rotate(45deg); background: #FFC400;"></span>
+          </span>
+        </span>
+
+        <!-- ---------------------- PARADA 4 · pendiente · Sinéad ---------------------- -->
+        <span class="entra" style="position: absolute; left: 50%; top: 30.43%; transform: translate(-50%, -50%); animation-delay: 320ms;">
+          <span style="position: relative; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 999px; background: #FFFFFF; border: 2px solid #C4DECF; box-shadow: 0 4px 0 #DFEBE4;">
+            <span style="font-family: 'Radio Canada Big', sans-serif; font-size: 17px; font-weight: 700; color: #7A8A80;">4</span>
+          </span>
+        </span>
+        <span class="rotulo entra" style="left: 50%; top: calc(30.43% - 40px); transform: translate(-50%, -100%); animation-delay: 320ms;">
+          <span style="display: block; font-size: 13.5px; line-height: 1.35; color: #5F6F66;">Interrumpir y ceder el turno</span>
+          <span style="display: block; margin-top: 3px; font-size: 12px; color: #8A9891;">Sinéad · 23 jul</span>
+        </span>
+
+        <!-- ----------------------- PARADA 5 · pendiente · Liam ----------------------- -->
+        <span class="entra" style="position: absolute; left: 64.78%; top: 69.57%; transform: translate(-50%, -50%); animation-delay: 390ms;">
+          <span style="position: relative; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 999px; background: #FFFFFF; border: 2px solid #C4DECF; box-shadow: 0 4px 0 #DFEBE4;">
+            <span style="font-family: 'Radio Canada Big', sans-serif; font-size: 17px; font-weight: 700; color: #7A8A80;">5</span>
+          </span>
+        </span>
+        <span class="rotulo entra" style="left: 64.78%; top: calc(69.57% + 40px); transform: translate(-50%, 0); animation-delay: 390ms;">
+          <span style="display: block; font-size: 13.5px; line-height: 1.35; color: #5F6F66;">Contar lo que te dijeron</span>
+          <span style="display: block; margin-top: 3px; font-size: 12px; color: #8A9891;">Liam · 18 jul</span>
+        </span>
+
+        <!-- ---------------------- PARADA 6 · pendiente · Aoife ---------------------- -->
+        <span class="entra" style="position: absolute; left: 79.57%; top: 30.43%; transform: translate(-50%, -50%); animation-delay: 460ms;">
+          <span style="position: relative; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 999px; background: #FFFFFF; border: 2px solid #C4DECF; box-shadow: 0 4px 0 #DFEBE4;">
+            <span style="font-family: 'Radio Canada Big', sans-serif; font-size: 17px; font-weight: 700; color: #7A8A80;">6</span>
+          </span>
+        </span>
+        <span class="rotulo entra" style="left: 79.57%; top: calc(30.43% - 40px); transform: translate(-50%, -100%); animation-delay: 460ms;">
+          <span style="display: block; font-size: 13.5px; line-height: 1.35; color: #5F6F66;">Preposiciones de tiempo</span>
+          <span style="display: block; margin-top: 3px; font-size: 12px; color: #8A9891;">Aoife · 10 jul</span>
+        </span>
+
+        <!-- ======================= PARADA 7 · EL CANDADO ======================= -->
+        <span class="entra" style="position: absolute; left: 94.35%; top: 69.57%; transform: translate(-50%, -50%); animation-delay: 530ms;">
+          <span style="position: relative; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 999px; background: #F1F5F2; border: 2px dashed #C4DECF; box-shadow: 0 4px 0 #E2EDE6;">
+            <svg viewBox="0 0 20 20" style="width: 22px; height: 22px;" fill="none" stroke="#8A9891" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.6" y="8.8" width="10.8" height="7.4" rx="2"/><path d="M7 8.8V6.6a3 3 0 0 1 6 0v2.2"/></svg>
+          </span>
+        </span>
+        <span class="rotulo entra" style="left: 94.35%; top: calc(69.57% + 40px); transform: translate(-62%, 0); width: 186px; animation-delay: 530ms;">
+          <span style="display: block; font-size: 13.5px; line-height: 1.35; color: #8A9891;">Se abre con tu próxima clase</span>
+          <span style="display: block; margin-top: 3px; font-size: 12px; color: #9BA8A1;">La prepara Aoife</span>
+        </span>
+      </div>
+
+      <!-- ================================ LA TARJETA ================================ -->
+      <div class="entra" style="margin-top: 54px; border-radius: 20px; background: #FFFFFF; border: 1px solid #DCE9E1; border-top: 3px solid #FFC400; padding: 26px 30px; box-shadow: 0 14px 32px -18px rgba(18,33,26,0.28); display: flex; align-items: center; gap: 36px; animation-delay: 600ms;">
+
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: #FBF7EF; border: 1px solid #EFE3C0; font-family: 'Radio Canada Big', sans-serif; font-size: 13px; font-weight: 700; color: #6B5A2E;">A</span>
+            <p style="margin: 0; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; line-height: 1; color: #9A7B00;">Parada 3 · de tu clase del 24 jul con Aoife</p>
+          </div>
+
+          <h2 style="margin: 14px 0 0; font-family: 'Radio Canada Big', 'Radio Canada', sans-serif; font-size: 32px; font-weight: 700; line-height: 1.08; letter-spacing: -0.025em; color: #12211A;">Condicionales 2 y 3</h2>
+
+          <p style="margin: 11px 0 0; max-width: 56ch; font-size: 15.5px; line-height: 1.5; color: #4C5C53; text-wrap: pretty;">Lo que se te atascó el jueves. El segundo habla de un presente que no es real; el tercero, de un pasado que ya no se puede cambiar.</p>
+        </div>
+
+        <div style="flex-shrink: 0; text-align: center;">
+          <a href="#" style="display: flex; align-items: center; justify-content: center; min-height: 58px; border-radius: 999px; background: #1E9E3A; color: #FFFFFF; padding: 0 44px; font-size: 17.5px; font-weight: 700; box-shadow: 0 4px 0 #14722A, 0 12px 22px rgba(30,158,58,0.28);">Seguir la ruta</a>
+          <p style="margin: 12px auto 0; max-width: 22ch; font-size: 13px; line-height: 1.4; color: #7A8A80;">Diez ejercicios. Lo que escribas al final lo lee Aoife antes de vuestra próxima clase.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 18px; border: 1px solid #E2E8E4; border-radius: 18px; background: #FFFFFF; padding: 18px 26px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+    <p style="margin: 0; font-size: 15.5px; font-weight: 600; color: #24352C;">Paradas hechas <span style="color: #8A9891; font-weight: 500;">· 2</span></p>
+    <svg viewBox="0 0 16 16" style="width: 16px; height: 16px; flex-shrink: 0;" fill="none" stroke="#7A8A80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":940}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>
