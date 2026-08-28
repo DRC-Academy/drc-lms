@@ -7,6 +7,7 @@ import {
   curvaMovil,
   geometriaRuta,
   plegarRuta,
+  tramoRuta,
   LIENZO,
   LIENZO_MOVIL,
   PCT_BANDA,
@@ -16,6 +17,7 @@ import {
 import type { TarjetaPractica } from "@/lib/modos";
 import type { EstadoGeneracion } from "@/components/usarGenerador";
 import type { EtapaGeneracion } from "@/lib/generacion";
+import { recogerParadaCerrada } from "@/lib/cierre-ruta";
 import AvanceGeneracion from "@/components/AvanceGeneracion";
 
 /**
@@ -117,7 +119,7 @@ function Candado({
   );
 }
 
-function Marca() {
+function Marca({ traza }: { traza?: boolean }) {
   return (
     <svg
       viewBox="0 0 20 20"
@@ -128,8 +130,25 @@ function Marca() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M5 10.5l3.5 3.5L15 7" />
+      {/* Al cerrar la parada la marca se dibuja; el resto del tiempo ya
+          está ahí. */}
+      <path className={traza ? "ruta-traza" : undefined} d="M5 10.5l3.5 3.5L15 7" />
     </svg>
+  );
+}
+
+/** El disco de una parada recién cerrada: se llena de verde y se traza
+ *  la marca dentro, con el aro apagándose de ámbar a verde. */
+function DiscoCerrando({ medida }: { medida: number }) {
+  return (
+    <span
+      className="ruta-disco ruta-apaga relative grid place-items-center rounded-full border-[3px] border-marca-verde bg-marca-verdeFondo shadow-[0_4px_0_#14722A,0_9px_16px_rgba(30,158,58,0.22)]"
+      style={{ width: medida, height: medida }}
+    >
+      <span className="ruta-llena absolute inset-0 grid place-items-center rounded-full bg-marca-verde">
+        <Marca traza />
+      </span>
+    </span>
   );
 }
 
@@ -153,9 +172,40 @@ export default function Ruta({
   // Si la parada disponible se ha ido de la pantalla, y por qué lado.
   const [lejos, setLejos] = useState(false);
   const [haciaArriba, setHaciaArriba] = useState(false);
+  // La parada que ACABA de cerrarse, mientras dura su animación.
+  const [cerrando, setCerrando] = useState<string | null>(null);
 
   const nodoActual = useRef<HTMLSpanElement | null>(null);
   const filas = useRef<Record<string, HTMLDivElement | null>>({});
+  const notaLeida = useRef(false);
+
+  // ---------------------------------------------------------------
+  // EL CIERRE DE UNA PARADA
+  //
+  // El alumno vuelve de hacer el bloque y la ruta ya llega rehecha del
+  // servidor: la parada verde y la siguiente disponible. La nota que
+  // dejó `components/Practica` al cerrarlo es lo único que dice que eso
+  // acaba de pasar, y se consume al leerla, así que se ve una vez.
+  //
+  // Si la nota falta —modo privado, otra pestaña, recarga— no pasa
+  // nada: la ruta se pinta igual, sin animación.
+  // ---------------------------------------------------------------
+  useEffect(() => {
+    if (notaLeida.current) return;
+    notaLeida.current = true;
+
+    const clave = recogerParadaCerrada();
+    if (clave === null) return;
+
+    // Solo si de verdad quedó cerrada: si el guardado no llegó, la
+    // parada sigue siendo la actual y no hay nada que celebrar.
+    const parada = paradas.find((p) => p.clave === clave);
+    if (!parada || parada.tipo !== "hecha") return;
+
+    setCerrando(clave);
+    const reloj = setTimeout(() => setCerrando(null), 1150);
+    return () => clearTimeout(reloj);
+  }, [paradas]);
 
   const visibles = useMemo(() => plegarRuta(paradas, plegado), [paradas, plegado]);
   const bandas = useMemo(() => bandasMovil(visibles), [visibles]);
@@ -222,7 +272,17 @@ export default function Ruta({
     0,
     indiceActual !== -1 ? indiceActual : esperando ? visibles.length - 2 : visibles.length - 1
   );
-  const { puntos, recorrido, pendiente } = geometriaRuta(visibles.length, corte);
+  // Mientras se cierra una parada, el camino se pinta como estaba ANTES
+  // —el tramo recién andado todavía en piedras— y encima se le colorea.
+  // Sin esto no habría nada que ver: llegaría ya verde del servidor.
+  const indiceCerrando =
+    cerrando === null ? -1 : visibles.findIndex((p) => p.clave === cerrando);
+  const corteVisual = indiceCerrando === -1 ? corte : Math.max(0, corte - 1);
+  const { puntos, recorrido, pendiente } = geometriaRuta(visibles.length, corteVisual);
+
+  // Al volver de cerrar un bloque no hay entrada escalonada: el alumno
+  // ya conoce este mapa y lo que tiene que ver es lo que ha cambiado.
+  const animarEntrada = cerrando === null;
 
   /** Al plegar o desplegar cambian de sitio muchas filas. Se mide el nodo
    *  tocado antes y después y se corrige el scroll: el mapa crece, pero
@@ -318,6 +378,16 @@ export default function Ruta({
               {recorrido !== "" && (
                 <path d={recorrido} stroke="#1E9E3A" strokeWidth="6" strokeLinecap="round" />
               )}
+              {/* El tramo que acaba de andarse, coloreándose. */}
+              {indiceCerrando !== -1 && (
+                <path
+                  className="ruta-colorea"
+                  d={tramoRuta(visibles.length, indiceCerrando)}
+                  stroke="#1E9E3A"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                />
+              )}
             </svg>
 
             {visibles.map((parada, i) => (
@@ -327,7 +397,9 @@ export default function Ruta({
                 punto={puntos[i]}
                 arriba={i % 2 === 1}
                 grande={parada.clave === claveTarjeta}
-                retraso={Math.min(i, 9) * 70}
+                retraso={animarEntrada ? Math.min(i, 9) * 70 : null}
+                cerrando={parada.clave === cerrando}
+                ascendiendo={indiceCerrando !== -1 && parada.tipo === "actual"}
                 onPulsar={() => alPulsar(parada)}
                 onGenerar={generacion.onGenerar}
                 generando={generacion.estado === "generando"}
@@ -350,9 +422,13 @@ export default function Ruta({
               const esActiva = parada.tipo === "actual";
               const esUltima = i === visibles.length - 1;
               const suya = parada.clave === claveTarjeta;
+              const seCierra = parada.clave === cerrando;
+              // El tramo que sale de la parada que se cierra se pinta
+              // todavía en piedras: encima se le colorea el verde.
               const andado =
-                parada.tipo === "hecha" || (parada.tipo === "resumen" && !parada.futuro);
-              const retraso = Math.min(i, 9) * 70;
+                !seCierra &&
+                (parada.tipo === "hecha" || (parada.tipo === "resumen" && !parada.futuro));
+              const retraso = animarEntrada ? Math.min(i, 9) * 70 : null;
               const d = esUltima ? "" : curvaMovil(banda, bandas[i + 1], suya);
 
               return (
@@ -373,7 +449,10 @@ export default function Ruta({
                     className="absolute inset-0 z-0 h-full w-full"
                     fill="none"
                   >
-                    <g className="ruta-asoma" style={{ animationDelay: `${retraso}ms` }}>
+                    <g
+                      className={retraso === null ? undefined : "ruta-asoma"}
+                      style={retraso === null ? undefined : { animationDelay: `${retraso}ms` }}
+                    >
                       <path
                         d={d}
                         stroke="#D9EDE1"
@@ -391,6 +470,17 @@ export default function Ruta({
                         strokeDasharray={andado ? undefined : "0.5 15"}
                         vectorEffect="non-scaling-stroke"
                       />
+                      {/* Y el que acaba de andarse, coloreándose. */}
+                      {seCierra && !esUltima && (
+                        <path
+                          className="ruta-colorea"
+                          d={d}
+                          stroke="#1E9E3A"
+                          strokeWidth="6"
+                          strokeLinecap="round"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      )}
                     </g>
                   </svg>
 
@@ -401,8 +491,12 @@ export default function Ruta({
                   >
                     {esActiva && (
                       <span
-                        className="ruta-brota absolute bottom-full left-1/2 mb-3 -translate-x-1/2"
-                        style={{ animationDelay: `${retraso + 320}ms` }}
+                        className={`absolute bottom-full left-1/2 mb-3 -translate-x-1/2 ${
+                          retraso === null ? "" : "ruta-brota"
+                        }`}
+                        style={
+                          retraso === null ? undefined : { animationDelay: `${retraso + 320}ms` }
+                        }
                       >
                         <span className="relative inline-flex items-center whitespace-nowrap rounded-full bg-marca-amarillo px-[15px] py-[7px] text-[12.5px] font-bold text-marca-tinta shadow-[0_4px_0_#E0A800,0_8px_16px_rgba(18,33,26,0.16)]">
                           Estás aquí
@@ -414,15 +508,26 @@ export default function Ruta({
                       </span>
                     )}
 
-                    <span className="ruta-entra" style={{ animationDelay: `${retraso + 110}ms` }}>
+                    <span
+                      className={retraso === null ? "block" : "ruta-entra"}
+                      style={retraso === null ? undefined : { animationDelay: `${retraso + 110}ms` }}
+                    >
                       <button
                         type="button"
                         onClick={() => alPulsar(parada)}
                         aria-expanded={suya}
                         className={`ruta-nodo block ${esActiva ? "ruta-halo" : ""}`}
                       >
-                        <span className={esActiva ? "ruta-latido" : "block"}>
-                          <DiscoMovil parada={parada} />
+                        <span
+                          className={
+                            indiceCerrando !== -1 && esActiva
+                              ? "ruta-asciende"
+                              : esActiva
+                                ? "ruta-latido"
+                                : "block"
+                          }
+                        >
+                          <DiscoMovil parada={parada} cerrando={seCierra} />
                         </span>
                         <span className="sr-only">{rotuloDe(parada)}</span>
                         {suya && parada.tipo !== "resumen" && (
@@ -591,8 +696,10 @@ function rotuloDe(parada: Parada): string {
  * pulsarlo. Es todo el aire de mapa que hace falta, sin una sola
  * mecánica de juego detrás.
  */
-function DiscoMovil({ parada }: { parada: Parada }) {
+function DiscoMovil({ parada, cerrando }: { parada: Parada; cerrando?: boolean }) {
   const base = "ruta-disco relative grid place-items-center rounded-full";
+
+  if (cerrando) return <DiscoCerrando medida={46} />;
 
   if (parada.tipo === "actual") {
     // EL ÚNICO DISCO DEL MAPA QUE NO ES NI BLANCO NI VERDE MACIZO, y el
@@ -684,6 +791,8 @@ function Nodo({
   arriba,
   grande,
   retraso,
+  cerrando,
+  ascendiendo,
   onPulsar,
   onGenerar,
   generando,
@@ -694,7 +803,12 @@ function Nodo({
   arriba: boolean;
   /** Es la parada que se lleva la tarjeta. */
   grande: boolean;
-  retraso: number;
+  /** Cuándo entra al cargar, o null si no hay entrada que animar. */
+  retraso: number | null;
+  /** Acaba de cerrarse: se llena y se traza la marca. */
+  cerrando: boolean;
+  /** Hereda el turno: se enciende cuando la anterior termina de cerrarse. */
+  ascendiendo: boolean;
   onPulsar: () => void;
   onGenerar: () => void;
   generando: boolean;
@@ -706,12 +820,12 @@ function Nodo({
     <>
       {esActiva && (
         <span
-          className="ruta-brota absolute z-20"
+          className={retraso === null ? "absolute z-20" : "ruta-brota absolute z-20"}
           style={{
             left: `${punto.x}%`,
             top: `calc(${punto.y}% - 66px)`,
             transform: "translate(-50%, -100%)",
-            animationDelay: `${retraso + 320}ms`,
+            animationDelay: retraso === null ? undefined : `${retraso + 320}ms`,
           }}
         >
           <span className="relative inline-flex items-center whitespace-nowrap rounded-full bg-marca-amarillo px-[15px] py-[7px] text-[12.5px] font-bold text-marca-tinta shadow-[0_4px_0_#E0A800,0_8px_16px_rgba(18,33,26,0.16)]">
@@ -725,17 +839,17 @@ function Nodo({
       )}
 
       <span
-        className="ruta-entra absolute z-10"
+        className={retraso === null ? "absolute z-10" : "ruta-entra absolute z-10"}
         style={{
           left: `${punto.x}%`,
           top: `${punto.y}%`,
           transform: "translate(-50%, -50%)",
-          animationDelay: `${retraso + 110}ms`,
+          animationDelay: retraso === null ? undefined : `${retraso + 110}ms`,
         }}
       >
         <button type="button" onClick={onPulsar} className={`ruta-nodo ${esActiva ? "ruta-halo" : ""}`}>
-          <span className={esActiva ? "ruta-latido" : "block"}>
-            <DiscoEscritorio parada={parada} grande={grande} />
+          <span className={ascendiendo ? "ruta-asciende" : esActiva ? "ruta-latido" : "block"}>
+            <DiscoEscritorio parada={parada} grande={grande} cerrando={cerrando} />
           </span>
           <span className="sr-only">{rotuloDe(parada)}</span>
         </button>
@@ -743,12 +857,14 @@ function Nodo({
 
       {!grande && (
         <span
-          className="ruta-entra absolute w-[168px] text-center text-[13px] leading-[1.35]"
+          className={`absolute w-[168px] text-center text-[13px] leading-[1.35] ${
+            retraso === null ? "" : "ruta-entra"
+          }`}
           style={{
             left: `${punto.x}%`,
             top: arriba ? `calc(${punto.y}% - 40px)` : `calc(${punto.y}% + 40px)`,
             transform: `translate(${nudge}, ${arriba ? "-100%" : "0"})`,
-            animationDelay: `${retraso + 110}ms`,
+            animationDelay: retraso === null ? undefined : `${retraso + 110}ms`,
           }}
         >
           <span className={etiquetaClase(parada)}>{parada.titulo}</span>
@@ -774,8 +890,18 @@ function etiquetaClase(parada: Parada): string {
   return "text-marca-gris";
 }
 
-function DiscoEscritorio({ parada, grande }: { parada: Parada; grande: boolean }) {
+function DiscoEscritorio({
+  parada,
+  grande,
+  cerrando,
+}: {
+  parada: Parada;
+  grande: boolean;
+  cerrando?: boolean;
+}) {
   const base = "ruta-disco relative grid place-items-center rounded-full";
+
+  if (cerrando) return <DiscoCerrando medida={54} />;
 
   if (parada.tipo === "actual") {
     return (

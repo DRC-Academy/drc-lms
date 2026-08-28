@@ -295,6 +295,31 @@ export function geometriaRuta(total: number, indiceActual: number): Geometria {
   };
 }
 
+/**
+ * Un solo tramo del camino de escritorio: el que va de `indice` al
+ * siguiente.
+ *
+ * `geometriaRuta` devuelve lo andado y lo que queda como dos trazos
+ * enteros, y eso basta para pintar. Pero al cerrar una parada hay que
+ * colorear UN tramo —el que acaba de andarse— por encima de lo demás, y
+ * para eso hace falta poder pedirlo suelto.
+ */
+export function tramoRuta(total: number, indice: number): string {
+  if (indice < 0 || indice >= total - 1) return "";
+
+  const util = LIENZO.ancho - MARGEN * 2;
+  const punto = (i: number) => ({
+    x: total === 1 ? LIENZO.ancho / 2 : MARGEN + (i * util) / (total - 1),
+    y: BANDAS[i % 2],
+  });
+
+  const a = punto(indice);
+  const b = punto(indice + 1);
+  const mitad = (b.x - a.x) / 2;
+  return `M ${a.x} ${a.y} C ${a.x + mitad} ${a.y}, ${b.x - mitad} ${b.y}, ${b.x} ${b.y}`;
+}
+
+
 // ---------------------------------------------------------------
 // LA GEOMETRÍA DEL MÓVIL
 //

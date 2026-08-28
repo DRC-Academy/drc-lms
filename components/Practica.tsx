@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Bloque } from "@/lib/data";
 import { UMBRAL_DOMINADO } from "@/lib/progreso";
+import { anotarParadaCerrada } from "@/lib/cierre-ruta";
 import { desdePractica } from "@/lib/ejercicio-unificado";
 import LateralFases from "@/components/ejercicios/LateralFases";
 import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
@@ -89,6 +90,10 @@ export default function Practica({
       // bloque y quitar la marca de "iba por la mitad" son lo mismo.
       case "final":
         guardar({ tipo: "progreso", aciertos: suceso.aciertos, total: suceso.total });
+        // Y se deja la nota para la ruta: cuando el alumno vuelva, la
+        // parada ya estará cerrada en el servidor y sin esto no habría
+        // manera de saber que acababa de pasar. Ver `lib/cierre-ruta`.
+        anotarParadaCerrada(bloque.id);
         break;
 
       // Los intentos sueltos no se guardan en la práctica: aquí lo que

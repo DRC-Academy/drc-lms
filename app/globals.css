@@ -555,7 +555,78 @@
     animation: ruta-brotar 380ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
   }
 
-  /* 4 · EL PIE QUE DEVUELVE, y su flecha señalando hacia dónde está la
+  /* 4 · AL CERRAR UNA PARADA. Poco más de un segundo, y solo al volver
+     de hacer el bloque: se llena el disco, se traza la marca, el tramo
+     se colorea hasta la siguiente y allí se enciende el aro.
+
+     NO HAY PREMIO: HAY AVANCE. Ni confeti, ni sello, ni un número que
+     sube. Lo que pasa es que el camino llega un poco más lejos, que es
+     exactamente lo que ha pasado de verdad. */
+  @keyframes ruta-llenar {
+    from {
+      transform: scale(0.2);
+      opacity: 0;
+    }
+    55% {
+      opacity: 1;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes ruta-trazar {
+    from {
+      stroke-dashoffset: 26;
+    }
+  }
+
+  @keyframes ruta-colorear {
+    from {
+      stroke-dashoffset: 2000;
+    }
+  }
+
+  /* El aro ámbar del disco que se cierra se apaga a verde con él. */
+  @keyframes ruta-apagar {
+    from {
+      border-color: #ffc400;
+    }
+  }
+
+  /* Y la parada que hereda el turno se enciende al final. */
+  @keyframes ruta-ascender {
+    from {
+      opacity: 0;
+      transform: scale(0.72);
+    }
+  }
+
+  .ruta-llena {
+    animation: ruta-llenar 360ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  .ruta-traza {
+    stroke-dasharray: 26;
+    animation: ruta-trazar 280ms cubic-bezier(0.6, 0, 0.4, 1) 200ms both;
+  }
+
+  .ruta-colorea {
+    stroke-dasharray: 2000;
+    animation: ruta-colorear 480ms cubic-bezier(0.5, 0, 0.3, 1) 200ms both;
+  }
+
+  .ruta-apaga {
+    animation: ruta-apagar 360ms linear both;
+  }
+
+  .ruta-asciende {
+    display: block;
+    animation: ruta-ascender 380ms cubic-bezier(0.2, 0.8, 0.3, 1) 700ms both;
+  }
+
+  /* 5 · EL PIE QUE DEVUELVE, y su flecha señalando hacia dónde está la
      parada disponible cuando se ha ido de la pantalla. */
   @keyframes ruta-subir {
     from {
