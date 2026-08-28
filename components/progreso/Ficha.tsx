@@ -1,6 +1,6 @@
 import type { ClaseDelRecorrido } from "@/lib/gestion";
 import type { Estimacion } from "@/lib/estimacion";
-import { enMeses } from "@/lib/estimacion";
+import BannerAmpliar from "@/components/BannerAmpliar";
 import { formatearFechaLarga } from "@/lib/perfil";
 import { ESCALERA_MCER, esHito, proximoHito, type NivelMcer } from "@/lib/recorrido";
 import { enViñetas, soloParaElAlumno, textoParaElAlumno } from "@/lib/texto-alumno";
@@ -26,7 +26,14 @@ import { enViñetas, soloParaElAlumno, textoParaElAlumno } from "@/lib/texto-alu
 // componente igual que en Gestión: no toca `globals.css` ni afecta a
 // ninguna otra pantalla.
 //
-// LO ÚNICO QUE NO SE REPLICA es el marco: allí la página trae su propia
+// LO QUE YA NO SE REPLICA: EL BANNER DE AMPLIACIÓN. Se rediseñó para el
+// LMS —fondo claro, otro copy y el ahorro de meses como pieza principal—
+// y vive fuera, en `components/BannerAmpliar.tsx`, con sus propios
+// estilos. Hasta que ese rediseño baje también a Gestión, es el único
+// bloque de esta pantalla que allí se ve distinto. El resto sigue siendo
+// copia literal.
+//
+// LO OTRO QUE NO SE REPLICA es el marco: allí la página trae su propia
 // cabecera con el logotipo y el rótulo "Informe de progreso", porque es
 // una pantalla suelta que se abre desde un enlace. Aquí es una sección
 // del LMS y vive dentro de la barra de navegación de la aplicación, que
@@ -130,7 +137,9 @@ export default function Ficha({
           </section>
         )}
 
-        {estimacion && <BannerRitmo estimacion={estimacion} urlAmpliar={urlAmpliar} />}
+        {estimacion && (
+          <BannerAmpliar estimacion={estimacion} urlAmpliar={urlAmpliar} retardoMs={180} />
+        )}
 
         {(fuertes.length > 0 || debiles.length > 0) && (
           <section className="pg-split pg-rise" style={{ animationDelay: "240ms" }}>
@@ -227,99 +236,6 @@ function Escalera({ nivel, meta }: { nivel: NivelMcer | null; meta: NivelMcer | 
 }
 
 /**
- * EL BANNER. La misma distancia recorrida a dos o tres velocidades, con
- * la fecha de llegada de cada una. La fecha es lo que convence: "29
- * meses" es abstracto, "mayo de 2028" se entiende de golpe.
- *
- * LAS BARRAS CRECEN SIN JAVASCRIPT. En Gestión esto es un componente de
- * cliente que pone un `useState` a los 260 ms para disparar la
- * transición. Aquí la pantalla entera se resuelve en el servidor, así
- * que el crecimiento se hace con un `@keyframes` que arranca en `width:
- * 0` y termina en la anchura que trae el `style` inline. Mismo gesto,
- * misma duración, misma curva, y sin bajar React para animar una barra.
- */
-function BannerRitmo({
-  estimacion,
-  urlAmpliar,
-}: {
-  estimacion: Estimacion;
-  urlAmpliar: string;
-}) {
-  const mejor = estimacion.opciones[estimacion.opciones.length - 1];
-  const metaEsExamen = estimacion.meta.origen === "examen";
-
-  return (
-    <section className="pg-card pg-pace pg-rise" style={{ animationDelay: "180ms" }}>
-      <p className="pg-kicker pg-kicker-light">Tu ritmo</p>
-      <h2 className="pg-pace-title">
-        {estimacion.hayAmpliacion
-          ? "Puedes llegar antes de lo que crees"
-          : "Vas al mejor ritmo posible"}
-      </h2>
-      <p className="pg-pace-lede">
-        Para alcanzar el <strong>{estimacion.meta.nivel}</strong>
-        {metaEsExamen ? " que preparas" : ""} quedan unas{" "}
-        <strong>{estimacion.horasQueFaltan} horas</strong> de inglés.
-        {estimacion.hayAmpliacion
-          ? " Esto es lo que tardarías según las horas que hagas cada semana."
-          : " A tu ritmo actual, esta es la previsión."}
-      </p>
-
-      <ol className="pg-bars">
-        {estimacion.opciones.map((opcion) => (
-          <li
-            key={opcion.horasSemanales}
-            className={`pg-bar-row${opcion.esSuPlan ? " is-current" : ""}`}
-          >
-            <div className="pg-bar-head">
-              <span className="pg-bar-plan">
-                {opcion.horasSemanales} h a la semana
-                {opcion.esSuPlan && <span className="pg-chip">Tu plan</span>}
-              </span>
-              <span className="pg-bar-months">{enMeses(opcion.meses)}</span>
-            </div>
-
-            <div className="pg-track">
-              <div className="pg-fill" style={{ width: `${opcion.porcentajeBarra}%` }} aria-hidden />
-            </div>
-
-            <div className="pg-bar-foot">
-              <span className="pg-bar-date">Llegarías en {opcion.llegada}</span>
-              {opcion.mesesAhorrados > 0 && (
-                <span className="pg-save">{enMeses(opcion.mesesAhorrados)} antes</span>
-              )}
-            </div>
-          </li>
-        ))}
-      </ol>
-
-      {estimacion.hayAmpliacion && (
-        <div className="pg-cta-block">
-          <a className="pg-cta" href={urlAmpliar} target="_blank" rel="noopener noreferrer">
-            Amplía tu plan
-            <span className="pg-cta-arrow" aria-hidden>
-              →
-            </span>
-          </a>
-          <p className="pg-cta-note">
-            Con una hora más a la semana llegarías {enMeses(estimacion.opciones[1].mesesAhorrados)}{" "}
-            antes.
-            {mejor.horasSemanales > estimacion.opciones[1].horasSemanales &&
-              ` Con ${mejor.horasSemanales} horas, ${enMeses(mejor.mesesAhorrados)} antes.`}
-          </p>
-        </div>
-      )}
-
-      <p className="pg-disclaimer">
-        Estimación orientativa. Partimos de las horas de estudio guiado que Cambridge asocia a cada
-        nivel del MCER y contamos con que practicas por tu cuenta entre clases. Tu ritmo real
-        depende de ti y de tu constancia.
-      </p>
-    </section>
-  );
-}
-
-/**
  * El recorrido clase a clase. Los hitos de DRC (1, 15, 30, 50) van
  * marcados.
  *
@@ -405,8 +321,6 @@ function EstilosFicha() {
 //
 //   · `.pg-page` pierde el `min-height: 100dvh`, porque aquí no es la
 //     página entera: va debajo de la cabecera del LMS.
-//   · `@keyframes pg-fill-grow`, que sustituye al `useState` que animaba
-//     las barras en el cliente.
 //   · `.pg-more-wrap`, para que el `<details>` haga de botón "ver más".
 //
 // El resto es literal, incluidas las medias queries y el bloque de
@@ -522,73 +436,6 @@ const CSS_FICHA = `
   line-height: 1.62; color: #24271F; white-space: pre-wrap;
 }
 
-/* ── Banner de ritmo ────────────────────────────────────────────────────── */
-.pg-pace {
-  background: var(--pg-green-deep); border-color: var(--pg-green-deep); color: #fff;
-  padding: 28px 26px 24px; box-shadow: 0 14px 36px rgba(16, 58, 30, 0.22);
-}
-.pg-kicker-light { color: var(--pg-yellow); }
-.pg-pace-title {
-  font-size: clamp(21px, 4.6vw, 27px); font-weight: 700; letter-spacing: -0.025em;
-  line-height: 1.2; margin: 0 0 10px; color: #fff; text-wrap: balance;
-}
-.pg-pace-lede { font-size: 15px; line-height: 1.62; color: rgba(255, 255, 255, 0.76); margin: 0 0 24px; max-width: 52ch; }
-.pg-pace-lede strong { color: #fff; font-weight: 700; }
-
-.pg-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 18px; }
-.pg-bar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 7px; }
-.pg-bar-plan {
-  font-size: 14px; font-weight: 600; color: rgba(255, 255, 255, 0.82);
-  display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
-}
-.pg-chip {
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.16); color: rgba(255, 255, 255, 0.9);
-  padding: 3px 8px; border-radius: 999px;
-}
-.pg-bar-months { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: #fff; white-space: nowrap; }
-
-.pg-track { height: 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
-.pg-fill {
-  height: 100%; border-radius: 999px; min-width: 12px;
-  background: linear-gradient(90deg, var(--pg-green) 0%, var(--pg-green-bright) 100%);
-  /* SOLO EN EL LMS: en Gestión la anchura arranca en 0 y la sube un
-     'useState' a los 260 ms con 'transition'. Aquí no hay JavaScript de
-     cliente, así que el mismo gesto se hace con un keyframe que sale de
-     'width: 0'; 'backwards' mantiene la barra vacía durante la espera. */
-  animation: pg-fill-grow 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) 0.26s backwards;
-}
-@keyframes pg-fill-grow { from { width: 0; } }
-.pg-bar-row.is-current .pg-fill { background: rgba(255, 255, 255, 0.26); }
-
-.pg-bar-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 7px; }
-.pg-bar-date { font-size: 12.5px; color: rgba(255, 255, 255, 0.58); }
-.pg-save {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap;
-  background: var(--pg-yellow); color: #3D2C00; padding: 4px 10px; border-radius: 999px;
-}
-
-.pg-cta-block {
-  margin-top: 26px; padding-top: 22px; border-top: 1px solid rgba(255, 255, 255, 0.14);
-  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-}
-.pg-cta {
-  display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
-  background: var(--pg-yellow); color: #2E2100; border-radius: 12px;
-  padding: 14px 24px; font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em;
-  box-shadow: 0 6px 18px rgba(255, 196, 0, 0.26);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-.pg-cta:hover { transform: translateY(-1px); box-shadow: 0 9px 24px rgba(255, 196, 0, 0.34); }
-.pg-cta:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
-.pg-cta-arrow { transition: transform 0.18s ease; }
-.pg-cta:hover .pg-cta-arrow { transform: translateX(3px); }
-.pg-cta-note { font-size: 13.5px; line-height: 1.55; color: rgba(255, 255, 255, 0.72); margin: 0; flex: 1; min-width: 200px; }
-
-.pg-disclaimer {
-  margin: 22px 0 0; font-size: 11.5px; line-height: 1.6; color: rgba(255, 255, 255, 0.45);
-}
-
 /* ── Fuertes / a reforzar ───────────────────────────────────────────────── */
 .pg-split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 .pg-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
@@ -651,7 +498,6 @@ const CSS_FICHA = `
 @media (max-width: 720px) {
   .pg-main { padding: 26px 14px 56px; gap: 14px; }
   .pg-card { padding: 20px 18px; border-radius: 16px; }
-  .pg-pace { padding: 24px 18px 20px; }
   .pg-ladder { gap: 4px; }
   .pg-rung { padding: 10px 1px 9px; font-size: 12.5px; border-radius: 9px; }
   .pg-rung-note { font-size: 8px; letter-spacing: 0.03em; margin-top: 4px; }
@@ -661,10 +507,6 @@ const CSS_FICHA = `
   .pg-stat-num { font-size: 23px; }
   .pg-split { grid-template-columns: 1fr; gap: 14px; }
   .pg-goal-text { font-size: 16px; }
-  .pg-bar-months { font-size: 17px; }
-  .pg-cta-block { gap: 14px; }
-  .pg-cta { width: 100%; justify-content: center; }
-  .pg-cta-note { min-width: 0; text-align: center; }
   .pg-timeline { padding-left: 22px; }
   .pg-tl-node { left: -22px; top: 19px; }
   .pg-tl-card { padding: 16px 16px; }
@@ -672,7 +514,5 @@ const CSS_FICHA = `
 
 @media (prefers-reduced-motion: reduce) {
   .pg-rise { animation: none; }
-  .pg-fill { animation: none; }
-  .pg-cta, .pg-cta-arrow { transition: none; }
 }
 `;
