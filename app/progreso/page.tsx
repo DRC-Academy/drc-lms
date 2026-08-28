@@ -1,5 +1,6 @@
 import { obtenerPerfil, obtenerRecorrido } from "@/lib/gestion";
 import { calcularEstimacion, nivelEfectivo } from "@/lib/estimacion";
+import { objetivoDelAlumno } from "@/lib/objetivo-servidor";
 import { exigirFoco } from "@/lib/sesion-servidor";
 import { cursosAsignados } from "@/lib/cursos-servidor";
 import Cabecera from "@/components/Cabecera";
@@ -50,7 +51,20 @@ export default async function PaginaProgreso() {
   // Igual que en el resto de pantallas: sin ficha en Gestión no es un
   // 404, es una pantalla con menos cosas. Hay alumnos con clases
   // analizadas y sin fila en la vista de perfiles.
-  const cursos = perfil ? await cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : [];
+  // Las dos salen del perfil y ninguna depende de la otra: en fila
+  // serían dos viajes donde cabe uno.
+  //
+  // «TU OBJETIVO», EN SEGUNDA PERSONA SI LO HAY. Gestión escribe ese
+  // campo PARA EL PROFESOR y en tercera persona: de los 50 que hoy se
+  // pintan, ninguno le habla al alumno. La reescritura la produce
+  // `scripts/reescribir-objetivos.ts` y vive en la base del LMS,
+  // porque en la de Gestión no se puede escribir. Sin reescritura, o
+  // si Gestión ha rehecho la ficha desde que se hizo, vuelve el
+  // original: peor redactado, pero cierto. Ver `lib/objetivo-servidor.ts`.
+  const [cursos, objetivo] = await Promise.all([
+    perfil ? cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : Promise.resolve([]),
+    objetivoDelAlumno(alumnoId, perfil?.objetivoPerfil ?? null),
+  ]);
 
   // EL NIVEL, CON LA PRIORIDAD DE GESTIÓN. La columna `nivel` de la
   // vista es lo que tecleó quien dio de alta al alumno, que allí es la
@@ -91,7 +105,7 @@ export default async function PaginaProgreso() {
         horasSemanales={perfil?.horasSemanales ?? null}
         clasesContadas={recorrido.clasesContadas}
         estimacion={estimacion}
-        objetivo={perfil?.objetivoPerfil ?? null}
+        objetivo={objetivo}
         puntosFuertes={perfil?.puntosFuertes ?? null}
         puntosDebiles={perfil?.puntosDebiles ?? null}
         focoRecomendado={perfil?.focoRecomendado ?? null}

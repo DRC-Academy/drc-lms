@@ -29,6 +29,18 @@
 // persona; lo que corresponde a largo plazo es que el prompt escriba
 // aparte una versión para el alumno. Mientras tanto, esto es el
 // cortafuegos, y el LMS lo necesita porque enseña los mismos textos.
+//
+// PENDIENTE EN GESTIÓN, y ya con medida: de los 174 alumnos, 52 tienen
+// `objetivo_perfil` relleno, 50 pasan por aquí y se pintan, y de esos
+// 50 ninguno le habla al alumno. Cero. No es un caso raro, es cómo se
+// genera la ficha.
+//
+// Mientras tanto el LMS se ha montado el apaño:
+// `scripts/reescribir-objetivos.ts` reescribe en segunda persona y
+// guarda en la base del LMS, porque en la de Gestión no se puede
+// escribir. El día que el prompt de allí escriba las dos versiones
+// del objetivo —la del profesor y la del alumno—, ese script, su
+// tabla y `lib/objetivo-servidor.ts` se borran.
 // ---------------------------------------------------------------
 
 /**
