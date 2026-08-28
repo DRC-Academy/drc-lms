@@ -78,6 +78,16 @@ export type EjercicioUnificado = {
    * haber una explicación se lee como contenido que no ha cargado.
    */
   explicacion: string | null;
+  /**
+   * LA FRASE QUE ENCABEZA LA CORRECCIÓN, escrita para ESTE ejercicio.
+   *
+   * Null en el curso, que no la trae, y null también en el bloque
+   * generado al que el modelo no se la rellenó. En los dos casos el
+   * visor pone el veredicto de siempre, así que esto no es un dato que
+   * pueda faltar: es uno que a veces mejora el que ya había.
+   */
+  veredictoAcierto: string | null;
+  veredictoFallo: string | null;
 };
 
 /** Los valores por defecto. Cada adaptador pisa lo suyo y nada más. */
@@ -93,6 +103,8 @@ const BASE: Omit<EjercicioUnificado, "id" | "forma" | "enunciado"> = {
   criterios: [],
   modelo: null,
   explicacion: null,
+  veredictoAcierto: null,
+  veredictoFallo: null,
 };
 
 /** Texto limpio, o null si no hay nada que enseñar. */
@@ -139,6 +151,8 @@ export function desdePractica(ejercicio: Ejercicio): EjercicioUnificado {
       // quedan los dos en array, que es la forma que admite las dos.
       correctas: [ejercicio.correcta],
       explicacion: texto(ejercicio.explicacion),
+      veredictoAcierto: texto(ejercicio.veredictoAcierto),
+      veredictoFallo: texto(ejercicio.veredictoFallo),
     };
   }
 
@@ -153,6 +167,8 @@ export function desdePractica(ejercicio: Ejercicio): EjercicioUnificado {
       respuestas: ejercicio.respuestas,
       pista: texto(ejercicio.pista),
       explicacion: texto(ejercicio.explicacion),
+      veredictoAcierto: texto(ejercicio.veredictoAcierto),
+      veredictoFallo: texto(ejercicio.veredictoFallo),
     };
   }
 

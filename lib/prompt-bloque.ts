@@ -63,6 +63,88 @@ const CALIBRACION: Record<Bloque["nivel"], string> = {
 };
 
 // ---------------------------------------------------------------
+// EN QUÉ IDIOMA SE CORRIGE
+//
+// Todo lo que el alumno lee DESPUÉS de responder —la explicación, el
+// veredicto que la encabeza, la pista del 'transformar' y los criterios
+// del 'producir'— va en inglés a partir de B2. Por debajo sigue en
+// español.
+//
+// El corte no está entre B1 y B2 por comodidad. Una explicación es
+// siempre más difícil que el ejercicio que explica: el ejercicio se
+// resuelve reconociendo una forma, y la explicación habla SOBRE esa
+// forma, que es lengua sobre la lengua y un escalón entero por encima.
+// A un A2 que acaba de fallar 'have a shower' se le puede explicar por
+// qué en inglés sencillo, pero ese inglés sencillo le sigue costando
+// más que el hueco que ha fallado, y entonces la corrección se cae
+// justo en el momento para el que existe. En B2 esa distancia ya está
+// cubierta y leer la corrección en inglés es práctica de regalo, no un
+// segundo obstáculo.
+//
+// LO QUE NO CAMBIA EN NINGÚN NIVEL: la interfaz y el enunciado de la
+// tarea. Instrucción y contexto siguen en español siempre, porque son
+// lo que se lee ANTES de responder, y ahí una duda de comprensión se
+// convierte en un fallo que no es del alumno.
+// ---------------------------------------------------------------
+
+const IDIOMA_CORRECCION: Record<Bloque["nivel"], "es" | "en"> = {
+  A1: "es",
+  A2: "es",
+  B1: "es",
+  B2: "en",
+  C1: "en",
+};
+
+/** "en inglés sencillo" o "en español", para incrustar en el prompt. */
+function comoSeCorrige(nivel: Bloque["nivel"]): string {
+  return IDIOMA_CORRECCION[nivel] === "en" ? "en inglés sencillo" : "en español";
+}
+
+/** La regla de idioma de la corrección, escrita para este nivel. */
+function reglasDeIdioma(nivel: Bloque["nivel"]): string[] {
+  if (IDIOMA_CORRECCION[nivel] === "es") {
+    return [
+      "- Las instrucciones, pistas, criterios y explicaciones van en español de España, tuteando, en tono cálido y directo.",
+    ];
+  }
+
+  return [
+    "- Las instrucciones y el contexto de cada tarea van en español de España, tuteando, en tono cálido y directo:",
+    "  son lo que el alumno lee ANTES de responder, y una duda ahí le cuesta un fallo que no es suyo.",
+    "- TODO LO QUE LEE DESPUÉS DE RESPONDER VA EN INGLÉS: la explicación, los dos veredictos, la pista del",
+    "  'transformar' y los criterios del 'producir'.",
+    "- Y ese inglés es CLARAMENTE MÁS SENCILLO QUE EL DEL EJERCICIO. Frases cortas, vocabulario de alta frecuencia",
+    "  y la mínima jerga gramatical posible: explicar una collocation cuesta más que elegirla, así que una",
+    "  explicación escrita al nivel del ejercicio es un segundo ejercicio, y le llega justo cuando acaba de fallar.",
+    "  Escríbela como se la dirías a alguien un nivel por debajo del suyo.",
+  ];
+}
+
+/** Los dos veredictos: qué son, y por qué no pueden repetirse. */
+function bloqueVeredictos(nivel: Bloque["nivel"]): string[] {
+  return [
+    "EL VEREDICTO DE CADA EJERCICIO",
+    "Cada 'reconocer' y cada 'transformar' llevan dos frases más: 'veredictoAcierto' y 'veredictoFallo'.",
+    `Son lo primero que lee el alumno al responder, encima de la explicación, y van ${comoSeCorrige(nivel)}.`,
+    "",
+    "TIENEN QUE SER DISTINTOS EN CADA EJERCICIO y decir algo de lo que ha pasado en ESE ejercicio:",
+    "- Acertar algo que tenía trampa no se saluda igual que acertar lo evidente. Si el ejercicio era duro,",
+    "  reconócelo; si era de rodaje, no lo infles: celebrar a lo grande un acierto fácil suena a burla.",
+    "- Fallar por poco no se dice igual que elegir la opción que estaba más lejos. No sabes cuál ha marcado,",
+    "  así que escribe el 'veredictoFallo' apuntando al distractor que has diseñado para que caiga: nómbrale",
+    "  esa confusión concreta, que es la que casi seguro acaba de tener.",
+    "- NUNCA lenguaje de error: ni 'wrong', ni 'incorrect', ni 'error', ni 'you failed', ni sus equivalentes.",
+    "  Se nombra lo que ha pasado con la lengua, no lo que ha hecho mal el alumno.",
+    "- Nunca condescendiente: ni un 'good job!' vacío, ni 'don't worry', ni ánimos de profesor de niños pequeños.",
+    "- Breves: una frase, dos como mucho, en el mismo tono cálido que el resto del bloque.",
+    "",
+    "Diez ejercicios con el mismo 'Exacto' y el mismo 'Casi' son la misma frase diez veces: a la tercera deja de",
+    "leerse, y con ella deja de leerse la explicación que va justo debajo. Si dos veredictos de este bloque se",
+    "pueden intercambiar sin que se note, están mal los dos.",
+  ];
+}
+
+// ---------------------------------------------------------------
 // FORMATO AUTÉNTICO DE CADA EXAMEN
 //
 // Se describe por TAREA y no por posición del ejercicio, que es lo que
@@ -110,7 +192,7 @@ export function construirSistema(nivel: Bloque["nivel"]): string {
     "",
     "REGLAS DE CONTENIDO",
     "- Los enunciados, frases y respuestas de los ejercicios van en inglés.",
-    "- Las instrucciones, pistas y explicaciones van en español de España, tuteando, en tono cálido y directo.",
+    ...reglasDeIdioma(nivel),
     "- Nunca uses lenguaje de error o de vigilancia: nada de 'tus fallos', 'tus errores' o 'áreas deficientes'.",
     "- Las explicaciones dicen POR QUÉ, no repiten la regla en abstracto. Una o dos frases, sin jerga gramatical innecesaria.",
     "- El contexto es adulto. Nada de ejemplos escolares.",
@@ -146,6 +228,8 @@ export function construirSistema(nivel: Bloque["nivel"]): string {
     `Son ${REPARTO.reconocer} 'reconocer' y ${REPARTO.transformar} 'transformar', no dos de cada uno repetidos. Cada uno ataca un punto distinto:`,
     "si dos ejercicios se resuelven con la misma regla y el mismo razonamiento, el segundo sobra. Reescríbelo apuntando a otra cosa.",
     "",
+    ...bloqueVeredictos(nivel),
+    "",
     "FORMATO",
     "Devuelves SOLO el objeto JSON. Sin markdown, sin vallados, sin una sola palabra antes ni después.",
   ].join("\n");
@@ -156,13 +240,23 @@ export function construirSistema(nivel: Bloque["nivel"]): string {
 // ---------------------------------------------------------------
 
 function plantillaJson(nivel: Bloque["nivel"]): string {
+  // El idioma va escrito DENTRO de cada campo, y no solo en las reglas
+  // de arriba. La plantilla es lo que el modelo tiene delante cuando ya
+  // está escribiendo el JSON, y la etiqueta repetida ahí es lo que evita
+  // que a partir del sexto ejercicio se le escape el español.
+  const corrige = comoSeCorrige(nivel);
+  const acierto = `Frase corta ${corrige} para cuando acierta, escrita para ESTE ejercicio.`;
+  const fallo = `Frase corta ${corrige} para cuando no acierta, sin lenguaje de error.`;
+
   const reconocer = (n: number) => ({
     tipo: "reconocer",
     id: `r${n}`,
     enunciado: "Frase en inglés con ____ donde va el hueco.",
     opciones: ["correcta", "distractor 1", "distractor 2", "distractor 3"],
     correcta: 0,
-    explicacion: "Por qué es esa y qué error refleja la que suele elegirse.",
+    veredictoAcierto: acierto,
+    veredictoFallo: fallo,
+    explicacion: `Por qué es esa y qué error refleja la que suele elegirse, ${corrige}.`,
   });
 
   const transformar = (n: number) => ({
@@ -171,8 +265,10 @@ function plantillaJson(nivel: Bloque["nivel"]): string {
     instruccion: "Qué tiene que hacer, en español.",
     frase: "Frase de partida en inglés.",
     respuestas: ["Todas las formas correctas, incluidas contracciones y orden alternativo."],
-    pista: "Una pista corta que acote la respuesta.",
-    explicacion: "Qué cambia y por qué.",
+    pista: `Una pista corta que acote la respuesta, ${corrige}.`,
+    veredictoAcierto: acierto,
+    veredictoFallo: fallo,
+    explicacion: `Qué cambia y por qué, ${corrige}.`,
   });
 
   const producir = (n: number, de: string) => ({
@@ -180,7 +276,11 @@ function plantillaJson(nivel: Bloque["nivel"]): string {
     id: `p${n}`,
     instruccion: "Qué tiene que escribir, en español.",
     contexto: `Situación concreta y extensión esperada. Este sale de ${de}.`,
-    criterios: ["Criterio comprobable 1", "Criterio comprobable 2", "Criterio comprobable 3"],
+    criterios: [
+      `Criterio comprobable 1, ${corrige}.`,
+      `Criterio comprobable 2, ${corrige}.`,
+      `Criterio comprobable 3, ${corrige}.`,
+    ],
     modelo: "Una respuesta modelo en inglés, natural, de dos a cuatro frases.",
   });
 
@@ -210,7 +310,8 @@ function plantillaJson(nivel: Bloque["nivel"]): string {
   );
 }
 
-const REQUISITOS = [
+function requisitos(nivel: Bloque["nivel"]): string {
+  const lineas = [
   "Requisitos que se comprueban antes de publicar el bloque:",
   `- Exactamente ${TOTAL_EJERCICIOS} ejercicios y en este orden: ${REPARTO.reconocer} 'reconocer', luego ${REPARTO.transformar} 'transformar', luego ${REPARTO.producir} 'producir'. Ni uno más ni uno menos, y sin mezclar el orden.`,
   "- Cada 'reconocer' tiene exactamente 4 opciones distintas y 'correcta' es el índice (0-3) de la buena.",
@@ -223,7 +324,18 @@ const REQUISITOS = [
   "  Este es el fallo más caro del bloque: el alumno hace exactamente lo que le pides y se lo damos por fallado.",
   "- Cada 'producir' tiene entre 2 y 5 criterios comprobables y un modelo real.",
   "- Los dos 'producir' son tareas DISTINTAS: distinta situación, distinto destinatario y distinto registro. Si los dos podrían intercambiarse, están mal.",
-].join("\n");
+  "- Cada 'reconocer' y cada 'transformar' traen sus dos veredictos, y ninguno se repite ni se parece a otro del bloque.",
+  ];
+
+  if (IDIOMA_CORRECCION[nivel] === "en") {
+    lineas.push(
+      "- La explicación, los dos veredictos, las pistas y los criterios están EN INGLÉS, y en un inglés más",
+      "  sencillo que el del propio ejercicio. Las instrucciones y los contextos siguen en español."
+    );
+  }
+
+  return lineas.join("\n");
+}
 
 // ---------------------------------------------------------------
 // LO QUE SABEMOS DEL ALUMNO
@@ -397,7 +509,13 @@ export function construirUsuario(materia: MateriaPrima): string {
     );
   }
 
-  partes.push("", "Devuelve exactamente esta estructura:", plantillaJson(materia.nivel), "", REQUISITOS);
+  partes.push(
+    "",
+    "Devuelve exactamente esta estructura:",
+    plantillaJson(materia.nivel),
+    "",
+    requisitos(materia.nivel)
+  );
 
   return partes.join("\n");
 }

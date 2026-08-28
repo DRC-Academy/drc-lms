@@ -4,7 +4,33 @@
 // reutiliza entre alumnos del mismo nivel con la misma dificultad.
 // ---------------------------------------------------------------
 
-export type Reconocer = {
+/**
+ * EL VEREDICTO QUE ENCABEZA LA CORRECCIÓN.
+ *
+ * Las dos frases que el alumno lee justo al responder, antes de la
+ * explicación: una si acierta y otra si no. Las escribe el modelo para
+ * ESE ejercicio, porque un texto fijo —"Eso es" / "Casi"— deja de
+ * leerse hacia el tercero de los diez, y lo que queda entonces es un
+ * adorno que el ojo se salta.
+ *
+ * Son OPCIONALES a propósito, y no por prudencia con el esquema:
+ *
+ *   · Los 1.492 ejercicios importados de LearnDash no los traen nunca.
+ *   · Los bloques escritos a mano de aquí abajo y del banco, tampoco.
+ *   · Y un bloque generado al que el modelo no se los rellene tiene que
+ *     seguir siendo un bloque válido: perder un veredicto es perder una
+ *     frase, y tirar los diez ejercicios por eso es peor negocio.
+ *
+ * Cuando faltan, el visor pone los de siempre.
+ */
+export type Veredictos = {
+  /** Al acertar. Ajustado a si el acierto era fácil o tenía mérito. */
+  veredictoAcierto?: string;
+  /** Al fallar. Nunca lenguaje de error: ni "wrong" ni "incorrect". */
+  veredictoFallo?: string;
+};
+
+export type Reconocer = Veredictos & {
   tipo: "reconocer";
   id: string;
   enunciado: string;
@@ -13,7 +39,7 @@ export type Reconocer = {
   explicacion: string;
 };
 
-export type Transformar = {
+export type Transformar = Veredictos & {
   tipo: "transformar";
   id: string;
   instruccion: string;

@@ -10,7 +10,7 @@
 // no tener el bloque: si algo no cuadra, devolvemos null.
 // ---------------------------------------------------------------
 
-import type { Bloque, Ejercicio, Producir, Reconocer, Transformar } from "@/lib/data";
+import type { Bloque, Ejercicio, Producir, Reconocer, Transformar, Veredictos } from "@/lib/data";
 
 // ---------------------------------------------------------------
 // LAS DOS FORMAS QUE ACEPTAMOS
@@ -113,6 +113,33 @@ function listaDeCadenas(
   return salida.length >= minimo ? salida : null;
 }
 
+/**
+ * LOS DOS VEREDICTOS, SI VIENEN Y DICEN ALGO.
+ *
+ * No invalidan nada. Un ejercicio sin veredicto se enseña con el de
+ * siempre, así que descartar el bloque entero porque el modelo se dejó
+ * una frase de cortesía sería cambiar diez ejercicios por una.
+ *
+ * El tope de 180 caracteres no es cosmético: el veredicto ENCABEZA la
+ * corrección y la explicación va debajo. Un veredicto de párrafo se
+ * come el sitio de la explicación y deja al alumno leyendo dos veces lo
+ * mismo, así que si se desmadra vale más el corto de toda la vida.
+ */
+function veredictos(crudo: Record<string, unknown>): Veredictos {
+  const dentroDeRango = (valor: unknown): string | null => {
+    const limpia = cadena(valor, 4);
+    return limpia && limpia.length <= 180 ? limpia : null;
+  };
+
+  const acierto = dentroDeRango(crudo.veredictoAcierto);
+  const fallo = dentroDeRango(crudo.veredictoFallo);
+
+  return {
+    ...(acierto ? { veredictoAcierto: acierto } : {}),
+    ...(fallo ? { veredictoFallo: fallo } : {}),
+  };
+}
+
 function validarReconocer(crudo: Record<string, unknown>, id: string): Reconocer | null {
   const enunciado = cadena(crudo.enunciado, 5);
   const explicacion = cadena(crudo.explicacion, 10);
@@ -123,7 +150,7 @@ function validarReconocer(crudo: Record<string, unknown>, id: string): Reconocer
   if (typeof correcta !== "number" || !Number.isInteger(correcta)) return null;
   if (correcta < 0 || correcta >= opciones.length) return null;
 
-  return { tipo: "reconocer", id, enunciado, opciones, correcta, explicacion };
+  return { tipo: "reconocer", id, enunciado, opciones, correcta, explicacion, ...veredictos(crudo) };
 }
 
 function validarTransformar(crudo: Record<string, unknown>, id: string): Transformar | null {
@@ -135,7 +162,16 @@ function validarTransformar(crudo: Record<string, unknown>, id: string): Transfo
 
   if (!instruccion || !frase || !pista || !explicacion || !respuestas) return null;
 
-  return { tipo: "transformar", id, instruccion, frase, respuestas, pista, explicacion };
+  return {
+    tipo: "transformar",
+    id,
+    instruccion,
+    frase,
+    respuestas,
+    pista,
+    explicacion,
+    ...veredictos(crudo),
+  };
 }
 
 function validarProducir(crudo: Record<string, unknown>, id: string): Producir | null {

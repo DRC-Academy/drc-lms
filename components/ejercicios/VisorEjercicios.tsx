@@ -348,6 +348,43 @@ export default function VisorEjercicios({
     .filter((t) => t.trim() !== "")
     .join(" · ");
 
+  // ---------------------------------------------------------------
+  // LA CORRECCIÓN, EN DOS PIEZAS
+  //
+  // EL VEREDICTO la encabeza. Lo escribe el modelo para ESTE ejercicio
+  // y viene en `veredictoAcierto` / `veredictoFallo`; cuando no viene
+  // —el curso no lo trae nunca— se pone el de siempre.
+  //
+  // LA SOLUCIÓN es cuál era la respuesta, y solo hay que escribirla
+  // donde no esté ya en pantalla: en `escritura` y en `huecos` no se ve
+  // por ningún lado, mientras que en `opciones` la buena se queda
+  // marcada en verde entre las cuatro.
+  //
+  // Van partidas porque el veredicto del modelo sustituye al texto por
+  // defecto, y ese texto llevaba la respuesta dentro. Sin partirlas, un
+  // veredicto mejor se llevaría por delante el único sitio donde el
+  // alumno podía leer cuál era la buena.
+  // ---------------------------------------------------------------
+  const solucionEscrita = esHuecos
+    ? `${ejercicio.huecos.length === 1 ? "La respuesta era" : "Las respuestas eran"} ${enumerar(
+        ejercicio.huecos.map((a) => a[0] ?? "—")
+      )}.`
+    : esEscritura
+      ? `Una versión correcta: ${ejercicio.respuestas[0] ?? "—"}`
+      : null;
+
+  const veredictoPorDefecto = yaAcertado
+    ? esHuecos
+      ? ejercicio.huecos.length === 1
+        ? "El hueco, correcto."
+        : `Los ${enLetras(ejercicio.huecos.length)} huecos, correctos.`
+      : "Eso es."
+    : solucionEscrita
+      ? `Casi. ${solucionEscrita}`
+      : `No era esa. La correcta es la ${solucion}`;
+
+  const veredicto = yaAcertado ? ejercicio.veredictoAcierto : ejercicio.veredictoFallo;
+
   const pendienteVarias = esOpciones && ejercicio.variasCorrectas && !estado.resuelto;
   const puedeComprobarVarias = pendienteVarias && estado.elegidas.length > 0;
   const pendienteEscritura = esEscritura && !estado.resuelto;
@@ -514,23 +551,19 @@ export default function VisorEjercicios({
                   {yaAcertado ? "✓" : "—"}
                 </span>
                 <p className="text-pretty text-[15px] font-medium leading-[1.45] text-marca-tintaCuerpo min-[1100px]:text-[16px]">
-                  {esHuecos
-                    ? yaAcertado
-                      ? ejercicio.huecos.length === 1
-                        ? "El hueco, correcto."
-                        : `Los ${enLetras(ejercicio.huecos.length)} huecos, correctos.`
-                      : `Casi. ${
-                          ejercicio.huecos.length === 1 ? "La respuesta era" : "Las respuestas eran"
-                        } ${enumerar(ejercicio.huecos.map((a) => a[0] ?? "—"))}.`
-                    : esEscritura
-                      ? yaAcertado
-                        ? "Eso es."
-                        : `Casi. Una versión correcta: ${ejercicio.respuestas[0] ?? "—"}`
-                      : yaAcertado
-                        ? "Eso es."
-                        : `No era esa. La correcta es la ${solucion}`}
+                  {veredicto ?? veredictoPorDefecto}
                 </p>
               </div>
+
+              {/* CUÁL ERA LA BUENA. Solo cuando el veredicto del modelo
+                  ha ocupado el sitio del texto por defecto, que era el
+                  que la llevaba dentro. El sangrado la alinea con el
+                  veredicto, por debajo de la insignia. */}
+              {veredicto && !yaAcertado && solucionEscrita && (
+                <p className="mt-2 pl-[33px] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaCuerpo min-[1100px]:text-[15px]">
+                  {solucionEscrita}
+                </p>
+              )}
 
               {/* LA EXPLICACIÓN SOLO SI EXISTE. Los 1.492 del curso la
                   traen vacía, y reservarle sitio dejaría un hueco que
