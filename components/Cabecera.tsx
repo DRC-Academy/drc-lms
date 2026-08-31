@@ -174,7 +174,7 @@ export default function Cabecera({
 
           {/* En escritorio, junto al logotipo. En móvil, en la barra de abajo. */}
           {enlaces.length > 0 && (
-            <nav aria-label="Secciones" className="hidden h-full items-center gap-7 lg:flex">
+            <nav aria-label="Secciones" className="hidden h-full items-center gap-7 min-[900px]:flex">
               {enlaces.map((enlace) => (
                 <Link
                   key={enlace.clave}
@@ -206,7 +206,7 @@ export default function Cabecera({
               quién soy. `min-w-0` + `truncate` para que un título largo
               se recorte en vez de empujar la navegación fuera. */}
           {contexto && (
-            <div className="ml-auto hidden min-w-0 items-center gap-3 lg:flex">
+            <div className="ml-auto hidden min-w-0 items-center gap-3 min-[900px]:flex">
               <Link
                 href={hrefCurso}
                 className="min-w-0 truncate text-[13.5px] font-medium text-marca-tinta transition-colors hover:text-marca-verdeOsc"
@@ -221,10 +221,10 @@ export default function Cabecera({
           {/* `ml-auto` SIEMPRE: en móvil el bloque del contexto está
               oculto, así que si el empuje a la derecha viviera solo allí,
               el avatar se pegaría al logotipo. En escritorio con contexto
-              el `lg:ml-3` lo desactiva y empuja el de arriba. */}
+              el `min-[900px]:ml-3` lo desactiva y empuja el de arriba. */}
           <div
             className={`ml-auto flex shrink-0 items-center gap-3 sm:gap-4 ${
-              contexto ? "lg:ml-3" : ""
+              contexto ? "min-[900px]:ml-3" : ""
             }`}
           >
             {nombre && (
@@ -271,7 +271,7 @@ export default function Cabecera({
             porcentaje: el "12 de 191" de escritorio no cabe y el
             porcentaje dice lo mismo en tres caracteres. */}
         {contexto && (
-          <div className="border-t border-marca-borde bg-marca-niebla px-4 py-[7px] lg:hidden">
+          <div className="border-t border-marca-borde bg-marca-niebla px-4 py-[7px] min-[900px]:hidden">
             <div className="mx-auto flex max-w-contenido items-center gap-2.5">
               <Link
                 href={hrefCurso}
@@ -398,7 +398,11 @@ function BarraCurso({ contexto, compacto }: { contexto: ContextoCurso; compacto?
 
       <span
         className={`font-semibold tabular-nums ${
-          compacto ? "text-[11.5px] text-marca-gris" : "text-[12px] text-marca-grisSuave"
+          // El mismo caso que las etiquetas de la barra de abajo: a 12px,
+          // `grisSuave` se queda en 3,65:1 y AA pide 4,5:1. La variante
+          // compacta ya iba en `gris`; la de escritorio se había quedado
+          // atrás.
+          compacto ? "text-[11.5px] text-marca-gris" : "text-[12px] text-marca-gris"
         }`}
       >
         {porcentaje}%
@@ -427,13 +431,49 @@ function NavegacionInferior({
   enlaces: { clave: SeccionActiva; texto: string; href: string }[];
   seccion?: SeccionActiva;
 }) {
+  // Dónde cae la sección actual dentro de la fila. -1 cuando no hay
+  // ninguna marcada, y entonces no se pinta la marca.
+  const indice = enlaces.findIndex((enlace) => enlace.clave === seccion);
+
   return (
     <nav
       aria-label="Secciones"
       data-nav-inferior
-      className="fixed inset-x-0 bottom-0 z-40 grid border-t border-marca-borde bg-white/[0.96] px-1 pb-3.5 pt-2 backdrop-blur-md lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid border-t border-marca-borde bg-white/[0.96] px-1 pb-3.5 pt-2 backdrop-blur-md min-[900px]:hidden"
       style={{ gridTemplateColumns: `repeat(${enlaces.length}, minmax(0, 1fr))` }}
     >
+      {/* ---------------------------------------------------------------
+          LA MARCA QUE SE DESLIZA
+
+          Antes la sección activa solo cambiaba de color y de peso, así
+          que al cambiar de pestaña el cambio ocurría en dos sitios a la
+          vez sin nada que los uniera: se apagaba una y se encendía otra.
+          Esto pone una sola marca que VIAJA, y con ella el cambio de
+          sección deja de ser un parpadeo y pasa a ser un movimiento con
+          dirección —de dónde vienes y a dónde vas—.
+
+          SIN MEDIR NADA EN JAVASCRIPT. La rejilla es de columnas iguales
+          (`repeat(N, minmax(0,1fr))`), así que la marca mide `100/N` por
+          ciento y se desplaza `índice × 100%` de su propio ancho. Es
+          exacto por construcción y sobrevive a que cambie el número de
+          secciones: hoy son cuatro y con tres seguiría cuadrando.
+
+          Va en `transform`, que es lo único que se puede mover sin tocar
+          disposición. Y `aria-hidden` porque no dice nada que no diga ya
+          el `aria-current` del enlace: para un lector de pantalla esto
+          sería ruido repetido.
+          --------------------------------------------------------------- */}
+      {indice >= 0 && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-0 top-0 h-[3px] rounded-b-full bg-marca-verde transition-transform duration-[220ms] ease-[var(--ease-salida)]"
+          style={{
+            width: `${100 / enlaces.length}%`,
+            transform: `translateX(${indice * 100}%)`,
+          }}
+        />
+      )}
+
       {enlaces.map((enlace) => {
         const activo = seccion === enlace.clave;
         return (
@@ -442,7 +482,14 @@ function NavegacionInferior({
             href={enlace.href}
             aria-current={activo ? "page" : undefined}
             className={`flex min-h-[44px] flex-col items-center justify-center gap-[5px] text-[12px] transition-colors ${
-              activo ? "font-semibold text-marca-tinta" : "font-medium text-marca-grisSuave"
+              // LA SECCIÓN EN LA QUE NO ESTÁS TAMBIÉN HAY QUE PODER LEERLA.
+              // Esto era `grisSuave` #7A8A80, que a 12px da 3,65:1 sobre
+              // el blanco de la barra: por debajo del 4,5:1 que pide AA.
+              // Y no es un texto cualquiera —es la navegación entera en
+              // móvil— ni un público cualquiera: hay alumnos de sesenta
+              // años. `gris` #5F6F66 da 5,33:1 y sigue leyéndose como
+              // apagado al lado de la tinta de la sección activa.
+              activo ? "font-semibold text-marca-tinta" : "font-medium text-marca-gris"
             }`}
           >
             <Icono seccion={enlace.clave} activo={activo} />

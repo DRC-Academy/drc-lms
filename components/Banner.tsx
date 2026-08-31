@@ -98,7 +98,7 @@ export default function Banner({
   // donde esa navegación no existe, baja a su sitio.
   if (esBarra) {
     return (
-      <div data-barra-inferior className="pointer-events-none fixed inset-x-0 bottom-[86px] z-30 px-4 lg:bottom-6 lg:px-9">
+      <div data-barra-inferior className="pointer-events-none fixed inset-x-0 bottom-[86px] z-30 px-4 min-[900px]:bottom-6 min-[900px]:px-9">
         <div className="mx-auto w-full max-w-contenido">
           <div className="banner pointer-events-auto flex items-center gap-4 rounded-[14px] py-4 pl-5 pr-4 min-[900px]:pl-[26px] min-[900px]:pr-5">
             <div className="min-w-0 flex-1">

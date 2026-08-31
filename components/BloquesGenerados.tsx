@@ -43,12 +43,12 @@ function EsqueletoBloque() {
   return (
     <div
       aria-hidden
-      className="esqueleto rounded-[16px] border border-marca-borde bg-white p-[18px] lg:rounded-[18px] lg:p-6"
+      className="esqueleto rounded-[16px] border border-marca-borde bg-white p-[18px] min-[900px]:rounded-[18px] min-[900px]:p-6"
     >
       {/* El sello «Nuevo», que es lo único que va encima del título
           desde que se fueron el área y los minutos. */}
       <span className="block h-[24px] w-[62px] rounded-full bg-marca-pista" />
-      <span className="mt-2.5 block h-[21px] w-[58%] rounded-md bg-marca-pista lg:mt-3 lg:h-[23px]" />
+      <span className="mt-2.5 block h-[21px] w-[58%] rounded-md bg-marca-pista min-[900px]:mt-3 min-[900px]:h-[23px]" />
       <span className="mt-2.5 block h-[14px] w-full rounded-md bg-marca-niebla" />
       <span className="mt-2 block h-[14px] w-[72%] rounded-md bg-marca-niebla" />
       <div className="mt-3.5 flex flex-wrap gap-1.5">
@@ -56,7 +56,7 @@ function EsqueletoBloque() {
           <span key={fase} className="block h-[26px] w-[92px] rounded-full bg-marca-niebla" />
         ))}
       </div>
-      <span className="mt-3.5 block h-[44px] w-full rounded-full bg-marca-pista lg:w-[150px]" />
+      <span className="mt-3.5 block h-[44px] w-full rounded-full bg-marca-pista min-[900px]:w-[150px]" />
     </div>
   );
 }
@@ -124,19 +124,19 @@ export default function BloquesGenerados({
           Y DEBAJO, «PENDIENTE» A SECAS. Decía «Lo tienes aquí hasta que
           lo termines», que explicaba una regla nuestra; lo que el alumno
           necesita saber de un vistazo es en qué estado está. */}
-      <div className="lg:flex lg:items-baseline lg:gap-3.5">
+      <div className="min-[900px]:flex min-[900px]:items-baseline min-[900px]:gap-3.5">
         <h2
           id="titulo-bloques"
-          className="shrink-0 font-display text-[17px] font-bold text-marca-tinta lg:text-[20px]"
+          className="shrink-0 font-display text-[17px] font-bold text-marca-tinta min-[900px]:text-[20px]"
         >
           {pendiente ? "Tu lección personalizada" : "Tus bloques"}
         </h2>
-        <p className="mt-1 text-pretty text-[14px] leading-[1.4] text-marca-gris lg:mt-0 lg:text-[15px]">
+        <p className="mt-1 text-pretty text-[14px] leading-[1.4] text-marca-gris min-[900px]:mt-0 min-[900px]:text-[15px]">
           {pendiente ? "Pendiente" : "Aquí aparece el que prepares, listo para empezarlo."}
         </p>
       </div>
 
-      <div className="mt-3.5 lg:mt-4">
+      <div className="mt-3.5 min-[900px]:mt-4">
         {generando ? (
           <EsqueletoBloque />
         ) : pendiente ? (
@@ -182,8 +182,19 @@ function TarjetaPendiente({
 }) {
   return (
     <article
-      className={`flex flex-col gap-5 rounded-[16px] border bg-white p-[18px] min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-7 lg:rounded-[18px] lg:p-6 ${
-        esNuevo ? "aparece border-marca-amarillo" : "border-marca-borde"
+      className={`flex flex-col gap-5 rounded-[16px] border bg-white p-[18px] min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-7 min-[900px]:rounded-[18px] min-[900px]:p-6 ${
+        // EL BLOQUE QUE SUSTITUYE AL ESQUELETO ENTRA DIFUMINADO.
+        // Llevaba `aparece`, que son 6px de deslizamiento: el mismo
+        // gesto exacto con el que entra un mensaje de error dos
+        // componentes más abajo. Mismo movimiento para «ya está tu
+        // bloque» y para «esto ha fallado».
+        //
+        // `entra-difuminado` lo separa por el motivo correcto: aquí no
+        // aparece algo nuevo, se SUSTITUYE el esqueleto que ocupaba ese
+        // hueco, y sin desenfoque se ven un instante los dos objetos
+        // solapados. El desenfoque los funde y el ojo lee una sola
+        // transformación en vez de un cambiazo.
+        esNuevo ? "entra-difuminado border-marca-amarillo" : "border-marca-borde"
       }`}
       style={esNuevo ? { boxShadow: "0 0 0 3px rgba(255, 196, 0, 0.14)" } : undefined}
     >
@@ -205,14 +216,14 @@ function TarjetaPendiente({
         )}
 
         <h3
-          className={`text-pretty font-display text-[18px] font-bold leading-[1.2] text-marca-tinta lg:text-[21px] ${
-            esNuevo ? "mt-2.5 lg:mt-3" : ""
+          className={`text-pretty font-display text-[18px] font-bold leading-[1.2] text-marca-tinta min-[900px]:text-[21px] ${
+            esNuevo ? "mt-2.5 min-[900px]:mt-3" : ""
           }`}
         >
           {bloque.titulo}
         </h3>
 
-        <p className="mt-[7px] max-w-[70ch] text-pretty text-[14px] leading-[1.45] text-marca-tintaMedia lg:mt-2 lg:text-[15px] lg:leading-[1.5]">
+        <p className="mt-[7px] max-w-[70ch] text-pretty text-[14px] leading-[1.45] text-marca-tintaMedia min-[900px]:mt-2 min-[900px]:text-[15px] min-[900px]:leading-[1.5]">
           {bloque.intro}
         </p>
 
@@ -287,7 +298,7 @@ function HuecoVacio({
       : "En cuanto tengas tu próxima clase, aquí aparece el siguiente.";
 
   return (
-    <div className="flex flex-col items-start gap-6 rounded-[16px] border-[1.5px] border-dashed border-marca-puntoPendiente bg-marca-casiBlanco p-6 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-10 min-[900px]:px-11 min-[900px]:py-10 lg:rounded-[18px]">
+    <div className="flex flex-col items-start gap-6 rounded-[16px] border-[1.5px] border-dashed border-marca-puntoPendiente bg-marca-casiBlanco p-6 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-10 min-[900px]:px-11 min-[900px]:py-10 min-[900px]:rounded-[18px]">
       <span
         aria-hidden
         className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-marca-verdeFondo min-[900px]:h-[84px] min-[900px]:w-[84px]"

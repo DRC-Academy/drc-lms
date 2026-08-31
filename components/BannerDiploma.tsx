@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { textoDiploma, type EstadoDiploma } from "@/lib/diploma";
 
 /**
@@ -35,7 +36,22 @@ import { textoDiploma, type EstadoDiploma } from "@/lib/diploma";
  *
  * Se renderiza en el servidor: no tiene estado ni interacción.
  */
-export default function BannerDiploma({ estado }: { estado: EstadoDiploma }) {
+export default function BannerDiploma({
+  estado,
+  sendero,
+}: {
+  estado: EstadoDiploma;
+  /**
+   * El camino que sustituye a la barra, o nada.
+   *
+   * Solo lo pasa el inicio. El curso no, y no es un olvido: allí el
+   * temario entero está debajo, mes a mes y desplegable, así que un
+   * mapa de seis nodos encima sería un resumen de lo que se ve completo
+   * dos dedos más abajo. Donde hace falta es en el inicio, que es la
+   * pantalla que no enseña el curso.
+   */
+  sendero?: ReactNode;
+}) {
   const texto = textoDiploma(estado);
   if (texto === null) return null;
 
@@ -66,12 +82,23 @@ export default function BannerDiploma({ estado }: { estado: EstadoDiploma }) {
           <IconoDiploma conseguido={conseguido} />
 
           {texto.cifra === null ? (
-            <p className="min-w-0 flex-1 font-display text-[24px] font-extrabold leading-[1.1] tracking-[-0.02em] text-marca-tinta min-[900px]:flex-none min-[900px]:text-[32px]">
+            <p className="min-w-0 flex-1 font-display text-[20px] font-extrabold leading-[1.1] tracking-[-0.02em] text-marca-tinta min-[900px]:flex-none min-[900px]:text-[24px]">
               {texto.unidad}
             </p>
           ) : (
             <p className="flex min-w-0 flex-1 items-baseline gap-2 min-[900px]:flex-none min-[900px]:gap-2.5">
-              <span className="font-display text-[32px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-marca-tinta min-[900px]:text-[42px]">
+              {/* LA CIFRA YA NO ES LO MÁS GRANDE DE LA PANTALLA.
+                  Medía 42px en escritorio contra los 34 del titular de la
+                  franja y los 30 del saludo: el número mayor del inicio
+                  era el único que no se puede pulsar. En móvil pasaba lo
+                  mismo —32 contra los 26 del titular—, así que se corrigen
+                  los dos anchos y no solo uno.
+
+                  Ahora la escala baja como debe: franja 26/34, saludo
+                  22/30, cifra 24/28. El diploma sigue siendo la cifra
+                  grande de su propia caja sin discutirle la pantalla a la
+                  acción principal. */}
+              <span className="font-display text-[24px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-marca-tinta min-[900px]:text-[28px]">
                 {texto.cifra}
               </span>
               <span className="text-pretty text-[14px] font-semibold leading-[1.25] text-marca-tintaMedia min-[900px]:text-[17px]">
@@ -84,12 +111,22 @@ export default function BannerDiploma({ estado }: { estado: EstadoDiploma }) {
         {/* La barra se lleva lo que sobre: a ancho completo en móvil,
             y en escritorio todo lo que quede a la derecha de la cifra.
             No lleva pie —el porcentaje no se escribe— porque la
-            distancia se ve mejor de lo que se lee. */}
-        {!conseguido && (
-          <div className="min-[900px]:flex-1">
-            <Barra relleno={texto.relleno} descripcion={descripcion} />
-          </div>
-        )}
+            distancia se ve mejor de lo que se lee.
+
+            O EL SENDERO, DONDE LO HAYA. El inicio pasa un camino y el
+            curso no pasa nada, así que cada pantalla cuenta el avance
+            una sola vez: allí el mapa, aquí la barra. Enseñar los dos a
+            la vez sería decir dos veces lo mismo a un dedo de
+            distancia, que es el fallo que esta pieza lleva evitando
+            desde que se le quitó la columna de cifra a la franja. */}
+        {!conseguido &&
+          (sendero ? (
+            <div className="min-[900px]:flex-1">{sendero}</div>
+          ) : (
+            <div className="min-[900px]:flex-1">
+              <Barra relleno={texto.relleno} descripcion={descripcion} />
+            </div>
+          ))}
       </div>
     </section>
   );
@@ -106,8 +143,13 @@ function Barra({ relleno, descripcion }: { relleno: number; descripcion: string 
       aria-label={descripcion}
       className="h-[7px] overflow-hidden rounded-[4px] bg-marca-calidoBadge min-[900px]:h-2"
     >
+      {/* El ancho se queda en línea —es el estado en reposo, y el
+          correcto— y lo que se anima es la escala. Ver `.llena` en
+          `globals.css`: el `transition-[width]` que había aquí nunca
+          llegó a ejecutarse, porque en un componente de servidor no hay
+          cambio de estado que dispare una transición. */}
       <div
-        className="h-full rounded-[4px] bg-marca-verde transition-[width] duration-500"
+        className="llena h-full rounded-[4px] bg-marca-verde"
         style={{ width: `${relleno}%` }}
       />
     </div>

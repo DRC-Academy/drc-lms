@@ -93,16 +93,16 @@ export default function TarjetaGeneracion({
 
   return (
     <div className="flex flex-col gap-3">
-      <article className="flex flex-col rounded-[16px] border border-marca-borde bg-white p-[18px] shadow-[0_10px_24px_rgba(18,33,26,0.07)] lg:rounded-[20px] lg:p-6">
+      <article className="flex flex-col rounded-[16px] border border-marca-borde bg-white p-[18px] shadow-[0_10px_24px_rgba(18,33,26,0.07)] min-[900px]:rounded-[20px] min-[900px]:p-6">
         <p className="flex flex-wrap items-center gap-2">
           <SelloNuevo />
         </p>
 
-        <h2 className="mt-3.5 text-pretty font-display text-[20px] font-bold leading-[1.15] text-marca-tinta lg:mt-4 lg:text-[24px]">
+        <h2 className="mt-3.5 text-pretty font-display text-[20px] font-bold leading-[1.15] text-marca-tinta min-[900px]:mt-4 min-[900px]:text-[24px]">
           {tarjeta.titulo}
         </h2>
 
-        <p className="mt-2 text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia lg:mt-2.5 lg:text-[15px]">
+        <p className="mt-2 text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:mt-2.5 min-[900px]:text-[15px]">
           {tarjeta.descripcion}
         </p>
 
@@ -110,7 +110,7 @@ export default function TarjetaGeneracion({
             de "espera a tu próxima clase" no lo trae: ahí la tarjeta se
             queda en título, descripción y botón apagado. */}
         {tarjeta.espera?.nota && (
-          <p className="mt-3 text-[13px] leading-[1.45] text-marca-gris lg:text-[13.5px]">
+          <p className="mt-3 text-[13px] leading-[1.45] text-marca-gris min-[900px]:text-[13.5px]">
             {tarjeta.espera.nota}
           </p>
         )}
@@ -123,7 +123,7 @@ export default function TarjetaGeneracion({
           onClick={onGenerar}
           disabled={generando || tarjeta.espera !== null}
           aria-live="polite"
-          className={`mt-4 flex min-h-[48px] w-full items-center justify-center rounded-full px-6 text-[15.5px] font-bold leading-[1.1] transition-colors disabled:cursor-default lg:mt-auto lg:pt-0 ${
+          className={`mt-4 flex min-h-[48px] w-full items-center justify-center rounded-full px-6 text-[15.5px] font-bold leading-[1.1] transition-colors disabled:cursor-default min-[900px]:mt-auto min-[900px]:pt-0 ${
             tarjeta.espera
               ? "bg-marca-pista text-marca-grisInactivo"
               : "btn-verde disabled:cursor-wait disabled:opacity-60"

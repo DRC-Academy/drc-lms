@@ -267,17 +267,34 @@ function Mes({
             </span>
           </span>
 
+          {/* LA FLECHA GIRA, NO SE CAMBIA POR OTRA. Antes se sustituía el
+              glifo —▼ por ▲— y eso es un corte: dos caracteres distintos
+              en el mismo sitio. Girando el mismo triángulo, abrir y
+              cerrar es un solo objeto que se mueve, y de paso la
+              dirección del giro dice hacia dónde va. */}
           <span
             aria-hidden
-            className="shrink-0 text-[10px] text-temario-enlace min-[900px]:flex min-[900px]:h-[30px] min-[900px]:w-[30px] min-[900px]:items-center min-[900px]:justify-center min-[900px]:rounded-full min-[900px]:border min-[900px]:border-temario-linea"
+            style={{ transform: abierto ? "rotate(180deg)" : undefined }}
+            className="shrink-0 text-[10px] text-temario-enlace transition-transform duration-[220ms] ease-[var(--ease-salida)] min-[900px]:flex min-[900px]:h-[30px] min-[900px]:w-[30px] min-[900px]:items-center min-[900px]:justify-center min-[900px]:rounded-full min-[900px]:border min-[900px]:border-temario-linea"
           >
-            {abierto ? "▲" : "▼"}
+            ▼
           </span>
         </button>
 
-        {/* ----------------------------- SEMANAS ----------------------------- */}
+        {/* ----------------------------- SEMANAS -----------------------------
+
+            SE ANIMA AL ABRIR Y NO AL CERRAR, a propósito. El contenido
+            sigue entrando y saliendo del DOM —con `grid-template-rows`
+            se podría animar en los dos sentidos, pero eso deja los
+            enlaces del mes cerrado dentro del documento y tabulables,
+            que es peor que un cierre seco.
+
+            Y la asimetría es la correcta de todos modos: al abrir el
+            alumno está esperando algo y el movimiento lo acompaña; al
+            cerrar ya ha decidido, y hacerle esperar la animación de
+            salida es cobrarle su propia decisión. */}
         {abierto && (
-          <div className="px-1 pb-2.5 pt-1.5 min-[900px]:pl-2.5 min-[900px]:pr-0">
+          <div className="entra px-1 pb-2.5 pt-1.5 min-[900px]:pl-2.5 min-[900px]:pr-0">
             {hechos.length > 0 && <Completados modulos={hechos} slug={slug} foco={foco} />}
 
             {mes.semanas.map((semana) => {

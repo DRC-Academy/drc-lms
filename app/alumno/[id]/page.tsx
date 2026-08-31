@@ -9,11 +9,16 @@ import {
   leerProgresoAlumno,
   leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
-import { cursosDelInicio } from "@/lib/cursos-servidor";
+import { arbolDelCurso, cursosDelInicio } from "@/lib/cursos-servidor";
+import { sinDripEn } from "@/lib/accesos-manuales";
+import { construirTemario } from "@/lib/temario";
+import { comoFecha } from "@/lib/fechas";
 import { calcularDiploma } from "@/lib/diploma";
+import { hitos } from "@/lib/gamificacion";
 import Cabecera from "@/components/Cabecera";
 import BannerCurso from "@/components/BannerCurso";
 import BannerDiploma from "@/components/BannerDiploma";
+import Sendero from "@/components/Sendero";
 import PanelAlumno from "@/components/PanelAlumno";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
@@ -87,6 +92,36 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   const principal = estadosCurso[0];
   const diploma = calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0);
 
+  // ---------------------------------------------------------------
+  // EL TEMARIO, SOLO PARA DIBUJAR EL CAMINO
+  //
+  // Es la consulta más cara de esta pantalla y entra a sabiendas: el
+  // sendero necesita saber dónde acaba cada mes, y eso no se puede
+  // deducir de `completadas` y `total`. Deducirlo de MODULOS_POR_MES
+  // colocaría mal los nodos en cuanto un módulo no tenga ocho
+  // lecciones, que es justo el tipo de error que nadie ve hasta que un
+  // alumno pregunta por qué su mes 3 empieza a la mitad.
+  //
+  // VA LA ÚLTIMA Y FUERA DEL LOTE de arriba a propósito: depende del
+  // curso, que sale de `cursosDelInicio`, que a su vez depende del
+  // perfil. Encadenadas, no en paralelo.
+  //
+  // Sin curso asignado no se pide nada y el banner del diploma se
+  // queda con su barra, que es lo que hace en el curso.
+  // ---------------------------------------------------------------
+  const temario =
+    principal && perfil
+      ? construirTemario(
+          await arbolDelCurso(
+            params.id,
+            principal.curso,
+            (await sinDripEn(params.id, principal.curso.id))
+              ? null
+              : comoFecha(perfil.fechaInicio)
+          )
+        )
+      : null;
+
   const nombre = perfil?.nombre.trim() ?? "";
   const profesor = perfil?.profesor.trim() ?? "";
 
@@ -150,7 +185,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
         revisando={revisando}
       />
 
-      <main className="mx-auto w-full max-w-contenido flex-1 px-4 pb-8 pt-[18px] lg:px-9 lg:pb-11 lg:pt-8">
+      <main className="mx-auto w-full max-w-contenido flex-1 px-4 pb-8 pt-[18px] min-[900px]:px-9 min-[900px]:pb-11 min-[900px]:pt-8">
         {/* Control del equipo, no del alumno: va arriba del todo y fuera
             del contenido. En medio de la página partía el hilo entre el
             banner y la práctica.
@@ -183,12 +218,32 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           </div>
         )}
 
-        <div className="mb-4 lg:mb-[22px]">
-          <h1 className="font-display text-[22px] font-bold leading-[1.15] text-marca-tinta lg:text-[30px]">
+        {/* ---------------------------------------------------------------
+            LA ENTRADA EN CASCADA
+
+            Los cuatro bloques del inicio entran escalonados: saludo,
+            diploma, rejilla y la sección de bloques —los dos últimos los
+            pone «PanelAlumno», con los retardos que siguen a estos—. El
+            paso está en `--paso-escalonado` y es el mismo que usa la
+            ruta.
+
+            EL RETARDO VA EN LÍNEA Y NO EN UNA CLASE POR POSICIÓN. Es
+            como ya lo hace `Ruta.tsx`: una sola clase `.entra` y un
+            número. Con clases por posición harían falta cuatro reglas
+            que no dicen nada distinto entre sí.
+
+            NADA DE ESTO BLOQUEA. Solo se animan `opacity` y `transform`,
+            así que el botón de la franja se puede pulsar desde el primer
+            fotograma aunque todavía no se vea del todo. Y con
+            movimiento reducido la cascada entera desaparece y la
+            pantalla sale montada.
+            --------------------------------------------------------------- */}
+        <div className="entra mb-4 min-[900px]:mb-[22px]">
+          <h1 className="font-display text-[22px] font-bold leading-[1.15] text-marca-tinta min-[900px]:text-[30px]">
             {saludo}
           </h1>
 
-          <p className="mt-[5px] text-pretty text-[14px] leading-[1.4] text-marca-gris lg:mt-1.5 lg:text-[16px]">
+          <p className="mt-[5px] text-pretty text-[14px] leading-[1.4] text-marca-gris min-[900px]:mt-1.5 min-[900px]:text-[16px]">
             {subtitulo}
           </p>
         </div>
@@ -197,8 +252,14 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
             por encima de la rejilla: es la meta de la que cuelga todo lo
             que viene después, y compartiendo caja con el curso se leía
             como un dato del curso. */}
-        <div className="mb-3 lg:mb-5">
-          <BannerDiploma estado={diploma} />
+        <div
+          className="entra mb-3 min-[900px]:mb-5"
+          style={{ animationDelay: "var(--paso-escalonado)" }}
+        >
+          <BannerDiploma
+            estado={diploma}
+            sendero={temario ? <Sendero hitos={hitos(temario.meses)} /> : undefined}
+          />
         </div>
 
         {/* La franja entra como pieza ya renderizada: la pinta el

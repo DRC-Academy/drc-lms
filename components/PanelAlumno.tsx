@@ -130,9 +130,13 @@ export default function PanelAlumno({
 
   return (
     <>
+      {/* Tercero y cuarto de la cascada que empieza en la página: el
+          saludo va a 0, el diploma a un paso, y estos dos detrás. Ver la
+          nota de `app/alumno/[id]/page.tsx`. */}
       <div
-        className={`grid items-start gap-3 lg:gap-5 ${
-          conColumna ? "lg:grid-cols-[minmax(0,1fr)_416px]" : "lg:grid-cols-1"
+        style={{ animationDelay: "calc(var(--paso-escalonado) * 2)" }}
+        className={`entra grid items-start gap-3 min-[900px]:gap-5 ${
+          conColumna ? "min-[900px]:grid-cols-[minmax(0,1fr)_416px]" : "min-[900px]:grid-cols-1"
         }`}
       >
         {/* IZQUIERDA: la franja del curso. El diploma ya no vive aquí
@@ -155,7 +159,10 @@ export default function PanelAlumno({
         )}
       </div>
 
-      <div className="mt-[26px] lg:mt-9">
+      <div
+        className="entra mt-[26px] min-[900px]:mt-9"
+        style={{ animationDelay: "calc(var(--paso-escalonado) * 3)" }}
+      >
         <BloquesGenerados
           bloques={generados}
           idsNuevos={recienGenerados.map((bloque) => bloque.id)}

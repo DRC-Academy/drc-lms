@@ -50,16 +50,16 @@ export function CabeceraCargando() {
           />
         </Link>
 
-        <span aria-hidden className="hidden h-[13px] w-[190px] rounded bg-marca-nieblaOscura lg:block" />
+        <span aria-hidden className="hidden h-[13px] w-[190px] rounded bg-marca-nieblaOscura min-[900px]:block" />
 
         <div className="ml-auto flex shrink-0 items-center gap-3.5">
-          <span aria-hidden className="hidden h-[5px] w-[120px] rounded-[3px] bg-marca-pista lg:block" />
+          <span aria-hidden className="hidden h-[5px] w-[120px] rounded-[3px] bg-marca-pista min-[900px]:block" />
           <span aria-hidden className="h-7 w-7 rounded-full bg-marca-nieblaOscura sm:h-[30px] sm:w-[30px]" />
         </div>
       </div>
 
       {/* La segunda línea del contexto, que en móvil sí existe. */}
-      <div className="border-t border-marca-borde bg-marca-niebla px-4 py-[7px] lg:hidden">
+      <div className="border-t border-marca-borde bg-marca-niebla px-4 py-[7px] min-[900px]:hidden">
         <div className="mx-auto flex max-w-contenido items-center gap-2.5">
           <span aria-hidden className="h-[11px] flex-1 rounded bg-marca-nieblaOscura" />
           <span aria-hidden className="h-[5px] w-16 rounded-[3px] bg-marca-pista" />

@@ -48,7 +48,7 @@ export default function BannerCurso({
   // Esto es una tarjeta, no una franja: no lleva verde ni amarillo.
   if (estados.length === 0) {
     return (
-      <section className="rounded-[18px] border border-marca-borde bg-white px-6 py-5 lg:rounded-[20px]">
+      <section className="rounded-[18px] border border-marca-borde bg-white px-6 py-5 min-[900px]:rounded-[20px]">
         <p className="text-[15px] leading-[1.55] text-marca-gris">
           Tu plan todavía no tiene un curso asociado. Coméntaselo a tu profesor y lo activamos.
           Mientras tanto, tu práctica de abajo funciona con normalidad.

@@ -55,9 +55,50 @@
      --------------------------------------------------------------- */
   :root {
     --nav-inferior: 0px;
+
+    /* ---------------------------------------------------------------
+       EL VOCABULARIO DE MOVIMIENTO, EN UN SOLO SITIO
+
+       Estas curvas y estas bandas estaban repetidas a mano en quince
+       keyframes y en un puñado de `transition` sueltas por el JSX. Al
+       pasar de cuatro gestos a movimiento en toda la aplicación, eso
+       deja de ser una molestia y pasa a ser el problema: con cincuenta
+       usos, dos animaciones que quieren ser la misma acaban a 20ms de
+       distancia y nadie sabe cuál es la buena.
+
+       A partir de aquí, NINGUNA ANIMACIÓN NUEVA ESCRIBE SU PROPIA CURVA.
+       Si hace falta una que no está, se añade aquí con su nombre y su
+       trabajo, o no se añade.
+       --------------------------------------------------------------- */
+
+    /* Toda entrada y toda salida. Es la curva de la casa: arranca
+       rápida y tarda en asentar. Si dudas, es esta. */
+    --ease-salida: cubic-bezier(0.2, 0.8, 0.3, 1);
+    /* Llenar y colorear: barras, `stroke-dashoffset`, recorridos. */
+    --ease-trazo: cubic-bezier(0.5, 0, 0.3, 1);
+    /* Lo que respira en bucle. Simétrica a propósito: no tiene principio. */
+    --ease-respira: cubic-bezier(0.4, 0, 0.4, 1);
+    /* El halo que crece y se apaga. */
+    --ease-halo: cubic-bezier(0.25, 0.6, 0.35, 1);
+    /* LA ÚNICA CON REBOTE, y por eso la única que celebra. Hoy la usa
+       un solo sitio —`.celebra`, en «Para ti»— y así debe seguir: no se
+       usa para entrar en una pantalla ni para responder a un clic. Si
+       algún día la piden dos cosas más, la que sobra es la nueva. */
+    --ease-rebote: cubic-bezier(0.2, 0.85, 0.3, 1.1);
+
+    /* Las bandas. Salen de medir lo que ya había, no de inventar. */
+    --dur-fisico: 90ms; /* hundirse al pulsar */
+    --dur-estado: 180ms; /* hover, color */
+    --dur-entrada: 320ms; /* entrada en pantalla frecuente */
+    --dur-entrada-larga: 380ms; /* entrada de algo que llega solo */
+    --dur-trazo: 480ms; /* llenarse una barra o un camino */
+    --dur-ambiente: 2800ms; /* un ciclo de respiración */
+
+    /* El desfase entre hermanos que entran en cascada. */
+    --paso-escalonado: 70ms;
   }
 
-  @media (max-width: 1023px) {
+  @media (max-width: 899px) {
     body:has(nav[data-nav-inferior]) {
       --nav-inferior: 78px;
       padding-bottom: var(--nav-inferior);
@@ -70,6 +111,30 @@
     }
   }
 
+  /* ---------------------------------------------------------------
+     MOVIMIENTO REDUCIDO: TODO QUIETO, Y GRATIS
+
+     Esta regla aplasta cualquier animación a 0,01ms, así que la
+     pantalla salta directamente a donde la animación iba a terminar.
+     Que eso sea el diseño correcto y no un estropicio NO es casualidad:
+     depende de una condición que hay que seguir cumpliendo al escribir
+     keyframes nuevos.
+
+     LA CONDICIÓN: el estado en reposo del elemento tiene que ser YA su
+     estado final, y el keyframe solo debe definir el `from` (o, si
+     tiene varios pasos, terminar exactamente en ese estado en el 100%).
+     Con `both` en la animación, apagarla deja la pantalla como termina.
+
+     Escrito al revés, que es como se rompe: si escribes un keyframe que
+     va `from: A → to: B` y dejas el CSS base en A, con movimiento
+     reducido el elemento se queda en A para siempre. Ahí es donde hace
+     falta un segundo diseño, y por eso no se hace.
+
+     Lo cumplen todos los gestos nuevos —`entra`, `entra-difuminado`,
+     `morfa`, `llena`, `sendero-andado`—: todos definen solo el `from`,
+     así que con movimiento reducido la pantalla sale montada, la barra
+     llena y el camino recorrido hasta donde toca.
+     --------------------------------------------------------------- */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -347,6 +412,35 @@
   }
 
   /* ---------------------------------------------------------------
+     LO QUE SE PULSA, SE HUNDE
+
+     El botón más pulsado de la aplicación —el de la franja— no tenía
+     ninguna respuesta al pulsarlo, mientras que un nodo de la ruta se
+     hunde en 90ms. Dos controles del mismo producto, uno vivo y otro
+     muerto, y el muerto era el principal.
+
+     `.btn` ya lo tenía, pero `.btn-verde` se usa suelto en media
+     aplicación —sin `.btn` al lado— así que ahí tampoco pasaba nada.
+     Ahora lo llevan los tres.
+
+     90ms y no 160: es la banda de lo físico, y lo físico es lo más
+     rápido que hay. Una respuesta al tacto que se ve llegar deja de ser
+     respuesta.
+     --------------------------------------------------------------- */
+  .banner-cta,
+  .btn-verde,
+  .pulsable {
+    transition: background-color var(--dur-estado) ease, box-shadow var(--dur-estado) ease,
+      transform var(--dur-fisico) ease;
+  }
+
+  .banner-cta:active:not(:disabled),
+  .btn-verde:active:not(:disabled),
+  .pulsable:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  /* ---------------------------------------------------------------
      LA ESQUINA DE LA AYUDA
 
      Abajo a la derecha es zona disputada. Ahí puede haber, a la vez, la
@@ -376,7 +470,7 @@
     bottom: 96px;
   }
 
-  @media (max-width: 1023px) {
+  @media (max-width: 899px) {
     /* La navegación de secciones solo existe en móvil. */
     body:has(nav[data-nav-inferior]) .zona-ayuda {
       bottom: 90px;
@@ -391,6 +485,181 @@
 }
 
 @layer utilities {
+  /* ===============================================================
+     UN SOLO DUEÑO POR MOMENTO
+
+     La regla anterior era «un solo dueño por GESTO»: pulsa un nodo, no
+     siete. Servía mientras el movimiento vivía en una pantalla y eran
+     cuatro gestos contados. Con movimiento en toda la aplicación esa
+     regla no se puede cumplir —lo prohíbe casi todo— y borrarla sin
+     poner otra en su sitio deja ruido, que es peor que no moverse.
+
+     La que manda ahora reparte por TIEMPO en vez de por elemento. Cada
+     pantalla tiene tres fases y en cada una manda una sola cosa:
+
+       · ENTRADA (~600ms). Se mueve todo, UNA vez, coreografiado. El
+         escalonado va en `--paso-escalonado` y se corta a los nueve
+         hermanos: a partir de ahí la cascada deja de leerse como orden
+         y empieza a leerse como espera.
+
+       · REPOSO. No se mueve NADA, salvo como mucho un dueño ambiental
+         por pantalla —el que dice «te toca aquí»—. Dos cosas
+         respirando a la vez en reposo es el fallo más fácil de cometer
+         y el más difícil de ver en una captura.
+
+       · RESPUESTA. Solo lo que has tocado y lo que eso cambia. Nunca
+         se aprovecha un clic para animar media pantalla.
+
+     Lo que la regla vieja protegía —que el movimiento signifique algo—
+     lo protege esta por otro camino: no limitando cuánto se mueve, sino
+     impidiendo que dos cosas compitan en el mismo instante.
+
+     LO QUE NO CAMBIA: solo se animan `transform`, `opacity`, `filter` y
+     `clip-path`. Nada que dispare layout. Y nada bloquea la
+     interacción: un elemento a `opacity: 0` sigue siendo pulsable, y
+     ninguna animación toca `pointer-events`.
+     =============================================================== */
+
+  /* ---------------------------------------------------------------
+     LA ENTRADA EN CASCADA
+
+     El desfase lo pone quien la usa, con `style={{animationDelay}}`,
+     igual que `Ruta.tsx`. No hay una clase por posición: hay una clase
+     y un retardo.
+     --------------------------------------------------------------- */
+  @keyframes entrar-bloque {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+
+  .entra {
+    animation: entrar-bloque var(--dur-entrada) var(--ease-salida) both;
+  }
+
+  /* ---------------------------------------------------------------
+     EL CRUCE DIFUMINADO
+
+     Cuando el esqueleto da paso al contenido real, sin esto se ven dos
+     objetos distintos solapados un instante. El desenfoque los funde y
+     el ojo lee una sola transformación en vez de un cambiazo. Por
+     debajo de 20px, que más es caro en Safari.
+     --------------------------------------------------------------- */
+  @keyframes entrar-difuminado {
+    from {
+      opacity: 0;
+      filter: blur(2px);
+      transform: translateY(6px);
+    }
+  }
+
+  .entra-difuminado {
+    animation: entrar-difuminado var(--dur-entrada-larga) var(--ease-salida) both;
+  }
+
+  /* ---------------------------------------------------------------
+     LA CIFRA QUE CAMBIA
+
+     Para el contador del diploma. NO es un contador que sube: el número
+     baja —cuenta lo que falta— y rodar los dígitos hacia atrás animaría
+     la deuda. Lo que se anima es el CAMBIO: la cifra vieja se va hacia
+     arriba y la nueva entra desde abajo, una sola vez, cuando de verdad
+     ha cambiado.
+
+     Pide `tabular-nums` en el elemento o los dígitos bailan de ancho al
+     cruzarse.
+     --------------------------------------------------------------- */
+  @keyframes morfar-cifra {
+    from {
+      opacity: 0;
+      transform: translateY(7px);
+    }
+  }
+
+  .morfa {
+    animation: morfar-cifra var(--dur-entrada) var(--ease-salida) both;
+  }
+
+  /* ---------------------------------------------------------------
+     EL DUEÑO DEL REPOSO, EN SVG
+
+     La ruta tiene su pulso en `box-shadow`, que solo sirve sobre una
+     caja. Dentro de un SVG hace falta un círculo de verdad que crezca y
+     se apague, así que es otro keyframe y no un cambio de los suyos.
+
+     ES EL ÚNICO GESTO EN BUCLE DEL INICIO. Lo dice la doctrina: en
+     reposo manda una sola cosa por pantalla. Si algún día algo más
+     respira aquí, uno de los dos sobra.
+
+     Crece y se apaga; no parpadea. 2,8s es el ritmo de una respiración
+     y el retardo deja terminar la cascada de entrada antes de empezar.
+     --------------------------------------------------------------- */
+  @keyframes sendero-pulso {
+    0% {
+      transform: scale(1);
+      opacity: 0.5;
+    }
+    70% {
+      transform: scale(2.1);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(2.1);
+      opacity: 0;
+    }
+  }
+
+  .sendero-pulso {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: sendero-pulso var(--dur-ambiente) var(--ease-halo) 900ms infinite;
+  }
+
+  /* El trazo verde se recorre al entrar, en vez de aparecer entero. */
+  @keyframes sendero-andar {
+    from {
+      stroke-dashoffset: var(--largo, 900);
+    }
+  }
+
+  .sendero-andado {
+    stroke-dasharray: var(--largo, 900);
+    animation: sendero-andar 1100ms var(--ease-trazo) 320ms both;
+  }
+
+  /* ---------------------------------------------------------------
+     LA BARRA QUE SE LLENA
+
+     `transform: scaleX()`, nunca `width`. Animar el ancho obliga al
+     navegador a recalcular disposición en CADA fotograma; una escala va
+     a la GPU y no toca el layout. Es la misma razón por la que el resto
+     del sistema solo anima `transform` y `opacity`.
+
+     Y ESTO ARREGLA UNA ANIMACIÓN QUE NUNCA EXISTIÓ. La barra del diploma
+     llevaba `transition-[width] duration-500` desde que se escribió,
+     sobre un componente de SERVIDOR: no hay cambio de estado que
+     dispare una transición, así que no se ejecutó una sola vez. Parecía
+     animada en el código y estaba muerta en pantalla.
+
+     El ancho final se queda en el `width` en línea —o sea, el estado en
+     reposo ya es el correcto— y esto solo define el `from`. Con
+     movimiento reducido la barra aparece llena y no pasa nada.
+
+     El retardo la deja llegar después de su propio bloque: primero
+     entra la caja, luego se llena lo de dentro.
+     --------------------------------------------------------------- */
+  @keyframes llenar-barra {
+    from {
+      transform: scaleX(0);
+    }
+  }
+
+  .llena {
+    transform-origin: left;
+    animation: llenar-barra var(--dur-trazo) var(--ease-trazo) 260ms both;
+  }
+
   /* Aparición suave: feedback, bloques nuevos, paneles que se despliegan. */
   @keyframes aparecer {
     from {
@@ -438,21 +707,30 @@
   }
 
   .celebra {
-    animation: celebrar 0.52s cubic-bezier(0.2, 0.85, 0.3, 1.1) both;
+    animation: celebrar 0.52s var(--ease-rebote) both;
   }
 
   /* ---------------------------------------------------------------
      EL MOVIMIENTO DE LA RUTA
 
-     Cuatro gestos, y la regla que los mantiene adultos es de REPARTO,
-     no de intensidad: cada uno tiene UN SOLO DUEÑO en la pantalla.
+     Cuatro gestos, repartidos por la regla de arriba: aquí el dueño del
+     REPOSO es el pulso de la parada disponible, y no hay ningún otro.
      Pulsa un nodo, no siete. Marcha un tramo —el que sale de donde
      estás—, no los quince que quedan. Con veinte paradas se mueve
      exactamente lo mismo que con siete.
 
+     Esto ERA una regla general de la aplicación —«un solo dueño por
+     gesto»— y ahora es solo la manera en que esta pantalla cumple «un
+     solo dueño por momento». La diferencia importa: en la ruta el
+     reposo lo ocupa un pulso porque hay veinte paradas y hay que
+     encontrar la tuya. Donde no hay nada que encontrar, el reposo se
+     queda quieto.
+
      Todos los estados base son el estado FINAL y los keyframes solo
      definen el `from`, así que apagarlos con prefers-reduced-motion
-     deja la pantalla como termina, sin escribir un segundo diseño.
+     deja la pantalla como termina, sin escribir un segundo diseño. Eso
+     sigue valiendo aquí y en toda entrada; lo que ya NO vale para todo
+     está anotado en el bloque de movimiento reducido del final.
      --------------------------------------------------------------- */
 
   /* 1 · EL PULSO de la parada disponible. Crece y se apaga; no
@@ -559,9 +837,19 @@
      de hacer el bloque: se llena el disco, se traza la marca, el tramo
      se colorea hasta la siguiente y allí se enciende el aro.
 
-     NO HAY PREMIO: HAY AVANCE. Ni confeti, ni sello, ni un número que
-     sube. Lo que pasa es que el camino llega un poco más lejos, que es
-     exactamente lo que ha pasado de verdad. */
+     AQUÍ NO HAY PREMIO: HAY AVANCE. El camino llega un poco más lejos,
+     que es exactamente lo que ha pasado de verdad.
+
+     ESTO YA NO ES UNA REGLA DE TODA LA APLICACIÓN, y conviene saber por
+     qué se quedó aquí. La aplicación SÍ celebra ahora, pero por
+     escalones y según lo raro que sea el momento: cerrar una lección
+     —187 veces por curso— no celebra nada, cerrar un mes —seis veces—
+     estampa un sello, y el diploma —una— tiene puesta en escena. Ciento
+     ochenta y siete celebraciones no son una celebración: son un peaje.
+
+     Cerrar una parada de la ruta cae del lado frecuente de esa escala,
+     así que se queda como estaba. La regla que lo decide vive en
+     `lib/gamificacion.ts`, con la tabla de escalones. */
   @keyframes ruta-llenar {
     from {
       transform: scale(0.2);
