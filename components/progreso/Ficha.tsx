@@ -199,6 +199,7 @@ export default function Ficha({
           <BannerAmpliar
             estimacion={null}
             preparaExamen
+            horasSemanales={horasSemanales}
             urlAmpliar={urlAmpliar}
             retardoMs={180}
           />

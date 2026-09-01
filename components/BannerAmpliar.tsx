@@ -1,5 +1,4 @@
-import type { Estimacion } from "@/lib/estimacion";
-import { enMeses } from "@/lib/estimacion";
+import { enMeses, opcionesDeHoras, type Estimacion } from "@/lib/estimacion";
 
 // ---------------------------------------------------------------
 // EL BANNER DE AMPLIACIÓN
@@ -32,6 +31,7 @@ export default function BannerAmpliar({
   estimacion,
   urlAmpliar,
   retardoMs = 0,
+  horasSemanales = null,
   preparaExamen = false,
 }: {
   estimacion: Estimacion | null;
@@ -44,6 +44,11 @@ export default function BannerAmpliar({
    * nivel. Enseña la variante sin cifras. Ver `preparaSuPropioExamen`.
    */
   preparaExamen?: boolean;
+  /**
+   * Solo para esa variante: con ellas se dibuja la escalera de planes.
+   * Cuando hay `estimacion`, las horas ya vienen dentro de sus opciones.
+   */
+  horasSemanales?: number | null;
 }) {
   // ---------------------------------------------------------------
   // LA VARIANTE SIN CIFRAS
@@ -65,6 +70,8 @@ export default function BannerAmpliar({
   if (!estimacion) {
     if (!preparaExamen) return null;
 
+    const opciones = opcionesDeHoras(horasSemanales);
+
     return (
       <section
         className="amp amp-rise"
@@ -72,24 +79,92 @@ export default function BannerAmpliar({
       >
         <EstilosBanner />
 
-        <h2 className="amp-title">Llega más preparado</h2>
+        {/* ---------------------------------------------------------------
+            SIN ESCALERA NO SE OFRECE NADA
+
+            `opcionesDeHoras` devuelve null cuando el alumno ya está en el
+            plan más alto —5h, el techo del sistema—, y son 5 alumnos.
+            Con la primera versión de este banner esos cinco leían «con
+            más horas a la semana…» y un botón de «Amplía tu plan» que no
+            les podía dar nada: se les ofrecía algo que no existe.
+
+            Así que sin escalera cambia el titular y desaparece el botón,
+            exactamente igual que hace el banner de estimación cuando
+            `mereceLaPena` es falso. Un alumno que ya está arriba del todo
+            merece que se lo digan, no que se le venda. */}
+        <h2 className="amp-title">{opciones ? "Llega más preparado" : "Vas al máximo de horas"}</h2>
         <p className="amp-sub">
-          Estás preparando tu examen. Con más horas a la semana no cambias de meta: llegas a la
-          misma prueba con más práctica hecha y más seguridad.
+          {opciones
+            ? "Estás preparando tu examen. Con más horas a la semana no cambias de meta: llegas a la misma prueba con más práctica hecha y más seguridad."
+            : "Estás preparando tu examen con todas las horas que ofrecemos. No hay plan por encima del tuyo: lo que queda es seguir."}
         </p>
+
+        {/* ---------------------------------------------------------------
+            LAS MISMAS BARRAS, MIDIENDO OTRA COSA
+
+            El banner de estimación compara MESES —cuánto tardarías con
+            cada plan— y aquí eso no existe: sin meta por encima no hay
+            horas que faltan, así que no hay meses que contar. Pero la
+            escalera de planes sí existe, y cuántas horas da cada uno es
+            un hecho que no hay que estimar.
+
+            Así que se comparan HORAS. Es lo que de verdad cambia al
+            ampliar, y es lo único que se puede poner aquí sin inventar
+            una cifra —que era la condición para que este banner
+            existiera—.
+
+            LA BARRA SIGNIFICA LO CONTRARIO QUE EN EL OTRO, y por eso
+            cada una va rotulada con sus horas y con cuántas suma: allí
+            la más corta es la mejor porque son meses, aquí la más larga
+            porque son horas de clase. Ver la nota de `opcionesDeHoras`.
+            --------------------------------------------------------------- */}
+        {opciones && (
+          <ol className="amp-planes">
+            {opciones.map((opcion) => (
+              <li
+                key={opcion.horasSemanales}
+                className={`amp-plan${opcion.esSuPlan ? " es-suyo" : ""}`}
+              >
+                <p className="amp-horas">
+                  {opcion.horasSemanales} h a la semana
+                  {opcion.esSuPlan && <span className="amp-chip">Tu plan</span>}
+                </p>
+
+                {opcion.horasExtra > 0 && (
+                  <p className="amp-ahorro">
+                    +{opcion.horasExtra} h cada semana
+                  </p>
+                )}
+
+                <div className="amp-medida">
+                  <div className="amp-track">
+                    <div
+                      className="amp-fill"
+                      style={{ width: `${opcion.porcentajeBarra}%` }}
+                      aria-hidden
+                    />
+                  </div>
+                  <span className="amp-meses">{opcion.horasSemanales} h</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
 
         {/* El mismo botón, con el mismo rótulo y abriendo igual que el
             del banner de siempre: para el alumno es la misma acción, y
             dos nombres para una sola cosa es lo que hace dudar de si
             llevan al mismo sitio. */}
-        <div className="amp-pie">
-          <a className="amp-cta" href={urlAmpliar} target="_blank" rel="noopener noreferrer">
-            Amplía tu plan
-            <span className="amp-flecha" aria-hidden>
-              →
-            </span>
-          </a>
-        </div>
+        {opciones && (
+          <div className="amp-pie">
+            <a className="amp-cta" href={urlAmpliar} target="_blank" rel="noopener noreferrer">
+              Amplía tu plan
+              <span className="amp-flecha" aria-hidden>
+                →
+              </span>
+            </a>
+          </div>
+        )}
       </section>
     );
   }

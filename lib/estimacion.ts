@@ -264,6 +264,67 @@ export type OpcionDeRitmo = {
   mesesAhorrados: number;
 };
 
+/**
+ * Una opción de la escalera cuando NO hay meta que estimar.
+ *
+ * Es la mitad de `OpcionDeRitmo` que no depende de ninguna cuenta: las
+ * horas del plan y su barra. Sin meses, sin fecha de llegada y sin
+ * meses ahorrados, porque esos tres salen de `horasQueFaltan` y aquí no
+ * hay meta de la que restar.
+ */
+export type OpcionDeHoras = {
+  horasSemanales: number;
+  /** Cuántas horas más que su plan actual. 0 en el suyo. */
+  horasExtra: number;
+  /** Ancho relativo, 0-100. Aquí el plan MÁS ALTO vale 100. */
+  porcentajeBarra: number;
+  esSuPlan: boolean;
+};
+
+/**
+ * La escalera de planes, sin estimar nada.
+ *
+ * Para los alumnos que preparan el examen de su propio nivel: no hay
+ * meta por encima, así que no hay meses que contar —ver `detectarMeta`—
+ * pero sí hay planes por encima, y cuántas horas da cada uno es un
+ * HECHO, no una predicción. Eso es lo que esta función devuelve.
+ *
+ * OJO CON LA BARRA, QUE SIGNIFICA LO CONTRARIO. En el banner con
+ * estimación la barra mide MESES y la más corta es la mejor; aquí mide
+ * HORAS y la más larga es la mejor. Son el mismo dibujo con el sentido
+ * invertido, así que cada barra va rotulada con sus horas y el titular
+ * dice de qué va: en el de estimación se llega antes, en este se llega
+ * más preparado. Si algún día las dos caben en la misma pantalla, esto
+ * hay que resolverlo mejor.
+ *
+ * Null cuando no se saben las horas o cuando ya está en el plan más
+ * alto: sin nada por encima no hay escalera, hay un peldaño.
+ */
+export function opcionesDeHoras(horasSemanales: number | null | undefined): OpcionDeHoras[] | null {
+  const semanales = Math.round(Number(horasSemanales ?? 0));
+  if (!Number.isFinite(semanales) || semanales < 1) return null;
+
+  // La misma escalera que usa `calcularEstimacion`, para que un alumno
+  // que cruce de un caso al otro vea los mismos planes.
+  const planes = [
+    semanales,
+    ...ESCALONES.map((escalon) => semanales + escalon).filter(
+      (horas) => horas <= HORAS_SEMANALES_MAXIMAS
+    ),
+  ];
+
+  if (planes.length < 2) return null;
+
+  const masAlto = planes[planes.length - 1];
+
+  return planes.map((horas) => ({
+    horasSemanales: horas,
+    horasExtra: horas - semanales,
+    porcentajeBarra: Math.max(12, Math.round((horas / masAlto) * 100)),
+    esSuPlan: horas === semanales,
+  }));
+}
+
 export type Estimacion = {
   nivelActual: NivelMcer;
   meta: Meta;
