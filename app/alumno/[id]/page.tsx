@@ -1,3 +1,4 @@
+import { nivelDelAlumno } from "@/lib/estimacion";
 import { notFound } from "next/navigation";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
@@ -16,6 +17,7 @@ import { comoFecha } from "@/lib/fechas";
 import { calcularDiploma } from "@/lib/diploma";
 import { hitos } from "@/lib/gamificacion";
 import Cabecera from "@/components/Cabecera";
+import AvatarProfesor from "@/components/AvatarProfesor";
 import BannerCurso from "@/components/BannerCurso";
 import BannerDiploma from "@/components/BannerDiploma";
 import Sendero from "@/components/Sendero";
@@ -65,11 +67,11 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   // Sin perfil no hay plan ni nivel, así que tampoco curso: el banner
   // enseña el estado sobrio y la práctica sigue funcionando.
-  const estadosCurso = perfil ? await cursosDelInicio(params.id, perfil.plan, perfil.nivel) : [];
+  const estadosCurso = perfil ? await cursosDelInicio(params.id, perfil.plan, nivelDelAlumno(params.id, perfil)) : [];
 
   // Los bloques estáticos se filtran por nivel exacto. Un A2 no recibe
   // material B1: su contenido sale del banco A2 al generar.
-  const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(perfil.nivel)) : [];
+  const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(nivelDelAlumno(params.id, perfil))) : [];
 
   // ---------------------------------------------------------------
   // EL DIPLOMA
@@ -238,14 +240,27 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
             movimiento reducido la cascada entera desaparece y la
             pantalla sale montada.
             --------------------------------------------------------------- */}
-        <div className="entra mb-4 min-[900px]:mb-[22px]">
-          <h1 className="font-display text-[22px] font-bold leading-[1.15] text-marca-tinta min-[900px]:text-[30px]">
-            {saludo}
-          </h1>
+        {/* LA CARA VA CON EL SALUDO, y por eso esto es una fila y no dos
+            párrafos sueltos. Lo primero de la pantalla deja de ser un
+            rectángulo y pasa a ser una persona: la del profesor, que ya
+            se nombraba aquí debajo en gris de 14px.
 
-          <p className="mt-[5px] text-pretty text-[14px] leading-[1.4] text-marca-gris min-[900px]:mt-1.5 min-[900px]:text-[16px]">
-            {subtitulo}
-          </p>
+            Alineado arriba y no al centro: el subtítulo se parte en dos
+            o tres líneas según el ancho, y con el avatar centrado contra
+            el bloque entero flotaría a media altura en unos anchos sí y
+            en otros no. */}
+        <div className="entra mb-4 flex items-start gap-3.5 min-[900px]:mb-[22px] min-[900px]:gap-4">
+          {profesor && <AvatarProfesor nombre={profesor} />}
+
+          <div className="min-w-0">
+            <h1 className="font-display text-[22px] font-bold leading-[1.15] text-marca-tinta min-[900px]:text-[30px]">
+              {saludo}
+            </h1>
+
+            <p className="mt-[5px] text-pretty text-[14px] leading-[1.4] text-marca-gris min-[900px]:mt-1.5 min-[900px]:text-[16px]">
+              {subtitulo}
+            </p>
+          </div>
         </div>
 
         {/* EL DIPLOMA, LO PRIMERO DEBAJO DEL SALUDO. A ancho completo y

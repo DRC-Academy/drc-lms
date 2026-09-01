@@ -394,3 +394,248 @@ export function nivelEfectivo(
     nivelMcer(nivelDelAlta)
   );
 }
+
+/**
+ * ALUMNOS A LOS QUE NO SE LES MUEVE EL NIVEL TODAVÍA.
+ *
+ * Revisado el 31/08/2026 sobre los 27 alumnos cuya medición discrepaba
+ * de la casilla del alta. Dos motivos, y ninguno es «por si acaso»:
+ *
+ *   · TIENE PROGRESO. Cambiarle el nivel le cambia el curso, y el curso
+ *     viejo deja de aparecerle con todo lo que llevaba hecho. No se
+ *     borra nada —las filas de `progreso_lecciones` siguen ahí y vuelven
+ *     si recupera el curso— pero deja de verlo, y a uno de estos eso le
+ *     esconde 277 lecciones.
+ *
+ *   · SALTA MÁS DE UN PELDAÑO. Una medición que mueve dos niveles de
+ *     golpe es más probable que sea un dato mal grabado que un alumno
+ *     que ha cambiado tanto. `cd6ee017` salta CUATRO —de A1 a C1, según
+ *     la prueba de nivel— y eso no es una medición, es algo roto.
+ *
+ * ESTA LISTA TIENE QUE LLEGAR A CERO. No es una configuración: es una
+ * cola de revisión. Cada id que sigue aquí es un alumno cuyo nivel
+ * alguien tiene que mirar una vez —idealmente su profesor, con el
+ * control de confirmación que todavía no existe— y borrar de aquí.
+ *
+ * Mientras esté, estos alumnos siguen con el nivel del alta, que es
+ * exactamente lo que tenían antes de este cambio: congelar no les
+ * empeora nada, solo no les mejora.
+ */
+const NIVEL_CONGELADO = new Set<string>([
+  // Con progreso en el curso actual.
+  "s_1785879819493", // A2→B1 (ficha) · 277 lecciones
+  "ac3efda1-cf3c-46d3-8296-eb5e5626cda5", // B1→B2 (profesor) · 66 lecciones
+  "s_1782421075994", // B2→B1 (profesor) · 3 lecciones y 3 bloques
+  // Saltos de más de un peldaño.
+  "a020d853-5c95-49d3-b9fa-a3cef562dccf", // B2→A2 (profesor)
+  "s_1787847320673", // B1→C1 (prueba)
+  "s_1785270685149", // B1→C1 (prueba)
+  "s_1787614018519", // B1→C1 (prueba)
+  "s_1785440736376", // B2→A2 (profesor)
+  "s_1786648930172", // B1→A1 (profesor)
+  "cd6ee017-9f31-4288-80f1-dccbb13a72a1", // A1→C1 (prueba) · cuatro peldaños: revisar el dato
+]);
+
+/**
+ * EL NIVEL DEL ALUMNO. El único sitio del que sale, para toda la
+ * aplicación.
+ *
+ * Antes había dos respuestas a la misma pregunta —`nivelEfectivo` en la
+ * ficha de progreso y `perfil.nivel` en las otras nueve rutas— y por eso
+ * había alumnos leyendo un nivel y recibiendo el curso de otro. Ver el
+ * bloque de causa raíz más abajo.
+ *
+ * Devuelve una CADENA y no `NivelMcer` a propósito: quien la recibe
+ * —`cursosAsignados`, `nivelDeBloque`— espera lo que había en la
+ * columna, y un alumno sin ningún nivel reconocible tiene que seguir
+ * pasando por ahí igual que antes en vez de romper.
+ */
+export function nivelDelAlumno(
+  alumnoId: string,
+  perfil: {
+    nivel: string;
+    nivelProfesor: string | null;
+    nivelFicha: string | null;
+    nivelPrueba: string | null;
+  }
+): string {
+  if (NIVEL_CONGELADO.has(alumnoId)) return perfil.nivel;
+
+  return (
+    nivelEfectivo(perfil.nivelProfesor, perfil.nivelFicha, perfil.nivelPrueba, perfil.nivel) ??
+    perfil.nivel
+  );
+}
+
+/**
+ * De DÓNDE ha salido el nivel que devuelve `nivelEfectivo`.
+ *
+ * Existe porque «cuál es su nivel» y «cuánto nos fiamos de ese nivel»
+ * son dos preguntas distintas, y hasta ahora la aplicación solo sabía
+ * contestar la primera. La segunda es la que decide si una cifra
+ * calculada sobre ese nivel se puede enseñar a secas.
+ *
+ * EL REPARTO HOY, sobre los 174 alumnos:
+ *
+ *   nivel_profesor    26   14,9%   confirmado por una persona
+ *   nivel_ficha        1    0,6%
+ *   nivel_prueba      22   12,6%   prueba automática
+ *   nivel (alta)     125   71,8%   lo tecleó quien dio de alta
+ *
+ * Esos 125 son el problema: de ellos, 70 están en B1, que es el valor
+ * por defecto. Es decir, para siete de cada diez alumnos el nivel con
+ * el que se elige su curso, se filtran sus ejercicios y se calcula su
+ * estimación es un dato que nadie ha confirmado nunca.
+ */
+export type OrigenNivel = "profesor" | "ficha" | "prueba" | "alta" | "ninguno";
+
+export function origenDelNivel(
+  nivelProfesor: string | null,
+  nivelFicha: string | null,
+  nivelPrueba: string | null,
+  nivelDelAlta: string
+): OrigenNivel {
+  if (nivelMcer(nivelProfesor)) return "profesor";
+  if (nivelMcer(nivelFicha)) return "ficha";
+  if (nivelMcer(nivelPrueba)) return "prueba";
+  if (nivelMcer(nivelDelAlta)) return "alta";
+  return "ninguno";
+}
+
+/**
+ * Si el nivel se puede enseñar sin advertencia.
+ *
+ * La raya se pone entre la cuarta columna y las tres primeras, no entre
+ * «humano» y «máquina»: la prueba de nivel es automática pero es una
+ * MEDICIÓN, y el alta es una casilla de un formulario con un valor por
+ * defecto. Medido flojo sigue siendo medido; sin medir no.
+ */
+export function nivelEsFiable(origen: OrigenNivel): boolean {
+  return origen === "profesor" || origen === "ficha" || origen === "prueba";
+}
+
+// ===============================================================
+// LA CAUSA RAÍZ: UN RESOLUTOR Y NUEVE RUTAS QUE NO LO USAN
+//
+// Esto es lo que produce todos los desajustes de nivel de la
+// aplicación, y hay que arreglarlo de verdad o vuelve con cada alumno
+// nuevo. Queda escrito aquí porque es el módulo donde vive la regla.
+//
+// EL SÍNTOMA. `nivelEfectivo` —la prioridad profesor > ficha > prueba >
+// alta— se llamaba desde UN solo sitio: `app/progreso/page.tsx`, para
+// pintar la ficha. Las otras nueve rutas leían `perfil.nivel` en crudo,
+// que es la casilla del alta:
+//
+//   app/alumno/[id]/page.tsx        qué curso ve · qué ejercicios recibe
+//   app/api/generar-bloque/route.ts con qué nivel se le genera material
+//   app/practica/page.tsx           · app/curso/[slug]/page.tsx
+//   app/curso/[slug]/[leccion]      · app/alumno/[id]/[bloqueId]
+//   app/acciones-accesos.ts         · y la propia página de progreso,
+//                                     que usaba las dos a la vez
+//
+// LA CONSECUENCIA, medida el 31/08/2026: 27 alumnos tenían una medición
+// —profesor o prueba— que decía un nivel distinto del alta, y los 27
+// recibían el curso del alta mientras su ficha les enseñaba el medido.
+// Uno de ellos llevaba 277 lecciones del curso equivocado.
+//
+// NO ERA UN FALLO DE DATOS. La prioridad estaba bien escrita y bien
+// probada; simplemente casi nadie la llamaba. Un resolutor que no se usa
+// no resuelve nada.
+//
+// LO QUE SE HIZO: `nivelDelAlumno` de aquí abajo es ahora el único sitio
+// del que sale un nivel, y las nueve rutas pasan por él.
+//
+// LO QUE FALTA, y es lo que impide que vuelva:
+//
+//   1. QUE `perfil.nivel` NO SE PUEDA LEER SUELTO. Mientras la propiedad
+//      exista en `PerfilAlumno`, la próxima pantalla la va a usar: es la
+//      que se llama «nivel» y la que sale primero al autocompletar. Lo
+//      que cierra esto de verdad es renombrarla —`nivelDelAlta`— para
+//      que quien la escriba sepa lo que está cogiendo.
+//   2. UNA REGLA QUE LO IMPIDA, no solo un nombre. Un `grep` en CI que
+//      falle ante `perfil.nivel` fuera de este módulo cuesta diez
+//      minutos y vale más que este comentario.
+//   3. QUE LA LISTA DE CONGELADOS DE ABAJO LLEGUE A CERO. Mientras haya
+//      excepciones por id, hay alumnos a los que la regla no se aplica y
+//      nadie se acuerda de por qué.
+// ===============================================================
+
+// ---------------------------------------------------------------
+// LO QUE HAY QUE ARREGLAR DE VERDAD, Y NO ES ESTA FUNCIÓN
+//
+// `nivelEsFiable` es un parche honesto: dice en voz alta que un dato no
+// está confirmado. No lo confirma. Mientras el origen no se arregle, la
+// marca va a salir en 125 de 174 fichas, y una advertencia que aparece
+// en el 72% de las pantallas deja de leerse a las dos semanas.
+//
+// LA CONTRADICCIÓN, DICHA ENTERA. El equipo ya decidió que si el nivel
+// no es fiable es mejor no enseñarlo, y por eso NO se enseña en el
+// inicio del alumno —está anotado en `app/alumno/[id]/page.tsx`: «no es
+// un dato que el alumno necesite»—. Pero ese mismo dato sin confirmar
+// se usa hoy para tres cosas que sí le cambian el producto:
+//
+//   1. QUÉ CURSO VE.        `cursosAsignados(plan, nivel, alumnoId)`
+//   2. QUÉ EJERCICIOS RECIBE. `BLOQUES.filter(b => b.nivel === …)` en el
+//      inicio, y el banco de generación, que reparte por nivel exacto.
+//   3. QUÉ ESTIMACIÓN LEE.   todo este módulo.
+//
+// O sea: demasiado poco fiable para enseñarlo, suficientemente fiable
+// para decidir con él. Las dos cosas no pueden ser ciertas a la vez, y
+// la que hay que cambiar no es la primera.
+//
+// EL ALCANCE, medido sobre los 174 alumnos:
+//
+//   nivel_profesor rellena     26
+//   nivel_ficha rellena         1
+//   nivel_prueba rellena       27   (ganan 22: el resto tiene además
+//                                    nivel_profesor, que manda)
+//   → sin ninguna de las tres 125   de los cuales 70 en B1
+//
+// Setenta alumnos en el valor por defecto no es una distribución de
+// niveles: es una casilla que nadie rellenó.
+//
+// LOS DOS CAMINOS, y no son excluyentes:
+//
+//   A · QUE LA PRUEBA DE NIVEL ESCRIBA DONDE CORRESPONDE. Hay 27 filas
+//       con `nivel_prueba` sobre 174 alumnos. O la prueba se pasa muy
+//       poco, o se pasa y el resultado no acaba en esa columna. Es lo
+//       primero que hay que mirar porque no depende de nadie: si ya se
+//       está midiendo, solo hay que guardar la medida.
+//
+//   B · QUE EL PROFESOR PUEDA CONFIRMARLO. Es la fuente de más
+//       prioridad y solo la tienen 26. Hoy no hay ninguna pantalla en
+//       el LMS donde un profesor confirme el nivel de su alumno: se
+//       hace en Gestión o no se hace. Un control de un clic tras las
+//       primeras clases —«¿es correcto este nivel?»— convertiría la
+//       marca de «estimado» en el disparador de su propia desaparición.
+//
+// MIENTRAS TANTO, la marca se queda. Es preferible un producto que
+// admite lo que no sabe a uno que presenta una casilla por defecto como
+// si fuera una medición.
+// ---------------------------------------------------------------
+
+/**
+ * El alumno prepara el examen del nivel que YA tiene.
+ *
+ * Es el único motivo por el que hoy `calcularEstimacion` devuelve null:
+ * 41 de los 174 alumnos, todos en este caso —22 en B1, 13 en B2 y 6 en
+ * C1—, ninguno por falta de nivel ni de horas.
+ *
+ * `detectarMeta` no puede distinguirlo desde fuera: devuelve null tanto
+ * aquí como para un alumno en C2, y las dos situaciones piden pantallas
+ * distintas. Así que se pregunta aparte.
+ *
+ * NO SE ESTIMA Y SIGUE SIN ESTIMARSE. La razón está intacta —no hay
+ * referencia defendible de cuántas horas lleva consolidar un nivel
+ * hasta aprobar su examen— y esto no la toca: solo permite que la
+ * pantalla sepa por qué no hay cifra, para poder decir otra cosa en vez
+ * de no decir nada.
+ */
+export function preparaSuPropioExamen(
+  textosDelPlan: Array<string | null | undefined>,
+  nivelActual: NivelMcer
+): boolean {
+  const crudo = textosDelPlan.filter(Boolean).join(" ");
+  const examen = nivelDeExamen(crudo, normalizar(crudo));
+  return examen !== null && ESCALERA_MCER.indexOf(examen) === ESCALERA_MCER.indexOf(nivelActual);
+}

@@ -19,6 +19,7 @@
 // a medio formar.
 // ---------------------------------------------------------------
 
+import { nivelDelAlumno } from "@/lib/estimacion";
 import { NextResponse } from "next/server";
 import type { Bloque, TipoExamen } from "@/lib/data";
 import { anterioresA, historialDeClases, obtenerAlumno } from "@/lib/gestion";
@@ -648,7 +649,7 @@ export async function POST(peticion: Request) {
 
   // Sin perfil (alumno con clase pero sin ficha) tiramos de B1, que es
   // el nivel con más alumnos y más material.
-  const nivel = perfil ? nivelDeBloque(perfil.nivel) : "B1";
+  const nivel = perfil ? nivelDeBloque(nivelDelAlumno(alumnoId, perfil)) : "B1";
 
   // ---------------------------------------------------------------
   // LA MATERIA PRIMA

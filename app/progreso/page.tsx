@@ -1,5 +1,12 @@
+import { nivelMcer } from "@/lib/recorrido";
 import { obtenerPerfil, obtenerRecorrido } from "@/lib/gestion";
-import { calcularEstimacion, nivelEfectivo } from "@/lib/estimacion";
+import {
+  calcularEstimacion,
+  nivelDelAlumno,
+  nivelEsFiable,
+  origenDelNivel,
+  preparaSuPropioExamen,
+} from "@/lib/estimacion";
 import { objetivoDelAlumno } from "@/lib/objetivo-servidor";
 import { exigirFoco } from "@/lib/sesion-servidor";
 import { cursosAsignados } from "@/lib/cursos-servidor";
@@ -62,7 +69,7 @@ export default async function PaginaProgreso() {
   // si Gestión ha rehecho la ficha desde que se hizo, vuelve el
   // original: peor redactado, pero cierto. Ver `lib/objetivo-servidor.ts`.
   const [cursos, objetivo] = await Promise.all([
-    perfil ? cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : Promise.resolve([]),
+    perfil ? cursosAsignados(perfil.plan, nivelDelAlumno(alumnoId, perfil), alumnoId) : Promise.resolve([]),
     objetivoDelAlumno(alumnoId, perfil?.objetivoPerfil ?? null),
   ]);
 
@@ -72,7 +79,7 @@ export default async function PaginaProgreso() {
   // misma regla y el alumno sale en el mismo peldaño en las dos
   // pantallas; sin ellas esto se queda en el de siempre.
   const nivel = perfil
-    ? nivelEfectivo(perfil.nivelProfesor, perfil.nivelFicha, perfil.nivelPrueba, perfil.nivel)
+    ? nivelMcer(nivelDelAlumno(alumnoId, perfil))
     : null;
 
   // Null mientras no se corra `gestion-vista-perfil-ritmo.sql` (faltan
@@ -102,6 +109,38 @@ export default async function PaginaProgreso() {
       <Ficha
         nombre={perfil?.nombre ?? ""}
         nivel={nivel}
+        // ---------------------------------------------------------------
+        // DE DÓNDE SALE EL NIVEL, Y POR QUÉ IMPORTA AQUÍ
+        //
+        // 125 de los 174 alumnos lo tienen puesto en el alta y sin
+        // confirmar —70 de ellos en B1, que es el valor por defecto—.
+        // Esta pantalla es la única que le enseña el nivel al alumno, y
+        // además calcula sobre él una estimación en horas y meses. Con
+        // `false` la ficha añade la nota de «estimado».
+        // ---------------------------------------------------------------
+        nivelFiable={
+          perfil
+            ? nivelEsFiable(
+                origenDelNivel(
+                  perfil.nivelProfesor,
+                  perfil.nivelFicha,
+                  perfil.nivelPrueba,
+                  perfil.nivel
+                )
+              )
+            : false
+        }
+        // Sin estimación, pero con algo que decir: el alumno prepara el
+        // examen de su propio nivel. Son los 41 que hasta ahora no veían
+        // ningún banner. Ver `preparaSuPropioExamen`.
+        preparaExamen={
+          !estimacion && perfil !== null && nivel !== null
+            ? preparaSuPropioExamen(
+                [perfil.planContratado, perfil.objetivoSetter, perfil.objetivoPerfil],
+                nivel
+              )
+            : false
+        }
         horasSemanales={perfil?.horasSemanales ?? null}
         clasesContadas={recorrido.clasesContadas}
         estimacion={estimacion}

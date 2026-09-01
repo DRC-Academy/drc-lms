@@ -1,3 +1,4 @@
+import { nivelDelAlumno } from "@/lib/estimacion";
 import { notFound, redirect } from "next/navigation";
 import { focoActual } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
@@ -65,7 +66,7 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
   // también en revisión: el alumno no puede abrir este curso, así que el
   // espejo tampoco.
   if (alumnoId) {
-    const suyos = perfil ? await cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : [];
+    const suyos = perfil ? await cursosAsignados(perfil.plan, nivelDelAlumno(alumnoId, perfil), alumnoId) : [];
     if (!suyos.some((c) => c.id === curso.id)) redirect(`/alumno/${alumnoId}`);
   }
 

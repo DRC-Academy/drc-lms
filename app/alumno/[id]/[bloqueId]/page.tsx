@@ -1,3 +1,4 @@
+import { nivelDelAlumno } from "@/lib/estimacion";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getBloque } from "@/lib/data";
@@ -44,7 +45,7 @@ export default async function PaginaBloque({
   // El curso principal, solo para que la cabecera pueda pintar "Mi curso".
   // Son 7 filas y evita que la navegación cambie de forma entre pantallas.
   const cursos = datos.perfil
-    ? await cursosAsignados(datos.perfil.plan, datos.perfil.nivel, params.id)
+    ? await cursosAsignados(datos.perfil.plan, nivelDelAlumno(params.id, datos.perfil), params.id)
     : [];
   const cursoSlug = cursos[0]?.slug ?? null;
 

@@ -1,3 +1,4 @@
+import { nivelDelAlumno } from "@/lib/estimacion";
 import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { nivelDeBloque } from "@/lib/perfil";
@@ -73,11 +74,11 @@ export default async function PaginaPractica() {
   const ultimaClase = datos?.ultimaClase ?? null;
 
   const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion);
-  const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(perfil.nivel)) : [];
+  const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(nivelDelAlumno(alumnoId, perfil))) : [];
 
   // Solo para que la cabecera pueda pintar "Mi curso" sin cambiar de
   // forma entre pantallas.
-  const cursos = perfil ? await cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : [];
+  const cursos = perfil ? await cursosAsignados(perfil.plan, nivelDelAlumno(alumnoId, perfil), alumnoId) : [];
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">

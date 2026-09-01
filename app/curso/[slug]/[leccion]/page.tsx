@@ -1,3 +1,4 @@
+import { nivelDelAlumno } from "@/lib/estimacion";
 import { notFound, redirect } from "next/navigation";
 import { focoActual } from "@/lib/sesion-servidor";
 import { conFoco } from "@/lib/foco";
@@ -63,7 +64,7 @@ export default async function PaginaLeccion({
   // del `redirect`.
 
   const [suyos, vista] = await Promise.all([
-    perfil ? cursosAsignados(perfil.plan, perfil.nivel, alumnoId) : Promise.resolve([]),
+    perfil ? cursosAsignados(perfil.plan, nivelDelAlumno(alumnoId, perfil), alumnoId) : Promise.resolve([]),
     leccionParaVer(alumnoId, curso, params.leccion, fechaDrip),
   ]);
 

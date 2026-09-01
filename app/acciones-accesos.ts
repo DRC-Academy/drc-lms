@@ -20,6 +20,7 @@
 //      prohibido: su cliente solo expone `select` y no compilaría.
 // ---------------------------------------------------------------
 
+import { nivelDelAlumno } from "@/lib/estimacion";
 import { revalidatePath } from "next/cache";
 import { exigirAdministrador } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
@@ -48,7 +49,11 @@ export async function leerAccesos(alumnoId: string): Promise<FilaAcceso[]> {
   // son los que deciden qué cursos cuentan como "por plan", y dejarlos
   // elegir desde fuera permitiría disfrazar una concesión manual.
   const perfil = await obtenerPerfil(alumnoId);
-  return estadoDeAccesos(alumnoId, perfil?.plan ?? "", perfil?.nivel ?? "");
+  return estadoDeAccesos(
+    alumnoId,
+    perfil?.plan ?? "",
+    perfil ? nivelDelAlumno(alumnoId, perfil) : ""
+  );
 }
 
 /**

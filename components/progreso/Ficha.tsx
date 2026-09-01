@@ -53,9 +53,23 @@ export default function Ficha({
   focoRecomendado,
   clases,
   urlAmpliar,
+  nivelFiable,
+  preparaExamen,
 }: {
   nombre: string;
   nivel: NivelMcer | null;
+  /**
+   * Si el nivel viene de una medición —profesor, ficha o prueba— o solo
+   * de la casilla del alta. Con false se enseña la nota de «estimado».
+   * Ver `origenDelNivel` en `lib/estimacion.ts`.
+   */
+  nivelFiable: boolean;
+  /**
+   * El alumno prepara el examen de su propio nivel, así que no hay
+   * estimación posible pero sí banner que enseñar. Ver
+   * `preparaSuPropioExamen`.
+   */
+  preparaExamen: boolean;
   horasSemanales: number | null;
   /** Las clases que cuenta la cifra: todas, con informe o sin él. */
   clasesContadas: number;
@@ -103,9 +117,36 @@ export default function Ficha({
                 {clasesContadas === 1 ? "Clase hecha" : "Clases hechas"}
               </span>
             </div>
+            {/* ---------------------------------------------------------------
+                EL NIVEL DICE DE DÓNDE SALE
+
+                125 de los 174 alumnos tienen el nivel puesto por quien
+                les dio de alta, sin que nadie lo haya confirmado —y 70
+                de esos están en B1, que es el valor por defecto—. Sobre
+                ese dato se elige su curso, se filtran sus ejercicios y
+                se calcula la estimación del banner de abajo.
+
+                Enseñarlo a secas lo convierte en un hecho. La nota lo
+                devuelve a lo que es: una hipótesis, y con la manera de
+                resolverla al lado.
+
+                NO ES UN AVISO Y NO DEBE PARECERLO. Ni rojo, ni icono de
+                alerta, ni «atención»: el alumno no ha hecho nada mal y
+                no hay nada roto. Es la misma tinta apagada que el resto
+                de rótulos, una línea más pequeña, debajo. Quien no la
+                lea no se pierde nada; quien la lea sabe qué preguntar
+                en su próxima clase.
+
+                Y desaparece sola en cuanto el profesor confirma el
+                nivel, que es lo que de verdad la hace útil: la marca
+                sobra el día que el dato está bien.
+                --------------------------------------------------------------- */}
             <div className="pg-stat">
               <span className="pg-stat-num">{nivel ?? "—"}</span>
               <span className="pg-stat-label">Nivel actual</span>
+              {nivel && !nivelFiable && (
+                <span className="pg-stat-nota">Estimado · confírmalo con tu profesor</span>
+              )}
             </div>
             <div className="pg-stat">
               <span className="pg-stat-num">
@@ -137,9 +178,31 @@ export default function Ficha({
           </section>
         )}
 
-        {estimacion && (
+        {/* ---------------------------------------------------------------
+            DOS BANNERS, Y NINGÚN ALUMNO SIN UNO
+
+            Hasta ahora esto era `estimacion && <BannerAmpliar/>`, y 41
+            de los 174 alumnos no veían nada. Los 41 son el mismo caso:
+            preparan el examen del nivel que ya tienen —22 en B1, 13 en
+            B2, 6 en C1—, así que no hay peldaño que prometer y
+            `calcularEstimacion` devuelve null. No es un fallo, es la
+            regla de `lib/estimacion.ts`, que sigue en pie.
+
+            Lo que cambia es que quedarse callado no era la única
+            respuesta. A quien prepara su propio examen la ampliación le
+            sirve igual, solo que por otro motivo: no llega ANTES, llega
+            MÁS PREPARADO. Y eso se puede decir sin inventar una sola
+            cifra, que es justo lo que la regla protegía. */}
+        {estimacion ? (
           <BannerAmpliar estimacion={estimacion} urlAmpliar={urlAmpliar} retardoMs={180} />
-        )}
+        ) : preparaExamen ? (
+          <BannerAmpliar
+            estimacion={null}
+            preparaExamen
+            urlAmpliar={urlAmpliar}
+            retardoMs={180}
+          />
+        ) : null}
 
         {(fuertes.length > 0 || debiles.length > 0) && (
           <section className="pg-split pg-rise" style={{ animationDelay: "240ms" }}>
@@ -427,6 +490,15 @@ const CSS_FICHA = `
 .pg-stat-label {
   display: block; margin-top: 5px; font-size: 11px; font-weight: 600;
   letter-spacing: 0.06em; text-transform: uppercase; color: var(--pg-faint);
+}
+/* La nota del nivel sin confirmar. En minúsculas y SIN el tracking del
+   rótulo de arriba: no es una etiqueta más de la tira, es una frase. Y
+   sin color propio —el mismo apagado que el resto— porque un color
+   distinto la convertiría en la advertencia que no queremos que sea. */
+.pg-stat-nota {
+  display: block; margin-top: 4px; font-size: 10.5px; font-weight: 500;
+  line-height: 1.35; color: var(--pg-faint); text-transform: none; letter-spacing: 0;
+  max-width: 15ch;
 }
 
 /* ── Objetivo (las palabras del propio alumno, en cursiva) ──────────────── */

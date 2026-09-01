@@ -32,13 +32,68 @@ export default function BannerAmpliar({
   estimacion,
   urlAmpliar,
   retardoMs = 0,
+  preparaExamen = false,
 }: {
-  estimacion: Estimacion;
+  estimacion: Estimacion | null;
   /** A dónde lleva el botón. Provisional hasta que haya pop-up de planes. */
   urlAmpliar: string;
   /** Retardo de la entrada, para encajar en una pila escalonada. */
   retardoMs?: number;
+  /**
+   * Sin estimación porque el alumno prepara el examen de su propio
+   * nivel. Enseña la variante sin cifras. Ver `preparaSuPropioExamen`.
+   */
+  preparaExamen?: boolean;
 }) {
+  // ---------------------------------------------------------------
+  // LA VARIANTE SIN CIFRAS
+  //
+  // 41 de los 174 alumnos preparan el examen del nivel que ya tienen.
+  // Para ellos no hay meta por encima, así que no hay horas que contar
+  // ni meses que ahorrar, y durante un tiempo eso significó no verles
+  // ningún banner.
+  //
+  // AQUÍ NO SE ESTIMA NADA, y esa es la condición para que esta pieza
+  // exista. No se dice "llegarás antes" —no hay un antes—, no se dice
+  // cuántas horas faltan y no se promete una fecha. Se dice lo único
+  // que es verdad sin medir: con más horas a la semana llegas al mismo
+  // examen con más práctica encima.
+  //
+  // Sale antes que todo lo demás porque no comparte casi nada con el
+  // banner de siempre: mismo envoltorio, mismo botón, ni una cifra.
+  // ---------------------------------------------------------------
+  if (!estimacion) {
+    if (!preparaExamen) return null;
+
+    return (
+      <section
+        className="amp amp-rise"
+        style={retardoMs ? { animationDelay: `${retardoMs}ms` } : undefined}
+      >
+        <EstilosBanner />
+
+        <h2 className="amp-title">Llega más preparado</h2>
+        <p className="amp-sub">
+          Estás preparando tu examen. Con más horas a la semana no cambias de meta: llegas a la
+          misma prueba con más práctica hecha y más seguridad.
+        </p>
+
+        {/* El mismo botón, con el mismo rótulo y abriendo igual que el
+            del banner de siempre: para el alumno es la misma acción, y
+            dos nombres para una sola cosa es lo que hace dudar de si
+            llevan al mismo sitio. */}
+        <div className="amp-pie">
+          <a className="amp-cta" href={urlAmpliar} target="_blank" rel="noopener noreferrer">
+            Amplía tu plan
+            <span className="amp-flecha" aria-hidden>
+              →
+            </span>
+          </a>
+        </div>
+      </section>
+    );
+  }
+
   // ---------------------------------------------------------------
   // ¿HAY ALGO QUE PROMETER?
   //
@@ -242,8 +297,28 @@ const CSS_BANNER = `
   background: var(--amp-amarillo);
   color: var(--amp-tinta);
   border-radius: 10px;
-  padding: 6px 13px 7px;
-  font-size: clamp(24px, 6.4vw, 29px);
+  padding: 5px 11px 6px;
+  /* ---------------------------------------------------------------
+     SEGUNDO, NO PRIMERO.
+
+     Estuvo en clamp(24px, 6.4vw, 29px) y eso no era «lo más
+     importante»: era MÁS que el titular. A 375px el titular mide 23px
+     y el badge medía 24, y como crecía más rápido —6,4vw contra los
+     5,6vw del titular— la desproporción se agravaba cuanto más
+     estrecha la pantalla. El banner se leía empezando por el ahorro y
+     el titular quedaba de pie de foto.
+
+     Ahora va siempre por debajo del titular y siempre por encima de
+     todo lo demás, que es el sitio que le tocaba desde el principio:
+
+       375px   titular 23 · badge 19   (0,83)
+       1024px  titular 31 · badge 23   (0,74)
+
+     Sigue siendo lo segundo que capta el ojo sin discusión: la
+     siguiente pieza del banner —los meses— mide 18px, y el resto va
+     por debajo de 17.
+     --------------------------------------------------------------- */
+  font-size: clamp(19px, 4.6vw, 23px);
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.1;
