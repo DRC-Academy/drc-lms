@@ -299,22 +299,7 @@ function HuecoVacio({
 
   return (
     <div className="flex flex-col items-start gap-6 rounded-[16px] border-[1.5px] border-dashed border-marca-puntoPendiente bg-marca-casiBlanco p-6 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-10 min-[900px]:px-11 min-[900px]:py-10 min-[900px]:rounded-[18px]">
-      <span
-        aria-hidden
-        className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-marca-verdeFondo min-[900px]:h-[84px] min-[900px]:w-[84px]"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          className="h-7 w-7 min-[900px]:h-[34px] min-[900px]:w-[34px]"
-          fill="none"
-          stroke="#1E9E3A"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 3.5 14.3 9l5.7.5-4.3 3.7 1.3 5.6L12 15.9l-5 2.9 1.3-5.6L4 9.5 9.7 9 12 3.5Z" />
-        </svg>
-      </span>
+      <DibujoDeClase />
 
       <div className="min-w-0 flex-1">
         <h3 className="text-pretty font-display text-[19px] font-bold leading-[1.2] text-marca-tinta min-[900px]:text-[22px]">
@@ -362,5 +347,95 @@ function HuecoVacio({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * DE DÓNDE SALE UN BLOQUE: DE UNA CONVERSACIÓN.
+ *
+ * Aquí había una estrella de cinco puntas dentro de un círculo verde.
+ * Una estrella significa «nuevo», que es exactamente lo que ya dice el
+ * sello ámbar de la tarjeta de arriba, así que el único dibujo de la
+ * pantalla estaba gastado en repetir una palabra. Y es el dibujo que
+ * más gente ve: 86 de 168 alumnos no tienen ningún bloque generado, o
+ * sea que para la mitad de la academia esta es la única ilustración del
+ * producto.
+ *
+ * Ahora dibuja lo que un bloque ES: dos bocadillos, uno del profesor y
+ * otro del alumno, y de ellos sale la hoja de ejercicios. Es literal
+ * —el bloque se genera de la última clase— y es lo que separa a esta
+ * academia de una aplicación de autoestudio: detrás de cada ejercicio
+ * hubo una persona hablando contigo.
+ *
+ * ---------------------------------------------------------------
+ * POR QUÉ NO ES UN ICONO, Y POR QUÉ NO ES UN EMOJI
+ *
+ * Los trazos no cierran del todo y las líneas no son rectas perfectas:
+ * las esquinas quedan abiertas y los bocadillos están ligeramente
+ * torcidos y a distinta altura. Eso es lo que separa un dibujo de un
+ * pictograma —un icono de set es geométricamente perfecto, y la
+ * perfección se lee como sistema, no como mano—.
+ *
+ * Un emoji habría sido más rápido y habría dado lo contrario: se dibuja
+ * distinto en cada sistema operativo, no hereda el color de la marca, y
+ * al lado de los SVG a mano de esta aplicación se ve pegado. Con un
+ * público que llega a los sesenta, además, la carita es la frontera
+ * exacta entre cálido e infantil.
+ * ---------------------------------------------------------------
+ *
+ * En cálido y no en verde: el verde es el color de «pulsa aquí» y esto
+ * no se pulsa. La única nota verde es la hoja, que es lo que el alumno
+ * va a recibir.
+ */
+function DibujoDeClase() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 132 108"
+      className="h-[92px] w-[112px] shrink-0 min-[900px]:h-28 min-[900px]:w-[132px]"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* EL BOCADILLO DEL PROFESOR. El más grande y el que habla
+          primero, arriba a la izquierda. Relleno cálido: es quien pone
+          el contexto. */}
+      <path
+        d="M8 14 q0-6 6-6 h44 q6 0 6 6 v22 q0 6-6 6 h-30 l-10 9 v-9 h-4 q-6 0-6-6 z"
+        fill="#FBF7EF"
+        stroke="#C0A97A"
+        strokeWidth="2.2"
+      />
+      <path d="M20 21h30M20 29h20" stroke="#C0A97A" strokeWidth="2" opacity="0.75" />
+
+      {/* EL DEL ALUMNO. Más pequeño, a la derecha y un poco más abajo:
+          responde. La cola mira al otro lado para que se lean como una
+          conversación y no como dos avisos. */}
+      <path
+        d="M74 34 q0-5 5-5 h40 q5 0 5 5 v18 q0 5-5 5 h-26 l-9 8 v-8 h-5 q-5 0-5-5 z"
+        fill="#FFFFFF"
+        stroke="#C0A97A"
+        strokeWidth="2.2"
+        opacity="0.9"
+      />
+      <path d="M85 40h24M85 47h15" stroke="#C0A97A" strokeWidth="2" opacity="0.6" />
+
+      {/* LA HOJA QUE SALE DE LOS DOS. Verde, porque es lo único de este
+          dibujo que el alumno va a poder hacer. Ligeramente girada: sale
+          de una conversación, no de una imprenta. */}
+      <g transform="rotate(-4 56 86)">
+        <path
+          d="M32 68 h48 q4 0 4 4 v30 q0 4-4 4 h-48 q-4 0-4-4 v-30 q0-4 4-4 z"
+          fill="#F0FAF2"
+          stroke="#1E9E3A"
+          strokeWidth="2.2"
+        />
+        <path d="M40 78h32M40 86h32M40 94h20" stroke="#1E9E3A" strokeWidth="2" opacity="0.55" />
+      </g>
+
+      {/* Los dos puntos que bajan del bocadillo a la hoja: el hilo entre
+          lo que se habló y lo que se practica. */}
+      <path d="M96 64 v3M92 71 v3" stroke="#C0A97A" strokeWidth="2.4" opacity="0.5" />
+    </svg>
   );
 }
