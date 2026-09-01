@@ -108,7 +108,15 @@ export default function Ficha({
         </section>
 
         <section className="pg-card pg-hero pg-rise" style={{ animationDelay: "60ms" }}>
-          <Escalera nivel={nivel} meta={estimacion?.meta.nivel ?? null} />
+          {/* La bandera de meta solo cuando de verdad hay un peldaño al
+              que subir. En la estimación de preparación la meta ES su
+              propio nivel —está preparando su examen, no subiendo— y
+              marcarlo pondría la banderita sobre la casilla donde ya
+              está, que se lee como que le falta llegar a donde está. */}
+          <Escalera
+            nivel={nivel}
+            meta={estimacion?.tipo === "subir-nivel" ? estimacion.meta.nivel : null}
+          />
 
           <div className="pg-stats">
             <div className="pg-stat">

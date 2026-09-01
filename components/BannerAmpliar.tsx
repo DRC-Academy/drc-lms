@@ -180,6 +180,7 @@ export default function BannerAmpliar({
   // ---------------------------------------------------------------
   const ahorroMaximo = Math.max(0, ...estimacion.opciones.map((o) => o.mesesAhorrados));
   const mereceLaPena = estimacion.hayAmpliacion && ahorroMaximo > 0;
+  const esPreparacion = estimacion.tipo === "preparar-examen";
 
   return (
     <section
@@ -188,13 +189,32 @@ export default function BannerAmpliar({
     >
       <EstilosBanner />
 
+      {/* ---------------------------------------------------------------
+          DOS PREGUNTAS, EL MISMO BANNER
+
+          El cálculo, los planes, las barras y las fechas son idénticos
+          en los dos casos; lo único que cambia es de qué va. A quien
+          sube de nivel se le habla de su objetivo; a quien prepara el
+          examen de su propio nivel, de llegar preparado — que es la
+          pregunta que sí se hizo al comprar «B2 Exámenes».
+
+          Decirle a este segundo «tu objetivo» sería volver a hablarle
+          del peldaño siguiente, que es justo lo que no quiere. */}
       <h2 className="amp-title">
-        {mereceLaPena ? "¡Puedes llegar antes de lo que crees!" : "Vas al mejor ritmo posible"}
+        {mereceLaPena
+          ? esPreparacion
+            ? "¡Puedes llegar preparado antes!"
+            : "¡Puedes llegar antes de lo que crees!"
+          : "Vas al mejor ritmo posible"}
       </h2>
       <p className="amp-sub">
-        {mereceLaPena
-          ? "¿Cuánto tardarías en conseguir tu objetivo con otros planes?"
-          : "Esto es lo que tardarías en conseguir tu objetivo al ritmo que llevas."}
+        {esPreparacion
+          ? mereceLaPena
+            ? "¿Cuánto tardarías en llegar preparado a tu examen con otros planes?"
+            : "Esto es lo que tardarías en llegar preparado a tu examen al ritmo que llevas."
+          : mereceLaPena
+            ? "¿Cuánto tardarías en conseguir tu objetivo con otros planes?"
+            : "Esto es lo que tardarías en conseguir tu objetivo al ritmo que llevas."}
       </p>
 
       <ol className="amp-planes">
@@ -224,7 +244,9 @@ export default function BannerAmpliar({
               <span className="amp-meses">{enMeses(opcion.meses)}</span>
             </div>
 
-            <p className="amp-fecha">Llegarías en {opcion.llegada}</p>
+            <p className="amp-fecha">
+              {esPreparacion ? "Estarías listo en" : "Llegarías en"} {opcion.llegada}
+            </p>
           </li>
         ))}
       </ol>

@@ -66,6 +66,37 @@ export const HORAS_GUIADAS_HASTA: Record<NivelMcer, number> = {
 };
 
 /**
+ * HORAS DE PREPARACIÓN ESPECÍFICA DEL EXAMEN.
+ *
+ * NO ES LO MISMO QUE `HORAS_GUIADAS_HASTA`, y por eso es otra tabla con
+ * otro nombre. Aquella mide ADQUIRIR un nivel: cuántas horas guiadas
+ * separan un peldaño del siguiente. Esta mide otra cosa distinta:
+ * cuántas horas lleva llegar preparado a un examen ESTANDO YA en su
+ * nivel —el formato, las cuatro partes, la gestión del tiempo—.
+ *
+ * Mezclarlas sería el error fácil: sumar 200 horas de B2 a C1 a un
+ * alumno que no quiere subir de nivel, sino aprobar el B2.
+ *
+ * ORIGEN: es la referencia habitual del sector para preparación de
+ * examen con el nivel ya adquirido.
+ *
+ * ⚠ PENDIENTE DE VALIDAR con los profesores que preparan exámenes. Por
+ * eso está aquí, en una constante suelta y comentada, y no repartida por
+ * el cálculo: el día que la academia tenga su propio dato se cambia este
+ * bloque y nada más.
+ *
+ * PARCIAL A PROPÓSITO. Solo están los tres exámenes con referencia. Un
+ * alumno que prepare el A2 Key o el C2 Proficiency no recibe una cifra
+ * extrapolada: recibe el banner sin estimación, que es lo honesto
+ * mientras nadie haya medido eso.
+ */
+export const HORAS_PREPARACION_EXAMEN: Partial<Record<NivelMcer, number>> = {
+  B1: 80, // B1 Preliminary
+  B2: 100, // B2 First
+  C1: 120, // C1 Advanced
+};
+
+/**
  * Horas guiadas que produce cada hora de clase.
  *
  * 1,5 = por cada hora de clase el alumno suma media hora de práctica
@@ -325,7 +356,30 @@ export function opcionesDeHoras(horasSemanales: number | null | undefined): Opci
   }));
 }
 
+/**
+ * A qué pregunta contesta la estimación.
+ *
+ * Son dos preguntas distintas y el alumno solo se hizo una de las dos:
+ *
+ *   · `subir-nivel`      «¿cuánto tardo en llegar al B2?»
+ *   · `preparar-examen`  «¿cuánto tardo en llegar preparado a mi examen?»
+ *
+ * La segunda es la de quien ya está en el nivel de su examen. Durante un
+ * tiempo a esos no se les estimaba nada, porque se les medía con la
+ * pregunta equivocada: no hay peldaño por encima, así que `horasEntre`
+ * daba cero. Con la pregunta correcta sí hay respuesta, y encima no
+ * depende de saber su nivel exacto: el punto de partida no es «está en
+ * tal nivel», es «empezó a prepararlo».
+ *
+ * Todo lo que viene después del número de horas es idéntico en los dos
+ * casos —los planes, los meses, la fecha— porque `mesesPara` no
+ * pregunta de dónde salen las horas. Lo único que cambia es de qué tabla
+ * salen y qué dice el titular.
+ */
+export type TipoEstimacion = "subir-nivel" | "preparar-examen";
+
 export type Estimacion = {
+  tipo: TipoEstimacion;
   nivelActual: NivelMcer;
   meta: Meta;
   /** Horas guiadas que separan el nivel actual de la meta. */
@@ -362,13 +416,51 @@ export function calcularEstimacion(datos: DatosDeEstimacion): Estimacion | null 
   const semanales = Math.round(Number(datos.horasSemanales ?? 0));
   if (!Number.isFinite(semanales) || semanales < 1) return null;
 
+  // ---------------------------------------------------------------
+  // LAS DOS PREGUNTAS
+  //
+  // `detectarMeta` devuelve null en dos situaciones que parecían la
+  // misma y no lo son: el alumno está en C2 —no hay nada por encima, y
+  // ahí sigue sin haber estimación— o está en el nivel del examen que
+  // prepara. Ese segundo caso no es «no hay nada que contar»: es que se
+  // estaba contando lo que no era.
+  //
+  // Quien compró «B2 Exámenes» no preguntó cuánto tarda en llegar al C1.
+  // Preguntó cuánto tarda en llegar preparado al B2. Esa pregunta tiene
+  // respuesta —`HORAS_PREPARACION_EXAMEN`— y además no necesita saber su
+  // nivel exacto, que es justo el dato que a 25 de estos alumnos les
+  // falta: el punto de partida es «empezó a prepararlo».
+  //
+  // La meta se queda en su propio nivel y el origen en «examen», que es
+  // literalmente lo que pasa. Quien pinte la escalera de niveles tiene
+  // que mirar `tipo` antes de marcar un peldaño: aquí no se sube a
+  // ninguno.
+  // ---------------------------------------------------------------
   const meta = detectarMeta(datos.textosDelPlan, nivelActual);
-  if (!meta) return null;
-
-  const horasQueFaltan = horasEntre(nivelActual, meta.nivel);
-  if (horasQueFaltan <= 0) return null;
-
   const ahora = datos.ahora ?? new Date();
+
+  let tipo: TipoEstimacion = "subir-nivel";
+  let horasQueFaltan: number;
+  let metaFinal: Meta;
+
+  if (meta) {
+    metaFinal = meta;
+    horasQueFaltan = horasEntre(nivelActual, meta.nivel);
+  } else if (preparaSuPropioExamen(datos.textosDelPlan, nivelActual)) {
+    // Sin referencia para ese examen no se inventa una: se sigue sin
+    // estimar, como antes. Solo hay cifra para B1, B2 y C1.
+    const horas = HORAS_PREPARACION_EXAMEN[nivelActual];
+    if (!horas) return null;
+
+    tipo = "preparar-examen";
+    metaFinal = { nivel: nivelActual, origen: "examen" };
+    horasQueFaltan = horas;
+  } else {
+    // C2, o cualquier otro caso sin peldaño por encima.
+    return null;
+  }
+
+  if (horasQueFaltan <= 0) return null;
 
   const planes = [
     semanales,
@@ -397,8 +489,9 @@ export function calcularEstimacion(datos: DatosDeEstimacion): Estimacion | null 
   }));
 
   return {
+    tipo,
     nivelActual,
-    meta,
+    meta: metaFinal,
     horasQueFaltan,
     horasSemanalesActuales: semanales,
     opciones,
