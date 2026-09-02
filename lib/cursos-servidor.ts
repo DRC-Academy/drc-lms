@@ -19,7 +19,7 @@ import "server-only";
 import { cache } from "react";
 import { aperturaDeLeccion, calcularApertura } from "@/lib/drip";
 import { baseLms } from "@/lib/supabase-lms";
-import { claveCoincide, cursosDelAlumno } from "@/lib/cursos";
+import { cursosDelPlan } from "@/lib/cursos";
 import { excepcionesDelAlumno } from "@/lib/accesos-manuales";
 
 export type CursoFila = {
@@ -119,14 +119,11 @@ export async function cursosAsignados(
   if (!registrar("No se pudieron leer los cursos", error)) return [];
 
   const disponibles = data ?? [];
-  const salida: CursoFila[] = [];
 
-  // Se recorren las claves y no los cursos: así el orden de salida es el
-  // de relevancia que fija `cursosDelAlumno` (examen antes que general).
-  for (const clave of cursosDelAlumno(plan, nivel)) {
-    const encontrado = disponibles.find((curso) => claveCoincide(clave, curso));
-    if (encontrado && !salida.some((c) => c.id === encontrado.id)) salida.push(encontrado);
-  }
+  // Lo que da el plan. La regla entera vive en `lib/cursos.ts` y aquí no
+  // se decide nada: un plan de examen devuelve el curso del examen y
+  // nada más.
+  const salida: CursoFila[] = [...cursosDelPlan(plan, nivel, disponibles)];
 
   // Y detrás los concedidos a mano, que por definición no están en las
   // claves del plan. Van al final a propósito: delante quedan los del

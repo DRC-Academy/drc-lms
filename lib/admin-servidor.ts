@@ -29,7 +29,7 @@ import { alumnosDelPanel, clasesDelPanel, type AlumnoPanel } from "@/lib/gestion
 import { detectarExamen } from "@/lib/perfil";
 import { calcularApertura } from "@/lib/drip";
 import { comoFecha } from "@/lib/fechas";
-import { claveCoincide, cursosDelAlumno } from "@/lib/cursos";
+import { cursosDelPlan } from "@/lib/cursos";
 import { MODOS_HISTORICOS, type ModoHistorico } from "@/lib/modos";
 import type { TipoExamen } from "@/lib/data";
 
@@ -305,9 +305,7 @@ async function calcularAlDia(
     const hechas = hechasDe.get(ficha.alumnoId) ?? new Set<string>();
 
     // Sus cursos, con las mismas reglas que usa el alumno al entrar.
-    const suyos = cursosDelAlumno(ficha.plan, ficha.nivel)
-      .map((clave) => disponibles.find((curso) => claveCoincide(clave, curso)))
-      .filter((curso): curso is FilaCursoPanel => curso !== undefined);
+    const suyos = cursosDelPlan(ficha.plan, ficha.nivel, disponibles);
 
     let abiertas = 0;
     let pendientes = 0;

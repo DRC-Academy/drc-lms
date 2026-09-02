@@ -20,7 +20,7 @@
 import "server-only";
 import { cache } from "react";
 import { baseLms } from "@/lib/supabase-lms";
-import { claveCoincide, cursosDelAlumno } from "@/lib/cursos";
+import { cursosDelPlan } from "@/lib/cursos";
 import type { CursoFila } from "@/lib/cursos-servidor";
 
 export type ExcepcionAcceso = {
@@ -186,11 +186,7 @@ export async function estadoDeAccesos(
 
   // Los que le da el plan. Es la MISMA regla que usa el resto de la
   // aplicación, sin copiarla: se llama a la función pura de siempre.
-  const porPlan = new Set<string>();
-  for (const clave of cursosDelAlumno(plan, nivel)) {
-    const encontrado = activos.find((curso) => claveCoincide(clave, curso));
-    if (encontrado) porPlan.add(encontrado.id);
-  }
+  const porPlan = new Set(cursosDelPlan(plan, nivel, activos).map((curso) => curso.id));
 
   return activos.map((curso) => {
     const excepcion = excepciones.get(curso.id);

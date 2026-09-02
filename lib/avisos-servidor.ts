@@ -20,7 +20,7 @@
 
 import "server-only";
 import { baseLms } from "@/lib/supabase-lms";
-import { claveCoincide, cursosDelAlumno } from "@/lib/cursos";
+import { cursosDelPlan } from "@/lib/cursos";
 import type { CursoFila } from "@/lib/cursos-servidor";
 import { partirModulo } from "@/lib/modulo";
 import type { ModuloDelCurso } from "@/lib/avisos";
@@ -252,12 +252,7 @@ export function cursosDeAlumno(
   nivel: string,
   manuales: Set<string>
 ): CursoFila[] {
-  const salida: CursoFila[] = [];
-
-  for (const clave of cursosDelAlumno(plan, nivel)) {
-    const encontrado = contenido.cursos.find((curso) => claveCoincide(clave, curso));
-    if (encontrado && !salida.some((c) => c.id === encontrado.id)) salida.push(encontrado);
-  }
+  const salida: CursoFila[] = [...cursosDelPlan(plan, nivel, contenido.cursos)];
 
   for (const curso of contenido.cursos) {
     if (!manuales.has(curso.id)) continue;

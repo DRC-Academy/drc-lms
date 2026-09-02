@@ -45,27 +45,67 @@ export function nivelDeCurso(nivel: string): NivelCurso {
 }
 
 /**
- * Los cursos a los que tiene acceso un alumno, en orden de relevancia.
+ * EL CURSO QUE LE TOCA A UN ALUMNO. El único sitio del que sale, para
+ * toda la aplicación.
  *
- * Un plan de examen devuelve DOS: el del examen y el general de su
- * nivel. Quien prepara el First quiere las dos cosas —el formato del
- * examen y la base del idioma— y darle solo una de ellas es decidir por
- * él cuál necesita.
+ * UN PLAN DE EXAMEN DA EL CURSO DEL EXAMEN Y NADA MÁS. Quien compró la
+ * preparación del First entra al curso del First; no ve el general de
+ * B2. El plan es el producto que el alumno compró, y ese producto es la
+ * preparación de un examen concreto: darle además el general es
+ * regalarle un curso que no ha comprado y, sobre todo, repartir su
+ * atención entre dos temarios de seis meses cuando tiene una fecha de
+ * examen encima.
  *
- * Devuelve el examen primero porque es lo específico de su plan; el
- * banner del inicio no usa este orden para elegir cuál enseñar, sino
- * cuál tiene progreso más reciente.
+ * Antes devolvía los dos. El motivo escrito era que «quien prepara el
+ * First quiere las dos cosas y darle una es decidir por él». Se decide
+ * igual en los dos sentidos: darle los dos también es decidir por él, y
+ * encima es la opción que le esconde cuál de los dos es el suyo. Si un
+ * alumno concreto necesita además el general, existe `accesos_manuales`,
+ * que es exactamente para eso y deja constancia de quién se lo dio.
  *
- * Puede devolver una clave para la que no exista curso: `detectarExamen`
- * reconoce IELTS y no hay curso de IELTS. Se resuelve solo, porque quien
- * busca las filas no encuentra ninguna y se queda con el general.
+ * PARA UN PLAN DE EXAMEN, EL NIVEL DEJA DE DECIDIR NADA. Son 57 de 183
+ * alumnos —26 Preliminary, 23 First, 8 Advanced— cuyo curso ya no
+ * depende de `nivel`, que es la columna que en 7 de cada 10 alumnos
+ * nadie ha confirmado nunca (ver `lib/estimacion.ts`). Su curso sale del
+ * producto que compraron, con un 98% de cobertura. El nivel solo se mira
+ * en la reserva de aquí abajo.
+ *
+ * LA RESERVA, y no es un apaño: `detectarExamen` reconoce IELTS y no hay
+ * curso de IELTS. Sin esta red, un plan de IELTS daría CERO cursos, que
+ * es peor que darle el general. Hoy no hay ningún alumno de IELTS —los
+ * tres exámenes con alumnos tienen curso—, así que no se usa nunca:
+ * está para el día que entre uno, no para los de ahora.
+ *
+ * RECIBE EL CATÁLOGO Y DEVUELVE FILAS a propósito. Antes devolvía claves
+ * y CUATRO sitios —`cursos-servidor`, `avisos-servidor`,
+ * `accesos-manuales` y `admin-servidor`— repetían el mismo bucle para
+ * convertirlas en cursos. Con el bucle repetido cuatro veces, «el examen
+ * y nada más» habría que acertarlo cuatro veces, y el quinto sitio que
+ * se escriba lo volvería a hacer mal. Es el mismo fallo que ya costó
+ * caro con el nivel: una regla que cada pantalla reimplementa no es una
+ * regla. Aquí se decide entera y los cuatro reciben la lista hecha.
+ *
+ * Sigue devolviendo una lista y no un curso suelto porque quien la
+ * recibe le suma después los accesos manuales, y porque un plan sin
+ * curso ni reserva tiene que poder devolver ninguno.
  */
-export function cursosDelAlumno(plan: string, nivel: string): ClaveCurso[] {
-  const general: ClaveCurso = { tipo: "general", nivel: nivelDeCurso(nivel) };
+export function cursosDelPlan<T extends { tipo: string; nivel: string; examen: string | null }>(
+  plan: string,
+  nivel: string,
+  disponibles: T[]
+): T[] {
   const examen = detectarExamen(plan);
 
-  if (!examen) return [general];
-  return [{ tipo: "examen", examen }, general];
+  if (examen) {
+    const suyo = disponibles.find((curso) => claveCoincide({ tipo: "examen", examen }, curso));
+    if (suyo) return [suyo];
+  }
+
+  const general = disponibles.find((curso) =>
+    claveCoincide({ tipo: "general", nivel: nivelDeCurso(nivel) }, curso)
+  );
+
+  return general ? [general] : [];
 }
 
 /**
