@@ -104,6 +104,27 @@ export function asGuiaProxima(valor: unknown): GuiaProxima | null {
 /**
  * Cada examen con todas las formas en que aparece escrito en los planes.
  *
+ * LOS TRES PRODUCTOS DEL CATÁLOGO, con su nombre exacto. Es lo que
+ * compra el alumno y por tanto lo único que tiene que acertar sí o sí:
+ *
+ *   "Preparación B1 Preliminary"        16 alumnos  -> b1_preliminary
+ *   "Preparación B2 First Certificate"  18 alumnos  -> b2_first
+ *   "Preparación C1 Advanced"            6 alumnos  -> c1_advanced
+ *
+ * En Gestión llegan con los horarios pegados detrás —"Preparación B1
+ * Preliminary - 2h semanales — 2h semanales · Martes y jueves"—, así que
+ * se busca sobre el texto entero y nunca por igualdad.
+ *
+ * Y HAY DOS FAMILIAS MÁS que también son preparación de examen y también
+ * caen aquí, medidas sobre los 183 alumnos:
+ *
+ *   "Intensivo PET" / "FCE" / "CAE"     11 alumnos
+ *   "B1 / B2 / C1 Exámenes"              6 alumnos   nombre viejo
+ *
+ * Son 17 de los 57, así que no son un resto: si algún día se decide que
+ * un intensivo NO es lo mismo que el curso de preparación, hay que
+ * separarlas aquí, y no en quien consume esto.
+ *
  * PET y FCE son los nombres antiguos de B1 Preliminary y B2 First:
  * Cambridge los renombró, pero en la academia se siguen usando y son el
  * mismo examen. Las etiquetas cortas ("B2 Exámenes") vienen de los planes
