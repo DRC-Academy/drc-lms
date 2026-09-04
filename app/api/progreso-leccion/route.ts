@@ -26,7 +26,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function POST(peticion: NextRequest) {
   const sesion = await sesionActual();
   if (!sesion) {
-    return NextResponse.redirect(new URL("/acceso", peticion.url), { status: 303 });
+    // CON MOTIVO, y es lo que separa esta redirección de la del
+    // middleware. Aquí sabemos que la persona estaba dentro —este
+    // formulario no se envía desde ningún otro sitio— así que se le
+    // puede decir qué ha pasado en vez de dejarla en la pantalla de
+    // entrar preguntándose por qué. Ver `avisoDe` en `app/acceso`.
+    return NextResponse.redirect(new URL("/acceso?motivo=sesion", peticion.url), { status: 303 });
   }
 
   const datos = await peticion.formData();

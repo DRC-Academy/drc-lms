@@ -13,7 +13,15 @@ export const metadata: Metadata = {
 };
 
 /**
- * Los motivos con los que `/entrar` puede devolver aquí a alguien.
+ * Por qué se ha acabado aquí, cuando se sabe.
+ *
+ * DE DÓNDE SALE CADA UNO, porque están repartidos y sin esta lista no
+ * hay forma de encontrarlos:
+ *
+ *   caducado · sinficha · error  — `lib/entrada.ts`, que es la puerta de
+ *              `/entrar` y `/entrar/woo`. Son los tres de `MotivoRechazo`.
+ *   salida   — `app/salir`.
+ *   sesion   — `app/api/progreso-leccion`.
  *
  * Es un `switch` y no un objeto indexado a propósito: el motivo lo
  * escribe quien quiera en la barra de direcciones, y buscarlo en un
@@ -34,6 +42,17 @@ function avisoDe(motivo: unknown): string | null {
       return "No hemos podido abrir tu sesión. Vuelve a intentarlo en un momento.";
     case "salida":
       return "Has cerrado sesión. Pide un enlace cuando quieras volver.";
+    case "sesion":
+      // ESTE NO LO PUEDE PONER EL MIDDLEWARE, aunque manda aquí a mucha
+      // más gente. La cookie dura 30 días y el navegador la borra al
+      // caducar, así que desde fuera "se le caducó la sesión" y "no ha
+      // entrado nunca" son la misma petición sin cookie, y a un visitante
+      // nuevo esta frase le hablaría de algo que no le ha pasado.
+      //
+      // La ruta de la lección sí lo sabe: ese formulario no se envía sin
+      // haber estado dentro. Por eso el motivo lo pone ella y no la
+      // puerta de la calle.
+      return "Tu sesión ha caducado. Pide un enlace y sigues donde lo dejaste.";
     default:
       return null;
   }

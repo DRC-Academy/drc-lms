@@ -88,6 +88,30 @@ function conUrl(peticion: NextRequest) {
   return NextResponse.next({ request: { headers: cabeceras } });
 }
 
+/**
+ * ¿Esto lo ha pedido el navegador NAVEGANDO, o un `fetch`?
+ *
+ * Solo decide CÓMO se dice que no hay sesión, nunca si se deja pasar. Si
+ * esta función se equivoca en cualquiera de los dos sentidos, la ruta de
+ * destino vuelve a leer la cookie por su cuenta y responde lo que le
+ * toque: no hay ninguna puerta colgando de que acierte.
+ *
+ * `Sec-Fetch-Mode` es la señal buena. La pone el navegador, no se puede
+ * escribir desde el JavaScript de la página, y vale `navigate` para una
+ * navegación de nivel superior —escribir la URL, pulsar un enlace,
+ * ENVIAR UN FORMULARIO— frente a `cors`, `same-origin` o `no-cors` para
+ * un `fetch`.
+ *
+ * El `accept` es la reserva para quien no la mande (Safari por debajo de
+ * 16.4): una navegación pide `text/html` y ningún `fetch` de esta
+ * aplicación lo hace.
+ */
+function esNavegacion(peticion: NextRequest): boolean {
+  const modo = peticion.headers.get("sec-fetch-mode");
+  if (modo !== null) return modo === "navigate";
+  return (peticion.headers.get("accept") ?? "").includes("text/html");
+}
+
 export async function middleware(peticion: NextRequest) {
   const { pathname } = peticion.nextUrl;
 
@@ -102,11 +126,39 @@ export async function middleware(peticion: NextRequest) {
   // A la API se le contesta con un 401, no con una redirección: quien
   // la llama es `fetch`, y una redirección a HTML le llegaría como una
   // respuesta correcta que no sabe leer.
+  //
+  // PERO NO TODA LA API LA LLAMA UN `fetch`. `/api/progreso-leccion` es
+  // el destino de un formulario de HTML, y eso es deliberado: es lo que
+  // hace que "Completar y continuar" —la acción principal de la
+  // lección— funcione aunque no haya cargado el JavaScript. A un
+  // formulario el navegador le PINTA la respuesta, así que el alumno
+  // cuya cookie de 30 días había caducado se encontraba el objeto JSON
+  // en crudo en mitad de la pantalla: sin cabecera, sin logotipo y sin
+  // más salida que el botón de atrás.
+  //
+  // Así que una navegación se deja pasar y contesta la ruta, que sabe
+  // responderle a su propio llamador: `app/api/progreso-leccion` hace un
+  // 303 a `/acceso`, que es lo que el navegador entiende. Ese redirect
+  // estaba escrito desde el principio y no llegaba a ejecutarse nunca.
+  //
+  // DEJARLA PASAR NO ABRE NADA. Todas las rutas de `/api` vuelven a leer
+  // la cookie con `sesionActual()` antes de tocar nada, que es la regla
+  // de la cabecera de `lib/sesion-servidor.ts`: esto es la puerta de la
+  // calle y allí está la cerradura de cada habitación.
   if (pathname.startsWith("/api/")) {
-    return NextResponse.json(
-      { error: "Tu sesión ha caducado. Vuelve a entrar desde el enlace de tu email." },
-      { status: 401 }
-    );
+    if (!esNavegacion(peticion)) {
+      return NextResponse.json(
+        { error: "Tu sesión ha caducado. Vuelve a entrar desde el enlace de tu email." },
+        { status: 401 }
+      );
+    }
+
+    // La cookie se retira igual que en la redirección de abajo: ya
+    // sabemos que no vale, y la ruta no puede hacerlo por su cuenta
+    // porque su respuesta es un redirect que no la toca.
+    const respuesta = conUrl(peticion);
+    respuesta.cookies.delete(NOMBRE_COOKIE);
+    return respuesta;
   }
 
   const respuesta = NextResponse.redirect(new URL("/acceso", peticion.url));
