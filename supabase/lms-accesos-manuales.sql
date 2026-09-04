@@ -123,3 +123,62 @@ create index if not exists idx_accesos_manuales_alumno
 -- mano") y para el CASCADE del borrado de un curso.
 create index if not exists idx_accesos_manuales_curso
   on public.accesos_manuales (curso_id);
+
+
+-- ===============================================================
+-- PERMISOS
+--
+-- Mismo trato que el resto del esquema: RLS activado y SIN una sola
+-- política. El servidor entra siempre con la service key, que se salta
+-- RLS; sin políticas, `anon` y `authenticated` no pueden leer ni
+-- escribir nada. A esta base no se llega desde el navegador. La nota
+-- larga está en `lms-esquema.sql`.
+--
+-- ESTE BLOQUE FALTABA, y es la segunda vez que pasa lo mismo: una tabla
+-- que nace en su propio archivo, después del esquema base, y se queda
+-- sin el cierre que llevan las otras diecisiete. La primera fue
+-- `intentos_acceso` —está contado al final de `lms-esquema.sql`— y el
+-- motivo de fondo es el mismo: el `alter default privileges` de aquel
+-- archivo cubre el GRANT de lo que se cree después, pero NO cubre RLS,
+-- que no es un permiso por defecto. Con media puerta puesta, la tabla
+-- parecía cerrada y no lo estaba.
+--
+-- AQUÍ IMPORTA MÁS QUE EN CASI NINGUNA OTRA. Leer esto da el email del
+-- administrador que concedió cada excepción y el motivo que escribió;
+-- escribirlo es concederse un curso, y con `sin_drip` a true, el curso
+-- entero de golpe. Es la única tabla del LMS en la que escribir cambia
+-- lo que un alumno puede ver.
+--
+-- EL `revoke` VA EXPLÍCITO y no se deja al `alter default privileges`:
+-- aquel solo alcanza a lo que cree EL MISMO ROL que lo ejecutó, así que
+-- el día que estas tablas las cree una herramienta de migraciones con
+-- credenciales propias deja de alcanzarlas. Repetirlo cuesta una línea
+-- y no depende de acordarse.
+-- ===============================================================
+
+alter table public.accesos_manuales enable row level security;
+
+revoke all on public.accesos_manuales from anon, authenticated;
+
+
+-- ===============================================================
+-- COMPROBACIÓN
+--
+-- Tiene que devolver una fila con `rls` en true y `politicas` en 0. Es
+-- la misma consulta que cierra `lms-esquema.sql`, acotada a esta tabla.
+--
+-- Si vuelve a salir `false`, es que la tabla se creó sin pasar por este
+-- archivo. Merece la pena correr la de `lms-esquema.sql` —que las mira
+-- todas— cada vez que se añada una tabla nueva: es la única forma de
+-- que esto no vuelva a pasar una tercera vez.
+-- ===============================================================
+
+select c.relname           as tabla,
+       c.relrowsecurity    as rls,
+       count(p.policyname) as politicas
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+left join pg_policies p on p.schemaname = n.nspname and p.tablename = c.relname
+where n.nspname = 'public'
+  and c.relname = 'accesos_manuales'
+group by c.relname, c.relrowsecurity;
