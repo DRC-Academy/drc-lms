@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { conFoco } from "@/lib/foco";
+import { textoDeEspera } from "@/lib/drip";
 import type { EstadoCurso } from "@/lib/cursos-servidor";
 import { partirModulo } from "@/lib/modulo";
 import { etiquetaPosicion, ubicarModulo } from "@/lib/temario";
@@ -59,10 +60,25 @@ export default function BannerCurso({
 
   const principal = estados[0];
   const otros = estados.slice(1);
-  const { curso, total, completadas, siguiente } = principal;
+  const { curso, total, completadas, siguiente, diasParaAbrir } = principal;
 
   const empezado = completadas > 0;
-  const terminado = siguiente === null && total > 0;
+
+  // ---------------------------------------------------------------
+  // SIN LECCIÓN SIGUIENTE HAY DOS ESTADOS, NO UNO
+  //
+  // Antes esto era `siguiente === null`, y bastaba porque `siguiente`
+  // era la primera pendiente a secas: si no había ninguna, el curso
+  // estaba hecho. Desde que respeta la apertura progresiva —igual que el
+  // temario— puede no haberla también porque el alumno haya terminado
+  // todo lo que tiene abierto y esté esperando al módulo siguiente.
+  //
+  // Son cosas opuestas y decirle "Curso completado" a quien va por el
+  // mes 2 sería la frase más rara de la pantalla. Lo que las separa es
+  // el recuento, que no depende del drip.
+  // ---------------------------------------------------------------
+  const terminado = total > 0 && completadas >= total;
+  const esperando = siguiente === null && !terminado;
 
   const destino = conFoco(
     siguiente ? `/curso/${curso.slug}/${siguiente.id}` : `/curso/${curso.slug}`,
@@ -71,11 +87,22 @@ export default function BannerCurso({
 
   const etiqueta = terminado
     ? "Curso completado"
-    : empezado
-      ? "Continúa donde lo dejaste"
-      : "Empieza tu curso";
+    : esperando
+      ? "Estás al día"
+      : empezado
+        ? "Continúa donde lo dejaste"
+        : "Empieza tu curso";
 
-  const llamada = terminado ? "Repasar el curso" : empezado ? "Continuar" : "Empezar";
+  // Al que espera se le lleva al temario, que es donde está dicho qué
+  // viene y cuándo: es la regla 3 de `lib/drip.ts` —lo bloqueado se ve—
+  // y el único sitio de la aplicación que la cumple entera.
+  const llamada = terminado
+    ? "Repasar el curso"
+    : esperando
+      ? "Ver mi curso"
+      : empezado
+        ? "Continuar"
+        : "Empezar";
 
   // ---------------------------------------------------------------
   // EL TITULAR ES DÓNDE ESTÁS, NO QUÉ TOCA
@@ -100,7 +127,9 @@ export default function BannerCurso({
   // ---------------------------------------------------------------
   const titulo = siguiente
     ? etiquetaPosicion(ubicarModulo(partirModulo(siguiente.moduloTitulo, siguiente.moduloOrden)))
-    : curso.titulo;
+    : esperando
+      ? "Has hecho todo lo que tienes abierto"
+      : curso.titulo;
 
   return (
     <section>
@@ -113,7 +142,17 @@ export default function BannerCurso({
         // sobrevive de la columna de cifra, y sobrevive porque no lo dice
         // nadie más: el banner del diploma cuenta el curso entero, no en
         // qué punto de él estás ahora mismo.
-        secondaryText={siguiente ? `Lección ${siguiente.posicion} de ${total}` : undefined}
+        //
+        // Al que espera se le pone aquí cuándo se abre, con la misma
+        // frase que usan el temario y las filas de módulo: es la única
+        // pregunta que tiene, y va pegada al botón que le lleva a verlo.
+        secondaryText={
+          siguiente
+            ? `Lección ${siguiente.posicion} de ${total}`
+            : esperando && diasParaAbrir !== null
+              ? textoDeEspera(diasParaAbrir)
+              : undefined
+        }
       />
 
       {/* El segundo curso del alumno de examen. Discreto a propósito y

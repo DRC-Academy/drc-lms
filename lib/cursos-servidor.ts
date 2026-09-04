@@ -20,7 +20,7 @@ import { cache } from "react";
 import { aperturaDeLeccion, calcularApertura } from "@/lib/drip";
 import { baseLms } from "@/lib/supabase-lms";
 import { cursosDelPlan } from "@/lib/cursos";
-import { excepcionesDelAlumno } from "@/lib/accesos-manuales";
+import { excepcionesDelAlumno, sinDripEn } from "@/lib/accesos-manuales";
 
 export type CursoFila = {
   id: string;
@@ -61,8 +61,21 @@ export type EstadoCurso = {
   /** Lecciones del curso. */
   total: number;
   completadas: number;
-  /** La primera sin completar, o null si ya está el curso entero. */
+  /**
+   * La primera sin completar A LA QUE SE PUEDE ENTRAR.
+   *
+   * Null significa dos cosas distintas y quien lo pinte tiene que
+   * separarlas: o el curso está entero —`completadas === total`— o el
+   * alumno ha hecho todo lo que el drip le tiene abierto y espera al
+   * módulo siguiente. En ese segundo caso lo dice `diasParaAbrir`.
+   */
   siguiente: SiguienteLeccion | null;
+  /**
+   * Días hasta que se abra lo siguiente, o null si ya hay algo abierto
+   * (y también si no queda nada por abrir). Mismo nombre y mismo
+   * significado que en `ModuloIndice`.
+   */
+  diasParaAbrir: number | null;
   /** Cuándo tocó este curso por última vez. Decide cuál va en el banner. */
   ultimaActividad: string | null;
 };
@@ -147,12 +160,21 @@ export async function cursosAsignados(
  * por una columna de la tabla incrustada, que es lo que haría falta para
  * pedir "la primera lección pendiente" en una sola consulta.
  */
-export async function estadoDelCurso(alumnoId: string, curso: CursoFila): Promise<EstadoCurso> {
+export async function estadoDelCurso(
+  alumnoId: string,
+  curso: CursoFila,
+  /**
+   * Cuándo empezó el alumno. Null abre el curso entero, igual que en
+   * `arbolDelCurso`: ver `lib/drip.ts` para por qué se falla abierto.
+   */
+  fechaInicio: Date | null = null
+): Promise<EstadoCurso> {
   const vacio: EstadoCurso = {
     curso,
     total: 0,
     completadas: 0,
     siguiente: null,
+    diasParaAbrir: null,
     ultimaActividad: null,
   };
 
@@ -198,9 +220,16 @@ export async function estadoDelCurso(alumnoId: string, curso: CursoFila): Promis
 
   const ordenModulo = new Map<string, number>();
   const tituloModulo = new Map<string, string>();
+  // `visible_after` SE PEDÍA Y NO SE USABA, y ese era el fallo: la
+  // franja del inicio ofrecía "Continuar" hacia la primera lección
+  // pendiente sin mirar si su módulo estaba abierto. El alumno que
+  // terminaba lo que tenía disponible pulsaba y la página de la lección
+  // lo devolvía al índice sin decirle nada.
+  const esperaModulo = new Map<string, number>();
   listaModulos.forEach((m, i) => {
     ordenModulo.set(m.id, i);
     tituloModulo.set(m.id, m.titulo);
+    esperaModulo.set(m.id, m.visible_after ?? 0);
   });
 
   // Orden real del curso: primero por módulo, luego por lección.
@@ -211,7 +240,10 @@ export async function estadoDelCurso(alumnoId: string, curso: CursoFila): Promis
 
   let completadas = 0;
   let siguiente: SiguienteLeccion | null = null;
+  let diasParaAbrir: number | null = null;
   let ultimaActividad: string | null = null;
+
+  const ahora = new Date();
 
   ordenadas.forEach((leccion, i) => {
     const cuando = completadaEn.get(leccion.id);
@@ -222,19 +254,51 @@ export async function estadoDelCurso(alumnoId: string, curso: CursoFila): Promis
       return;
     }
 
-    // La primera pendiente en el orden del curso es donde se retoma.
-    if (siguiente === null) {
-      siguiente = {
-        id: leccion.id,
-        titulo: leccion.titulo,
-        moduloTitulo: tituloModulo.get(leccion.modulo_id) ?? "",
-        moduloOrden: ordenModulo.get(leccion.modulo_id) ?? 0,
-        posicion: i + 1,
-      };
+    // Ya la tenemos: el resto de las pendientes no cambia nada.
+    if (siguiente !== null) return;
+
+    // LA PRIMERA PENDIENTE A LA QUE SE PUEDE ENTRAR, que no es la
+    // primera pendiente. Mismo criterio y misma función que
+    // `arbolDelCurso`, que ya lo hacía así para su `leccionActual`: si
+    // esto apuntara a una bloqueada, el botón llevaría a una pantalla
+    // que rechaza al alumno.
+    //
+    // `false` como "completada" no es un atajo: aquí nunca lo está, ese
+    // caso ha salido por el `return` de arriba.
+    const apertura = aperturaDeLeccion(
+      esperaModulo.get(leccion.modulo_id) ?? 0,
+      fechaInicio,
+      false,
+      ahora
+    );
+
+    if (!apertura.abierto) {
+      // Se anota cuándo se abre la primera que está esperando y se
+      // sigue mirando: puede haber un módulo sin espera más adelante, y
+      // entonces sí hay a dónde ir hoy.
+      if (diasParaAbrir === null) diasParaAbrir = apertura.diasRestantes;
+      return;
     }
+
+    siguiente = {
+      id: leccion.id,
+      titulo: leccion.titulo,
+      moduloTitulo: tituloModulo.get(leccion.modulo_id) ?? "",
+      moduloOrden: ordenModulo.get(leccion.modulo_id) ?? 0,
+      posicion: i + 1,
+    };
   });
 
-  return { curso, total: ordenadas.length, completadas, siguiente, ultimaActividad };
+  return {
+    curso,
+    total: ordenadas.length,
+    completadas,
+    siguiente,
+    // Si hay a dónde ir hoy, lo que tarde el módulo de más allá no le
+    // interesa a nadie.
+    diasParaAbrir: siguiente === null ? diasParaAbrir : null,
+    ultimaActividad,
+  };
 }
 
 // ---------------------------------------------------------------
@@ -746,12 +810,27 @@ export async function guardarIntento(
 export async function cursosDelInicio(
   alumnoId: string,
   plan: string,
-  nivel: string
+  nivel: string,
+  /**
+   * Cuándo empezó el alumno, tal cual viene de su ficha. El drip por
+   * curso se resuelve aquí dentro: a quien le hayan abierto un curso
+   * entero se le pasa `null`, que es lo que `lib/drip.ts` entiende por
+   * "sin espera".
+   *
+   * Preguntar las excepciones por curso no cuesta viajes:
+   * `excepcionesDelAlumno` va por `cache()` y esta misma petición ya la
+   * ha pedido en `cursosAsignados`.
+   */
+  fechaInicio: Date | null = null
 ): Promise<EstadoCurso[]> {
   const cursos = await cursosAsignados(plan, nivel, alumnoId);
   if (cursos.length === 0) return [];
 
-  const estados = await Promise.all(cursos.map((curso) => estadoDelCurso(alumnoId, curso)));
+  const estados = await Promise.all(
+    cursos.map(async (curso) =>
+      estadoDelCurso(alumnoId, curso, (await sinDripEn(alumnoId, curso.id)) ? null : fechaInicio)
+    )
+  );
 
   return estados.slice().sort((a, b) => {
     if (a.ultimaActividad === b.ultimaActividad) return 0;

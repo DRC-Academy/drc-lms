@@ -67,7 +67,19 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   // Sin perfil no hay plan ni nivel, así que tampoco curso: el banner
   // enseña el estado sobrio y la práctica sigue funcionando.
-  const estadosCurso = perfil ? await cursosDelInicio(params.id, perfil.plan, nivelDelAlumno(params.id, perfil)) : [];
+  //
+  // LA FECHA DE INICIO VA DENTRO porque la franja ofrece "Continuar", y
+  // continuar hacia un módulo que todavía no se ha abierto es mandar al
+  // alumno a una pantalla que lo rechaza. El drip por curso lo resuelve
+  // `cursosDelInicio`; aquí solo se le da la fecha de su ficha.
+  const estadosCurso = perfil
+    ? await cursosDelInicio(
+        params.id,
+        perfil.plan,
+        nivelDelAlumno(params.id, perfil),
+        comoFecha(perfil.fechaInicio)
+      )
+    : [];
 
   // Los bloques estáticos se filtran por nivel exacto. Un A2 no recibe
   // material B1: su contenido sale del banco A2 al generar.
