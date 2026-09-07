@@ -50,18 +50,95 @@ function esRegistro(valor: unknown): valor is Record<string, unknown> {
   return typeof valor === "object" && valor !== null && !Array.isArray(valor);
 }
 
+// ---------------------------------------------------------------
+// LOS CARACTERES QUE SE VEN IGUAL Y NO LO SON
+//
+// Cada grupo es UN carácter para quien lo lee y varios para quien lo
+// compara. El alumno no elige cuál escribe: lo elige su teclado.
+//
+//   · iOS y macOS sustituyen la comilla recta por la curva mientras se
+//     teclea. Es la autocorrección tipográfica, y no se puede apagar
+//     desde la web.
+//   · El teclado español pone `´` en la tecla del apóstrofe. Escribir
+//     "I´ll" es un resbalón de una tecla, no un error de inglés.
+//   · Lo importado de LearnDash pasó por `wptexturize`, que hizo lo
+//     mismo con el material: 293 enunciados traen `’` y 24 respuestas
+//     de cloze también.
+//
+// Por eso la tabla vive aquí y no en el importador. Arreglar solo el
+// dato dejaría fuera al alumno que teclea la otra forma; arreglar solo
+// la entrada dejaría fuera los 1.492 ejercicios ya importados. Lo que
+// tiene que dar igual es la comparación, y la comparación es esto.
+// ---------------------------------------------------------------
+
+/** ‘ ’ ‛ ´ ` ʼ ʹ ʻ ＇ ′ → el apóstrofe recto de toda la vida. */
+const APOSTROFES = /[‘’‛´`ʼʹʻ＇′]/g;
+
+/** “ ” „ ‟ ″ « » ＂ → la comilla doble recta. */
+const COMILLAS = /[“”„‟″«»＂]/g;
+
+/** – — − ‐ ‑ ‒ ― → el guion del teclado. */
+const GUIONES = /[‐‑‒–—―−]/g;
+
+/**
+ * Los de ancho cero se BORRAN, no se cambian por espacio.
+ *
+ * `\s` no los reconoce como separador, así que sin esta línea un texto
+ * pegado desde Word o Google Docs deja una respuesta que en pantalla se
+ * lee idéntica a la buena y no vale nunca. Es el fallo más difícil de
+ * explicarle a un alumno, porque no hay nada que mirar.
+ */
+const ANCHO_CERO = /[\u200B\u200C\u200D\u2060\uFEFF]/g;
+
+/**
+ * Los espacios raros sí pasan a espacio normal.
+ *
+ * El `\s+` de abajo ya se lleva casi todos —en JavaScript `\s` incluye
+ * U+00A0 y U+202F—, pero se dejan escritos igualmente: la regla que
+ * queremos no es "lo que `\s` decida", es "cualquier cosa que se vea
+ * como un espacio es un espacio".
+ */
+const ESPACIOS = /[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g;
+
 /**
  * Criterio con el que se compara la respuesta del alumno en la práctica.
  *
- * Vive aquí y lo importa `Practica.tsx` para que haya UNA sola regla: la
- * deduplicación de `respuestas` tiene que usar exactamente la misma que
- * la comparación en tiempo real. Si dos variantes se comparan iguales al
- * practicar, guardar las dos no aporta nada.
+ * Vive aquí y lo importa `VisorEjercicios.tsx` para que haya UNA sola
+ * regla: la deduplicación de `respuestas` tiene que usar exactamente la
+ * misma que la comparación en tiempo real. Si dos variantes se comparan
+ * iguales al practicar, guardar las dos no aporta nada.
+ *
+ * SE APLICA A LOS DOS LADOS, y no por elegancia. El visor la llama sobre
+ * lo que escribe el alumno Y sobre cada respuesta guardada, en los dos
+ * únicos sitios donde se corrige texto: `corregirHueco` para el cloze
+ * del curso y `comprobarEscritura` para el transformar generado. Si
+ * alguna vez aparece un tercer sitio que compare respuestas sin pasar
+ * por aquí, ese sitio está mal.
+ *
+ * EL ORDEN NO ES CASUAL:
+ *
+ *   1. `NFC` primero. Una tilde puede llegar descompuesta —`e` seguido
+ *      de U+0301 en vez de `é`— y esas dos son la misma letra para
+ *      quien la escribió. Componer antes evita que el resto de las
+ *      reglas trabajen sobre una letra partida en dos.
+ *   2. Las equivalencias, mientras el texto conserva mayúsculas: son
+ *      todas de puntuación y no dependen de la caja, pero así se leen
+ *      junto a la tabla que las define.
+ *   3. `…` se convierte en tres puntos y no se borra a mano, porque el
+ *      paso siguiente ya se lleva los puntos. Una regla menos.
+ *   4. Al final, lo de siempre: minúsculas, fuera la puntuación que no
+ *      cambia la respuesta, un solo espacio entre palabras.
  */
 export function normalizarRespuesta(texto: string): string {
   return texto
+    .normalize("NFC")
+    .replace(ANCHO_CERO, "")
+    .replace(APOSTROFES, "'")
+    .replace(COMILLAS, '"')
+    .replace(GUIONES, "-")
+    .replace(/…/g, "...")
+    .replace(ESPACIOS, " ")
     .toLowerCase()
-    .replace(/[‘’]/g, "'")
     .replace(/[.,;!?]/g, "")
     .replace(/\s+/g, " ")
     .trim();
