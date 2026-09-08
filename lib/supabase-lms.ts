@@ -52,6 +52,29 @@ export function baseLms(): SupabaseClient {
     // aquí con la clave de servicio. Persistir o refrescar no aplica.
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     db: { schema: "public" },
+
+    // NUNCA POR LA CACHÉ DE DATOS DE NEXT.
+    //
+    // Next parchea el fetch global y, salvo que se le diga lo
+    // contrario, guarda la respuesta y la reutiliza. A una base de
+    // datos eso no se le hace: aquí no se piden documentos que
+    // envejecen despacio, se pregunta el estado de ahora mismo.
+    //
+    // COSTÓ UN ENVÍO ENTERO DESCUBRIRLO. El cron leyó `avisos_modulo`
+    // cuando la tabla estaba vacía, Next se quedó con ese `[]` y un
+    // `revalidate` de un año, y desde entonces todas las ejecuciones
+    // creían que no se había avisado a nadie. La siembra escribía sus
+    // 4.469 filas y la siguiente lectura seguía devolviendo cero, sin
+    // un solo error en el log: el fallo más caro de encontrar es el que
+    // responde 200.
+    //
+    // `dynamic = "force-dynamic"` en la ruta NO basta: marca la ruta
+    // como dinámica, pero las respuestas de fetch se seguían guardando.
+    // Se corta aquí, en el cliente, para que valga para todo el que lo
+    // llame y no haya que acordarse ruta por ruta.
+    global: {
+      fetch: (entrada, opciones) => fetch(entrada, { ...opciones, cache: "no-store" }),
+    },
   });
 
   return cliente;

@@ -66,6 +66,13 @@ function crearCliente(): SupabaseClient {
     // y se resuelve en el servidor. Persistir o refrescar sesión no aplica.
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     db: { schema: "public" },
+
+    // Lo mismo que en `lib/supabase-lms.ts`, y por la misma razón: las
+    // fichas de Gestión cambian, y una respuesta que Next guarda un año
+    // las congela. Allí está la explicación larga.
+    global: {
+      fetch: (entrada, opciones) => fetch(entrada, { ...opciones, cache: "no-store" }),
+    },
   });
 
   return cliente;
