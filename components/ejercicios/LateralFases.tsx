@@ -1,6 +1,7 @@
 "use client";
 
 import type { EjercicioUnificado, Fase } from "@/lib/ejercicio-unificado";
+import type { Textos } from "@/lib/textos-ejercicios";
 
 /**
  * El lateral de un bloque de práctica.
@@ -21,11 +22,11 @@ import type { EjercicioUnificado, Fase } from "@/lib/ejercicio-unificado";
  * el curso, donde saltar de lección a lección sí tiene sentido.
  */
 
-const FASES: Record<Fase, { nombre: string; numero: number; accion: string }> = {
-  reconocer: { nombre: "Reconocer", numero: 1, accion: "Elige la forma" },
-  transformar: { nombre: "Transformar", numero: 2, accion: "Reescribe" },
-  producir: { nombre: "Producir", numero: 3, accion: "Escribe tú" },
-};
+/**
+ * El número de cada fase. El nombre y la acción NO están aquí: viajan en
+ * `t`, porque cambian de idioma y el número no.
+ */
+const NUMERO_FASE: Record<Fase, number> = { reconocer: 1, transformar: 2, producir: 3 };
 
 const ORDEN: Fase[] = ["reconocer", "transformar", "producir"];
 
@@ -36,6 +37,7 @@ export default function LateralFases({
   respondido,
   acertado,
   profesor,
+  t,
 }: {
   titulo: string;
   ejercicios: EjercicioUnificado[];
@@ -44,6 +46,8 @@ export default function LateralFases({
   respondido: (i: number) => boolean;
   acertado: (i: number) => boolean;
   profesor?: string;
+  /** Lo baja el visor, que es donde vive el botón de idioma. */
+  t: Textos;
 }) {
   const hechos = ejercicios.filter((_, i) => respondido(i)).length;
   const porcentaje = ejercicios.length > 0 ? Math.round((hechos / ejercicios.length) * 100) : 0;
@@ -61,7 +65,7 @@ export default function LateralFases({
     <aside className="sticky top-[68px] hidden h-[calc(100dvh-68px)] flex-col border-r border-marca-borde bg-white min-[1100px]:flex">
       <div className="border-b border-marca-nieblaOscura px-[22px] pb-4 pt-[22px]">
         <p className="text-[11px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-          Tu práctica
+          {t.tuPractica}
         </p>
         <h2 className="mt-2 text-pretty font-display text-[16px] font-bold leading-[1.3] text-marca-tinta">
           {titulo}
@@ -71,7 +75,7 @@ export default function LateralFases({
             <div className="h-full rounded-[3px] bg-marca-verde" style={{ width: `${porcentaje}%` }} />
           </div>
           <span className="shrink-0 text-[12.5px] font-medium text-marca-gris tabular-nums">
-            {hechos} de {ejercicios.length}
+            {t.hechosDeTotal(hechos, ejercicios.length)}
           </span>
         </div>
       </div>
@@ -80,14 +84,14 @@ export default function LateralFases({
         {grupos.map((grupo) => (
           <div key={grupo.fase} className="mb-3 last:mb-0">
             <p className="px-3.5 pb-1.5 pt-2 text-[10px] font-semibold uppercase leading-[1.2] tracking-[0.1em] text-marca-grisSuave">
-              Fase {FASES[grupo.fase].numero} · {FASES[grupo.fase].nombre}
+              {t.faseEtiqueta(NUMERO_FASE[grupo.fase], t.fases[grupo.fase].nombre)}
             </p>
             <ol>
               {grupo.pasos.map(({ ejercicio, i }) => (
                 <Paso
                   key={ejercicio.id}
                   numero={i + 1}
-                  texto={FASES[grupo.fase].accion}
+                  texto={t.fases[grupo.fase].accion}
                   actual={i === indice}
                   hecho={respondido(i)}
                   bien={acertado(i)}
@@ -111,7 +115,7 @@ export default function LateralFases({
               {profesor[0]?.toUpperCase()}
             </span>
             <p className="text-[12px] leading-[1.45] text-marca-gris">
-              {profesor} verá tu respuesta antes de la clase.
+              {t.avisoProfesorLateral(profesor)}
             </p>
           </div>
         </div>

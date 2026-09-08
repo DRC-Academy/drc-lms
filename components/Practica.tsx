@@ -119,19 +119,22 @@ export default function Practica({
         // A "PARA TI", que es de donde se entra. Antes esto era un
         // "Salir" que llevaba al inicio: no era el sitio del que venía
         // el alumno y el rótulo tampoco lo decía.
-        volver={{ texto: "Volver a Para ti", href: conFoco("/practica", foco) }}
+        // LA SECCIÓN, NO LA FRASE. "Para ti" es como la llama la
+        // cabecera, y la cabecera se queda en español: el visor le pone
+        // delante el "Volver a" o el "Back to" que toque.
+        volver={{ seccion: "Para ti", href: conFoco("/practica", foco) }}
       alSuceso={alSuceso}
       // Ancla el ejercicio a la clase de la que salió. Dato secundario:
       // una línea, sin adornos. En la fase de producir no se enseña,
       // porque ahí el alumno ya no está repasando nada concreto.
-      notaAlPie={(ejercicio) =>
+      notaAlPie={(ejercicio, t) =>
         bloque.claseOrigen && ejercicio.fase !== "producir" ? (
           <p className="mt-4 text-[12.5px] leading-[1.5] text-marca-grisSuave">
-            Lo viste con {bloque.claseOrigen.profesor} el {bloque.claseOrigen.fecha}.
+            {t.notaClaseOrigen(bloque.claseOrigen.profesor, bloque.claseOrigen.fecha)}
           </p>
         ) : null
       }
-      lateral={({ indice, respondido, acertado }) => (
+      lateral={({ indice, respondido, acertado, t }) => (
         <LateralFases
           titulo={bloque.titulo}
           ejercicios={unificados}
@@ -139,9 +142,10 @@ export default function Practica({
           respondido={respondido}
           acertado={acertado}
           profesor={profesor}
+          t={t}
         />
       )}
-      cierre={({ aciertos, total }) => {
+      cierre={({ aciertos, total, t }) => {
         const pct = total > 0 ? Math.round((aciertos / total) * 100) : 0;
         const dominado = pct >= UMBRAL_DOMINADO;
 
@@ -161,19 +165,13 @@ export default function Practica({
                 {bloque.titulo}
               </h2>
               <p className="mt-3 text-[15px] leading-[1.55] text-drc-cuerpo">
-                {pct === 100
-                  ? "Bloque impecable. Esto ya lo tienes dominado."
-                  : dominado
-                    ? "Muy bien. Lo tienes cogido; un repaso en unos días y queda fijado."
-                    : pct >= 60
-                      ? "Buen avance. Lo que se resistió hoy vuelve la semana que viene."
-                      : "Bloque exigente. Repítelo en un par de días y verás el salto."}
+                {t.cierrePractica(pct)}
               </p>
               <Link
                 href={`/alumno/${alumnoId}`}
                 className="btn btn-verde mt-8 min-h-[50px] w-full text-[15px]"
               >
-                Volver a mis bloques
+                {t.volverAMisBloques}
               </Link>
             </div>
           </div>

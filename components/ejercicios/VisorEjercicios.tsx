@@ -4,6 +4,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { normalizarRespuesta } from "@/lib/validarBloque";
 import type { EjercicioUnificado } from "@/lib/ejercicio-unificado";
+import type { Textos } from "@/lib/textos-ejercicios";
+import { usarIdioma } from "@/components/ejercicios/usarIdioma";
 
 /**
  * EL VISOR DE EJERCICIOS. Uno solo, para las dos fuentes.
@@ -27,23 +29,19 @@ import type { EjercicioUnificado } from "@/lib/ejercicio-unificado";
  * las dos pantallas entra por props: el lateral, la pantalla de cierre,
  * a dónde vuelve la salida y qué hacer con cada suceso que haya que
  * guardar.
+ *
+ * Y NO SABE EN QUÉ IDIOMA ESTÁ. Todo lo que escribe sale de `t`, que es
+ * el paquete de `lib/textos-ejercicios.ts`. El estado del idioma vive
+ * AQUÍ y no en cada pantalla porque el botón que lo cambia está aquí:
+ * si cada envoltorio leyera el suyo, pulsar el botón cambiaría el visor
+ * y dejaría el cierre y el lateral en el idioma de antes. Por eso `t`
+ * baja a los tres callbacks —`lateral`, `cierre` y `notaAlPie`— igual
+ * que ya bajaba el resto del estado del visor.
  */
 
-const NUMEROS = ["cero", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez"];
 const LETRAS = "ABCDEFGH";
 
-const NOMBRE_FASE = { reconocer: "Reconocer", transformar: "Transformar", producir: "Producir" };
 const NUMERO_FASE = { reconocer: 1, transformar: 2, producir: 3 };
-
-function enLetras(n: number): string {
-  return NUMEROS[n] ?? String(n);
-}
-
-/** "a, b y c" */
-function enumerar(partes: string[]): string {
-  if (partes.length <= 1) return partes[0] ?? "";
-  return `${partes.slice(0, -1).join(", ")} y ${partes[partes.length - 1]}`;
-}
 
 /**
  * Lo que hay que guardar, dicho en términos del visor.
@@ -110,6 +108,7 @@ export default function VisorEjercicios({
     indice: number;
     respondido: (i: number) => boolean;
     acertado: (i: number) => boolean;
+    t: Textos;
   }) => ReactNode;
   /** La pantalla de cierre, que es distinta en cada fuente. */
   cierre: (datos: {
@@ -118,6 +117,7 @@ export default function VisorEjercicios({
     repetir: () => void;
     verEjercicio: (i: number) => void;
     acertado: (i: number) => boolean;
+    t: Textos;
   }) => ReactNode;
   /**
    * LA SALIDA. A dónde vuelve el alumno cuando quiere dejar esto.
@@ -132,19 +132,27 @@ export default function VisorEjercicios({
    * bloque de diez ejercicios no se sabe si retrocede un ejercicio,
    * cierra el bloque o sale de la sección, y esas tres cosas están a la
    * vez en esta pantalla.
+   *
+   * LO QUE LLEGA ES LA SECCIÓN, NO LA FRASE, porque la frase cambia de
+   * idioma y la sección no: la navegación de la aplicación se queda en
+   * español, así que "Para ti" y "Mi curso" se llaman igual en las dos
+   * versiones de esta pantalla y lo único que se traduce es el "Volver
+   * a" de delante. Si esto recibiera la frase hecha, el enlace mandaría
+   * a "For you", que es un sitio que no existe en la cabecera.
    */
-  volver: { texto: string; href: string };
+  volver: { seccion: string; href: string };
   /**
    * Una línea al pie del ejercicio. La usa la práctica para anclar el
    * bloque a la clase de la que salió: es lo que recuerda que esto no es
    * material genérico. Recibe el ejercicio porque en la fase de producir
    * no se enseña.
    */
-  notaAlPie?: (ejercicio: EjercicioUnificado) => ReactNode;
+  notaAlPie?: (ejercicio: EjercicioUnificado, t: Textos) => ReactNode;
   alSuceso?: (suceso: SucesoVisor) => void;
   /** false para el equipo: revisa el curso, no lo cursa. */
   guardarIntentos?: boolean;
 }) {
+  const { t, alternar } = usarIdioma();
   const [indice, setIndice] = useState(0);
   const [cerrado, setCerrado] = useState(false);
   const [estados, setEstados] = useState<Estado[]>(() => ejercicios.map(VACIO));
@@ -334,7 +342,7 @@ export default function VisorEjercicios({
   const conMarco = (dentro: ReactNode) =>
     lateral ? (
       <div className="grid flex-1 grid-cols-1 min-[1100px]:grid-cols-[300px_minmax(0,1fr)]">
-        {lateral({ indice, respondido, acertado })}
+        {lateral({ indice, respondido, acertado, t })}
         {dentro}
       </div>
     ) : (
@@ -345,7 +353,7 @@ export default function VisorEjercicios({
     const aciertos = ejercicios.filter((_, i) => acertado(i)).length;
     return conMarco(
       <div className="flex min-w-0 flex-1 flex-col">
-        {cierre({ aciertos, total: ejercicios.length, repetir, verEjercicio, acertado })}
+        {cierre({ aciertos, total: ejercicios.length, repetir, verEjercicio, acertado, t })}
       </div>
     );
   }
@@ -380,22 +388,18 @@ export default function VisorEjercicios({
   // alumno podía leer cuál era la buena.
   // ---------------------------------------------------------------
   const solucionEscrita = esHuecos
-    ? `${ejercicio.huecos.length === 1 ? "La respuesta era" : "Las respuestas eran"} ${enumerar(
-        ejercicio.huecos.map((a) => a[0] ?? "—")
-      )}.`
+    ? t.respuestaEra(ejercicio.huecos.map((a) => a[0] ?? "—"))
     : esEscritura
-      ? `Una versión correcta: ${ejercicio.respuestas[0] ?? "—"}`
+      ? t.unaVersionCorrecta(ejercicio.respuestas[0] ?? "—")
       : null;
 
   const veredictoPorDefecto = yaAcertado
     ? esHuecos
-      ? ejercicio.huecos.length === 1
-        ? "El hueco, correcto."
-        : `Los ${enLetras(ejercicio.huecos.length)} huecos, correctos.`
-      : "Eso es."
+      ? t.huecosCorrectos(ejercicio.huecos.length)
+      : t.esoEs
     : solucionEscrita
-      ? `Casi. ${solucionEscrita}`
-      : `No era esa. La correcta es la ${solucion}`;
+      ? t.casi(solucionEscrita)
+      : t.noEraEsa(solucion);
 
   const veredicto = yaAcertado ? ejercicio.veredictoAcierto : ejercicio.veredictoFallo;
 
@@ -423,18 +427,41 @@ export default function VisorEjercicios({
             se come un tercio de una pantalla de 375px. Al entrar está a
             la vista, que es cuando se busca la salida; después, la fila
             del progreso de aquí abajo dice que esto se acaba. */}
-        <Link
-          href={volver.href}
-          className="inline-flex items-center gap-1.5 self-start rounded-full border border-marca-borde bg-white px-3.5 py-[7px] text-[13px] font-semibold text-marca-tinta transition-colors hover:bg-marca-niebla min-[1100px]:text-[13.5px]"
-        >
-          <span aria-hidden>←</span>
-          {volver.texto}
-        </Link>
+        {/* EL BOTÓN DE IDIOMA VA AQUÍ, y no abajo con la corrección.
+            Esta es la única fila de la columna que está siempre a la
+            vista y siempre dice lo mismo —de dónde se sale y en qué
+            idioma se lee—, y las dos son decisiones de antes de
+            empezar. Junto a la corrección quedaría escondido hasta que
+            el alumno responde, que es tarde: el enunciado ya lo leyó.
+
+            NOMBRA EL IDIOMA AL QUE LLEVA, no el que está puesto, por lo
+            mismo que la salida nombra su destino. Un botón que ponga
+            "English" mientras se lee inglés es un botón que no se sabe
+            si informa o si ofrece. */}
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href={volver.href}
+            className="inline-flex items-center gap-1.5 rounded-full border border-marca-borde bg-white px-3.5 py-[7px] text-[13px] font-semibold text-marca-tinta transition-colors hover:bg-marca-niebla min-[1100px]:text-[13.5px]"
+          >
+            <span aria-hidden>←</span>
+            {t.volverA(volver.seccion)}
+          </Link>
+
+          <button
+            type="button"
+            onClick={alternar}
+            aria-label={t.otroIdiomaAria}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-marca-borde bg-white px-3.5 py-[7px] text-[13px] font-semibold text-marca-gris transition-colors hover:bg-marca-niebla hover:text-marca-tinta min-[1100px]:text-[13.5px]"
+          >
+            <span aria-hidden>↔</span>
+            {t.otroIdioma}
+          </button>
+        </div>
 
         {/* ------------------------------ PROGRESO ------------------------------ */}
       <div className="mt-4 flex items-center gap-4 min-[1100px]:mt-[18px] min-[1100px]:gap-5">
         <span className="shrink-0 text-[13px] font-semibold text-marca-gris tabular-nums">
-          Ejercicio {indice + 1} de {ejercicios.length}
+          {t.progreso(indice + 1, ejercicios.length)}
         </span>
         <div className="flex flex-1 gap-[5px]">
           {ejercicios.map((ej, i) => (
@@ -459,7 +486,7 @@ export default function VisorEjercicios({
           {/* --------------------------- FASE --------------------------- */}
           {ejercicio.fase && (
             <p className="mb-3 text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-verde">
-              Fase {NUMERO_FASE[ejercicio.fase]} · {NOMBRE_FASE[ejercicio.fase]}
+              {t.faseEtiqueta(NUMERO_FASE[ejercicio.fase], t.fases[ejercicio.fase].nombre)}
             </p>
           )}
 
@@ -490,6 +517,7 @@ export default function VisorEjercicios({
             <Huecos
               ejercicio={ejercicio}
               estado={estado}
+              t={t}
               alEscribir={(i, v) =>
                 cambiar({ huecos: estado.huecos.map((x, j) => (j === i ? v : x)) })
               }
@@ -500,7 +528,7 @@ export default function VisorEjercicios({
           {esOpciones && (
             <>
               {ejercicio.variasCorrectas && (
-                <p className="mt-4 text-[14px] text-marca-gris">Puede haber más de una correcta.</p>
+                <p className="mt-4 text-[14px] text-marca-gris">{t.variasCorrectas}</p>
               )}
               <div
                 className={`mt-6 grid gap-3 min-[1100px]:mt-7 ${
@@ -536,13 +564,13 @@ export default function VisorEjercicios({
                 }}
                 disabled={yaRespondido}
                 rows={3}
-                placeholder="Escribe tu versión…"
+                placeholder={t.placeholderEscritura}
                 className="mt-5 w-full resize-none rounded-[14px] border-[1.5px] border-marca-borde bg-white px-5 py-4 text-[16.5px] leading-[1.5] text-marca-tinta outline-none transition-colors focus:border-marca-verde disabled:opacity-70"
               />
               {!yaRespondido && ejercicio.pista && (
                 <details className="mt-3 text-[14px] text-marca-gris">
                   <summary className="cursor-pointer py-1 transition-colors hover:text-marca-verdeOsc">
-                    Ver pista
+                    {t.verPista}
                   </summary>
                   <p className="aparece mt-2 leading-[1.5]">{ejercicio.pista}</p>
                 </details>
@@ -554,6 +582,7 @@ export default function VisorEjercicios({
             <Produccion
               ejercicio={ejercicio}
               estado={estado}
+              t={t}
               alEscribir={(v) => cambiar({ texto: v })}
               alPedirModelo={() => cambiar({ verModelo: true })}
               alMarcar={(k) =>
@@ -604,7 +633,7 @@ export default function VisorEjercicios({
             </div>
           )}
 
-          {notaAlPie?.(ejercicio)}
+          {notaAlPie?.(ejercicio, t)}
 
         </div>
       </div>
@@ -628,7 +657,7 @@ export default function VisorEjercicios({
       >
         <div className="mx-auto w-full max-w-[calc(760px+7rem)] px-3.5 pb-4 pt-3 min-[1100px]:px-14 min-[1100px]:py-3.5">
           <div className="flex items-center gap-3 min-[1100px]:gap-4">
-            <FlechaAtras alPulsar={indice > 0 ? () => verEjercicio(indice - 1) : null} />
+            <FlechaAtras t={t} alPulsar={indice > 0 ? () => verEjercicio(indice - 1) : null} />
 
             {pendienteVarias || pendienteEscritura ? (
               <button
@@ -642,10 +671,10 @@ export default function VisorEjercicios({
                 }`}
               >
                 {puedeComprobarVarias || puedeComprobarEscritura
-                  ? "Comprobar"
+                  ? t.comprobar
                   : pendienteEscritura
-                    ? "Escribe tu versión"
-                    : "Elige una opción"}
+                    ? t.esperaEscritura
+                    : t.esperaOpciones}
               </button>
             ) : (
               <button
@@ -660,13 +689,13 @@ export default function VisorEjercicios({
               >
                 {!yaRespondido
                   ? esHuecos
-                    ? "Rellena los huecos"
+                    ? t.esperaHuecos
                     : esLibre
-                      ? "Escribe tu respuesta"
-                      : "Elige una opción"
+                      ? t.esperaLibre
+                      : t.esperaOpciones
                   : indice + 1 >= ejercicios.length
-                    ? "Ver el resultado →"
-                    : "Siguiente ejercicio →"}
+                    ? t.verElResultado
+                    : t.siguienteEjercicio}
               </button>
             )}
           </div>
@@ -681,7 +710,7 @@ export default function VisorEjercicios({
  * se conserva, igual que en la barra de la lección: sin él, el botón
  * principal daría un salto al pasar del primer ejercicio al segundo.
  */
-function FlechaAtras({ alPulsar }: { alPulsar: (() => void) | null }) {
+function FlechaAtras({ t, alPulsar }: { t: Textos; alPulsar: (() => void) | null }) {
   const clase =
     "grid h-11 w-11 shrink-0 place-items-center rounded-full border border-marca-borde text-[15px] leading-none text-marca-tinta transition-colors hover:bg-marca-niebla min-[1100px]:h-auto min-[1100px]:w-auto min-[1100px]:px-[18px] min-[1100px]:py-[11px] min-[1100px]:text-[14.5px] min-[1100px]:font-medium";
 
@@ -692,7 +721,7 @@ function FlechaAtras({ alPulsar }: { alPulsar: (() => void) | null }) {
   return (
     <button type="button" onClick={alPulsar} className={clase}>
       <span className="min-[1100px]:hidden">←</span>
-      <span className="hidden min-[1100px]:inline">← Anterior</span>
+      <span className="hidden min-[1100px]:inline">{t.anterior}</span>
     </button>
   );
 }
@@ -784,11 +813,13 @@ function Opcion({
 function Huecos({
   ejercicio,
   estado,
+  t,
   alEscribir,
   alCorregir,
 }: {
   ejercicio: EjercicioUnificado;
   estado: Estado;
+  t: Textos;
   alEscribir: (i: number, valor: string) => void;
   alCorregir: (i: number) => void;
 }) {
@@ -825,7 +856,7 @@ function Huecos({
               }}
               readOnly={ok !== null}
               placeholder="…"
-              aria-label={`Hueco ${indice + 1}`}
+              aria-label={t.huecoAria(indice + 1)}
               className={`mx-1 inline-block w-[100px] rounded-[9px] border-[1.5px] px-2.5 py-[7px] text-center text-[17px] leading-none outline-none transition-colors ${
                 ok === null
                   ? "border-marca-bordeSuave bg-marca-huecoFondo text-marca-tinta focus:border-marca-verde"
@@ -839,8 +870,7 @@ function Huecos({
       </div>
 
       <p className="mt-3 text-[13.5px] text-marca-grisTenue">
-        Escribe y sal del hueco para corregirlo. {enLetras(ejercicio.huecos.length)}{" "}
-        {ejercicio.huecos.length === 1 ? "hueco" : "huecos"}.
+        {t.ayudaHuecos(ejercicio.huecos.length)}
       </p>
     </>
   );
@@ -860,12 +890,14 @@ function Huecos({
 function Produccion({
   ejercicio,
   estado,
+  t,
   alEscribir,
   alPedirModelo,
   alMarcar,
 }: {
   ejercicio: EjercicioUnificado;
   estado: Estado;
+  t: Textos;
   alEscribir: (valor: string) => void;
   alPedirModelo: () => void;
   alMarcar: (k: number) => void;
@@ -876,7 +908,7 @@ function Produccion({
         value={estado.texto}
         onChange={(e) => alEscribir(e.target.value)}
         rows={6}
-        placeholder="Escribe aquí…"
+        placeholder={t.placeholderLibre}
         className="mt-5 w-full resize-none rounded-[14px] border-[1.5px] border-marca-borde bg-white px-5 py-4 text-[16.5px] leading-[1.55] text-marca-tinta outline-none transition-colors focus:border-marca-verde"
       />
 
@@ -891,11 +923,13 @@ function Produccion({
               : "cursor-not-allowed bg-marca-pista text-marca-grisInactivo"
           }`}
         >
-          Comparar con el modelo
+          {t.compararConElModelo}
         </button>
       ) : (
         <div className="aparece mt-5 rounded-[16px] border border-marca-borde bg-white p-5 min-[1100px]:p-6">
-          <p className="font-display text-[17px] font-bold text-marca-tinta">Revisa tu respuesta</p>
+          <p className="font-display text-[17px] font-bold text-marca-tinta">
+            {t.revisaTuRespuesta}
+          </p>
 
           <div className="mb-5 mt-4 flex flex-col gap-1">
             {ejercicio.criterios.map((criterio, k) => {
@@ -926,7 +960,7 @@ function Produccion({
           {ejercicio.modelo && (
             <div className="rounded-[12px] bg-marca-niebla p-4">
               <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-                Un ejemplo válido
+                {t.unEjemploValido}
               </p>
               <p className="mt-2 text-[14.5px] leading-[1.55] text-marca-tintaCuerpo">
                 {ejercicio.modelo}
@@ -936,9 +970,7 @@ function Produccion({
 
           {/* EL AVISO SE QUEDA. Es lo que hace que el alumno escriba en
               serio: sabe que esto no cae en un pozo. */}
-          <p className="mt-4 text-[13px] text-marca-gris">
-            Tu profesor verá esta respuesta antes de la próxima clase.
-          </p>
+          <p className="mt-4 text-[13px] text-marca-gris">{t.avisoProfesor}</p>
         </div>
       )}
     </>

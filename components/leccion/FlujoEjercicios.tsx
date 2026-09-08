@@ -16,13 +16,12 @@ import BotonCompletar from "@/components/leccion/BotonCompletar";
  * más —el registro de intentos y la pantalla de cierre, con su botón de
  * completar la lección— más la traducción de los ejercicios a la forma
  * única.
+ *
+ * Los textos del cierre salen de `t`, que baja del visor: es donde vive
+ * el botón de idioma, así que pulsarlo aquí cambia también esta
+ * pantalla. La lista de números escritos que había aquí —la misma once
+ * palabras que en el visor— se fue a `lib/textos-ejercicios.ts`.
  */
-
-const NUMEROS = ["cero", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez"];
-
-function enLetras(n: number): string {
-  return NUMEROS[n] ?? String(n);
-}
 
 /**
  * Deja constancia del intento sin que el alumno espere: la corrección ya
@@ -84,29 +83,23 @@ export default function FlujoEjercicios({
       // sección de la que ha salido —y la que la navegación nombra— es
       // el curso. Para volver al texto de esta lección están la flecha
       // del carril lateral y la de la barra de móvil.
-      volver={{ texto: "Volver al curso", href: conFoco(`/curso/${cursoSlug}`, foco) }}
+      // "Mi curso" es como la nombra la cabecera, que se queda en
+      // español. El visor le pone delante el "Volver a" o el "Back to".
+      volver={{ seccion: "Mi curso", href: conFoco(`/curso/${cursoSlug}`, foco) }}
       alSuceso={alSuceso}
       guardarIntentos={registrarIntentos}
-      cierre={({ aciertos, total, repetir, verEjercicio, acertado }) => (
+      cierre={({ aciertos, total, repetir, verEjercicio, acertado, t }) => (
         <div className="mx-auto w-full max-w-[calc(600px+7rem)] px-4 py-10 min-[1100px]:px-14 min-[1100px]:py-14">
           <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-            Ejercicios terminados
+            {t.ejerciciosTerminados}
           </p>
           <h2 className="mt-3 text-pretty font-display text-[25px] font-bold leading-[1.15] text-marca-tinta min-[1100px]:text-[34px]">
             {/* El diseño decía "Los cinco, correctos", pero cinco es la
                 media y no la regla: hay lecciones de uno y de quince. */}
-            {aciertos !== total
-              ? `Acertaste ${aciertos} de ${total}.`
-              : total === 1
-                ? "Correcto."
-                : `Los ${enLetras(total)}, correctos.`}
+            {t.resultadoLeccion(aciertos, total)}
           </h2>
           <p className="mt-3 text-pretty text-[16px] leading-[1.6] text-marca-gris min-[1100px]:text-[17px]">
-            {aciertos === total
-              ? "Has terminado los ejercicios de esta lección. Puedes seguir con la siguiente cuando quieras."
-              : `Lo que se te ha quedado a medias vuelve a aparecer en tu práctica.${
-                  profesor ? ` ${profesor} lo verá antes de vuestra próxima clase.` : ""
-                }`}
+            {t.cierreLeccion(aciertos, total, profesor)}
           </p>
 
           <ol className="mt-7 overflow-hidden rounded-[16px] border border-marca-borde bg-white">
@@ -131,7 +124,7 @@ export default function FlujoEjercicios({
                   onClick={() => verEjercicio(i)}
                   className="shrink-0 text-[13.5px] font-semibold text-marca-verdeOsc transition-colors hover:text-marca-tinta"
                 >
-                  Ver
+                  {t.ver}
                 </button>
               </li>
             ))}
@@ -145,7 +138,7 @@ export default function FlujoEjercicios({
               foco={foco}
               className="w-full rounded-full btn-verde px-8 py-[15px] text-[16px] font-semibold min-[1100px]:order-2 min-[1100px]:w-auto"
             >
-              Completar y seguir
+              {t.completarYSeguir}
             </BotonCompletar>
 
             <button
@@ -153,7 +146,7 @@ export default function FlujoEjercicios({
               onClick={repetir}
               className="w-full rounded-full btn-verde-linea px-8 py-[13.5px] text-[16px] font-semibold min-[1100px]:order-1 min-[1100px]:w-auto"
             >
-              Repetir los ejercicios
+              {t.repetirLosEjercicios}
             </button>
           </div>
 
@@ -162,7 +155,7 @@ export default function FlujoEjercicios({
             onClick={alSalir}
             className="mt-5 text-[14px] text-marca-grisSuave transition-colors hover:text-marca-tinta"
           >
-            ← Volver a la teoría de la lección
+            {t.volverALaTeoria}
           </button>
         </div>
       )}
