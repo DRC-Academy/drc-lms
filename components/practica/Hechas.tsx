@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Bloque } from "@/lib/data";
 import { porcentajeDe, type ProgresoBloques } from "@/lib/ruta";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 
 /**
  * LAS PARADAS QUE YA HIZO, CERRADAS Y SIN MEDALLA.
@@ -33,6 +34,8 @@ export default function Hechas({
   progreso: ProgresoBloques;
   alumnoId: string;
 }) {
+  const t = usarIdioma().t.practica;
+
   if (bloques.length === 0) return null;
 
   return (
@@ -44,10 +47,10 @@ export default function Hechas({
         </span>
 
         <span className="flex-1 text-[15px] font-bold text-marca-tinta min-[900px]:text-[16px]">
-          {bloques.length} {bloques.length === 1 ? "parada hecha" : "paradas hechas"}
+          {t.paradasHechas(bloques.length)}
         </span>
 
-        <span className="shrink-0 text-[13px] text-marca-grisSuave">Puedes repetir cualquiera</span>
+        <span className="shrink-0 text-[13px] text-marca-grisSuave">{t.puedesRepetirCualquiera}</span>
       </summary>
 
       <ul className="border-t border-marca-borde">
@@ -86,14 +89,14 @@ export default function Hechas({
                     {pct !== null && (
                       <>
                         {" · "}
-                        <span className="tabular-nums">{pct}%</span> de aciertos
+                        <span className="tabular-nums">{pct}%</span> {t.deAciertos}
                       </>
                     )}
                   </span>
                 </span>
 
                 <span className="shrink-0 text-[13px] font-semibold text-marca-verdeOsc">
-                  Repetir
+                  {t.repetir}
                 </span>
               </Link>
             </li>

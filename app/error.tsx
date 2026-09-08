@@ -34,6 +34,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 
 export default function Error({
   error,
@@ -42,6 +43,8 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = usarIdioma().t.entrada;
+
   useEffect(() => {
     // El `digest` es lo único que une lo que ve el alumno con la traza
     // del servidor: en producción Next NO manda el mensaje al navegador
@@ -69,15 +72,14 @@ export default function Error({
         />
 
         <h1 className="mt-7 font-display text-[26px] font-extrabold leading-[1.1] tracking-[-0.02em] text-marca-tinta">
-          Algo se ha roto por aquí
+          {t.algoSeHaRoto}
         </h1>
 
         {/* Lo que el alumno necesita saber es que no ha hecho nada mal y
             que no ha perdido lo suyo: sus lecciones y sus bloques están
             guardados en el servidor, no en esta pantalla. */}
         <p className="mt-3 text-[15px] leading-[1.55] text-marca-tintaMedia">
-          No es culpa tuya y no se ha perdido nada de lo que llevas hecho. Casi siempre se arregla
-          volviendo a intentarlo.
+          {t.noEsCulpaTuya}
         </p>
 
         <div className="mt-7 flex flex-col gap-2.5">
@@ -86,7 +88,7 @@ export default function Error({
             onClick={reset}
             className="btn btn-verde min-h-[48px] w-full text-[15.5px]"
           >
-            Volver a intentarlo
+            {t.volverAIntentarlo}
           </button>
 
           {/* A la raíz y no a `/alumno/{id}`: aquí no sabemos quién es
@@ -97,19 +99,20 @@ export default function Error({
             href="/"
             className="flex min-h-[48px] w-full items-center justify-center rounded-full border-[1.5px] border-marca-borde px-8 text-[15.5px] font-bold text-marca-tinta transition-colors hover:border-marca-grisTenue"
           >
-            Ir a mi inicio
+            {t.irAMiInicio}
           </Link>
         </div>
 
         <p className="mt-5 text-[13.5px] leading-[1.5] text-marca-grisSuave">
-          Si vuelve a pasar, escríbele a tu profesor
+          {t.siVuelveAPasar}
           {error.digest ? (
             <>
               {" "}
-              y dile este código: <span className="font-mono text-marca-tinta">{error.digest}</span>
+              {t.yDileEsteCodigo}{" "}
+              <span className="font-mono text-marca-tinta">{error.digest}</span>
             </>
           ) : (
-            " y lo miramos"
+            t.yLoMiramos
           )}
           .
         </p>

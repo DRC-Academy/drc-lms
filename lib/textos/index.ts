@@ -43,19 +43,27 @@
 import type { Idioma } from "@/lib/idioma";
 import { EJERCICIOS, type TextosEjercicios } from "@/lib/textos/ejercicios";
 import { NAVEGACION, type TextosNavegacion } from "@/lib/textos/navegacion";
+import { ENTRADA, type TextosEntrada } from "@/lib/textos/entrada";
+import { PRACTICA, type TextosPractica } from "@/lib/textos/practica";
 
 export type Textos = {
   ejercicios: TextosEjercicios;
   navegacion: TextosNavegacion;
+  entrada: TextosEntrada;
+  practica: TextosPractica;
 };
 
 export const TEXTOS: Record<Idioma, Textos> = {
   en: {
     ejercicios: EJERCICIOS.en,
     navegacion: NAVEGACION.en,
+    entrada: ENTRADA.en,
+    practica: PRACTICA.en,
   },
   es: {
     ejercicios: EJERCICIOS.es,
     navegacion: NAVEGACION.es,
+    entrada: ENTRADA.es,
+    practica: PRACTICA.es,
   },
 };

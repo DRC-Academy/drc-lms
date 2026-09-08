@@ -1,6 +1,7 @@
 "use client";
 
 import type { TarjetaPractica } from "@/lib/modos";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import type { EstadoGeneracion } from "@/components/usarGenerador";
 import type { EtapaGeneracion } from "@/lib/generacion";
 import AvanceGeneracion from "@/components/AvanceGeneracion";
@@ -52,7 +53,7 @@ function SelloNuevo() {
         <path d="M10 2.5 11.9 7l4.6.4-3.5 3 1.1 4.5L10 12.5 5.9 14.9 7 10.4l-3.5-3L8.1 7 10 2.5Z" />
       </svg>
       <span className="text-[11.5px] font-semibold leading-none text-marca-amarilloTexto">
-        Nuevo tras cada clase
+        {usarIdioma().t.practica.nuevoTrasCadaClase}
       </span>
     </span>
   );
@@ -84,6 +85,7 @@ export default function TarjetaGeneracion({
   onGenerar: () => void;
   onReintentar: () => void;
 }) {
+  const t = usarIdioma().t.practica;
   const generando = estado === "generando";
 
   // Sin ninguna fuente no hay tarjeta que ofrecer. La invitación a
@@ -131,7 +133,7 @@ export default function TarjetaGeneracion({
         >
           {generando && <IconoGirando />}
           <span className={generando ? "ml-2" : ""}>
-            {generando ? "Preparando…" : (tarjeta.espera?.etiquetaBoton ?? tarjeta.llamada)}
+            {generando ? t.preparando : (tarjeta.espera?.etiquetaBoton ?? tarjeta.llamada)}
           </span>
         </button>
       </article>
@@ -141,7 +143,7 @@ export default function TarjetaGeneracion({
       {estado === "error" && (
         <div className="aparece rounded-[16px] border border-marca-examenBorde bg-marca-examen px-5 py-4">
           <p className="font-display text-[15px] font-bold text-marca-tinta">
-            {esEspera ? "Por ahora, ya está" : "Esta vez no ha salido."}
+            {esEspera ? t.porAhoraYaEsta : t.estaVezNoHaSalido}
           </p>
           <p className="mt-1 text-[14px] leading-[1.5] text-marca-gris">{mensajeError}</p>
           {/* Sin botón cuando es una espera: reintentar daría lo mismo. */}
@@ -151,7 +153,7 @@ export default function TarjetaGeneracion({
               onClick={onReintentar}
               className="btn btn-verde mt-4 min-h-[44px] w-full"
             >
-              Volver a intentarlo
+              {t.volverAIntentarlo}
             </button>
           )}
         </div>

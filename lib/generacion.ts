@@ -19,6 +19,7 @@
 // ---------------------------------------------------------------
 
 import type { Bloque } from "@/lib/data";
+import type { TextosPractica } from "@/lib/textos/practica";
 
 export type Origen = "ia" | "banco";
 
@@ -124,15 +125,16 @@ export function calcularProgreso(
 // está leyendo su ficha y su historial de clases.
 // ---------------------------------------------------------------
 
-const TEXTO: Record<EtapaGeneracion, string> = {
-  preparando: "Repasando tus clases y tu perfil…",
-  escribiendo: "Escribiendo tus diez ejercicios…",
-  revisando: "Revisando que todo esté bien…",
-  guardando: "Guardando tu bloque…",
-  banco: "Preparando un bloque de práctica…",
-};
-
-export function textoDeEtapa(etapa: EtapaGeneracion): string {
+// El texto ya no vive aquí: lo trae `t`, porque cambia de idioma y las
+// etapas no. Este módulo sigue siendo el que decide CUÁLES son.
+export function textoDeEtapa(etapa: EtapaGeneracion, t: TextosPractica): string {
+  const TEXTO: Record<EtapaGeneracion, string> = {
+    preparando: t.etapaPreparando,
+    escribiendo: t.etapaEscribiendo,
+    revisando: t.etapaRevisando,
+    guardando: t.etapaGuardando,
+    banco: t.etapaBanco,
+  };
   return TEXTO[etapa];
 }
 

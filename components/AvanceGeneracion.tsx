@@ -1,6 +1,7 @@
 "use client";
 
 import { textoDeEtapa, type EtapaGeneracion } from "@/lib/generacion";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 
 /**
  * Lo que ve el alumno mientras se prepara su bloque.
@@ -33,12 +34,13 @@ export default function AvanceGeneracion({
   progreso: number;
   tardando: boolean;
 }) {
-  const texto = textoDeEtapa(etapa);
+  const t = usarIdioma().t.practica;
+  const texto = textoDeEtapa(etapa, t);
 
   return (
     <div className="aparece mt-4 rounded-[14px] border border-marca-borde bg-white px-5 py-5 lg:px-6">
       <p className="text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-marca-verdeOsc">
-        Preparando tu bloque
+        {t.preparandoTuBloque}
       </p>
 
       <div className="mt-3 flex items-baseline justify-between gap-4">
@@ -57,7 +59,7 @@ export default function AvanceGeneracion({
         aria-valuenow={progreso}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label="Progreso de la preparación"
+        aria-label={t.progresoPreparacion}
         className="mt-3.5 h-2 w-full overflow-hidden rounded-full bg-marca-pista"
       >
         <div
@@ -68,8 +70,8 @@ export default function AvanceGeneracion({
 
       <p className="mt-3 text-[14px] leading-[1.5] text-marca-gris">
         {tardando
-          ? "Se está haciendo de rogar, pero seguimos en ello."
-          : "Son diez ejercicios, así que tarda un poco. Puedes quedarte aquí mientras."}
+          ? t.seHaceDeRogar
+          : t.sonDiezEjercicios}
       </p>
     </div>
   );

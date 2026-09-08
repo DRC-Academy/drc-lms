@@ -26,6 +26,7 @@ import type { PerfilAlumno, TipoExamen, UltimaClase } from "@/lib/data";
 import { NOMBRE_EXAMEN } from "@/lib/data";
 import { detectarExamen, formatearFecha } from "@/lib/perfil";
 import { calcularDisponibilidad, comoFecha, type Disponibilidad } from "@/lib/limites";
+import type { TextosPractica } from "@/lib/textos/practica";
 
 // ---------------------------------------------------------------
 // EL ENLACE AL FORMULARIO DE PERFIL
@@ -84,22 +85,23 @@ export function urlFormulario(base: string | undefined, token: string | null): s
 
 export type AvisoFormulario = { titulo: string; cuerpo: string };
 
-export function avisoFormulario(profesor: string, enviadoEn: string | null): AvisoFormulario {
+export function avisoFormulario(
+  t: TextosPractica,profesor: string, enviadoEn: string | null): AvisoFormulario {
   // Por el nombre de pila, como el saludo. Vacío en los pocos alumnos
   // sin profesor asignado, y entonces la frase empieza por "Tu profesor".
   const suyo = profesor.trim().split(" ")[0] ?? "";
-  const quien = suyo === "" ? "Tu profesor" : suyo;
+  const quien = suyo === "" ? t.tuProfesor : suyo;
 
   if (enviadoEn === null) {
     return {
-      titulo: "¿Nos cuentas a qué te dedicas?",
-      cuerpo: `${quien} te enviará por correo un formulario para conocerte mejor. Con eso preparamos también ejercicios con tus situaciones del día a día.`,
+      titulo: t.avisoFormularioTitulo,
+      cuerpo: t.avisoFormularioCuerpo(quien),
     };
   }
 
   return {
-    titulo: "Busca el formulario en tu correo",
-    cuerpo: `${quien} te lo envió el ${formatearFecha(enviadoEn)}. Si no lo encuentras o el enlace ya no funciona, pídeselo otra vez.`,
+    titulo: t.avisoFormularioEnviadoTitulo,
+    cuerpo: t.avisoFormularioEnviadoCuerpo(quien, formatearFecha(enviadoEn)),
   };
 }
 
@@ -201,23 +203,21 @@ export function tieneContexto(perfil: PerfilAlumno | null): boolean {
 function describirFuentes(
   ultimaClase: UltimaClase | null,
   conContexto: boolean,
-  examen: TipoExamen | null
+  examen: TipoExamen | null,
+  t: TextosPractica
 ): string {
   const frases: string[] = [];
 
   if (ultimaClase) {
-    frases.push(`tu clase del ${formatearFecha(ultimaClase.fechaClase)}`);
+    frases.push(t.fuenteClase(formatearFecha(ultimaClase.fechaClase)));
     // El historial no se nombra con número de clases: al alumno no le
     // dice nada "tus últimas cuatro clases" y suena a expediente.
-    frases.push("lo que se te repite");
+    frases.push(t.fuenteRepeticiones);
   }
-  if (conContexto) frases.push("tu día a día");
-  if (examen) frases.push(`el formato del ${NOMBRE_EXAMEN[examen]}`);
+  if (conContexto) frases.push(t.fuenteContexto);
+  if (examen) frases.push(t.fuenteExamen(NOMBRE_EXAMEN[examen]));
 
-  if (frases.length === 0) return "";
-  if (frases.length === 1) return frases[0];
-
-  return `${frases.slice(0, -1).join(", ")} y ${frases[frases.length - 1]}`;
+  return t.enumerar(frases);
 }
 
 // ---------------------------------------------------------------
@@ -232,7 +232,8 @@ function describirFuentes(
 function redactarEspera(
   disponibilidad: Disponibilidad,
   profesor: string,
-  tuvoClase: boolean
+  tuvoClase: boolean,
+  t: TextosPractica
 ): EsperaTarjeta | null {
   if (disponibilidad.disponible) return null;
 
@@ -241,10 +242,8 @@ function redactarEspera(
     // hay clase analizada que pueda traer nada nuevo. Es la espera más
     // larga de todas y por eso se cuenta entera.
     return {
-      etiquetaBoton: "Después de tu primera clase",
-      nota: profesor
-        ? `Ya tienes tu bloque con lo que sabemos de ti. En cuanto ${profesor} analice tu primera clase, preparamos el siguiente con lo que trabajéis.`
-        : "Ya tienes tu bloque con lo que sabemos de ti. En cuanto se analice tu primera clase, preparamos el siguiente con lo que trabajéis.",
+      etiquetaBoton: t.esperaPrimeraClase,
+      nota: profesor ? t.notaSinClase(profesor) : t.notaSinClaseSinProfesor,
     };
   }
 
@@ -256,7 +255,7 @@ function redactarEspera(
   //
   // El vínculo con el profesor se pierde, y es lo único que se pierde:
   // vale menos que dejar la tarjeta en dos líneas.
-  return { etiquetaBoton: "Después de tu próxima clase", nota: null };
+  return { etiquetaBoton: t.esperaProximaClase, nota: null };
 }
 
 /**
@@ -275,6 +274,7 @@ export function calcularTarjeta(
   perfil: PerfilAlumno | null,
   ultimaClase: UltimaClase | null,
   ultimaGeneracion: string | null,
+  t: TextosPractica,
   ahora: Date = new Date()
 ): TarjetaPractica | null {
   const conContexto = tieneContexto(perfil);
@@ -283,7 +283,7 @@ export function calcularTarjeta(
   if (!ultimaClase && !conContexto && !examen) return null;
 
   const profesor = perfil?.profesor.trim() ?? "";
-  const fuentes = describirFuentes(ultimaClase, conContexto, examen);
+  const fuentes = describirFuentes(ultimaClase, conContexto, examen, t);
 
   const espera = redactarEspera(
     calcularDisponibilidad(
@@ -292,18 +292,17 @@ export function calcularTarjeta(
       ahora
     ),
     profesor,
-    ultimaClase !== null
+    ultimaClase !== null,
+    t
   );
 
   return {
-    etiqueta: "Hecho para ti",
-    titulo: "Tu bloque de práctica",
+    etiqueta: t.etiquetaHechoParaTi,
+    titulo: t.tituloTarjeta,
     // Sin fuentes no se llega aquí, pero la frase aguanta el caso igual
     // antes que quedarse a medias en pantalla.
-    descripcion: fuentes
-      ? `Diez ejercicios con ${fuentes}.`
-      : "Diez ejercicios hechos con lo que sabemos de ti.",
-    llamada: "Preparar mi bloque",
+    descripcion: fuentes ? t.diezEjerciciosCon(fuentes) : t.diezEjerciciosGenerico,
+    llamada: t.llamada,
     espera,
   };
 }
@@ -328,13 +327,13 @@ export function resumenUltimaClase(
   perfil: PerfilAlumno | null,
   ultimaClase: UltimaClase | null,
   /** Si su bloque ya está hecho y toca esperar a la siguiente clase. */
-  yaGenerado: boolean
+  yaGenerado: boolean,
+  t: TextosPractica
 ): ResumenClase {
   if (!ultimaClase) {
     return {
-      titulo: "Todavía no hay clase que repasar",
-      cuerpo:
-        "En cuanto tu profesor analice tu primera clase, preparamos aquí un bloque con lo que trabajasteis.",
+      titulo: t.sinClaseTitulo,
+      cuerpo: t.sinClaseCuerpo,
     };
   }
 
@@ -344,16 +343,16 @@ export function resumenUltimaClase(
   // Sin perfil no sabemos quién dio la clase: se cuenta sin el nombre en
   // lugar de esconder la tarjeta.
   const quien = profesor
-    ? `${profesor} trabajó contigo ${ultimaClase.titulo} el ${fecha}.`
-    : `Trabajaste ${ultimaClase.titulo} el ${fecha}.`;
+    ? t.trabajoContigo(profesor, ultimaClase.titulo, fecha)
+    : t.trabajaste(ultimaClase.titulo, fecha);
 
   return yaGenerado
     ? {
-        titulo: "Ya lo has practicado",
-        cuerpo: `${quien} En cuanto tengas la siguiente clase, preparamos el próximo bloque.`,
+        titulo: t.yaLoHasPracticado,
+        cuerpo: `${quien}${t.colaYaPracticado}`,
       }
     : {
-        titulo: "Tienes clase nueva",
-        cuerpo: `${quien} Ahí abajo puedes prepararte el bloque con lo que trabajasteis.`,
+        titulo: t.tienesClaseNueva,
+        cuerpo: `${quien}${t.colaClaseNueva}`,
       };
 }

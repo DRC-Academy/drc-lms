@@ -3,10 +3,16 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { sesionActual } from "@/lib/sesion-servidor";
 import FormularioAcceso from "@/components/FormularioAcceso";
+import { textosActuales } from "@/lib/idioma-servidor";
+import type { TextosEntrada } from "@/lib/textos/entrada";
 
 // Lee la cookie, así que no hay nada que prerenderizar.
 export const dynamic = "force-dynamic";
 
+// Los metadatos NO siguen la cookie: `generateMetadata` correría antes
+// de saber quién pide la página en la mitad de los casos, y el título de
+// la pestaña de la pantalla de entrar no compensa esa complicación. Se
+// quedan en español, que es lo que ve el buscador.
 export const metadata: Metadata = {
   title: "Entrar · DRC Academy",
   description: "Pide un enlace para entrar en tu práctica.",
@@ -29,19 +35,19 @@ export const metadata: Metadata = {
  * —`?motivo=constructor` sacaría una función en vez de un texto y
  * tumbaría la página de acceso, que es justo la que no puede caerse.
  */
-function avisoDe(motivo: unknown): string | null {
+function avisoDe(motivo: unknown, t: TextosEntrada): string | null {
   switch (motivo) {
     case "caducado":
-      return "Ese enlace ya no es válido. Pide uno nuevo.";
+      return t.avisoCaducado;
     case "sinficha":
-      return "Ese enlace es correcto, pero no encontramos tu ficha. Escribe a tu profesor y lo miramos.";
+      return t.avisoSinFicha;
     case "error":
       // El sobre era bueno y la ficha existe: lo que falló fue abrir la
       // sesión. No es culpa de quien entra, así que no se le manda a
       // hablar con nadie, se le dice que reintente.
-      return "No hemos podido abrir tu sesión. Vuelve a intentarlo en un momento.";
+      return t.avisoError;
     case "salida":
-      return "Has cerrado sesión. Pide un enlace cuando quieras volver.";
+      return t.avisoSalida;
     case "sesion":
       // ESTE NO LO PUEDE PONER EL MIDDLEWARE, aunque manda aquí a mucha
       // más gente. La cookie dura 30 días y el navegador la borra al
@@ -52,7 +58,7 @@ function avisoDe(motivo: unknown): string | null {
       // La ruta de la lección sí lo sabe: ese formulario no se envía sin
       // haber estado dentro. Por eso el motivo lo pone ella y no la
       // puerta de la calle.
-      return "Tu sesión ha caducado. Pide un enlace y sigues donde lo dejaste.";
+      return t.avisoSesion;
     default:
       return null;
   }
@@ -63,7 +69,8 @@ export default async function Acceso({ searchParams }: { searchParams: { motivo?
   // ya sabe si le toca el buscador o su propia ficha.
   if (await sesionActual()) redirect("/");
 
-  const aviso = avisoDe(searchParams.motivo);
+  const t = textosActuales().entrada;
+  const aviso = avisoDe(searchParams.motivo, t);
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[440px] flex-col justify-center px-6 py-16">
@@ -82,16 +89,16 @@ export default async function Acceso({ searchParams }: { searchParams: { motivo?
       </div>
 
       <h1 className="text-balance font-display text-[34px] font-semibold leading-[1.08] tracking-[-0.02em] text-drc-titular">
-        Entra en tu práctica
+        {t.entraEnTuPractica}
       </h1>
       <p className="mb-8 mt-3.5 text-pretty text-[16px] leading-[1.55] text-drc-cuerpo">
-        Pon tu email y te enviamos un enlace para entrar. Sin contraseñas.
+        {t.ponTuEmail}
       </p>
 
       <FormularioAcceso aviso={aviso} />
 
       <p className="mt-10 border-t border-drc-borde pt-6 text-[13px] leading-[1.55] text-drc-cuerpo">
-        ¿Problemas para entrar? Escribe a tu profesor.
+        {t.problemasParaEntrar}
       </p>
     </main>
   );

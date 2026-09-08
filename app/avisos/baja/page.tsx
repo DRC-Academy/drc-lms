@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { abrirTokenBaja } from "@/lib/sesion";
 import { guardarPreferenciaAvisos, recibeAvisos } from "@/lib/avisos-servidor";
+import { textosActuales } from "@/lib/idioma-servidor";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function BajaDeAvisos({
 }: {
   searchParams: { t?: string };
 }) {
+  const t = textosActuales().entrada;
   const token = (searchParams.t ?? "").trim();
   const alumnoId = await abrirTokenBaja(token);
 
@@ -34,11 +36,10 @@ export default async function BajaDeAvisos({
     return (
       <Marco>
         <h1 className="font-display text-[26px] font-extrabold leading-[1.1] tracking-[-0.02em] text-marca-tinta">
-          Este enlace no vale
+          {t.enlaceNoVale}
         </h1>
         <p className="mt-3 text-[15px] leading-[1.55] text-marca-tintaMedia">
-          Puede que esté incompleto por cómo lo ha cortado el cliente de correo. Abre el enlace
-          desde el correo original, o escríbenos y lo cambiamos nosotros.
+          {t.enlaceNoValeDetalle}
         </p>
       </Marco>
     );
@@ -66,13 +67,13 @@ export default async function BajaDeAvisos({
       </p>
 
       <h1 className="mt-4 font-display text-[26px] font-extrabold leading-[1.1] tracking-[-0.02em] text-marca-tinta">
-        {recibe ? "Avisos de contenido nuevo" : "Ya no recibes estos avisos"}
+        {recibe ? t.avisosDeContenido : t.yaNoRecibes}
       </h1>
 
       <p className="mt-3 text-[15px] leading-[1.55] text-marca-tintaMedia">
         {recibe
-          ? "Es el correo que te llega cuando se abre contenido nuevo de tu curso, más o menos una vez por semana. Puedes dejar de recibirlo aquí."
-          : "No te mandaremos más avisos de contenido nuevo. Seguirás recibiendo los correos que pidas tú, como el enlace para entrar."}
+          ? t.avisosActivosDetalle
+          : t.avisosBajaDetalle}
       </p>
 
       <form action={cambiar} className="mt-7">
@@ -86,14 +87,14 @@ export default async function BajaDeAvisos({
               : "btn-verde"
           }`}
         >
-          {recibe ? "Dejar de recibir estos avisos" : "Volver a recibirlos"}
+          {recibe ? t.dejarDeRecibir : t.volverARecibirlos}
         </button>
       </form>
 
       <p className="mt-5 text-[13.5px] leading-[1.5] text-marca-grisSuave">
         {recibe
-          ? "Esto no toca nada más: tu curso y tu práctica siguen igual."
-          : "Si cambias de idea, este mismo enlace los vuelve a activar."}
+          ? t.bajaNoTocaNada
+          : t.bajaReversible}
       </p>
     </Marco>
   );

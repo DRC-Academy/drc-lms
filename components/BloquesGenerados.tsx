@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { conFoco } from "@/lib/foco";
+import { usarIdioma } from "@/components/ProveedorIdioma";
+import type { TextosPractica } from "@/lib/textos/practica";
 import { Fragment } from "react";
 import type { Bloque } from "@/lib/data";
 
@@ -29,7 +31,7 @@ import type { Bloque } from "@/lib/data";
  * bloque generado— así que es el que decide si entiende la aplicación.
  */
 
-const FASES = ["Reconocer", "Transformar", "Producir"];
+
 
 /**
  * El hueco que ocupa el bloque mientras se genera.
@@ -52,8 +54,8 @@ function EsqueletoBloque() {
       <span className="mt-2.5 block h-[14px] w-full rounded-md bg-marca-niebla" />
       <span className="mt-2 block h-[14px] w-[72%] rounded-md bg-marca-niebla" />
       <div className="mt-3.5 flex flex-wrap gap-1.5">
-        {FASES.map((fase) => (
-          <span key={fase} className="block h-[26px] w-[92px] rounded-full bg-marca-niebla" />
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="block h-[26px] w-[92px] rounded-full bg-marca-niebla" />
         ))}
       </div>
       <span className="mt-3.5 block h-[44px] w-full rounded-full bg-marca-pista min-[900px]:w-[150px]" />
@@ -98,6 +100,7 @@ export default function BloquesGenerados({
    */
   zonaRef?: React.RefObject<HTMLDivElement>;
 }) {
+  const t = usarIdioma().t.practica;
   const terminados = new Set(idsTerminados);
 
   // `bloques` ya viene del más reciente al más antiguo, así que el
@@ -129,10 +132,10 @@ export default function BloquesGenerados({
           id="titulo-bloques"
           className="shrink-0 font-display text-[17px] font-bold text-marca-tinta min-[900px]:text-[20px]"
         >
-          {pendiente ? "Tu lección personalizada" : "Tus bloques"}
+          {pendiente ? t.tuLeccionPersonalizada : t.tusBloques}
         </h2>
         <p className="mt-1 text-pretty text-[14px] leading-[1.4] text-marca-gris min-[900px]:mt-0 min-[900px]:text-[15px]">
-          {pendiente ? "Pendiente" : "Aquí aparece el que prepares, listo para empezarlo."}
+          {pendiente ? t.pendiente : t.aquiApareceElQuePrepares}
         </p>
       </div>
 
@@ -141,6 +144,7 @@ export default function BloquesGenerados({
           <EsqueletoBloque />
         ) : pendiente ? (
           <TarjetaPendiente
+            t={t}
             bloque={pendiente}
             esNuevo={esNuevo}
             alumnoId={alumnoId}
@@ -149,6 +153,7 @@ export default function BloquesGenerados({
           />
         ) : (
           <HuecoVacio
+            t={t}
             sinNinguno={bloques.length === 0}
             puedeGenerar={puedeGenerar}
             totalPractica={totalPractica}
@@ -168,12 +173,14 @@ export default function BloquesGenerados({
  * borde deja de leerse como un botón.
  */
 function TarjetaPendiente({
+  t,
   bloque,
   esNuevo,
   alumnoId,
   foco,
   restantes,
 }: {
+  t: TextosPractica;
   bloque: Bloque;
   esNuevo: boolean;
   alumnoId: string;
@@ -210,7 +217,7 @@ function TarjetaPendiente({
         {esNuevo && (
           <p>
             <span className="inline-flex items-center rounded-full bg-marca-amarillo px-2.5 py-1 text-[11px] font-semibold leading-none text-marca-tinta">
-              Nuevo
+              {t.nuevo}
             </span>
           </p>
         )}
@@ -228,7 +235,7 @@ function TarjetaPendiente({
         </p>
 
         <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
-          {FASES.map((fase, i) => (
+          {t.fases.map((fase, i) => (
             <Fragment key={fase}>
               {i > 0 && (
                 <span aria-hidden className="text-[13px] text-marca-grisTenue">
@@ -248,18 +255,18 @@ function TarjetaPendiente({
           href={`/alumno/${alumnoId}/${bloque.id}`}
           className="flex min-h-[48px] items-center justify-center rounded-full btn-verde px-8 text-[15.5px] font-bold leading-[1.1]"
         >
-          Empezar
+          {t.empezar}
           <span className="sr-only"> {bloque.titulo}</span>
         </Link>
 
         {restantes > 0 && (
           <p className="text-center text-[13px] leading-[1.4] text-marca-gris">
-            y {restantes} más en{" "}
+            {t.yMasEn(restantes)}{" "}
             <Link
               href={conFoco("/practica", foco)}
               className="font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
             >
-              Para ti
+              {usarIdioma().t.navegacion.paraTi}
             </Link>
           </p>
         )}
@@ -277,25 +284,27 @@ function TarjetaPendiente({
  * pulsar; señalar uno apagado sería mandar a chocarse contra él.
  */
 function HuecoVacio({
+  t,
   sinNinguno,
   puedeGenerar,
   totalPractica,
   foco,
 }: {
+  t: TextosPractica;
   sinNinguno: boolean;
   puedeGenerar: boolean;
   totalPractica: number;
   foco: string | null;
 }) {
-  const titulo = sinNinguno ? "Todavía no has preparado ninguno" : "Los has hecho todos";
+  const titulo = sinNinguno ? t.todaviaNinguno : t.losHasHechoTodos;
 
   const cuerpo = sinNinguno
     ? puedeGenerar
-      ? "Pulsa «Preparar mi bloque» y en menos de un minuto tienes diez ejercicios hechos con tu última clase, con lo que se te repite y con tu examen. Aparecerán aquí."
-      : "En cuanto tu profesor analice tu primera clase, preparamos aquí tu primer bloque de diez ejercicios."
+      ? t.huecoPuedeGenerar
+      : t.huecoSinPrimeraClase
     : puedeGenerar
-      ? "Prepara otro cuando quieras: sale de tu última clase, de lo que se te repite y de tu examen."
-      : "En cuanto tengas tu próxima clase, aquí aparece el siguiente.";
+      ? t.huecoPreparaOtro
+      : t.huecoEsperaSiguiente;
 
   return (
     <div className="flex flex-col items-start gap-6 rounded-[16px] border-[1.5px] border-dashed border-marca-puntoPendiente bg-marca-casiBlanco p-6 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-10 min-[900px]:px-11 min-[900px]:py-10 min-[900px]:rounded-[18px]">
@@ -316,7 +325,7 @@ function HuecoVacio({
               href={conFoco("/practica", foco)}
               className="font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
             >
-              Para ti
+              {usarIdioma().t.navegacion.paraTi}
             </Link>
             .
           </p>

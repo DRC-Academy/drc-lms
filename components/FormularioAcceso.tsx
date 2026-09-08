@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { solicitarEnlace } from "@/app/acceso/acciones";
 import type { EstadoAcceso } from "@/app/acceso/estado";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 
 const INICIAL: EstadoAcceso = { estado: "inicial", mensaje: "" };
 
@@ -15,6 +16,7 @@ const INICIAL: EstadoAcceso = { estado: "inicial", mensaje: "" };
  * práctica también lo necesita, así que no se pierde nada.
  */
 export default function FormularioAcceso({ aviso }: { aviso: string | null }) {
+  const t = usarIdioma().t.entrada;
   const [resultado, setResultado] = useState<EstadoAcceso>(INICIAL);
   const [enviando, setEnviando] = useState(false);
   // El aviso de "enlace caducado" viene de la URL. Se retira en cuanto
@@ -36,7 +38,7 @@ export default function FormularioAcceso({ aviso }: { aviso: string | null }) {
       console.error("[acceso] No se pudo enviar el formulario:", error);
       setResultado({
         estado: "error",
-        mensaje: "No hemos podido enviar el enlace. Inténtalo otra vez en un momento.",
+        mensaje: t.noSePudoEnviar,
       });
     } finally {
       setEnviando(false);
@@ -47,12 +49,12 @@ export default function FormularioAcceso({ aviso }: { aviso: string | null }) {
     return (
       <div className="aparece" aria-live="polite">
         <div className="rounded-[20px] border border-drc-borde bg-drc-superficie px-[26px] py-6">
-          <p className="eyebrow text-drc-verde-texto">Revisa tu correo</p>
+          <p className="eyebrow text-drc-verde-texto">{t.revisaTuCorreo}</p>
           <p className="mt-3.5 text-pretty text-[16px] leading-[1.55] text-drc-texto">
             {resultado.mensaje}
           </p>
           <p className="mt-3 text-[14px] leading-[1.55] text-drc-cuerpo">
-            El enlace caduca en 15 minutos. Si no lo ves, mira en spam.
+            {t.caducaEnQuince}
           </p>
         </div>
 
@@ -61,7 +63,7 @@ export default function FormularioAcceso({ aviso }: { aviso: string | null }) {
           onClick={() => setResultado(INICIAL)}
           className="mt-5 text-[14px] font-medium text-drc-verde-texto underline underline-offset-2 transition-colors hover:text-drc-enlace-hover"
         >
-          Probar con otro email
+          {t.probarOtroEmail}
         </button>
       </div>
     );
@@ -80,7 +82,7 @@ export default function FormularioAcceso({ aviso }: { aviso: string | null }) {
 
       <form onSubmit={alEnviar} noValidate className="flex flex-col gap-2.5">
         <label htmlFor="email" className="sr-only">
-          Tu email
+          {t.tuEmail}
         </label>
         <input
           id="email"
@@ -91,11 +93,11 @@ export default function FormularioAcceso({ aviso }: { aviso: string | null }) {
           autoFocus
           required
           disabled={enviando}
-          placeholder="tucorreo@ejemplo.com"
+          placeholder={t.marcadorEmail}
           className="min-h-[48px] w-full rounded-full border-2 border-drc-borde bg-drc-superficie px-5 text-[16px] text-drc-texto outline-none transition-colors placeholder:text-drc-apagado focus:border-drc-verde-solido disabled:opacity-60"
         />
         <button type="submit" disabled={enviando} className="btn btn-verde min-h-[48px]">
-          {enviando ? "Enviando…" : "Enviarme el enlace"}
+          {enviando ? t.enviando : t.enviarme}
         </button>
       </form>
 

@@ -4,6 +4,7 @@ import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { formatearFecha, nivelDeBloque } from "@/lib/perfil";
 import { calcularTarjeta } from "@/lib/modos";
+import { textosActuales } from "@/lib/idioma-servidor";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
 import {
   leerBloquesGenerados,
@@ -63,7 +64,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   if (!datos) notFound();
 
   const { perfil, ultimaClase } = datos;
-  const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion);
+  const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion, textosActuales().practica);
 
   // Sin perfil no hay plan ni nivel, así que tampoco curso: el banner
   // enseña el estado sobrio y la práctica sigue funcionando.

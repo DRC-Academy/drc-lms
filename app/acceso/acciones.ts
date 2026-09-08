@@ -16,11 +16,14 @@ import { crearTokenEnlace, esAdministrador, esEmailPlausible, normalizarEmail } 
 import { enviarEnlaceAcceso } from "@/lib/correo";
 import { registrarIntento, type ResultadoIntento, type RolIntento } from "@/lib/accesos-servidor";
 import type { EstadoAcceso } from "@/app/acceso/estado";
+import { textosActuales } from "@/lib/idioma-servidor";
 
 /** Lo que hay que dejar anotado, decidido dentro pero escrito fuera. */
 type Anotacion = { resultado: ResultadoIntento; rol: RolIntento; alumnoId: string | null };
 
-const MENSAJE_NEUTRO = "Si ese email está registrado, te hemos enviado un enlace para entrar.";
+// El mensaje neutro y el de email inválido salen del diccionario, y
+// siguen la cookie del visitante: es una acción de servidor, así que
+// puede leerla igual que una página.
 
 /**
  * Suelo de respuesta. Sin él, un email desconocido contestaría en lo
@@ -80,7 +83,7 @@ export async function solicitarEnlace(datos: FormData): Promise<EstadoAcceso> {
     await registrarIntento({ resultado: "email_invalido", rol: "desconocido" });
     return {
       estado: "invalido",
-      mensaje: "Ese email no parece completo. Revísalo y vuelve a probar.",
+      mensaje: textosActuales().entrada.emailIncompleto,
     };
   }
 
@@ -104,5 +107,5 @@ export async function solicitarEnlace(datos: FormData): Promise<EstadoAcceso> {
   // de 500 ms está ahí para tapar.
   await registrarIntento(anotacion);
 
-  return { estado: "enviado", mensaje: MENSAJE_NEUTRO };
+  return { estado: "enviado", mensaje: textosActuales().entrada.mensajeNeutro };
 }

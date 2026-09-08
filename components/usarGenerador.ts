@@ -10,6 +10,8 @@ import {
   UMBRAL_TARDANZA_MS,
   type EtapaGeneracion,
 } from "@/lib/generacion";
+import type { TextosPractica } from "@/lib/textos/practica";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 
 /**
  * En qué punto está la generación.
@@ -33,7 +35,8 @@ const TIEMPO_MAXIMO_MS = 70_000;
  */
 const CADENCIA_MS = 250;
 
-const MENSAJE_GENERICO = "A veces la conexión se hace la remolona. Vuelve a darle y lo preparamos.";
+
+
 
 /**
  * La generación de bloques, compartida por el inicio y por /practica.
@@ -72,7 +75,8 @@ export function usarGenerador({
   const [etapa, setEtapa] = useState<EtapaGeneracion>("preparando");
   const [progreso, setProgreso] = useState(0);
   const [tardando, setTardando] = useState(false);
-  const [mensajeError, setMensajeError] = useState(MENSAJE_GENERICO);
+  const t = usarIdioma().t.practica;
+  const [mensajeError, setMensajeError] = useState(t.errorGenerico);
   /** El "error" es en realidad un "todavía no toca": se cuenta distinto. */
   const [esEspera, setEsEspera] = useState(false);
 
@@ -159,12 +163,12 @@ export function usarGenerador({
       // explicación es mejor que cualquier texto genérico nuestro:
       // sabe si caducó la sesión o si falta la ficha.
       if (!respuesta.ok) {
-        throw await mensajeDeFallo(respuesta);
+        throw await mensajeDeFallo(respuesta, t);
       }
 
       const bloque = respuesta.headers.get("content-type")?.includes(TIPO_FLUJO)
-        ? await leerFlujo(respuesta, anotarEtapa)
-        : await leerRespuestaUnica(respuesta);
+        ? await leerFlujo(respuesta, anotarEtapa, t)
+        : await leerRespuestaUnica(respuesta, t);
 
       // No se guarda desde aquí: lo hace `app/api/generar-bloque` antes
       // de responder. Esto solo lo pone en pantalla.
@@ -180,14 +184,14 @@ export function usarGenerador({
       setEsEspera(error instanceof ErrorDeEspera);
       setMensajeError(
         error instanceof DOMException && error.name === "TimeoutError"
-          ? "La preparación ha tardado más de lo que podemos esperar. Vuelve a darle y lo intentamos otra vez."
+          ? t.errorTardando
           : error instanceof Error && error.message
             ? error.message
-            : MENSAJE_GENERICO
+            : t.errorGenerico
       );
       setEstado("error");
     }
-  }, [alumnoId, todos, anotarEtapa]);
+  }, [alumnoId, todos, anotarEtapa, t]);
 
   return {
     estado,
@@ -230,8 +234,8 @@ export function usarGenerador({
 class ErrorDeEspera extends Error {}
 
 /** El texto que explica un fallo previo a la generación, si lo hay. */
-async function mensajeDeFallo(respuesta: Response): Promise<Error> {
-  let mensaje = MENSAJE_GENERICO;
+async function mensajeDeFallo(respuesta: Response, t: TextosPractica): Promise<Error> {
+  let mensaje = t.errorGenerico;
   let esEspera = false;
 
   try {
@@ -255,9 +259,10 @@ async function mensajeDeFallo(respuesta: Response): Promise<Error> {
  */
 async function leerFlujo(
   respuesta: Response,
-  anotarEtapa: (etapa: EtapaGeneracion) => void
+  anotarEtapa: (etapa: EtapaGeneracion) => void,
+  t: TextosPractica
 ): Promise<Bloque> {
-  if (!respuesta.body) throw new Error(MENSAJE_GENERICO);
+  if (!respuesta.body) throw new Error(t.errorGenerico);
 
   const lector = respuesta.body.getReader();
   const decodificador = new TextDecoder();
@@ -288,7 +293,7 @@ async function leerFlujo(
           throw new Error(evento.mensaje);
         } else {
           const validado = validarBloque(evento.bloque);
-          if (!validado) throw new Error("El bloque recibido no tiene la forma esperada");
+          if (!validado) throw new Error(t.errorFormaInesperada);
           bloque = validado;
         }
       }
@@ -298,7 +303,7 @@ async function leerFlujo(
   }
 
   // Sin bloque y sin error explícito: el flujo se cortó por el camino.
-  if (!bloque) throw new Error("La preparación se ha cortado antes de terminar.");
+  if (!bloque) throw new Error(t.errorCortado);
   return bloque;
 }
 
@@ -310,11 +315,11 @@ async function leerFlujo(
  * a una instancia con la ruta vieja. Sin esto, ese alumno vería un error
  * durante los pocos minutos que dura el cambio.
  */
-async function leerRespuestaUnica(respuesta: Response): Promise<Bloque> {
+async function leerRespuestaUnica(respuesta: Response, t: TextosPractica): Promise<Bloque> {
   const cuerpo: unknown = await respuesta.json();
   const bloque = validarBloque(
     typeof cuerpo === "object" && cuerpo !== null ? (cuerpo as { bloque?: unknown }).bloque : null
   );
-  if (!bloque) throw new Error("El bloque recibido no tiene la forma esperada");
+  if (!bloque) throw new Error(t.errorFormaInesperada);
   return bloque;
 }

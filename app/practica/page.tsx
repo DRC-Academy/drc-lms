@@ -10,6 +10,7 @@ import {
   urlFormulario,
 } from "@/lib/modos";
 import { exigirFoco } from "@/lib/sesion-servidor";
+import { textosActuales } from "@/lib/idioma-servidor";
 import {
   leerBloquesGenerados,
   leerProgresoAlumno,
@@ -73,7 +74,8 @@ export default async function PaginaPractica() {
   const perfil = datos?.perfil ?? null;
   const ultimaClase = datos?.ultimaClase ?? null;
 
-  const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion);
+  const t = textosActuales().practica;
+  const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion, t);
   const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(nivelDelAlumno(alumnoId, perfil))) : [];
 
   // Solo para que la cabecera pueda pintar "Mi curso" sin cambiar de
@@ -117,6 +119,7 @@ export default async function PaginaPractica() {
           generadosIniciales={generados}
           urlFormulario={urlFormulario(process.env.URL_FORMULARIO_BASE, perfil?.formToken ?? null)}
           avisoFormulario={avisoFormulario(
+            t,
             perfil?.profesor ?? "",
             perfil?.formTokenEnviadoEn ?? null
           )}
