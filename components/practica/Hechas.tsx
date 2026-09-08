@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import type { Bloque } from "@/lib/data";
 import { porcentajeDe, type ProgresoBloques } from "@/lib/ruta";

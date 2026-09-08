@@ -1,3 +1,5 @@
+"use client";
+
 import { etiquetaPosicion, type Temario } from "@/lib/temario";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import Banner from "@/components/Banner";

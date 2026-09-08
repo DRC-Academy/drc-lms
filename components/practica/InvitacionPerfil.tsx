@@ -1,3 +1,5 @@
+"use client";
+
 import type { AvisoFormulario } from "@/lib/modos";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 

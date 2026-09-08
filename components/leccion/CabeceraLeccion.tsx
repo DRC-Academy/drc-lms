@@ -1,3 +1,5 @@
+"use client";
+
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import Image from "next/image";
 import Link from "next/link";

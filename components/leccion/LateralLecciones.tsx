@@ -1,3 +1,5 @@
+"use client";
+
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import Link from "next/link";
 import type { LeccionIndice } from "@/lib/cursos-servidor";
