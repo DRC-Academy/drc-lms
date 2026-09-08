@@ -30,6 +30,7 @@ import {
   construirSistema,
   construirUsuario,
   hayMateriaPrima,
+  IDIOMA_BLOQUE_POR_DEFECTO,
   type MateriaPrima,
 } from "@/lib/prompt-bloque";
 import { bloqueDeBanco } from "@/lib/banco";
@@ -750,8 +751,8 @@ export async function POST(peticion: Request) {
 
   return flujoDeGeneracion(traza, async (emitir) => {
     if (clave) {
-      const sistema = construirSistema(nivel);
-      const usuario = construirUsuario(materia);
+      const sistema = construirSistema(nivel, IDIOMA_BLOQUE_POR_DEFECTO);
+      const usuario = construirUsuario(materia, IDIOMA_BLOQUE_POR_DEFECTO);
 
       // El presupuesto de IA es el menor entre su propio tope y lo que
       // queda de la petición: lo gastado en sesión y ficha ya no está, y
@@ -774,7 +775,19 @@ export async function POST(peticion: Request) {
       );
 
       if (generado) {
-        const bloque = conIdPropio(generado.bloque);
+        // EL IDIOMA LO ESTAMPAMOS NOSOTROS, que es lo que se le pidió al
+        // modelo, en vez de pedírselo a él dentro del JSON: un campo que
+        // el modelo rellena puede decir "en" debajo de un bloque que se
+        // le escapó al español, y entonces el dato miente justo sobre lo
+        // que hay que arreglar. Aquí no puede no coincidir.
+        //
+        // El bloque del banco no pasa por aquí y no lo lleva, que es
+        // correcto: los seis del banco están en español, y en `Bloque`
+        // la ausencia significa exactamente eso.
+        const bloque: Bloque = {
+          ...conIdPropio(generado.bloque),
+          idioma: IDIOMA_BLOQUE_POR_DEFECTO,
+        };
         // Se guarda antes de responder, no en segundo plano: si la
         // escritura se quedara a medias, el alumno vería el bloque, lo
         // practicaría y al volver no estaría. El coste es una inserción,

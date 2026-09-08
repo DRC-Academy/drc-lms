@@ -63,69 +63,97 @@ const CALIBRACION: Record<Bloque["nivel"], string> = {
 };
 
 // ---------------------------------------------------------------
-// EN QUÉ IDIOMA SE CORRIGE
+// EN QUÉ IDIOMA SE ESCRIBE EL BLOQUE
 //
-// Todo lo que el alumno lee DESPUÉS de responder —la explicación, el
-// veredicto que la encabeza, la pista del 'transformar' y los criterios
-// del 'producir'— va en inglés a partir de B2. Por debajo sigue en
-// español.
+// Un bloque tiene DOS capas de texto, y solo una de ellas cambia de
+// idioma:
 //
-// El corte no está entre B1 y B2 por comodidad. Una explicación es
-// siempre más difícil que el ejercicio que explica: el ejercicio se
-// resuelve reconociendo una forma, y la explicación habla SOBRE esa
-// forma, que es lengua sobre la lengua y un escalón entero por encima.
-// A un A2 que acaba de fallar 'have a shower' se le puede explicar por
-// qué en inglés sencillo, pero ese inglés sencillo le sigue costando
-// más que el hueco que ha fallado, y entonces la corrección se cae
-// justo en el momento para el que existe. En B2 esa distancia ya está
-// cubierta y leer la corrección en inglés es práctica de regalo, no un
-// segundo obstáculo.
+//   EL MATERIAL   el enunciado, la frase de partida, las opciones, las
+//                 respuestas aceptadas y el modelo del 'producir'. Va en
+//                 inglés SIEMPRE, en las dos versiones del bloque: es lo
+//                 que se practica, y traducirlo sería quitar el
+//                 ejercicio y dejar el hueco.
 //
-// LO QUE NO CAMBIA EN NINGÚN NIVEL: la interfaz y el enunciado de la
-// tarea. Instrucción y contexto siguen en español siempre, porque son
-// lo que se lee ANTES de responder, y ahí una duda de comprensión se
-// convierte en un fallo que no es del alumno.
+//   EL ANDAMIO    el título, la intro, la instrucción, el contexto, la
+//                 pista, los criterios, la explicación y los dos
+//                 veredictos. Es lo que rodea al ejercicio para que se
+//                 pueda hacer y para que se aprenda algo al fallarlo, y
+//                 es lo único que decide esta constante.
+//
+// Antes esto era un mapa por nivel —`IDIOMA_CORRECCION`— que ponía la
+// corrección en inglés desde B2, la dejaba en español por debajo, y
+// mandaba la instrucción en español en los cinco niveles. Ahora el
+// andamio entero se escribe en un idioma, y el alumno tiene un botón
+// para pedir el otro.
+//
+// EL ARGUMENTO DE AQUEL MAPA NO SE HA CAÍDO: SE HA MUDADO. Decía que una
+// explicación es siempre más difícil que el ejercicio que explica,
+// porque el ejercicio se resuelve reconociendo una forma y la
+// explicación habla SOBRE esa forma, que es lengua sobre la lengua y un
+// escalón entero por encima. Eso sigue siendo verdad. Lo que cambia es
+// la conclusión: aquel razonamiento terminaba en "entonces escríbelo en
+// español por debajo de B2", y ahora termina en "entonces escríbelo en
+// un inglés claramente más bajo que el del ejercicio, y si aun así no
+// llega, para eso está el botón".
+//
+// Y la regla de "más sencillo que el ejercicio" GANA TERRENO en vez de
+// perderlo: antes protegía solo a la corrección, porque la instrucción
+// se libraba yendo en español. Ahora que la instrucción también va en
+// inglés, es ella la que más la necesita — una explicación que no se
+// entiende es una corrección perdida, pero una instrucción que no se
+// entiende es un fallo que no es del alumno.
 // ---------------------------------------------------------------
 
-const IDIOMA_CORRECCION: Record<Bloque["nivel"], "es" | "en"> = {
-  A1: "es",
-  A2: "es",
-  B1: "es",
-  B2: "en",
-  C1: "en",
-};
+export type IdiomaBloque = "en" | "es";
+
+/**
+ * EL IDIOMA CON EL QUE SE ESCRIBE UN BLOQUE NUEVO.
+ *
+ * Una constante y no un mapa por nivel: los cinco niveles se generan en
+ * inglés. La calibración por nivel sigue existiendo y sigue mandando en
+ * la DIFICULTAD del ejercicio —ver `CALIBRACION`—; lo que ya no hace es
+ * decidir el idioma del andamio.
+ *
+ * Se pasa como parámetro y no se lee aquí dentro porque la traducción
+ * al otro idioma pide exactamente el mismo prompt con el otro valor.
+ */
+export const IDIOMA_BLOQUE_POR_DEFECTO: IdiomaBloque = "en";
 
 /** "en inglés sencillo" o "en español", para incrustar en el prompt. */
-function comoSeCorrige(nivel: Bloque["nivel"]): string {
-  return IDIOMA_CORRECCION[nivel] === "en" ? "en inglés sencillo" : "en español";
+function comoSeEscribe(idioma: IdiomaBloque): string {
+  return idioma === "en" ? "en inglés sencillo" : "en español";
 }
 
-/** La regla de idioma de la corrección, escrita para este nivel. */
-function reglasDeIdioma(nivel: Bloque["nivel"]): string[] {
-  if (IDIOMA_CORRECCION[nivel] === "es") {
+/** La regla de idioma del andamio, escrita para este bloque. */
+function reglasDeIdioma(idioma: IdiomaBloque): string[] {
+  if (idioma === "es") {
     return [
-      "- Las instrucciones, pistas, criterios y explicaciones van en español de España, tuteando, en tono cálido y directo.",
+      "- El título, la intro, las instrucciones, los contextos, las pistas, los criterios, las explicaciones y",
+      "  los veredictos van en español de España, tuteando, en tono cálido y directo.",
     ];
   }
 
   return [
-    "- Las instrucciones y el contexto de cada tarea van en español de España, tuteando, en tono cálido y directo:",
-    "  son lo que el alumno lee ANTES de responder, y una duda ahí le cuesta un fallo que no es suyo.",
-    "- TODO LO QUE LEE DESPUÉS DE RESPONDER VA EN INGLÉS: la explicación, los dos veredictos, la pista del",
-    "  'transformar' y los criterios del 'producir'.",
+    "- TODO LO QUE NO SEA EL EJERCICIO VA EN INGLÉS: el título, la intro, la instrucción y el contexto de cada",
+    "  tarea, la pista del 'transformar', los criterios del 'producir', la explicación y los dos veredictos.",
     "- Y ese inglés es CLARAMENTE MÁS SENCILLO QUE EL DEL EJERCICIO. Frases cortas, vocabulario de alta frecuencia",
-    "  y la mínima jerga gramatical posible: explicar una collocation cuesta más que elegirla, así que una",
-    "  explicación escrita al nivel del ejercicio es un segundo ejercicio, y le llega justo cuando acaba de fallar.",
-    "  Escríbela como se la dirías a alguien un nivel por debajo del suyo.",
+    "  y la mínima jerga gramatical posible. Escríbelo como se lo dirías a alguien un nivel por debajo del suyo.",
+    "- La razón vale para las dos mitades, y no es la misma en las dos:",
+    "  · Explicar una collocation cuesta más que elegirla, así que una explicación escrita al nivel del ejercicio",
+    "    es un segundo ejercicio, y le llega justo cuando acaba de fallar.",
+    "  · Y la INSTRUCCIÓN se lee ANTES de responder: si no se entiende a la primera, el alumno falla por no haber",
+    "    entendido lo que le pedías, y eso se le apunta como si fuera un fallo de lengua suyo. Es el peor de los dos.",
+    "- Por eso la instrucción tiene que poder leerse de un vistazo: uno o dos verbos y qué hay que escribir.",
+    "  Nada de subordinadas, ni de condiciones encadenadas, ni de meter la regla gramatical dentro de la consigna.",
   ];
 }
 
 /** Los dos veredictos: qué son, y por qué no pueden repetirse. */
-function bloqueVeredictos(nivel: Bloque["nivel"]): string[] {
+function bloqueVeredictos(idioma: IdiomaBloque): string[] {
   return [
     "EL VEREDICTO DE CADA EJERCICIO",
     "Cada 'reconocer' y cada 'transformar' llevan dos frases más: 'veredictoAcierto' y 'veredictoFallo'.",
-    `Son lo primero que lee el alumno al responder, encima de la explicación, y van ${comoSeCorrige(nivel)}.`,
+    `Son lo primero que lee el alumno al responder, encima de la explicación, y van ${comoSeEscribe(idioma)}.`,
     "",
     "TIENEN QUE SER DISTINTOS EN CADA EJERCICIO y decir algo de lo que ha pasado en ESE ejercicio:",
     "- Acertar algo que tenía trampa no se saluda igual que acertar lo evidente. Si el ejercicio era duro,",
@@ -185,14 +213,14 @@ const FORMATO_EXAMEN: Record<TipoExamen, string> = {
 // EL SISTEMA
 // ---------------------------------------------------------------
 
-export function construirSistema(nivel: Bloque["nivel"]): string {
+export function construirSistema(nivel: Bloque["nivel"], idioma: IdiomaBloque): string {
   return [
     "Eres el diseñador de materiales de DRC Academy, una academia de inglés online para adultos hispanohablantes.",
     `Escribes bloques de práctica de ${TOTAL_EJERCICIOS} ejercicios hechos para UN alumno concreto, a partir de lo que sabemos de él.`,
     "",
     "REGLAS DE CONTENIDO",
-    "- Los enunciados, frases y respuestas de los ejercicios van en inglés.",
-    ...reglasDeIdioma(nivel),
+    "- Los enunciados, frases, opciones, respuestas y modelos de los ejercicios van en inglés SIEMPRE.",
+    ...reglasDeIdioma(idioma),
     "- Nunca uses lenguaje de error o de vigilancia: nada de 'tus fallos', 'tus errores' o 'áreas deficientes'.",
     "- Las explicaciones dicen POR QUÉ, no repiten la regla en abstracto. Una o dos frases, sin jerga gramatical innecesaria.",
     "- El contexto es adulto. Nada de ejemplos escolares.",
@@ -228,7 +256,7 @@ export function construirSistema(nivel: Bloque["nivel"]): string {
     `Son ${REPARTO.reconocer} 'reconocer' y ${REPARTO.transformar} 'transformar', no dos de cada uno repetidos. Cada uno ataca un punto distinto:`,
     "si dos ejercicios se resuelven con la misma regla y el mismo razonamiento, el segundo sobra. Reescríbelo apuntando a otra cosa.",
     "",
-    ...bloqueVeredictos(nivel),
+    ...bloqueVeredictos(idioma),
     "",
     "FORMATO",
     "Devuelves SOLO el objeto JSON. Sin markdown, sin vallados, sin una sola palabra antes ni después.",
@@ -239,14 +267,14 @@ export function construirSistema(nivel: Bloque["nivel"]): string {
 // LA PLANTILLA
 // ---------------------------------------------------------------
 
-function plantillaJson(nivel: Bloque["nivel"]): string {
+function plantillaJson(nivel: Bloque["nivel"], idioma: IdiomaBloque): string {
   // El idioma va escrito DENTRO de cada campo, y no solo en las reglas
   // de arriba. La plantilla es lo que el modelo tiene delante cuando ya
   // está escribiendo el JSON, y la etiqueta repetida ahí es lo que evita
-  // que a partir del sexto ejercicio se le escape el español.
-  const corrige = comoSeCorrige(nivel);
-  const acierto = `Frase corta ${corrige} para cuando acierta, escrita para ESTE ejercicio.`;
-  const fallo = `Frase corta ${corrige} para cuando no acierta, sin lenguaje de error.`;
+  // que a partir del sexto ejercicio se le escape el otro idioma.
+  const escribe = comoSeEscribe(idioma);
+  const acierto = `Frase corta ${escribe} para cuando acierta, escrita para ESTE ejercicio.`;
+  const fallo = `Frase corta ${escribe} para cuando no acierta, sin lenguaje de error.`;
 
   const reconocer = (n: number) => ({
     tipo: "reconocer",
@@ -256,30 +284,30 @@ function plantillaJson(nivel: Bloque["nivel"]): string {
     correcta: 0,
     veredictoAcierto: acierto,
     veredictoFallo: fallo,
-    explicacion: `Por qué es esa y qué error refleja la que suele elegirse, ${corrige}.`,
+    explicacion: `Por qué es esa y qué error refleja la que suele elegirse, ${escribe}.`,
   });
 
   const transformar = (n: number) => ({
     tipo: "transformar",
     id: `t${n}`,
-    instruccion: "Qué tiene que hacer, en español.",
+    instruccion: `Qué tiene que hacer, ${escribe}.`,
     frase: "Frase de partida en inglés.",
     respuestas: ["Todas las formas correctas, incluidas contracciones y orden alternativo."],
-    pista: `Una pista corta que acote la respuesta, ${corrige}.`,
+    pista: `Una pista corta que acote la respuesta, ${escribe}.`,
     veredictoAcierto: acierto,
     veredictoFallo: fallo,
-    explicacion: `Qué cambia y por qué, ${corrige}.`,
+    explicacion: `Qué cambia y por qué, ${escribe}.`,
   });
 
   const producir = (n: number, de: string) => ({
     tipo: "producir",
     id: `p${n}`,
-    instruccion: "Qué tiene que escribir, en español.",
-    contexto: `Situación concreta y extensión esperada. Este sale de ${de}.`,
+    instruccion: `Qué tiene que escribir, ${escribe}.`,
+    contexto: `Situación concreta y extensión esperada, ${escribe}. Este sale de ${de}.`,
     criterios: [
-      `Criterio comprobable 1, ${corrige}.`,
-      `Criterio comprobable 2, ${corrige}.`,
-      `Criterio comprobable 3, ${corrige}.`,
+      `Criterio comprobable 1, ${escribe}.`,
+      `Criterio comprobable 2, ${escribe}.`,
+      `Criterio comprobable 3, ${escribe}.`,
     ],
     modelo: "Una respuesta modelo en inglés, natural, de dos a cuatro frases.",
   });
@@ -287,11 +315,11 @@ function plantillaJson(nivel: Bloque["nivel"]): string {
   return JSON.stringify(
     {
       id: "identificador-en-minusculas-con-guiones",
-      titulo: "Título corto en español, máximo 40 caracteres",
+      titulo: `Título corto ${escribe}, máximo 40 caracteres`,
       area: `Una de: ${AREAS.join(" | ")}`,
       nivel,
       minutos: 10,
-      intro: "Una o dos frases en español que expliquen la idea clave del bloque.",
+      intro: `Una o dos frases ${escribe} que expliquen la idea clave del bloque.`,
       ejercicios: [
         reconocer(1),
         reconocer(2),
@@ -310,7 +338,7 @@ function plantillaJson(nivel: Bloque["nivel"]): string {
   );
 }
 
-function requisitos(nivel: Bloque["nivel"]): string {
+function requisitos(idioma: IdiomaBloque): string {
   const lineas = [
   "Requisitos que se comprueban antes de publicar el bloque:",
   `- Exactamente ${TOTAL_EJERCICIOS} ejercicios y en este orden: ${REPARTO.reconocer} 'reconocer', luego ${REPARTO.transformar} 'transformar', luego ${REPARTO.producir} 'producir'. Ni uno más ni uno menos, y sin mezclar el orden.`,
@@ -327,10 +355,14 @@ function requisitos(nivel: Bloque["nivel"]): string {
   "- Cada 'reconocer' y cada 'transformar' traen sus dos veredictos, y ninguno se repite ni se parece a otro del bloque.",
   ];
 
-  if (IDIOMA_CORRECCION[nivel] === "en") {
+  if (idioma === "en") {
     lineas.push(
-      "- La explicación, los dos veredictos, las pistas y los criterios están EN INGLÉS, y en un inglés más",
-      "  sencillo que el del propio ejercicio. Las instrucciones y los contextos siguen en español."
+      "- El título, la intro, las instrucciones, los contextos, las pistas, los criterios, las explicaciones y",
+      "  los veredictos están EN INGLÉS, y en un inglés más sencillo que el del propio ejercicio. Lo único que",
+      "  va al nivel del alumno es el ejercicio: la frase con el hueco, las opciones, la frase de partida, las",
+      "  respuestas aceptadas y el modelo.",
+      "- Y ninguna instrucción necesita releerse. Si para saber qué hay que hacer hay que leerla dos veces,",
+      "  reescríbela más corta: eso es un fallo que le vas a cobrar al alumno como si fuera suyo."
     );
   }
 
@@ -427,7 +459,7 @@ function bloquePatrones(anteriores: ClaseAnteriorParaPrompt[]): string[] {
 // EL MENSAJE
 // ---------------------------------------------------------------
 
-export function construirUsuario(materia: MateriaPrima): string {
+export function construirUsuario(materia: MateriaPrima, idioma: IdiomaBloque): string {
   const { ultimaClase, anteriores, examen } = materia;
   const partes: string[] = [
     "Ficha del alumno:",
@@ -512,9 +544,9 @@ export function construirUsuario(materia: MateriaPrima): string {
   partes.push(
     "",
     "Devuelve exactamente esta estructura:",
-    plantillaJson(materia.nivel),
+    plantillaJson(materia.nivel, idioma),
     "",
-    requisitos(materia.nivel)
+    requisitos(idioma)
   );
 
   return partes.join("\n");

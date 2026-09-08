@@ -79,6 +79,25 @@ export type Bloque = {
    * Es opcional porque los bloques generados por la IA no la tienen.
    */
   claseOrigen?: { fecha: string; profesor: string };
+  /**
+   * EN QUÉ IDIOMA ESTÁ ESCRITO EL ANDAMIO de este bloque: el título, la
+   * intro, las instrucciones, las pistas, los criterios, las
+   * explicaciones y los veredictos. El ejercicio en sí —la frase, las
+   * opciones, las respuestas— va en inglés en todos los bloques y no
+   * depende de esto.
+   *
+   * AUSENTE SIGNIFICA ESPAÑOL, y no es un valor por defecto de
+   * conveniencia: es lo que de verdad son todos los bloques escritos
+   * antes de que esto existiera —los del catálogo de aquí abajo, los
+   * seis del banco y las filas que ya están en `bloques_generados`—.
+   * Poner "es" a mano en los quince del código no cambiaría nada y
+   * dejaría fuera igual a las filas de la base, así que el que lee
+   * decide con la misma regla en los tres sitios.
+   *
+   * Lo estampa quien genera, que sabe en qué idioma lo pidió; no se le
+   * pregunta al modelo, que podría decir otra cosa que lo que escribió.
+   */
+  idioma?: "en" | "es";
 };
 
 export const BLOQUES: Bloque[] = [

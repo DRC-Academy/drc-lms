@@ -314,5 +314,25 @@ export function validarBloque(valor: unknown): Bloque | null {
     ejercicios.push(ejercicio);
   }
 
-  return { id, titulo, area, nivel: nivel as Bloque["nivel"], intro, minutos, ejercicios };
+  // EL IDIOMA SE ARRASTRA, no se exige. Un bloque sin él es un bloque
+  // en español —así son todos los de antes de que existiera— y eso es
+  // un bloque perfectamente válido, no uno al que le falte un dato.
+  //
+  // Tiene que pasar por aquí porque este validador es también la puerta
+  // de LECTURA: `lib/progreso-servidor.ts` relee por él todo lo que hay
+  // guardado en `bloques_generados.contenido`. Sin esta línea, el idioma
+  // se escribiría al generar y se perdería en cuanto alguien volviera a
+  // abrir el bloque.
+  const idioma = valor.idioma === "en" || valor.idioma === "es" ? valor.idioma : undefined;
+
+  return {
+    id,
+    titulo,
+    area,
+    nivel: nivel as Bloque["nivel"],
+    intro,
+    minutos,
+    ejercicios,
+    ...(idioma ? { idioma } : {}),
+  };
 }
