@@ -6,6 +6,7 @@ import { normalizarRespuesta } from "@/lib/validarBloque";
 import type { EjercicioUnificado } from "@/lib/ejercicio-unificado";
 import type { Textos } from "@/lib/textos-ejercicios";
 import { usarIdioma } from "@/components/ejercicios/usarIdioma";
+import BotonIdioma from "@/components/ejercicios/BotonIdioma";
 
 /**
  * EL VISOR DE EJERCICIOS. Uno solo, para las dos fuentes.
@@ -119,6 +120,21 @@ export default function VisorEjercicios({
     verEjercicio: (i: number) => void;
     acertado: (i: number) => boolean;
     t: Textos;
+    /**
+     * EL BOTÓN DE IDIOMA, YA MONTADO, para que cada cierre lo ponga
+     * donde le encaje.
+     *
+     * Llega hecho y no como un `alternar` suelto porque el cableado
+     * —el estado, el texto, el aviso de que está traduciendo— es del
+     * visor, y repetirlo en cada pantalla de cierre sería tener el
+     * mismo botón escrito tres veces.
+     *
+     * Y llega como nodo y no como una fila fija encima del cierre
+     * porque los dos cierres tienen anchos distintos: uno es una
+     * tarjeta centrada de 448px y el otro una columna de 600. Una fila
+     * común quedaría descolgada en al menos uno de los dos.
+     */
+    botonIdioma: ReactNode;
   }) => ReactNode;
   /**
    * LA SALIDA. A dónde vuelve el alumno cuando quiere dejar esto.
@@ -362,7 +378,15 @@ export default function VisorEjercicios({
     const aciertos = ejercicios.filter((_, i) => acertado(i)).length;
     return conMarco(
       <div className="flex min-w-0 flex-1 flex-col">
-        {cierre({ aciertos, total: ejercicios.length, repetir, verEjercicio, acertado, t })}
+        {cierre({
+          aciertos,
+          total: ejercicios.length,
+          repetir,
+          verEjercicio,
+          acertado,
+          t,
+          botonIdioma: <BotonIdioma t={t} traduccion={traduccion} alPulsar={alternar} />,
+        })}
       </div>
     );
   }
@@ -456,23 +480,7 @@ export default function VisorEjercicios({
             {t.volverA(volver.seccion)}
           </Link>
 
-          {/* NO SE DESACTIVA MIENTRAS TRADUCE. El mueble ya ha cambiado
-              —sus dos idiomas están en el código— así que el botón sí ha
-              hecho algo, y volver atrás tiene que seguir siendo posible
-              mientras el contenido viene de camino. Lo único que cambia
-              es que lo dice. */}
-          <button
-            type="button"
-            onClick={alternar}
-            aria-label={t.otroIdiomaAria}
-            aria-busy={traduccion?.pidiendo || undefined}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-marca-borde bg-white px-3.5 py-[7px] text-[13px] font-semibold text-marca-gris transition-colors hover:bg-marca-niebla hover:text-marca-tinta min-[1100px]:text-[13.5px]"
-          >
-            <span aria-hidden className={traduccion?.pidiendo ? "gira" : undefined}>
-              {traduccion?.pidiendo ? "◌" : "↔"}
-            </span>
-            {traduccion?.pidiendo ? t.traduciendo : t.otroIdioma}
-          </button>
+          <BotonIdioma t={t} traduccion={traduccion} alPulsar={alternar} />
         </div>
 
         {/* EL AVISO DE QUE NO SALIÓ, en pequeño y sin alarma: el alumno

@@ -170,7 +170,7 @@ export default function Practica({
           t={t}
         />
       )}
-      cierre={({ aciertos, total, t }) => {
+      cierre={({ aciertos, total, t, botonIdioma }) => {
         const pct = total > 0 ? Math.round((aciertos / total) * 100) : 0;
         const dominado = pct >= UMBRAL_DOMINADO;
 
@@ -199,6 +199,10 @@ export default function Practica({
                 {t.volverAMisBloques}
               </Link>
             </div>
+
+            {/* Debajo de la tarjeta y no dentro: es lo único de esta
+                pantalla que no habla del resultado. */}
+            <div className="mt-5 flex justify-center">{botonIdioma}</div>
           </div>
         );
         }}

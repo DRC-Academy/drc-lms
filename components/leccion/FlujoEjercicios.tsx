@@ -88,7 +88,7 @@ export default function FlujoEjercicios({
       volver={{ seccion: "Mi curso", href: conFoco(`/curso/${cursoSlug}`, foco) }}
       alSuceso={alSuceso}
       guardarIntentos={registrarIntentos}
-      cierre={({ aciertos, total, repetir, verEjercicio, acertado, t }) => (
+      cierre={({ aciertos, total, repetir, verEjercicio, acertado, t, botonIdioma }) => (
         <div className="mx-auto w-full max-w-[calc(600px+7rem)] px-4 py-10 min-[1100px]:px-14 min-[1100px]:py-14">
           <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
             {t.ejerciciosTerminados}
@@ -150,13 +150,19 @@ export default function FlujoEjercicios({
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={alSalir}
-            className="mt-5 text-[14px] text-marca-grisSuave transition-colors hover:text-marca-tinta"
-          >
-            {t.volverALaTeoria}
-          </button>
+          {/* La vuelta a la teoría y el idioma comparten fila: las dos
+              son salidas de esta pantalla y ninguna es la principal,
+              que son los dos botones de arriba. */}
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={alSalir}
+              className="text-[14px] text-marca-grisSuave transition-colors hover:text-marca-tinta"
+            >
+              {t.volverALaTeoria}
+            </button>
+            {botonIdioma}
+          </div>
         </div>
       )}
     />
