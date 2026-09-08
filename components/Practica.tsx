@@ -10,7 +10,7 @@ import { desdePractica } from "@/lib/ejercicio-unificado";
 import { conTraduccion } from "@/lib/traduccion-bloque";
 import LateralFases from "@/components/ejercicios/LateralFases";
 import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
-import { usarIdioma } from "@/components/ejercicios/usarIdioma";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import { usarTraduccion } from "@/components/ejercicios/usarTraduccion";
 
 /**
@@ -59,7 +59,7 @@ export default function Practica({
   // `conTraduccion` devuelve el MISMO bloque mientras no haya nada que
   // aplicar, así que hasta que llega la traducción esto no recalcula
   // nada.
-  const { idioma } = usarIdioma();
+  const { idioma, t: todos } = usarIdioma();
   const { traduccion, pidiendo, fallo } = usarTraduccion(bloque, idioma, alumnoId);
   const mostrado = useMemo(
     () => conTraduccion(bloque, traduccion, idioma),
@@ -139,10 +139,10 @@ export default function Practica({
         // A "PARA TI", que es de donde se entra. Antes esto era un
         // "Salir" que llevaba al inicio: no era el sitio del que venía
         // el alumno y el rótulo tampoco lo decía.
-        // LA SECCIÓN, NO LA FRASE. "Para ti" es como la llama la
-        // cabecera, y la cabecera se queda en español: el visor le pone
-        // delante el "Volver a" o el "Back to" que toque.
-        volver={{ seccion: "Para ti", href: conFoco("/practica", foco) }}
+        // LA SECCIÓN, NO LA FRASE. Se nombra con el mismo texto que usa la
+        // cabecera, para que la salida diga el destino tal y como el alumno
+        // lo va a ver al llegar. El visor le pone delante el "Volver a".
+        volver={{ seccion: todos.navegacion.paraTi, href: conFoco("/practica", foco) }}
       // El estado de la traducción, solo para que el botón de idioma
       // pueda decir que está trabajando. La lección del curso no lo trae
       // porque no tiene andamio que traducir: sus ejercicios son
@@ -170,7 +170,7 @@ export default function Practica({
           t={t}
         />
       )}
-      cierre={({ aciertos, total, t, botonIdioma }) => {
+      cierre={({ aciertos, total, t }) => {
         const pct = total > 0 ? Math.round((aciertos / total) * 100) : 0;
         const dominado = pct >= UMBRAL_DOMINADO;
 
@@ -199,10 +199,6 @@ export default function Practica({
                 {t.volverAMisBloques}
               </Link>
             </div>
-
-            {/* Debajo de la tarjeta y no dentro: es lo único de esta
-                pantalla que no habla del resultado. */}
-            <div className="mt-5 flex justify-center">{botonIdioma}</div>
           </div>
         );
         }}

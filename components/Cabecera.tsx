@@ -2,6 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import ChatAyuda from "@/components/ChatAyuda";
 import { conFoco } from "@/lib/foco";
+import { textosActuales } from "@/lib/idioma-servidor";
+import BotonIdioma from "@/components/BotonIdioma";
+import type { TextosNavegacion } from "@/lib/textos/navegacion";
 
 export type SeccionActiva = "inicio" | "curso" | "practica" | "progreso";
 
@@ -120,21 +123,23 @@ export default function Cabecera({
   /** Pinta la tira de revisión y cambia lo que dice la identidad. */
   revisando?: boolean;
 }) {
+  const t = textosActuales().navegacion;
+
   const enlaces =
     alumnoId != null
       ? [
-          { clave: "inicio" as const, texto: "Inicio", href: `/alumno/${alumnoId}` },
+          { clave: "inicio" as const, texto: t.inicio, href: `/alumno/${alumnoId}` },
           ...(cursoSlug
-            ? [{ clave: "curso" as const, texto: "Mi curso", href: `/curso/${cursoSlug}` }]
+            ? [{ clave: "curso" as const, texto: t.miCurso, href: `/curso/${cursoSlug}` }]
             : []),
-          { clave: "practica" as const, texto: "Para ti", href: "/practica" },
+          { clave: "practica" as const, texto: t.paraTi, href: "/practica" },
           // NOMBRE PROVISIONAL. "Mi ficha" quedó descartado —suena a
           // expediente administrativo y el contenido es justo lo
           // contrario— y el definitivo está sin decidir. Se cambia en
           // esta línea, con un límite medido: a 320px cada celda de la
           // barra inferior mide 77,5px, así que la etiqueta no pasa de
           // unos 12 caracteres a 12px sin tocar a la de al lado.
-          { clave: "progreso" as const, texto: "Mi progreso", href: "/progreso" },
+          { clave: "progreso" as const, texto: t.miProgreso, href: "/progreso" },
         ].map((enlace) => ({ ...enlace, href: conFoco(enlace.href, foco) }))
       : [];
 
@@ -174,7 +179,7 @@ export default function Cabecera({
 
           {/* En escritorio, junto al logotipo. En móvil, en la barra de abajo. */}
           {enlaces.length > 0 && (
-            <nav aria-label="Secciones" className="hidden h-full items-center gap-7 min-[900px]:flex">
+            <nav aria-label={t.secciones} className="hidden h-full items-center gap-7 min-[900px]:flex">
               {enlaces.map((enlace) => (
                 <Link
                   key={enlace.clave}
@@ -214,7 +219,7 @@ export default function Cabecera({
               >
                 {contexto.titulo}
               </Link>
-              <BarraCurso contexto={contexto} />
+              <BarraCurso contexto={contexto} t={t} />
             </div>
           )}
 
@@ -227,13 +232,25 @@ export default function Cabecera({
               contexto ? "min-[900px]:ml-3" : ""
             }`}
           >
+            {/* EL IDIOMA, ANTES QUE LA SALIDA Y QUE LA IDENTIDAD.
+                Es lo único de esta esquina que cambia lo que el alumno
+                LEE, y las otras dos cambian quién es o le sacan; puestas
+                al revés, el botón que se usa a diario quedaría detrás
+                del que se usa una vez.
+
+                Va en la cabecera y no dentro de cada pantalla porque la
+                preferencia es de toda la aplicación: antes había uno en
+                el visor y otro en cada cierre, y eran tres sitios para
+                pedir lo mismo. */}
+            <BotonIdioma />
+
             {nombre && (
               <form action="/salir" method="post">
                 <button
                   type="submit"
                   className="rounded-full text-[13px] text-marca-gris transition-colors hover:text-marca-tinta sm:text-[14px]"
                 >
-                  Salir
+                  {t.salir}
                 </button>
               </form>
             )}
@@ -254,7 +271,7 @@ export default function Cabecera({
                     como": quien mira no es esa persona y un lector de
                     pantalla no tiene la tira de arriba a la vista. */}
                 <span className="sr-only">
-                  {revisando ? `Ficha de ${nombre}, en revisión` : `Practicando como ${nombre}`}
+                  {revisando ? t.fichaEnRevision(nombre) : t.practicandoComo(nombre)}
                 </span>
               </p>
             )}
@@ -279,7 +296,7 @@ export default function Cabecera({
               >
                 {contexto.titulo}
               </Link>
-              <BarraCurso contexto={contexto} compacto />
+              <BarraCurso contexto={contexto} compacto t={t} />
             </div>
           </div>
         )}
@@ -296,10 +313,12 @@ export default function Cabecera({
             scroll: de quién es la ficha no es un dato que se lea una vez
             al entrar, es el que evita confundir a dos alumnos después de
             veinte minutos saltando entre fichas. */}
-        {revisando && <TiraRevision nombre={nombre} />}
+        {revisando && <TiraRevision nombre={nombre} t={t} />}
       </header>
 
-      {enlaces.length > 0 && <NavegacionInferior enlaces={enlaces} seccion={seccion} />}
+      {enlaces.length > 0 && (
+        <NavegacionInferior enlaces={enlaces} seccion={seccion} secciones={t.secciones} />
+      )}
 
       {/* LA AYUDA VIVE AQUÍ Y NO EN EL LAYOUT porque su condición es la
           misma que la de la navegación: hay alumno. El equipo entra por
@@ -334,7 +353,7 @@ export default function Cabecera({
  * suave. Es la misma pareja de tonos que ya usaba el aviso de la
  * lección, que es lo que esto sustituye.
  */
-function TiraRevision({ nombre }: { nombre?: string }) {
+function TiraRevision({ nombre, t }: { nombre?: string; t: TextosNavegacion }) {
   const quien = nombre?.trim();
 
   return (
@@ -347,16 +366,16 @@ function TiraRevision({ nombre }: { nombre?: string }) {
               perfiles— se dice igual que es una revisión: perder el
               nombre no puede hacer que el aviso desaparezca. */}
           <strong className="font-semibold">
-            {quien ? `Revisando la ficha de ${quien}` : "Revisando una ficha"}
+            {quien ? t.revisandoLaFichaDe(quien) : t.revisandoUnaFicha}
           </strong>
-          <span className="hidden sm:inline"> · Nada de lo que hagas aquí se guarda.</span>
+          <span className="hidden sm:inline"> {t.nadaSeGuarda}</span>
         </p>
 
         <Link
           href="/"
           className="shrink-0 whitespace-nowrap text-[12.5px] font-semibold text-marca-verdeOsc underline-offset-4 transition-colors hover:underline sm:text-[13px]"
         >
-          Salir de la revisión
+          {t.salirDeLaRevision}
         </Link>
       </div>
     </div>
@@ -377,7 +396,15 @@ function TiraRevision({ nombre }: { nombre?: string }) {
  * lección o abajo del todo del temario. Y el porcentaje, que ocupa tres
  * caracteres, basta para eso.
  */
-function BarraCurso({ contexto, compacto }: { contexto: ContextoCurso; compacto?: boolean }) {
+function BarraCurso({
+  contexto,
+  compacto,
+  t,
+}: {
+  contexto: ContextoCurso;
+  compacto?: boolean;
+  t: TextosNavegacion;
+}) {
   const porcentaje =
     contexto.total > 0 ? Math.round((contexto.completadas / contexto.total) * 100) : 0;
 
@@ -391,7 +418,7 @@ function BarraCurso({ contexto, compacto }: { contexto: ContextoCurso; compacto?
         aria-valuenow={porcentaje}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`Progreso en ${contexto.titulo}: ${contexto.completadas} de ${contexto.total} lecciones`}
+        aria-label={t.progresoEnCurso(contexto.titulo, contexto.completadas, contexto.total)}
       >
         <div className="h-full rounded-[3px] bg-marca-verde" style={{ width: `${porcentaje}%` }} />
       </div>
@@ -427,9 +454,11 @@ function BarraCurso({ contexto, compacto }: { contexto: ContextoCurso; compacto?
 function NavegacionInferior({
   enlaces,
   seccion,
+  secciones,
 }: {
   enlaces: { clave: SeccionActiva; texto: string; href: string }[];
   seccion?: SeccionActiva;
+  secciones: string;
 }) {
   // Dónde cae la sección actual dentro de la fila. -1 cuando no hay
   // ninguna marcada, y entonces no se pinta la marca.
@@ -437,7 +466,7 @@ function NavegacionInferior({
 
   return (
     <nav
-      aria-label="Secciones"
+      aria-label={secciones}
       data-nav-inferior
       className="fixed inset-x-0 bottom-0 z-40 grid border-t border-marca-borde bg-white/[0.96] px-1 pb-3.5 pt-2 backdrop-blur-md min-[900px]:hidden"
       style={{ gridTemplateColumns: `repeat(${enlaces.length}, minmax(0, 1fr))` }}

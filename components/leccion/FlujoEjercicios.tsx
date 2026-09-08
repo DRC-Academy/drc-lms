@@ -6,6 +6,7 @@ import { desdeCurso } from "@/lib/ejercicio-unificado";
 import type { EjercicioVista } from "@/lib/ejercicios";
 import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
 import BotonCompletar from "@/components/leccion/BotonCompletar";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 
 /**
  * Los ejercicios de la lección.
@@ -67,6 +68,7 @@ export default function FlujoEjercicios({
   /** Contexto de revisión. Ver `lib/foco.ts`. */
   foco?: string | null;
 }) {
+  const { t: todos } = usarIdioma();
   const unificados = useMemo(() => ejercicios.map(desdeCurso), [ejercicios]);
 
   function alSuceso(suceso: SucesoVisor) {
@@ -83,12 +85,12 @@ export default function FlujoEjercicios({
       // sección de la que ha salido —y la que la navegación nombra— es
       // el curso. Para volver al texto de esta lección están la flecha
       // del carril lateral y la de la barra de móvil.
-      // "Mi curso" es como la nombra la cabecera, que se queda en
-      // español. El visor le pone delante el "Volver a" o el "Back to".
-      volver={{ seccion: "Mi curso", href: conFoco(`/curso/${cursoSlug}`, foco) }}
+      // Se nombra con el mismo texto que usa la cabecera, para que la
+      // salida diga el destino tal y como el alumno lo va a ver al llegar.
+      volver={{ seccion: todos.navegacion.miCurso, href: conFoco(`/curso/${cursoSlug}`, foco) }}
       alSuceso={alSuceso}
       guardarIntentos={registrarIntentos}
-      cierre={({ aciertos, total, repetir, verEjercicio, acertado, t, botonIdioma }) => (
+      cierre={({ aciertos, total, repetir, verEjercicio, acertado, t }) => (
         <div className="mx-auto w-full max-w-[calc(600px+7rem)] px-4 py-10 min-[1100px]:px-14 min-[1100px]:py-14">
           <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
             {t.ejerciciosTerminados}
@@ -150,19 +152,13 @@ export default function FlujoEjercicios({
             </button>
           </div>
 
-          {/* La vuelta a la teoría y el idioma comparten fila: las dos
-              son salidas de esta pantalla y ninguna es la principal,
-              que son los dos botones de arriba. */}
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={alSalir}
-              className="text-[14px] text-marca-grisSuave transition-colors hover:text-marca-tinta"
-            >
-              {t.volverALaTeoria}
-            </button>
-            {botonIdioma}
-          </div>
+          <button
+            type="button"
+            onClick={alSalir}
+            className="mt-5 text-[14px] text-marca-grisSuave transition-colors hover:text-marca-tinta"
+          >
+            {t.volverALaTeoria}
+          </button>
         </div>
       )}
     />

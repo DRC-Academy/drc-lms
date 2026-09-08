@@ -29,33 +29,9 @@
 // `components/ejercicios/usarIdioma.ts`, que es quien toca el navegador.
 // ---------------------------------------------------------------
 
+import type { Idioma } from "@/lib/idioma";
 import type { Fase } from "@/lib/ejercicio-unificado";
 import { UMBRAL_DOMINADO } from "@/lib/progreso";
-
-export type Idioma = "en" | "es";
-
-export const IDIOMAS: Idioma[] = ["en", "es"];
-
-/**
- * EL IDIOMA CON EL QUE SE ABRE LA PANTALLA.
- *
- * Inglés, en los cinco niveles. Y es una constante y no una regla por
- * nivel a propósito: aquí no vale el argumento que sí vale para las
- * explicaciones del bloque —ese que dice que hablar SOBRE la lengua es
- * un escalón por encima de usarla, y que está escrito largo en
- * `lib/prompt-bloque.ts`—. "Check", "Next exercise" y "Show hint" no son
- * lengua sobre la lengua: son cuatro palabras de A1 que además están
- * pegadas a un botón que el alumno ya sabe para qué sirve.
- *
- * Donde ese argumento sí manda es en el CONTENIDO del bloque, y eso se
- * decide en el prompt, no aquí.
- */
-export const IDIOMA_POR_DEFECTO: Idioma = "en";
-
-/** El otro. El botón de la pantalla solo alterna entre dos. */
-export function elOtro(idioma: Idioma): Idioma {
-  return idioma === "en" ? "es" : "en";
-}
 
 // ---------------------------------------------------------------
 // NÚMEROS ESCRITOS
@@ -86,7 +62,7 @@ function enumerar(idioma: Idioma, partes: string[]): string {
 // LA FORMA DEL PAQUETE
 // ---------------------------------------------------------------
 
-export type Textos = {
+export type TextosEjercicios = {
   // --- el botón que cambia de idioma ---
   /** Nombra el idioma AL QUE LLEVA, no el que se está leyendo. */
   otroIdioma: string;
@@ -167,7 +143,7 @@ export type Textos = {
 // escondería el cambio dentro de otro.
 // ---------------------------------------------------------------
 
-const ES: Textos = {
+const ES: TextosEjercicios = {
   otroIdioma: "English",
   otroIdiomaAria: "See this screen in English",
   traduciendo: "Traduciendo…",
@@ -273,7 +249,7 @@ const ES: Textos = {
 //   las dos anteriores, donde el material se lo damos hecho.
 // ---------------------------------------------------------------
 
-const EN: Textos = {
+const EN: TextosEjercicios = {
   otroIdioma: "Español",
   otroIdiomaAria: "Ver esta pantalla en español",
   traduciendo: "Translating…",
@@ -359,9 +335,4 @@ const EN: Textos = {
   volverALaTeoria: "← Back to the lesson text",
 };
 
-export const TEXTOS: Record<Idioma, Textos> = { en: EN, es: ES };
-
-/** El paquete de este idioma. */
-export function textos(idioma: Idioma): Textos {
-  return TEXTOS[idioma];
-}
+export const EJERCICIOS: Record<Idioma, TextosEjercicios> = { en: EN, es: ES };

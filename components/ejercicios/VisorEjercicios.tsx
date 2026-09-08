@@ -4,9 +4,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { normalizarRespuesta } from "@/lib/validarBloque";
 import type { EjercicioUnificado } from "@/lib/ejercicio-unificado";
-import type { Textos } from "@/lib/textos-ejercicios";
-import { usarIdioma } from "@/components/ejercicios/usarIdioma";
-import BotonIdioma from "@/components/ejercicios/BotonIdioma";
+import type { TextosEjercicios } from "@/lib/textos/ejercicios";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 
 /**
  * EL VISOR DE EJERCICIOS. Uno solo, para las dos fuentes.
@@ -32,12 +31,12 @@ import BotonIdioma from "@/components/ejercicios/BotonIdioma";
  * guardar.
  *
  * Y NO SABE EN QUÉ IDIOMA ESTÁ. Todo lo que escribe sale de `t`, que es
- * el paquete de `lib/textos-ejercicios.ts`. El estado del idioma vive
- * AQUÍ y no en cada pantalla porque el botón que lo cambia está aquí:
- * si cada envoltorio leyera el suyo, pulsar el botón cambiaría el visor
- * y dejaría el cierre y el lateral en el idioma de antes. Por eso `t`
- * baja a los tres callbacks —`lateral`, `cierre` y `notaAlPie`— igual
- * que ya bajaba el resto del estado del visor.
+ * el área de ejercicios del diccionario (`lib/textos/`). El idioma ya no
+ * vive aquí: es una preferencia de toda la aplicación, guardada en una
+ * cookie y servida por `components/ProveedorIdioma.tsx`, así que este
+ * componente solo la lee. `t` sigue bajando a los tres callbacks
+ * —`lateral`, `cierre` y `notaAlPie`— para que las pantallas de cierre y
+ * el lateral no tengan que volver a pedirla cada una por su cuenta.
  */
 
 const LETRAS = "ABCDEFGH";
@@ -110,7 +109,7 @@ export default function VisorEjercicios({
     indice: number;
     respondido: (i: number) => boolean;
     acertado: (i: number) => boolean;
-    t: Textos;
+    t: TextosEjercicios;
   }) => ReactNode;
   /** La pantalla de cierre, que es distinta en cada fuente. */
   cierre: (datos: {
@@ -119,22 +118,7 @@ export default function VisorEjercicios({
     repetir: () => void;
     verEjercicio: (i: number) => void;
     acertado: (i: number) => boolean;
-    t: Textos;
-    /**
-     * EL BOTÓN DE IDIOMA, YA MONTADO, para que cada cierre lo ponga
-     * donde le encaje.
-     *
-     * Llega hecho y no como un `alternar` suelto porque el cableado
-     * —el estado, el texto, el aviso de que está traduciendo— es del
-     * visor, y repetirlo en cada pantalla de cierre sería tener el
-     * mismo botón escrito tres veces.
-     *
-     * Y llega como nodo y no como una fila fija encima del cierre
-     * porque los dos cierres tienen anchos distintos: uno es una
-     * tarjeta centrada de 448px y el otro una columna de 600. Una fila
-     * común quedaría descolgada en al menos uno de los dos.
-     */
-    botonIdioma: ReactNode;
+    t: TextosEjercicios;
   }) => ReactNode;
   /**
    * LA SALIDA. A dónde vuelve el alumno cuando quiere dejar esto.
@@ -150,12 +134,11 @@ export default function VisorEjercicios({
    * cierra el bloque o sale de la sección, y esas tres cosas están a la
    * vez en esta pantalla.
    *
-   * LO QUE LLEGA ES LA SECCIÓN, NO LA FRASE, porque la frase cambia de
-   * idioma y la sección no: la navegación de la aplicación se queda en
-   * español, así que "Para ti" y "Mi curso" se llaman igual en las dos
-   * versiones de esta pantalla y lo único que se traduce es el "Volver
-   * a" de delante. Si esto recibiera la frase hecha, el enlace mandaría
-   * a "For you", que es un sitio que no existe en la cabecera.
+   * LO QUE LLEGA ES LA SECCIÓN, NO LA FRASE HECHA: el visor le pone
+   * delante el "Volver a" o el "Back to" que toque. El nombre de la
+   * sección lo traduce quien lo pasa, con el mismo texto que usa la
+   * cabecera —`t.navegacion.paraTi`, `t.navegacion.miCurso`— para que la
+   * salida nombre el destino tal y como el alumno lo va a ver al llegar.
    */
   volver: { seccion: string; href: string };
   /**
@@ -164,7 +147,7 @@ export default function VisorEjercicios({
    * material genérico. Recibe el ejercicio porque en la fase de producir
    * no se enseña.
    */
-  notaAlPie?: (ejercicio: EjercicioUnificado, t: Textos) => ReactNode;
+  notaAlPie?: (ejercicio: EjercicioUnificado, t: TextosEjercicios) => ReactNode;
   /**
    * Cómo va la traducción del CONTENIDO, para que el botón de idioma lo
    * cuente. Solo lo trae la práctica generada: la lección del curso no
@@ -177,7 +160,8 @@ export default function VisorEjercicios({
   /** false para el equipo: revisa el curso, no lo cursa. */
   guardarIntentos?: boolean;
 }) {
-  const { t, alternar } = usarIdioma();
+  const { t: todos } = usarIdioma();
+  const t = todos.ejercicios;
   const [indice, setIndice] = useState(0);
   const [cerrado, setCerrado] = useState(false);
   const [estados, setEstados] = useState<Estado[]>(() => ejercicios.map(VACIO));
@@ -385,7 +369,6 @@ export default function VisorEjercicios({
           verEjercicio,
           acertado,
           t,
-          botonIdioma: <BotonIdioma t={t} traduccion={traduccion} alPulsar={alternar} />,
         })}
       </div>
     );
@@ -480,7 +463,23 @@ export default function VisorEjercicios({
             {t.volverA(volver.seccion)}
           </Link>
 
-          <BotonIdioma t={t} traduccion={traduccion} alPulsar={alternar} />
+          {/* AQUÍ NO HAY BOTÓN DE IDIOMA, está en la cabecera y gobierna
+              la aplicación entera. Lo que sí es de esta pantalla es que
+              el CONTENIDO del bloque tarda unos segundos en llegar
+              traducido, mientras el resto ya ha cambiado: eso se cuenta
+              aquí, que es donde pasa, y no en un botón que está fuera y
+              no sabe de este bloque. */}
+          {traduccion?.pidiendo && (
+            <span
+              role="status"
+              className="inline-flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-marca-grisSuave"
+            >
+              <span aria-hidden className="gira">
+                ◌
+              </span>
+              {t.traduciendo}
+            </span>
+          )}
         </div>
 
         {/* EL AVISO DE QUE NO SALIÓ, en pequeño y sin alarma: el alumno
@@ -745,7 +744,7 @@ export default function VisorEjercicios({
  * se conserva, igual que en la barra de la lección: sin él, el botón
  * principal daría un salto al pasar del primer ejercicio al segundo.
  */
-function FlechaAtras({ t, alPulsar }: { t: Textos; alPulsar: (() => void) | null }) {
+function FlechaAtras({ t, alPulsar }: { t: TextosEjercicios; alPulsar: (() => void) | null }) {
   const clase =
     "grid h-11 w-11 shrink-0 place-items-center rounded-full border border-marca-borde text-[15px] leading-none text-marca-tinta transition-colors hover:bg-marca-niebla min-[1100px]:h-auto min-[1100px]:w-auto min-[1100px]:px-[18px] min-[1100px]:py-[11px] min-[1100px]:text-[14.5px] min-[1100px]:font-medium";
 
@@ -854,7 +853,7 @@ function Huecos({
 }: {
   ejercicio: EjercicioUnificado;
   estado: Estado;
-  t: Textos;
+  t: TextosEjercicios;
   alEscribir: (i: number, valor: string) => void;
   alCorregir: (i: number) => void;
 }) {
@@ -932,7 +931,7 @@ function Produccion({
 }: {
   ejercicio: EjercicioUnificado;
   estado: Estado;
-  t: Textos;
+  t: TextosEjercicios;
   alEscribir: (valor: string) => void;
   alPedirModelo: () => void;
   alMarcar: (k: number) => void;

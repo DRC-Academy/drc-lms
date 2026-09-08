@@ -1,7 +1,7 @@
 "use client";
 
 import type { EjercicioUnificado, Fase } from "@/lib/ejercicio-unificado";
-import type { Textos } from "@/lib/textos-ejercicios";
+import type { TextosEjercicios } from "@/lib/textos/ejercicios";
 
 /**
  * El lateral de un bloque de práctica.
@@ -47,7 +47,7 @@ export default function LateralFases({
   acertado: (i: number) => boolean;
   profesor?: string;
   /** Lo baja el visor, que es donde vive el botón de idioma. */
-  t: Textos;
+  t: TextosEjercicios;
 }) {
   const hechos = ejercicios.filter((_, i) => respondido(i)).length;
   const porcentaje = ejercicios.length > 0 ? Math.round((hechos / ejercicios.length) * 100) : 0;
