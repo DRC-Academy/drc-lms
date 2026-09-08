@@ -1,5 +1,6 @@
 "use client";
 
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import { useCallback, useEffect, useState } from "react";
 import type { TituloLeccion } from "@/lib/leccion-html";
 
@@ -18,6 +19,7 @@ import type { TituloLeccion } from "@/lib/leccion-html";
  * y al tocar fondo se fuerza de todas formas.
  */
 export default function IndiceLeccion({ titulos }: { titulos: TituloLeccion[] }) {
+  const t = usarIdioma().t.curso;
   const [activo, setActivo] = useState(0);
 
   const recalcular = useCallback(() => {
@@ -76,11 +78,11 @@ export default function IndiceLeccion({ titulos }: { titulos: TituloLeccion[] })
 
   return (
     <nav
-      aria-label="En esta lección"
+      aria-label={t.enEstaLeccion}
       className="sticky top-16 hidden h-[calc(100vh-64px)] overflow-y-auto border-l border-marca-borde px-6 py-[34px] min-[1100px]:block"
     >
       <p className="text-[11px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-        En esta lección
+        {t.enEstaLeccion}
       </p>
 
       <ol className="mt-3">

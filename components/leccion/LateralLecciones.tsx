@@ -1,3 +1,4 @@
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import Link from "next/link";
 import type { LeccionIndice } from "@/lib/cursos-servidor";
 import { conFoco } from "@/lib/foco";
@@ -41,6 +42,7 @@ export default function LateralLecciones({
   /** Contexto de revisión que conservan los enlaces. Ver `lib/foco.ts`. */
   foco?: string | null;
 }) {
+  const t = usarIdioma().t.curso;
   const hechas = lecciones.filter((l) => l.completada).length;
   const porcentaje = lecciones.length > 0 ? Math.round((hechas / lecciones.length) * 100) : 0;
 
@@ -50,7 +52,7 @@ export default function LateralLecciones({
         <button
           type="button"
           onClick={alVolver}
-          aria-label="Volver a la lección"
+          aria-label={t.volverALaLeccion}
           className="grid h-[34px] w-[34px] place-items-center rounded-[10px] border border-marca-borde bg-marca-niebla text-[15px] leading-none text-marca-tinta transition-colors hover:bg-marca-nieblaOscura"
         >
           ←
@@ -126,13 +128,13 @@ export default function LateralLecciones({
           href={conFoco(`/curso/${cursoSlug}`, foco)}
           className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-marca-borde bg-marca-niebla px-3 py-[11px] text-[13.5px] font-semibold text-marca-tinta transition-colors hover:bg-marca-nieblaOscura"
         >
-          Ver el curso completo
+          {t.verElCursoCompleto}
           <span aria-hidden className="text-marca-grisSuave">
             →
           </span>
         </Link>
         <p className="mt-2 text-center text-[12px] text-marca-grisTenue tabular-nums">
-          {cursoCompletadas} de {cursoTotal} lecciones del curso
+          {t.leccionesDelCurso(cursoCompletadas, cursoTotal)}
         </p>
       </div>
     </aside>

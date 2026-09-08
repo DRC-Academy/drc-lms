@@ -1,3 +1,4 @@
+import type { TextosBanners } from "@/lib/textos/banners";
 // ---------------------------------------------------------------
 // EL DIPLOMA
 //
@@ -168,13 +169,13 @@ export type TextoDiploma = {
   relleno: number;
 };
 
-export function textoDiploma(estado: EstadoDiploma): TextoDiploma | null {
+export function textoDiploma(estado: EstadoDiploma, t: TextosBanners): TextoDiploma | null {
   if (estado.estado === "sin-curso") return null;
 
   // PROVISIONAL, hasta que exista el botón de descarga: reconoce el
   // logro y no promete un archivo que todavía no se genera.
   if (estado.estado === "conseguido") {
-    return { cifra: null, unidad: "Diploma conseguido", relleno: 100 };
+    return { cifra: null, unidad: t.diplomaConseguido, relleno: 100 };
   }
 
   return {
@@ -182,7 +183,7 @@ export function textoDiploma(estado: EstadoDiploma): TextoDiploma | null {
     // faltan todas", contado como lo que es: el tamaño de lo que tiene
     // por delante, no una deuda.
     cifra: estado.restantes,
-    unidad: estado.restantes === 1 ? "lección para tu diploma" : "lecciones para tu diploma",
+    unidad: t.leccionesParaTuDiploma(estado.restantes),
     relleno: estado.porcentaje,
   };
 }

@@ -1,4 +1,5 @@
 import type { ClaseDelRecorrido } from "@/lib/gestion";
+import { textosActuales } from "@/lib/idioma-servidor";
 import type { Estimacion } from "@/lib/estimacion";
 import BannerAmpliar from "@/components/BannerAmpliar";
 import { formatearFechaLarga } from "@/lib/perfil";
@@ -81,6 +82,7 @@ export default function Ficha({
   clases: ClaseDelRecorrido[];
   urlAmpliar: string;
 }) {
+  const t = textosActuales().progreso;
   const primerNombre = nombre.trim().split(/\s+/)[0] || nombre;
 
   // Todo lo que sale de la ficha pasa por el cortafuegos: está escrita
@@ -99,11 +101,10 @@ export default function Ficha({
 
       <main className="pg-main">
         <section className="pg-intro pg-rise" style={{ animationDelay: "0ms" }}>
-          <p className="pg-eyebrow">Tu progreso en inglés</p>
-          <h1 className="pg-h1">Esto es lo que llevas conseguido, {primerNombre}.</h1>
+          <p className="pg-eyebrow">{t.tuProgreso}</p>
+          <h1 className="pg-h1">{t.esteEsTuProgreso(primerNombre)}</h1>
           <p className="pg-lede">
-            Un resumen de tu nivel, de lo que ya dominas y de hacia dónde vamos en las próximas
-            clases.
+            {t.resumenDeTuNivel}
           </p>
         </section>
 
@@ -122,7 +123,7 @@ export default function Ficha({
             <div className="pg-stat">
               <span className="pg-stat-num">{clasesContadas}</span>
               <span className="pg-stat-label">
-                {clasesContadas === 1 ? "Clase hecha" : "Clases hechas"}
+                {t.clasesHechas(clasesContadas)}
               </span>
             </div>
             {/* ---------------------------------------------------------------
@@ -151,9 +152,9 @@ export default function Ficha({
                 --------------------------------------------------------------- */}
             <div className="pg-stat">
               <span className="pg-stat-num">{nivel ?? "—"}</span>
-              <span className="pg-stat-label">Nivel actual</span>
+              <span className="pg-stat-label">{t.nivelActual}</span>
               {nivel && !nivelFiable && (
-                <span className="pg-stat-nota">Estimado · confírmalo con tu profesor</span>
+                <span className="pg-stat-nota">{t.nivelEstimado}</span>
               )}
             </div>
             <div className="pg-stat">
@@ -161,27 +162,27 @@ export default function Ficha({
                 {horasSemanales != null ? horasSemanales : "—"}
                 {horasSemanales != null && <span className="pg-stat-unit">h</span>}
               </span>
-              <span className="pg-stat-label">Cada semana</span>
+              <span className="pg-stat-label">{t.cadaSemana}</span>
             </div>
             <div className="pg-stat">
               <span className="pg-stat-num">
                 {hito ? (
                   <>
-                    <span className="pg-stat-pre">Clase</span>
+                    <span className="pg-stat-pre">{t.clase}</span>
                     {hito}
                   </>
                 ) : (
                   "✓"
                 )}
               </span>
-              <span className="pg-stat-label">{hito ? "Próximo hito" : "Hitos completos"}</span>
+              <span className="pg-stat-label">{hito ? t.proximoHito : t.hitosCompletos}</span>
             </div>
           </div>
         </section>
 
         {objetivoVisible && (
           <section className="pg-card pg-goal pg-rise" style={{ animationDelay: "120ms" }}>
-            <p className="pg-kicker">Tu objetivo</p>
+            <p className="pg-kicker">{t.tuObjetivo}</p>
             <blockquote className="pg-goal-text">{objetivoVisible}</blockquote>
           </section>
         )}
@@ -217,7 +218,7 @@ export default function Ficha({
           <section className="pg-split pg-rise" style={{ animationDelay: "240ms" }}>
             {fuertes.length > 0 && (
               <div className="pg-card">
-                <p className="pg-kicker">Lo que ya haces bien</p>
+                <p className="pg-kicker">{t.loQueYaHacesBien}</p>
                 <ul className="pg-list">
                   {fuertes.map((texto, i) => (
                     <li key={i}>
@@ -232,7 +233,7 @@ export default function Ficha({
             )}
             {debiles.length > 0 && (
               <div className="pg-card">
-                <p className="pg-kicker">Lo que estamos reforzando</p>
+                <p className="pg-kicker">{t.loQueEstamosReforzando}</p>
                 <ul className="pg-list">
                   {debiles.map((texto, i) => (
                     <li key={i}>
@@ -251,8 +252,8 @@ export default function Ficha({
         {foco && (
           <section className="pg-card pg-focus pg-rise" style={{ animationDelay: "300ms" }}>
             <div className="pg-focus-head">
-              <p className="pg-kicker">En qué trabajamos ahora</p>
-              <span className="pg-badge">Foco actual</span>
+              <p className="pg-kicker">{t.enQueTrabajamosAhora}</p>
+              <span className="pg-badge">{t.focoActual}</span>
             </div>
             <p className="pg-body">{foco}</p>
           </section>
@@ -261,8 +262,7 @@ export default function Ficha({
         <Recorrido clases={clases} />
 
         <p className="pg-foot">
-          Este informe es privado y sólo para ti. Si te surge cualquier duda, coméntasela a tu
-          profesor.
+          {t.informePrivado}
         </p>
       </main>
     </div>
@@ -279,12 +279,13 @@ export default function Ficha({
  * semanales no hay estimación, y sin estimación no hay meta que marcar.
  */
 function Escalera({ nivel, meta }: { nivel: NivelMcer | null; meta: NivelMcer | null }) {
+  const t = textosActuales().progreso;
   const actual = nivel ? ESCALERA_MCER.indexOf(nivel) : -1;
   const objetivo = meta ? ESCALERA_MCER.indexOf(meta) : -1;
 
   return (
     <div className="pg-ladder-wrap">
-      <p className="pg-kicker">Tu nivel</p>
+      <p className="pg-kicker">{t.tuNivel}</p>
       <ol className="pg-ladder">
         {ESCALERA_MCER.map((etiqueta, i) => {
           const hecho = actual >= 0 && i < actual;
@@ -297,8 +298,8 @@ function Escalera({ nivel, meta }: { nivel: NivelMcer | null; meta: NivelMcer | 
           return (
             <li key={etiqueta} className={clases} aria-current={aqui ? "step" : undefined}>
               <span className="pg-rung-label">{etiqueta}</span>
-              {aqui && <span className="pg-rung-note">Estás aquí</span>}
-              {esMeta && <span className="pg-rung-note pg-rung-note-target">Tu meta</span>}
+              {aqui && <span className="pg-rung-note">{t.estasAqui}</span>}
+              {esMeta && <span className="pg-rung-note pg-rung-note-target">{t.tuMeta}</span>}
             </li>
           );
         })}
@@ -326,16 +327,17 @@ function Escalera({ nivel, meta }: { nivel: NivelMcer | null; meta: NivelMcer | 
 const VISIBLES = 6;
 
 function Recorrido({ clases }: { clases: ClaseDelRecorrido[] }) {
+  const t = textosActuales().progreso;
   const primeras = clases.slice(0, VISIBLES);
   const resto = clases.slice(VISIBLES);
 
   return (
     <section className="pg-rise" style={{ animationDelay: "360ms" }}>
-      <p className="pg-section-title">Tu recorrido, clase a clase</p>
+      <p className="pg-section-title">{t.tuRecorrido}</p>
 
       {clases.length === 0 ? (
         <div className="pg-card pg-empty">
-          Aquí irá apareciendo el resumen de cada clase. Se irá llenando a medida que avances.
+          {t.recorridoVacio}
         </div>
       ) : (
         <>
@@ -343,7 +345,7 @@ function Recorrido({ clases }: { clases: ClaseDelRecorrido[] }) {
 
           {resto.length > 0 && (
             <details className="pg-more-wrap">
-              <summary className="pg-more">Ver las {clases.length} clases</summary>
+              <summary className="pg-more">{t.verLasClases(clases.length)}</summary>
               <ol className="pg-timeline pg-timeline-resto">{resto.map(Tarjeta)}</ol>
             </details>
           )}
@@ -354,6 +356,7 @@ function Recorrido({ clases }: { clases: ClaseDelRecorrido[] }) {
 }
 
 function Tarjeta(clase: ClaseDelRecorrido) {
+  const t = textosActuales().progreso;
   const numero = clase.numero ?? 0;
   const marcado = numero > 0 && esHito(numero);
   // `fecha_clase` llega como `YYYY-MM-DD`. Se formatea partiendo la
@@ -369,9 +372,9 @@ function Tarjeta(clase: ClaseDelRecorrido) {
         {/* Muchas filas no traen número de clase. Antes salía "Clase —",
             que parecía un fallo; sin número manda la fecha. */}
         <div className="pg-tl-head">
-          {numero > 0 && <span className="pg-tl-num">Clase {numero}</span>}
+          {numero > 0 && <span className="pg-tl-num">{t.claseNumero(numero)}</span>}
           {fecha && <span className={numero > 0 ? "pg-tl-date" : "pg-tl-num"}>{fecha}</span>}
-          {marcado && <span className="pg-badge pg-badge-sm">Hito</span>}
+          {marcado && <span className="pg-badge pg-badge-sm">{t.hito}</span>}
         </div>
         {clase.titulo !== "" && <p className="pg-tl-title">{clase.titulo}</p>}
         {clase.resumen !== "" && <p className="pg-body">{clase.resumen}</p>}

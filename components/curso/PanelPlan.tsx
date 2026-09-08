@@ -1,4 +1,5 @@
 import { etiquetaPosicion, type Temario } from "@/lib/temario";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import Banner from "@/components/Banner";
 import { conFoco } from "@/lib/foco";
 
@@ -35,26 +36,27 @@ export default function PanelPlan({
   /** Contexto de revisión. Ver `lib/foco.ts`. */
   foco?: string | null;
 }) {
+  const { curso: t, banners: tb } = usarIdioma().t;
   const { actual, meses } = temario;
 
   const titulo = actual
-    ? etiquetaPosicion(actual)
+    ? etiquetaPosicion(actual, tb)
     : temario.totalLecciones > 0
-      ? "Has terminado el curso"
-      : "Todavía sin contenido";
+      ? t.hasTerminadoElCurso
+      : t.todaviaSinContenido;
 
   // Sin margen arriba: desde que la pantalla no tiene cabecera propia,
   // esta franja es lo primero que hay bajo la barra de navegación.
   return (
     <div>
       <Banner
-        eyebrow={`Tu plan de ${meses.length} ${meses.length === 1 ? "mes" : "meses"}`}
+        eyebrow={t.tuPlanDeMeses(meses.length)}
         title={titulo}
         subtitle={actual?.titulo}
         action={
           actual?.destino
             ? {
-                label: "Continuar",
+                label: t.continuar,
                 href: conFoco(`/curso/${slug}/${actual.destino}`, foco),
                 srSuffix: actual.titulo,
               }
@@ -62,7 +64,7 @@ export default function PanelPlan({
         }
         secondaryText={
           actual
-            ? `${actual.completadas} de ${actual.totalLecciones} lecciones en este módulo`
+            ? t.leccionesEnEsteModulo(actual.completadas, actual.totalLecciones)
             : undefined
         }
       />

@@ -1,5 +1,7 @@
 "use client";
 
+import type { TextosRuta } from "@/lib/textos/ruta";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
@@ -164,6 +166,7 @@ export default function Ruta({
   profesor: string;
   generacion: Generacion;
 }) {
+  const { ruta: t, practica: tp } = usarIdioma().t;
   // Los dos grupos del plegado. Empiezan cerrados: el alumno viene a
   // seguir, no a leer su historial.
   const [plegado, setPlegado] = useState<Plegado>({ atras: false, delante: false });
@@ -258,10 +261,10 @@ export default function Ruta({
   const hechas = paradas.filter((p) => p.tipo === "hecha").length;
 
   const rotulo = actual
-    ? `vas por la ${actual.numero} de ${total}`
+    ? t.vasPorLaDe(actual.numero, total)
     : cierre?.abierta
-      ? `${hechas} ${hechas === 1 ? "hecha" : "hechas"}`
-      : "al día";
+      ? t.hechasCuenta(hechas)
+      : t.alDia;
 
   // ESCRITORIO: hasta dónde llega el verde. Una parada que todavía no se
   // abre no se pinta como andada, así que el tramo que entra en ella va
@@ -322,7 +325,7 @@ export default function Ruta({
   return (
     <>
       <section
-        aria-label="Tu ruta"
+        aria-label={t.tuRuta}
         className="relative overflow-hidden rounded-[24px] border border-marca-rutaBorde bg-marca-ruta px-0 pb-6 pt-5 min-[900px]:rounded-[28px] min-[900px]:px-10 min-[900px]:pb-9 min-[900px]:pt-[34px]"
       >
         {/* Dos formas muy suaves al fondo. Es lo que separa esto de una
@@ -499,7 +502,7 @@ export default function Ruta({
                         }
                       >
                         <span className="relative inline-flex items-center whitespace-nowrap rounded-full bg-marca-amarillo px-[15px] py-[7px] text-[12.5px] font-bold text-marca-tinta shadow-[0_4px_0_#E0A800,0_8px_16px_rgba(18,33,26,0.16)]">
-                          Estás aquí
+                          {t.estasAqui}
                           <span
                             aria-hidden
                             className="absolute -bottom-[4px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 bg-marca-amarillo"
@@ -529,7 +532,7 @@ export default function Ruta({
                         >
                           <DiscoMovil parada={parada} cerrando={seCierra} />
                         </span>
-                        <span className="sr-only">{rotuloDe(parada)}</span>
+                        <span className="sr-only">{rotuloDe(parada, t)}</span>
                         {suya && parada.tipo !== "resumen" && (
                           <span
                             aria-hidden
@@ -561,16 +564,16 @@ export default function Ruta({
                       >
                         {plegado[parada.futuro ? "delante" : "atras"]
                           ? parada.futuro
-                            ? "Plegar lo que viene"
-                            : "Plegar las hechas"
+                            ? t.plegarLoQueViene
+                            : t.plegarLasHechas
                           : parada.titulo}
                       </p>
                       <p className="mt-[3px] text-[12px] leading-[1.3] text-marca-grisTenue">
                         {plegado[parada.futuro ? "delante" : "atras"]
-                          ? "Vuelven a un solo punto"
+                          ? t.vuelvenAUnSoloPunto
                           : parada.futuro
-                            ? "Te esperan aquí"
-                            : "Tócalas para verlas en el camino"}
+                            ? t.teEsperanAqui
+                            : t.tocalasParaVerlas}
                       </p>
                     </div>
                   )}
@@ -603,7 +606,7 @@ export default function Ruta({
           {generacion.estado === "error" && (
             <div className="aparece mx-4 mt-3 rounded-[16px] border border-marca-examenBorde bg-marca-examen px-5 py-4 min-[900px]:mx-0">
               <p className="font-display text-[15px] font-bold text-marca-tinta">
-                {generacion.esEspera ? "Por ahora, ya está" : "Esta vez no ha salido."}
+                {generacion.esEspera ? tp.porAhoraYaEsta : tp.estaVezNoHaSalido}
               </p>
               <p className="mt-1 text-[14px] leading-[1.5] text-marca-gris">
                 {generacion.mensajeError}
@@ -615,7 +618,7 @@ export default function Ruta({
                   onClick={generacion.onReintentar}
                   className="mt-4 flex min-h-[44px] w-full items-center justify-center rounded-full btn-verde px-7 text-[15px] font-semibold min-[900px]:w-auto"
                 >
-                  Volver a intentarlo
+                  {tp.volverAIntentarlo}
                 </button>
               )}
             </div>
@@ -683,12 +686,12 @@ export default function Ruta({
   );
 }
 
-function rotuloDe(parada: Parada): string {
+function rotuloDe(parada: Parada, t: TextosRuta): string {
   if (parada.tipo === "resumen") return parada.titulo;
   if (parada.tipo === "generacion") {
-    return parada.abierta ? "Parada lista para abrir" : "Parada cerrada: se abre con tu próxima clase";
+    return parada.abierta ? t.paradaListaParaAbrir : t.paradaCerrada;
   }
-  return `Parada ${parada.numero}: ${parada.titulo}`;
+  return t.paradaNumeroTitulo(parada.numero, parada.titulo);
 }
 
 /**
@@ -697,6 +700,7 @@ function rotuloDe(parada: Parada): string {
  * mecánica de juego detrás.
  */
 function DiscoMovil({ parada, cerrando }: { parada: Parada; cerrando?: boolean }) {
+  const t = usarIdioma().t.ruta;
   const base = "ruta-disco relative grid place-items-center rounded-full";
 
   if (cerrando) return <DiscoCerrando medida={46} />;
@@ -813,6 +817,7 @@ function Nodo({
   onGenerar: () => void;
   generando: boolean;
 }) {
+  const t = usarIdioma().t.ruta;
   const esActiva = parada.tipo === "actual";
   const nudge = punto.x < 12 ? "-40%" : punto.x > 88 ? "-62%" : "-50%";
 
@@ -829,7 +834,7 @@ function Nodo({
           }}
         >
           <span className="relative inline-flex items-center whitespace-nowrap rounded-full bg-marca-amarillo px-[15px] py-[7px] text-[12.5px] font-bold text-marca-tinta shadow-[0_4px_0_#E0A800,0_8px_16px_rgba(18,33,26,0.16)]">
-            Estás aquí
+            {t.estasAqui}
             <span
               aria-hidden
               className="absolute -bottom-[4px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 bg-marca-amarillo"
@@ -851,7 +856,7 @@ function Nodo({
           <span className={ascendiendo ? "ruta-asciende" : esActiva ? "ruta-latido" : "block"}>
             <DiscoEscritorio parada={parada} grande={grande} cerrando={cerrando} />
           </span>
-          <span className="sr-only">{rotuloDe(parada)}</span>
+          <span className="sr-only">{rotuloDe(parada, t)}</span>
         </button>
       </span>
 
@@ -995,6 +1000,7 @@ function BotonPreparar({
   onGenerar: () => void;
   generando: boolean;
 }) {
+  const { ruta: t, practica: tp } = usarIdioma().t;
   return (
     <button
       type="button"
@@ -1002,7 +1008,7 @@ function BotonPreparar({
       disabled={generando}
       className="mt-2 inline-flex min-h-[40px] items-center justify-center rounded-full btn-verde-linea bg-white px-5 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
     >
-      {generando ? "Preparando…" : `Preparar la parada ${numero}`}
+      {generando ? tp.preparando : t.prepararLaParada(numero)}
     </button>
   );
 }
@@ -1030,6 +1036,7 @@ function Tarjeta({
   hechas: number;
   numeroActual: number | null;
 }) {
+  const { ruta: t, practica: tp } = usarIdioma().t;
   const caja =
     "rounded-[18px] border bg-white p-5 min-[900px]:rounded-[20px] min-[900px]:px-[30px] min-[900px]:py-[26px]";
 
@@ -1065,7 +1072,7 @@ function Tarjeta({
             href={`/alumno/${alumnoId}/${parada.bloque.id}`}
             className="flex min-h-[52px] w-full items-center justify-center rounded-full btn-verde px-11 text-[16.5px] font-bold shadow-[0_4px_0_#14722A,0_10px_20px_rgba(30,158,58,0.26)] min-[900px]:min-h-[58px] min-[900px]:w-auto min-[900px]:text-[17.5px]"
           >
-            Seguir la ruta
+            {t.seguirLaRuta}
             <span className="sr-only"> — {parada.bloque.titulo}</span>
           </Link>
           {profesor !== "" && (
@@ -1098,10 +1105,10 @@ function Tarjeta({
           href={`/alumno/${alumnoId}/${parada.bloque.id}`}
           className="mt-4 flex min-h-[48px] w-full items-center justify-center rounded-full btn-verde-linea bg-white px-7 text-[15.5px] font-bold min-[900px]:w-auto"
         >
-          Volver a hacerla
+          {t.volverAHacerla}
         </Link>
         <p className="mt-2.5 text-center text-[12.5px] leading-[1.4] text-marca-grisSuave min-[900px]:text-left">
-          No cambia lo que ya tienes hecho.
+          {t.noCambiaLoHecho}
         </p>
       </article>
     );
@@ -1122,8 +1129,8 @@ function Tarjeta({
         </p>
         <Aviso>
           {numeroActual !== null
-            ? `Llegas a ella en cuanto cierres la parada ${numeroActual}.`
-            : "Llegas a ella cuando sigas la ruta."}
+            ? t.llegasAlCerrar(numeroActual)
+            : t.llegasSiguiendo}
         </Aviso>
       </article>
     );
@@ -1144,14 +1151,14 @@ function Tarjeta({
 
           <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[32px]">
             {profesor !== ""
-              ? `Tu última clase con ${profesor} ya está aquí`
-              : "Tu última clase ya está aquí"}
+              ? t.tuUltimaClaseCon(profesor)
+              : t.tuUltimaClase}
           </h2>
 
           {/* De qué está hecho ESTE bloque. Lo redacta el servidor: es lo
               que sostiene la promesa de que sale de lo suyo. */}
           <p className="mt-2.5 max-w-[56ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">
-            {generacion.tarjeta?.descripcion ?? "Diez ejercicios hechos con lo que sabemos de ti."}
+            {generacion.tarjeta?.descripcion ?? t.diezEjerciciosConLoTuyo}
           </p>
         </div>
 
@@ -1162,10 +1169,10 @@ function Tarjeta({
             disabled={generando}
             className="flex min-h-[52px] w-full items-center justify-center rounded-full btn-verde px-11 text-[16.5px] font-bold shadow-[0_4px_0_#14722A,0_10px_20px_rgba(30,158,58,0.26)] disabled:cursor-wait disabled:opacity-60 min-[900px]:min-h-[58px] min-[900px]:w-auto min-[900px]:text-[17.5px]"
           >
-            {generando ? "Preparando…" : `Preparar la parada ${parada.numero}`}
+            {generando ? "Preparando…" : t.prepararLaParada(parada.numero)}
           </button>
           <p className="mt-2.5 text-center text-[12.5px] leading-[1.4] text-marca-grisSuave min-[900px]:mt-3 min-[900px]:max-w-[22ch] min-[900px]:text-[13px]">
-            Tarda menos de un minuto.
+            {t.tardaMenosDeUnMinuto}
           </p>
         </div>
       </article>
@@ -1184,14 +1191,14 @@ function Tarjeta({
           Parada {parada.numero} · aún no está
         </p>
         <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tintaCuerpo min-[900px]:text-[30px]">
-          Se abre con tu próxima clase
+          {t.seAbreConTuProximaClase}
         </h2>
         <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">
           {profesor !== ""
-            ? `${profesor} la prepara cuando suba lo que trabajéis. Sale de esa clase, así que hasta entonces no existe.`
-            : "Tu profesor la prepara cuando suba lo que trabajéis. Sale de esa clase, así que hasta entonces no existe."}
+            ? t.laPreparaCuandoSuba(profesor)
+            : t.tuProfesorLaPrepara}
         </p>
-        <Aviso>No tienes que hacer nada: te la encuentras aquí abierta.</Aviso>
+        <Aviso>{t.noTienesQueHacerNada}</Aviso>
       </article>
     );
   }
@@ -1201,15 +1208,15 @@ function Tarjeta({
     return (
       <div className={`${caja} border-marca-rutaTarjeta`}>
         <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-amarilloTexto min-[900px]:text-[11px]">
-          Parada 1
+          {t.paradaUno}
         </p>
         <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[30px]">
-          Tu ruta empieza con tu primera clase
+          {t.tuRutaEmpieza}
         </h2>
         <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">
           {profesor !== ""
-            ? `En cuanto ${profesor} analice lo que trabajéis, aparece aquí tu primera parada: diez ejercicios hechos con lo tuyo.`
-            : "En cuanto tu profesor analice lo que trabajéis, aparece aquí tu primera parada: diez ejercicios hechos con lo tuyo."}
+            ? t.encuantoAnalice(profesor)
+            : t.encuantoAnaliceSinProfesor}
         </p>
       </div>
     );
@@ -1241,15 +1248,15 @@ function Tarjeta({
 
       <div className="min-w-0 flex-1">
         <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-verdeOsc min-[900px]:text-[11px]">
-          Ruta al día
+          {t.rutaAlDia}
         </p>
         <h2 className="mt-2.5 text-balance font-display text-[22px] font-extrabold leading-[1.1] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[30px]">
-          {hechas === 1 ? "Te has hecho la parada que tenías" : `Te has hecho las ${hechas} paradas`}
+          {hechas === 1 ? t.teHasHechoLaParada : t.teHasHechoLasParadas(hechas)}
         </h2>
         <p className="mt-2 max-w-[62ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">
           {profesor !== ""
-            ? `La siguiente sale de tu próxima clase con ${profesor}. Mientras tanto, cualquiera de las hechas se puede repetir.`
-            : "La siguiente sale de tu próxima clase. Mientras tanto, cualquiera de las hechas se puede repetir."}
+            ? t.laSiguienteSaleCon(profesor)
+            : t.laSiguienteSale}
         </p>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, type ReactNode } from "react";
 import type { MesTemario, ModuloTemario, Temario as DatosTemario } from "@/lib/temario";
 import PanelPlan from "@/components/curso/PanelPlan";
 import LineaProgreso from "@/components/curso/LineaProgreso";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import FilaModulo from "@/components/curso/FilaModulo";
 import { textoDeEspera } from "@/lib/drip";
 
@@ -42,6 +43,7 @@ export default function Temario({
 }) {
   const inicial = temario.actual?.mes ?? temario.meses[0]?.numero;
 
+  const { curso: t, banners: tb } = usarIdioma().t;
   const [abiertos, setAbiertos] = useState<Record<number, boolean>>(
     inicial === undefined ? {} : { [inicial]: true }
   );
@@ -79,7 +81,7 @@ export default function Temario({
   if (temario.meses.length === 0) {
     return (
       <p className="mt-9 text-[16px] leading-[1.6] text-temario-medio">
-        Este curso todavía no tiene contenido cargado.
+        {t.sinContenido}
       </p>
     );
   }
@@ -107,12 +109,12 @@ export default function Temario({
             es un rótulo de sección entre otros: es el que dice qué es
             todo lo que viene debajo. */}
         <h2 className="text-[11px] font-extrabold uppercase leading-none tracking-[0.16em] text-temario-tinta min-[900px]:text-[12px]">
-          Programa mes a mes
+          {t.programaMesAMes}
         </h2>
         <div className="hidden items-center gap-2 min-[900px]:flex">
           {[
-            { texto: "Expandir todo", accion: abrirTodos },
-            { texto: "Contraer todo", accion: cerrarTodos },
+            { texto: t.expandirTodo, accion: abrirTodos },
+            { texto: t.contraerTodo, accion: cerrarTodos },
           ].map(({ texto, accion }) => (
             <button
               key={texto}
@@ -172,6 +174,8 @@ function Mes({
   onAlternar: (numero: number) => void;
   refCallback: (nodo: HTMLDivElement | null) => void;
 }) {
+  const { curso: t, banners: tb } = usarIdioma().t;
+
   // Lo que el alumno ya cerró sale de la lista y se recoge en un solo
   // desplegable, en el orden del curso. Ver `Completados`.
   const hechos = mes.semanas.flatMap((semana) => semana.modulos).filter((modulo) => modulo.hecho);
@@ -225,8 +229,8 @@ function Mes({
               </span>
               <span className="hidden text-[11.5px] font-semibold text-temario-suave min-[900px]:inline">
                 {mes.semanas.length > 0
-                  ? `Semanas ${mes.semanas[0].numero} – ${mes.semanas[mes.semanas.length - 1].numero}`
-                  : "Sin semanas"}
+                  ? t.semanas(mes.semanas[0].numero, mes.semanas[mes.semanas.length - 1].numero)
+                  : t.sinSemanas}
               </span>
             </span>
 
@@ -241,7 +245,7 @@ function Mes({
                 lee como una contradicción. */}
             {mes.diasParaAbrir !== null && mes.estado !== "completado" && (
               <span className="mt-[5px] block text-[11.5px] font-semibold text-temario-suave min-[900px]:mt-1.5 min-[900px]:text-[12px]">
-                {textoDeEspera(mes.diasParaAbrir)}
+                {textoDeEspera(mes.diasParaAbrir, tb)}
               </span>
             )}
           </span>
@@ -258,7 +262,7 @@ function Mes({
               aria-valuenow={mes.porcentaje}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label={`Progreso del mes ${mes.numero}`}
+              aria-label={t.progresoDelMes(mes.numero)}
             >
               <span className="block h-full rounded-full bg-temario-verde" style={{ width: `${mes.porcentaje}%` }} />
             </span>
@@ -358,6 +362,7 @@ function Completados({
   slug: string;
   foco: string | null;
 }) {
+  const { curso: t, banners: tb } = usarIdioma().t;
   const [abierto, setAbierto] = useState(false);
 
   return (
@@ -376,8 +381,7 @@ function Completados({
         </span>
 
         <span className="flex-1 text-[12.5px] font-semibold text-temario-suave min-[900px]:text-[13px]">
-          {modulos.length}{" "}
-          {modulos.length === 1 ? "módulo completado" : "módulos completados"}
+          {modulos.length} {t.modulosCompletados(modulos.length)}
         </span>
 
         <span aria-hidden className="shrink-0 text-[10px] text-temario-suave">

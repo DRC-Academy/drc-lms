@@ -21,6 +21,7 @@
 
 import type { ArbolCurso } from "@/lib/cursos-servidor";
 import { partirModulo, type ModuloPartido } from "@/lib/modulo";
+import type { TextosBanners } from "@/lib/textos/banners";
 
 /** Cuántos módulos entran en un mes. La regla del curso actual. */
 export const MODULOS_POR_MES = 8;
@@ -171,8 +172,8 @@ export function ubicarModulo(partido: ModuloPartido): PosicionModulo {
  * frase distinta cada día, que no dice dónde está uno. Esto sí, y
  * además es lo mismo que va a leer al entrar en el curso.
  */
-export function etiquetaPosicion(posicion: PosicionModulo): string {
-  return `Mes ${posicion.mes} · Semana ${posicion.semana} · Módulo ${posicion.modulo}`;
+export function etiquetaPosicion(posicion: PosicionModulo, t: TextosBanners): string {
+  return t.posicion(posicion.mes, posicion.semana, posicion.modulo);
 }
 
 function porcentajeDe(hechas: number, total: number): number {

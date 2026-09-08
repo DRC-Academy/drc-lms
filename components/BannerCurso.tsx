@@ -1,3 +1,4 @@
+import { textosActuales } from "@/lib/idioma-servidor";
 import Link from "next/link";
 import { conFoco } from "@/lib/foco";
 import { textoDeEspera } from "@/lib/drip";
@@ -44,6 +45,7 @@ export default function BannerCurso({
    */
   foco?: string | null;
 }) {
+  const t = textosActuales().banners;
   // Sin curso asignado no hay banner. En su lugar, una línea sobria: el
   // alumno no ha hecho nada mal y no se le habla como si fuera un error.
   // Esto es una tarjeta, no una franja: no lleva verde ni amarillo.
@@ -51,8 +53,7 @@ export default function BannerCurso({
     return (
       <section className="rounded-[18px] border border-marca-borde bg-white px-6 py-5 min-[900px]:rounded-[20px]">
         <p className="text-[15px] leading-[1.55] text-marca-gris">
-          Tu plan todavía no tiene un curso asociado. Coméntaselo a tu profesor y lo activamos.
-          Mientras tanto, tu práctica de abajo funciona con normalidad.
+          {t.sinCursoTitulo} {t.sinCursoCuerpo}
         </p>
       </section>
     );
@@ -86,22 +87,22 @@ export default function BannerCurso({
   );
 
   const etiqueta = terminado
-    ? "Curso completado"
+    ? t.cursoCompletado
     : esperando
-      ? "Estás al día"
+      ? t.estasAlDia
       : empezado
-        ? "Continúa donde lo dejaste"
-        : "Empieza tu curso";
+        ? t.continuaDondeLoDejaste
+        : t.empiezaTuCurso;
 
   // Al que espera se le lleva al temario, que es donde está dicho qué
   // viene y cuándo: es la regla 3 de `lib/drip.ts` —lo bloqueado se ve—
   // y el único sitio de la aplicación que la cumple entera.
   const llamada = terminado
-    ? "Repasar el curso"
+    ? t.repasarElCurso
     : esperando
-      ? "Ver mi curso"
+      ? t.verMiCurso
       : empezado
-        ? "Continuar"
+        ? t.continuar
         : "Empezar";
 
   // ---------------------------------------------------------------
@@ -126,9 +127,9 @@ export default function BannerCurso({
   // de llegar al botón.
   // ---------------------------------------------------------------
   const titulo = siguiente
-    ? etiquetaPosicion(ubicarModulo(partirModulo(siguiente.moduloTitulo, siguiente.moduloOrden)))
+    ? etiquetaPosicion(ubicarModulo(partirModulo(siguiente.moduloTitulo, siguiente.moduloOrden)), t)
     : esperando
-      ? "Has hecho todo lo que tienes abierto"
+      ? t.todoLoAbierto
       : curso.titulo;
 
   return (
@@ -148,9 +149,9 @@ export default function BannerCurso({
         // pregunta que tiene, y va pegada al botón que le lleva a verlo.
         secondaryText={
           siguiente
-            ? `Lección ${siguiente.posicion} de ${total}`
+            ? t.leccionDeTotal(siguiente.posicion, total)
             : esperando && diasParaAbrir !== null
-              ? textoDeEspera(diasParaAbrir)
+              ? textoDeEspera(diasParaAbrir, t)
               : undefined
         }
       />

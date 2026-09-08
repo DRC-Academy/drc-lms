@@ -351,7 +351,7 @@ function HuecoVacio({
             <path d="M39 6 L 51 7.5 L 47 19" />
           </svg>
           <span className="max-w-[130px] text-center text-[13.5px] font-semibold leading-[1.4] text-marca-verdeOsc">
-            Está ahí arriba
+            {t.estaAhiArriba}
           </span>
         </div>
       )}

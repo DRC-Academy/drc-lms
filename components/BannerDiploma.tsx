@@ -1,3 +1,4 @@
+import { textosActuales } from "@/lib/idioma-servidor";
 import type { ReactNode } from "react";
 import { textoDiploma, type EstadoDiploma } from "@/lib/diploma";
 
@@ -52,7 +53,8 @@ export default function BannerDiploma({
    */
   sendero?: ReactNode;
 }) {
-  const texto = textoDiploma(estado);
+  const t = textosActuales().banners;
+  const texto = textoDiploma(estado, t);
   if (texto === null) return null;
 
   const conseguido = estado.estado === "conseguido";
@@ -60,14 +62,12 @@ export default function BannerDiploma({
   // Solo para el lector de pantalla: la barra sin narrar es un
   // porcentaje suelto, y el número de al lado no dice de cuántas.
   const descripcion = conseguido
-    ? "Curso completado"
-    : `Te ${texto.cifra === 1 ? "falta" : "faltan"} ${texto.cifra} de ${
-        estado.estado === "en-curso" ? estado.total : 0
-      } lecciones para tu diploma`;
+    ? t.cursoCompletado
+    : t.faltanParaDiploma(texto.cifra ?? 0, estado.estado === "en-curso" ? estado.total : 0);
 
   return (
     <section
-      aria-label="Tu diploma"
+      aria-label={t.tuDiploma}
       className={`rounded-[16px] px-[18px] py-[18px] min-[900px]:px-7 min-[900px]:py-[22px] ${
         conseguido
           ? "border border-marca-verde bg-marca-verdeFondo shadow-[inset_0_0_0_3px_#F0FAF2,inset_0_0_0_4px_#A9DFB7] min-[900px]:shadow-[inset_0_0_0_4px_#F0FAF2,inset_0_0_0_5px_#A9DFB7]"

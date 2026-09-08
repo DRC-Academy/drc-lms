@@ -1,5 +1,6 @@
 "use client";
 
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import type { Bloque } from "@/lib/data";
 import type { AvisoFormulario, TarjetaPractica } from "@/lib/modos";
 import { construirRuta, estaCerrado, type ProgresoBloques } from "@/lib/ruta";
@@ -119,8 +120,10 @@ export default function PanelPractica({
   // camino es esta semana, la lista de abajo es todo.
   const cerrados = todos.filter((bloque) => estaCerrado(progreso, bloque));
 
-  const saludo = nombre.trim() !== "" ? `Para ${nombre.trim().split(" ")[0]}` : "Para ti";
-  const hoy = new Intl.DateTimeFormat("es-ES", {
+  const t = usarIdioma().t.ruta;
+  const saludo =
+    nombre.trim() !== "" ? t.paraNombre(nombre.trim().split(" ")[0]) : t.paraTi;
+  const hoy = new Intl.DateTimeFormat(t.locale, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -139,16 +142,17 @@ export default function PanelPractica({
           {saludo} · {hoy}
         </p>
         <h1 className="mt-2.5 text-balance font-display text-[30px] font-extrabold leading-[1.03] tracking-[-0.03em] text-marca-tinta min-[900px]:mt-3 min-[900px]:text-[46px]">
-          {paradas.length > 0 ? "Tu ruta de esta semana" : "Aquí va a estar tu ruta"}
+          {paradas.length > 0 ? t.tuRutaDeEstaSemana : t.aquiVaAEstarTuRuta}
         </h1>
         <p className="mt-2.5 max-w-[62ch] text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia min-[900px]:mt-3 min-[900px]:text-[17px]">
           {profesor !== "" ? (
             <>
-              Sale de tus clases con <strong className="font-semibold text-marca-tinta">{profesor}</strong>.
-              Nadie más en la academia tiene esta ruta.
+              {t.saleDeTusClasesCon(profesor)} {t.nadieMasTieneEstaRuta}
             </>
           ) : (
-            <>Sale de tus clases y de lo que sabemos de ti. Nadie más en la academia tiene esta ruta.</>
+            <>
+              {t.saleDeTusClases} {t.nadieMasTieneEstaRuta}
+            </>
           )}
         </p>
       </div>
@@ -303,20 +307,22 @@ function RutaVacia({ generando, profesor }: { generando: boolean; profesor: stri
 
 /** La caja blanca de la primera parada, la que todavía no existe. */
 function Primera({ generando, profesor }: { generando: boolean; profesor: string }) {
+  const t = usarIdioma().t.ruta;
+
   return (
     <div className="rounded-[18px] border border-marca-rutaTarjeta bg-white p-5 min-[900px]:rounded-[20px] min-[900px]:px-[30px] min-[900px]:py-[26px]">
       <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-amarilloTexto min-[900px]:text-[11px]">
-        Parada 1
+        {t.paradaNumeroTitulo(1, "").replace(/:s*$/, "")}
       </p>
       <h2 className="mt-3 text-balance font-display text-[23px] font-extrabold leading-[1.08] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[30px]">
-        {generando ? "Preparando tu primera parada…" : "Tu ruta empieza con tu primera clase"}
+        {generando ? t.preparandoTuPrimeraParada : t.tuRutaEmpieza}
       </h2>
       <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.45] text-marca-tintaMedia min-[900px]:text-[15.5px] min-[900px]:leading-[1.5]">
         {generando
-          ? "En menos de un minuto la tienes aquí."
+          ? t.enMenosDeUnMinuto
           : profesor !== ""
-            ? `En cuanto ${profesor} analice lo que trabajéis, aparece aquí tu primera parada: diez ejercicios hechos con lo tuyo.`
-            : "En cuanto tu profesor analice lo que trabajéis, aparece aquí tu primera parada: diez ejercicios hechos con lo tuyo."}
+            ? t.encuantoAnalice(profesor)
+            : t.encuantoAnaliceSinProfesor}
       </p>
     </div>
   );

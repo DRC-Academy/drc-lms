@@ -23,6 +23,7 @@
 // Módulo puro: quien llama le pasa las fechas ya leídas.
 // ---------------------------------------------------------------
 
+import type { TextosBanners } from "@/lib/textos/banners";
 import { diasNaturales } from "@/lib/fechas";
 
 export type Apertura =
@@ -74,6 +75,6 @@ export function aperturaDeLeccion(
 }
 
 /** "Mañana", "En 3 días". Lo que se le enseña al alumno. */
-export function textoDeEspera(diasRestantes: number): string {
-  return diasRestantes <= 1 ? "Disponible mañana" : `Disponible en ${diasRestantes} días`;
+export function textoDeEspera(diasRestantes: number, t: TextosBanners): string {
+  return diasRestantes <= 1 ? t.disponibleManana : t.disponibleEnDias(diasRestantes);
 }

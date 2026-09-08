@@ -45,12 +45,20 @@ import { EJERCICIOS, type TextosEjercicios } from "@/lib/textos/ejercicios";
 import { NAVEGACION, type TextosNavegacion } from "@/lib/textos/navegacion";
 import { ENTRADA, type TextosEntrada } from "@/lib/textos/entrada";
 import { PRACTICA, type TextosPractica } from "@/lib/textos/practica";
+import { CURSO, type TextosCurso } from "@/lib/textos/curso";
+import { PROGRESO, type TextosProgreso } from "@/lib/textos/progreso";
+import { RUTA, type TextosRuta } from "@/lib/textos/ruta";
+import { BANNERS, type TextosBanners } from "@/lib/textos/banners";
 
 export type Textos = {
   ejercicios: TextosEjercicios;
   navegacion: TextosNavegacion;
   entrada: TextosEntrada;
   practica: TextosPractica;
+  curso: TextosCurso;
+  progreso: TextosProgreso;
+  ruta: TextosRuta;
+  banners: TextosBanners;
 };
 
 export const TEXTOS: Record<Idioma, Textos> = {
@@ -59,11 +67,19 @@ export const TEXTOS: Record<Idioma, Textos> = {
     navegacion: NAVEGACION.en,
     entrada: ENTRADA.en,
     practica: PRACTICA.en,
+    curso: CURSO.en,
+    progreso: PROGRESO.en,
+    ruta: RUTA.en,
+    banners: BANNERS.en,
   },
   es: {
     ejercicios: EJERCICIOS.es,
     navegacion: NAVEGACION.es,
     entrada: ENTRADA.es,
     practica: PRACTICA.es,
+    curso: CURSO.es,
+    progreso: PROGRESO.es,
+    ruta: RUTA.es,
+    banners: BANNERS.es,
   },
 };

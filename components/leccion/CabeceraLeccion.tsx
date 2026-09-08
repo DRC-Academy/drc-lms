@@ -1,3 +1,4 @@
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -66,7 +67,7 @@ export function CabeceraCargando() {
         </div>
       </div>
 
-      <span className="sr-only">Cargando el curso…</span>
+      <span className="sr-only">{usarIdioma().t.curso.cargandoElCurso}</span>
     </header>
   );
 }

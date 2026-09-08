@@ -1,3 +1,4 @@
+import { textosActuales } from "@/lib/idioma-servidor";
 import { enMeses, opcionesDeHoras, type Estimacion } from "@/lib/estimacion";
 
 // ---------------------------------------------------------------
@@ -50,6 +51,7 @@ export default function BannerAmpliar({
    */
   horasSemanales?: number | null;
 }) {
+  const t = textosActuales().banners;
   // ---------------------------------------------------------------
   // LA VARIANTE SIN CIFRAS
   //
@@ -85,18 +87,18 @@ export default function BannerAmpliar({
             `opcionesDeHoras` devuelve null cuando el alumno ya está en el
             plan más alto —5h, el techo del sistema—, y son 5 alumnos.
             Con la primera versión de este banner esos cinco leían «con
-            más horas a la semana…» y un botón de «Amplía tu plan» que no
+            más horas a la semana…» y un botón de «{t.ampliaTuPlan}» que no
             les podía dar nada: se les ofrecía algo que no existe.
 
             Así que sin escalera cambia el titular y desaparece el botón,
             exactamente igual que hace el banner de estimación cuando
             `mereceLaPena` es falso. Un alumno que ya está arriba del todo
             merece que se lo digan, no que se le venda. */}
-        <h2 className="amp-title">{opciones ? "Llega más preparado" : "Vas al máximo de horas"}</h2>
+        <h2 className="amp-title">{opciones ? "{t.llegaMasPreparado}" : "{t.vasAlMaximo}"}</h2>
         <p className="amp-sub">
           {opciones
-            ? "Estás preparando tu examen. Con más horas a la semana no cambias de meta: llegas a la misma prueba con más práctica hecha y más seguridad."
-            : "Estás preparando tu examen con todas las horas que ofrecemos. No hay plan por encima del tuyo: lo que queda es seguir."}
+            ? "{t.examenMasHoras}"
+            : "{t.examenAlMaximo}"}
         </p>
 
         {/* ---------------------------------------------------------------
@@ -127,7 +129,7 @@ export default function BannerAmpliar({
               >
                 <p className="amp-horas">
                   {opcion.horasSemanales} h a la semana
-                  {opcion.esSuPlan && <span className="amp-chip">Tu plan</span>}
+                  {opcion.esSuPlan && <span className="amp-chip">{t.tuPlan}</span>}
                 </p>
 
                 {opcion.horasExtra > 0 && (
@@ -158,7 +160,7 @@ export default function BannerAmpliar({
         {opciones && (
           <div className="amp-pie">
             <a className="amp-cta" href={urlAmpliar} target="_blank" rel="noopener noreferrer">
-              Amplía tu plan
+              {t.ampliaTuPlan}
               <span className="amp-flecha" aria-hidden>
                 →
               </span>
@@ -203,18 +205,18 @@ export default function BannerAmpliar({
       <h2 className="amp-title">
         {mereceLaPena
           ? esPreparacion
-            ? "¡Puedes llegar preparado antes!"
-            : "¡Puedes llegar antes de lo que crees!"
-          : "Vas al mejor ritmo posible"}
+            ? "{t.puedesLlegarAntesPreparado}"
+            : "{t.puedesLlegarAntes}"
+          : "{t.vasAlMejorRitmo}"}
       </h2>
       <p className="amp-sub">
         {esPreparacion
           ? mereceLaPena
-            ? "¿Cuánto tardarías en llegar preparado a tu examen con otros planes?"
-            : "Esto es lo que tardarías en llegar preparado a tu examen al ritmo que llevas."
+            ? "{t.cuantoTardariasExamen}"
+            : "{t.loQueTardariasExamen}"
           : mereceLaPena
-            ? "¿Cuánto tardarías en conseguir tu objetivo con otros planes?"
-            : "Esto es lo que tardarías en conseguir tu objetivo al ritmo que llevas."}
+            ? "{t.cuantoTardariasObjetivo}"
+            : "{t.loQueTardariasObjetivo}"}
       </p>
 
       <ol className="amp-planes">
@@ -222,7 +224,7 @@ export default function BannerAmpliar({
           <li key={opcion.horasSemanales} className={`amp-plan${opcion.esSuPlan ? " es-suyo" : ""}`}>
             <p className="amp-horas">
               {opcion.horasSemanales} h a la semana
-              {opcion.esSuPlan && <span className="amp-chip">Tu plan</span>}
+              {opcion.esSuPlan && <span className="amp-chip">{t.tuPlan}</span>}
             </p>
 
             {/* EL AHORRO, LO MÁS GRANDE DEL BANNER. Es lo único que
@@ -245,7 +247,7 @@ export default function BannerAmpliar({
             </div>
 
             <p className="amp-fecha">
-              {esPreparacion ? "Estarías listo en" : "Llegarías en"} {opcion.llegada}
+              {esPreparacion ? t.estariasListoEn : t.llegariasEn} {opcion.llegada}
             </p>
           </li>
         ))}
@@ -259,7 +261,7 @@ export default function BannerAmpliar({
       {mereceLaPena && (
         <div className="amp-pie">
           <a className="amp-cta" href={urlAmpliar} target="_blank" rel="noopener noreferrer">
-            Amplía tu plan
+            {t.ampliaTuPlan}
             <span className="amp-flecha" aria-hidden>
               →
             </span>

@@ -6,6 +6,7 @@ import type { LeccionIndice } from "@/lib/cursos-servidor";
 import type { TituloLeccion } from "@/lib/leccion-html";
 import type { EjercicioVista } from "@/lib/ejercicios";
 import { TiraProgreso } from "@/components/leccion/CabeceraLeccion";
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import LateralLecciones, { ItemLeccion } from "@/components/leccion/LateralLecciones";
 import IndiceLeccion from "@/components/leccion/IndiceLeccion";
 import FlujoEjercicios from "@/components/leccion/FlujoEjercicios";
@@ -88,6 +89,7 @@ export default function VistaLeccion({
   // directamente al flujo en vez de a una pantalla en blanco con un
   // botón de "Empezar".
   const [enEjercicios, setEnEjercicios] = useState(!hayTeoria && hayEjercicios);
+  const t = usarIdioma().t.curso;
   const [panel, setPanel] = useState(false);
 
   const posicion = hermanas.findIndex((h) => h.id === leccion.id);
@@ -132,7 +134,7 @@ export default function VistaLeccion({
                 setEnEjercicios(false);
                 window.scrollTo({ top: 0 });
               }}
-              aria-label="Volver a la teoría de la lección"
+              aria-label={t.volverALaTeoria}
               className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] border border-marca-borde bg-marca-niebla text-[14px] leading-none text-marca-tinta transition-colors hover:bg-marca-nieblaOscura"
             >
               ←
@@ -141,10 +143,10 @@ export default function VistaLeccion({
 
           <div className="min-w-0 flex-1">
             {enEjercicios ? (
-              <TiraProgreso texto="Ejercicios" hechos={hechasModulo} total={hermanas.length} />
+              <TiraProgreso texto={t.ejercicios} hechos={hechasModulo} total={hermanas.length} />
             ) : (
               <TiraProgreso
-                texto={`Lección ${posicion + 1} de ${hermanas.length}`}
+                texto={t.leccionDeTotal(posicion + 1, hermanas.length)}
                 hechos={hechasModulo}
                 total={hermanas.length}
               />
@@ -155,7 +157,7 @@ export default function VistaLeccion({
             onClick={() => setPanel((v) => !v)}
             className="shrink-0 rounded-full border border-marca-borde bg-marca-niebla px-3.5 py-[7px] text-[12.5px] font-semibold text-marca-tinta transition-colors hover:bg-marca-nieblaOscura"
           >
-            {panel ? "Cerrar" : "Lecciones"}
+            {panel ? t.cerrar : t.lecciones}
           </button>
         </div>
       </div>
@@ -250,16 +252,16 @@ export default function VistaLeccion({
                   <div className="mt-9 min-[1100px]:mt-[38px]">
                     <Banner
                       size="md"
-                      eyebrow="Ejercicios"
+                      eyebrow={t.ejercicios}
                       title={
                         ejercicios.length === 1
-                          ? "Un ejercicio para fijar lo de arriba"
-                          : `${ejercicios.length} ejercicios para fijar lo de arriba`
+                          ? t.unEjercicioParaFijar
+                          : t.variosEjerciciosParaFijar(ejercicios.length)
                       }
-                      subtitle="De uno en uno. Se corrigen al momento."
+                      subtitle={t.deUnoEnUno}
                       action={{
-                        label: "Empezar",
-                        srSuffix: "los ejercicios de esta lección",
+                        label: t.empezar,
+                        srSuffix: t.losEjerciciosDeEstaLeccion,
                         onClick: () => {
                           setEnEjercicios(true);
                           window.scrollTo({ top: 0 });
@@ -271,7 +273,7 @@ export default function VistaLeccion({
 
                 {!hayAlgoQueEnsenar && (
                   <p className="mt-7 text-[16px] leading-[1.6] text-marca-gris">
-                    Esta lección todavía no tiene contenido. Puedes seguir con la siguiente.
+                    {t.leccionSinContenido}
                   </p>
                 )}
               </div>
@@ -309,14 +311,14 @@ export default function VistaLeccion({
                       className="flex-1 rounded-full btn-verde px-6 py-[13px] text-center text-[15px] font-semibold min-[1100px]:py-3.5 min-[1100px]:text-[15.5px]"
                     >
                       <span className="min-[1100px]:hidden">
-                        {completada ? "Continuar" : "Completada y continuar"}
+                        {completada ? t.completarCortoHecha : t.completarCorto}
                       </span>
                       <span className="hidden min-[1100px]:inline">
                         {completada
-                          ? "Continuar"
+                          ? t.completarLargoHecha
                           : esUltimaDelModulo
-                          ? "Marcar el módulo como completado"
-                          : "Marcar como completada y continuar"}
+                            ? t.completarModulo
+                            : t.completarLargo}
                       </span>
                     </BotonCompletar>
                   </div>
@@ -335,7 +337,7 @@ export default function VistaLeccion({
         <div className="fixed inset-0 z-40 flex flex-col min-[1100px]:hidden">
           <button
             type="button"
-            aria-label="Cerrar el panel de lecciones"
+            aria-label={t.cerrarElPanel}
             onClick={() => setPanel(false)}
             className="flex-1 bg-[rgba(18,33,26,.42)]"
           />

@@ -1,3 +1,4 @@
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import Link from "next/link";
 import type { ModuloTemario } from "@/lib/temario";
 import { textoDeEspera } from "@/lib/drip";
@@ -32,11 +33,10 @@ export default function FilaModulo({
   /** Contexto de revisión, para no perder al alumno al abrir la lección. */
   foco?: string | null;
 }) {
+  const { curso: t, banners: tb } = usarIdioma().t;
   const { esActual, hecho, totalLecciones, completadas, disponible } = modulo;
 
-  const meta = `${totalLecciones} ${totalLecciones === 1 ? "lección" : "lecciones"} · ${completadas} ${
-    completadas === 1 ? "hecha" : "hechas"
-  }`;
+  const meta = t.metaModulo(totalLecciones, completadas);
 
   const contenido = (
     <>
@@ -96,11 +96,11 @@ export default function FilaModulo({
 
       {!disponible ? (
         <span className="mt-[2px] shrink-0 whitespace-nowrap text-[12.5px] font-semibold text-temario-suave min-[900px]:mt-0">
-          {textoDeEspera(modulo.diasParaAbrir ?? 1)}
+          {textoDeEspera(modulo.diasParaAbrir ?? 1, tb)}
         </span>
       ) : esActual ? (
         <span className="mt-[2px] shrink-0 whitespace-nowrap text-[13px] font-bold text-temario-verdeTexto min-[900px]:mt-0">
-          Continuar →
+          {t.continuarFlecha}
         </span>
       ) : (
         <span aria-hidden className="mt-[2px] shrink-0 text-[13px] text-temario-separador min-[900px]:mt-0">
@@ -151,7 +151,11 @@ export default function FilaModulo({
       >
         {contenido}
         <span className="sr-only">
-          {hecho ? "Repasar" : esActual ? "Continuar" : "Empezar"} el módulo {modulo.numero}
+          {hecho
+            ? t.repasarElModulo(modulo.numero)
+            : esActual
+              ? t.continuarElModulo(modulo.numero)
+              : t.empezarElModulo(modulo.numero)}
         </span>
       </Link>
     </li>

@@ -1,5 +1,6 @@
 "use client";
 
+import { usarIdioma } from "@/components/ProveedorIdioma";
 import { textoDeEspera } from "@/lib/drip";
 import type { MesTemario } from "@/lib/temario";
 
@@ -42,6 +43,7 @@ export default function LineaProgreso({
   actual: number | null;
   onIrAlMes: (numero: number) => void;
 }) {
+  const { curso: t, banners: tb } = usarIdioma().t;
   if (meses.length === 0) return null;
 
   const mesActual = meses.find((mes) => mes.numero === actual) ?? null;
@@ -52,7 +54,7 @@ export default function LineaProgreso({
 
   return (
     <section
-      aria-label="Tu recorrido por el curso"
+      aria-label={t.tuRecorrido}
       className="mt-4 rounded-[14px] border border-temario-borde bg-white px-4 pb-3.5 pt-4 min-[900px]:mt-4 min-[900px]:px-[22px] min-[900px]:pb-4 min-[900px]:pt-[18px]"
     >
       {/* ------------------------------ MÓVIL ------------------------------
@@ -83,7 +85,7 @@ export default function LineaProgreso({
 
       {proximo && (
         <p className="mt-3 text-[12.5px] text-temario-tenue min-[900px]:hidden">
-          El mes {proximo.numero} se abre {textoDeEspera(proximo.diasParaAbrir ?? 1).toLowerCase().replace("disponible ", "")}.
+          {tb.elMesSeAbre(proximo.numero, proximo.diasParaAbrir ?? 1)}
         </p>
       )}
     </section>
@@ -107,6 +109,7 @@ function Tramo({
   esActual: boolean;
   onIr: () => void;
 }) {
+  const tb = usarIdioma().t.banners;
   const bloqueado = mes.diasParaAbrir !== null;
   const completado = mes.estado === "completado";
 
@@ -176,7 +179,7 @@ function Tramo({
           }`}
         >
           {bloqueado ? (
-            textoDeEspera(mes.diasParaAbrir ?? 1)
+            textoDeEspera(mes.diasParaAbrir ?? 1, tb)
           ) : (
             <span className="tabular-nums">
               {mes.completadas} de {mes.totalLecciones}

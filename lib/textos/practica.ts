@@ -84,6 +84,7 @@ export type TextosPractica = {
   pendiente: string;
   aquiApareceElQuePrepares: string;
   nuevo: string;
+  estaAhiArriba: string;
   empezar: string;
   yMasEn: (restantes: number) => string;
   todaviaNinguno: string;
@@ -173,6 +174,7 @@ const ES: TextosPractica = {
   pendiente: "Pendiente",
   aquiApareceElQuePrepares: "Aquí aparece el que prepares, listo para empezarlo.",
   nuevo: "Nuevo",
+  estaAhiArriba: "Está ahí arriba",
   empezar: "Empezar",
   yMasEn: (restantes) => `y ${restantes} más en`,
   todaviaNinguno: "Todavía no has preparado ninguno",
@@ -266,6 +268,7 @@ const EN: TextosPractica = {
   pendiente: "Waiting for you",
   aquiApareceElQuePrepares: "The one you build shows up here, ready to start.",
   nuevo: "New",
+  estaAhiArriba: "It's up there",
   empezar: "Start",
   yMasEn: (restantes) => `and ${restantes} more in`,
   todaviaNinguno: "You haven't built one yet",
