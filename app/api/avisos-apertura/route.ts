@@ -42,27 +42,47 @@ import {
 } from "@/lib/avisos-servidor";
 import { alumnosParaAvisos, type AlumnoAviso } from "@/lib/gestion";
 import { urlBase } from "@/lib/correo";
-import { enviarAviso, type AvisoApertura, type SeccionAviso } from "@/lib/correo-avisos";
+import {
+  enviarAviso,
+  type AvisoApertura,
+  type ModuloAvisado,
+  type SeccionAviso,
+} from "@/lib/correo-avisos";
 import { crearTokenBaja } from "@/lib/sesion";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+/**
+ * 300 segundos, no 60.
+ *
+ * Con 60 esto no llegaba al final. Un correo cuesta la espera del ritmo
+ * más tres viajes —reservar, Resend, confirmar—, y medidos contra la
+ * base de verdad salen unos 1,7 segundos. Los 67 correos de un día
+ * normal son casi dos minutos: la función moría a mitad de la lista.
+ *
+ * Y morir a mitad no es quedarse corto. La fila ya está en `reservado`
+ * cuando el proceso se corta, y una reserva sin confirmar se trata como
+ * enviada a propósito —ver `supabase/lms-avisos.sql`—, así que el alumno
+ * en cuyo correo cayó el hachazo no recibe nada ni hoy ni nunca.
+ */
+export const maxDuration = 300;
 
 /**
  * Tope de correos por ejecución.
  *
- * No es una limitación de Resend ni del plan: es el fusible. En un día
- * normal salen unos 25 —172 alumnos con una apertura cada siete días—,
- * así que si una ejecución quiere mandar 300 es que algo se ha roto en
- * el cálculo, y prefiero que se corte y se vea en la respuesta a que
- * llegue a los buzones.
+ * No es una limitación de Resend ni del plan: es el fusible, y desde
+ * que el tiempo lo vigila `LIMITE_MS` es SOLO el fusible.
  *
- * 80 es además lo que cabe en los 60 segundos de la función al ritmo de
- * abajo. Si una ejecución se corta, los que se queden fuera entran al
- * día siguiente: siguen dentro de la ventana de dos días.
+ * El techo real de un día son unos 70: la ventana de dos días sobre 184
+ * alumnos con una apertura cada siete deja fuera a cinco de cada siete,
+ * y medido contra los datos de verdad da 67. 120 pasa de largo ese
+ * máximo sin llegar a "todos", así que solo salta si el cálculo se ha
+ * roto, que es justo para lo que está.
+ *
+ * Si una ejecución se corta, los que se queden fuera entran al día
+ * siguiente: siguen dentro de la ventana de dos días.
  */
-const TOPE_ENVIOS = 80;
+const TOPE_ENVIOS = 120;
 
 /**
  * Milisegundos entre correo y correo.
@@ -70,10 +90,28 @@ const TOPE_ENVIOS = 80;
  * Resend admite dos peticiones por segundo, y una ronda de envíos
  * seguidos las pasa de largo: cada llamada tarda menos de eso. Sin este
  * freno, a partir del tercer alumno empiezan los 429 y esos avisos se
- * pierden hasta el día siguiente. Con 25 correos al día son quince
- * segundos, que sobran dentro de la función.
+ * pierden hasta el día siguiente.
+ *
+ * SE ESPERA LO QUE FALTE, NO LOS 550 ENTEROS. Entre un envío y el
+ * siguiente ya se han hecho dos viajes a la base —confirmar el anterior
+ * y reservar el nuevo—, que por sí solos pasan de medio segundo.
+ * Dormir además 550 fijos era duplicar la espera y regalarle a la
+ * función 37 de sus segundos sin necesidad.
  */
 const RITMO_MS = 550;
+
+/**
+ * Cuándo dejar de mandar por su propio pie.
+ *
+ * El fusible cuenta correos; esto cuenta tiempo, que es lo que de
+ * verdad mata la función. Cortar aquí es cerrar la vuelta con lo hecho
+ * y decirlo en la respuesta; que corte Vercel es morir con una reserva
+ * a medias, y esa sí se pierde para siempre.
+ *
+ * 40 segundos de margen sobre `maxDuration` para que quepa el correo que
+ * esté en vuelo y la respuesta.
+ */
+const LIMITE_MS = 260_000;
 
 function esperar(ms: number): Promise<void> {
   return new Promise((listo) => setTimeout(listo, ms));
@@ -255,10 +293,14 @@ export async function GET(peticion: NextRequest) {
   }
 
   // ------------------------------ ENVIAR ------------------------------
+  const arranque = Date.now();
+
   let enviados = 0;
   let fallidos = 0;
   let modulos = 0;
   let cortado = false;
+  let sinTiempo = false;
+  let ultimoEnvio = 0;
 
   for (const plan of conAviso) {
     if (enviados + fallidos >= TOPE_ENVIOS) {
@@ -266,7 +308,13 @@ export async function GET(peticion: NextRequest) {
       break;
     }
 
-    if (enviados + fallidos > 0) await esperar(RITMO_MS);
+    if (Date.now() - arranque > LIMITE_MS) {
+      sinTiempo = true;
+      break;
+    }
+
+    const desdeElUltimo = Date.now() - ultimoEnvio;
+    if (ultimoEnvio > 0 && desdeElUltimo < RITMO_MS) await esperar(RITMO_MS - desdeElUltimo);
 
     // RESERVAR ANTES DE ENVIAR. Si otra ejecución se adelantó, aquí
     // vuelve menos de lo pedido —o nada— y el correo se ajusta a lo que
@@ -292,6 +340,7 @@ export async function GET(peticion: NextRequest) {
 
     const ids = recortado.secciones.flatMap((seccion) => seccion.nuevos.map((m) => m.id));
 
+    ultimoEnvio = Date.now();
     const resultado = await enviarAviso(plan.alumno.email, await componer(recortado));
 
     if (resultado.ok) {
@@ -313,6 +362,8 @@ export async function GET(peticion: NextRequest) {
     modulos,
     fallidos,
     cortadoPorTope: cortado,
+    cortadoPorTiempo: sinTiempo,
+    segundos: Math.round((Date.now() - arranque) / 1000),
     descartados: resumirDescartes(planes),
   });
 }
@@ -343,6 +394,43 @@ function resumirDescartes(planes: PlanAlumno[]): Record<string, number> {
   return cuenta;
 }
 
+/**
+ * Dos módulos seguidos con el mismo título se cuentan como uno.
+ *
+ * NO ES UN CASO RARO: el drip abre dos módulos cada siete días, y en
+ * Inglés General A2 esos dos vienen emparejados con el mismo nombre
+ * —"Lesson 5: Talking About Past Experiences" y "Lesson 6: Talking
+ * About Past Experiences"—. Quitado el prefijo, que es lo que hace
+ * `partirModulo`, quedan dos líneas idénticas una debajo de otra. En
+ * el correo eso no se lee como dos módulos: se lee como que la
+ * plataforma ha repetido una línea.
+ *
+ * Se funden sumando las lecciones, que es lo que el alumno encuentra
+ * cuando entra: un solo bloque de ocho en vez de dos de cuatro.
+ *
+ * SOLO LOS CONTIGUOS, porque el pareado siempre lo es —llegan
+ * ordenados por `orden`— y porque el mismo nombre en dos semanas
+ * distintas del curso sí son dos cosas distintas: "Practical
+ * Exercises" se repite dieciséis veces en B1 sin ser nunca el mismo
+ * módulo.
+ */
+function fundirRepetidos(modulos: ModuloAvisado[]): ModuloAvisado[] {
+  const salida: ModuloAvisado[] = [];
+
+  for (const modulo of modulos) {
+    const anterior = salida[salida.length - 1];
+
+    if (anterior && anterior.titulo === modulo.titulo) {
+      anterior.totalLecciones += modulo.totalLecciones;
+      continue;
+    }
+
+    salida.push({ ...modulo });
+  }
+
+  return salida;
+}
+
 /** Del plan calculado al correo, con sus enlaces ya montados. */
 async function componer(plan: PlanAlumno): Promise<AvisoApertura> {
   const base = urlBase();
@@ -357,10 +445,12 @@ async function componer(plan: PlanAlumno): Promise<AvisoApertura> {
 
     return {
       curso: seccion.curso,
-      modulos: seccion.nuevos.map((modulo) => ({
-        titulo: modulo.titulo,
-        totalLecciones: modulo.totalLecciones,
-      })),
+      modulos: fundirRepetidos(
+        seccion.nuevos.map((modulo) => ({
+          titulo: modulo.titulo,
+          totalLecciones: modulo.totalLecciones,
+        }))
+      ),
       enlace: destino
         ? `${base}/curso/${seccion.slug}/${destino}`
         : `${base}/curso/${seccion.slug}`,
