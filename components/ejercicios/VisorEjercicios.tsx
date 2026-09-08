@@ -93,6 +93,7 @@ export default function VisorEjercicios({
   cierre,
   volver,
   notaAlPie,
+  traduccion,
   alSuceso,
   guardarIntentos = true,
 }: {
@@ -148,6 +149,14 @@ export default function VisorEjercicios({
    * no se enseña.
    */
   notaAlPie?: (ejercicio: EjercicioUnificado, t: Textos) => ReactNode;
+  /**
+   * Cómo va la traducción del CONTENIDO, para que el botón de idioma lo
+   * cuente. Solo lo trae la práctica generada: la lección del curso no
+   * tiene nada que traducir —sus ejercicios son material de punta a
+   * punta, sin explicación ni instrucción— así que allí el botón cambia
+   * el mueble y ya está.
+   */
+  traduccion?: { pidiendo: boolean; fallo: boolean };
   alSuceso?: (suceso: SucesoVisor) => void;
   /** false para el equipo: revisa el curso, no lo cursa. */
   guardarIntentos?: boolean;
@@ -447,16 +456,34 @@ export default function VisorEjercicios({
             {t.volverA(volver.seccion)}
           </Link>
 
+          {/* NO SE DESACTIVA MIENTRAS TRADUCE. El mueble ya ha cambiado
+              —sus dos idiomas están en el código— así que el botón sí ha
+              hecho algo, y volver atrás tiene que seguir siendo posible
+              mientras el contenido viene de camino. Lo único que cambia
+              es que lo dice. */}
           <button
             type="button"
             onClick={alternar}
             aria-label={t.otroIdiomaAria}
+            aria-busy={traduccion?.pidiendo || undefined}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-marca-borde bg-white px-3.5 py-[7px] text-[13px] font-semibold text-marca-gris transition-colors hover:bg-marca-niebla hover:text-marca-tinta min-[1100px]:text-[13.5px]"
           >
-            <span aria-hidden>↔</span>
-            {t.otroIdioma}
+            <span aria-hidden className={traduccion?.pidiendo ? "gira" : undefined}>
+              {traduccion?.pidiendo ? "◌" : "↔"}
+            </span>
+            {traduccion?.pidiendo ? t.traduciendo : t.otroIdioma}
           </button>
         </div>
+
+        {/* EL AVISO DE QUE NO SALIÓ, en pequeño y sin alarma: el alumno
+            tiene el mueble en su idioma y el ejercicio en el original,
+            que es donde estaba antes de pulsar. No se ha perdido nada y
+            no hay nada que arreglar más que volver a pulsar. */}
+        {traduccion?.fallo && (
+          <p role="status" className="mt-2 text-[13px] leading-[1.45] text-marca-grisSuave">
+            {t.traduccionFallida}
+          </p>
+        )}
 
         {/* ------------------------------ PROGRESO ------------------------------ */}
       <div className="mt-4 flex items-center gap-4 min-[1100px]:mt-[18px] min-[1100px]:gap-5">

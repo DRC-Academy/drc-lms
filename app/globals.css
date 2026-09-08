@@ -691,6 +691,26 @@
     animation: latir 1.4s ease-in-out infinite;
   }
 
+  /* El botón de idioma mientras el bloque se traduce. */
+  @keyframes girar {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .gira {
+    display: inline-block;
+    animation: girar 1s linear infinite;
+  }
+
+  /* Con movimiento reducido late en vez de girar: el botón sigue
+     diciendo que está trabajando, que es lo único que tenía que hacer. */
+  @media (prefers-reduced-motion: reduce) {
+    .gira {
+      animation: latir 1.4s ease-in-out infinite;
+    }
+  }
+
   /* Un rebote breve al completar un bloque. */
   @keyframes celebrar {
     0% {

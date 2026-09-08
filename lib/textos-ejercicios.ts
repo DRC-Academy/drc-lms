@@ -91,6 +91,9 @@ export type Textos = {
   /** Nombra el idioma AL QUE LLEVA, no el que se está leyendo. */
   otroIdioma: string;
   otroIdiomaAria: string;
+  /** Mientras el contenido del bloque viene de camino. */
+  traduciendo: string;
+  traduccionFallida: string;
 
   // --- las tres fases del bloque generado ---
   fases: Record<Fase, { nombre: string; accion: string }>;
@@ -167,6 +170,10 @@ export type Textos = {
 const ES: Textos = {
   otroIdioma: "English",
   otroIdiomaAria: "See this screen in English",
+  traduciendo: "Traduciendo…",
+  // Dice qué se puede hacer, no qué ha fallado: al alumno le da igual
+  // de quién fue la culpa y no puede arreglar nada más que esto.
+  traduccionFallida: "Los ejercicios se han quedado en inglés. Vuelve a pulsar para intentarlo otra vez.",
 
   fases: {
     reconocer: { nombre: "Reconocer", accion: "Elige la forma" },
@@ -269,6 +276,8 @@ const ES: Textos = {
 const EN: Textos = {
   otroIdioma: "Español",
   otroIdiomaAria: "Ver esta pantalla en español",
+  traduciendo: "Translating…",
+  traduccionFallida: "The exercises are still in Spanish. Tap again to try once more.",
 
   fases: {
     reconocer: { nombre: "Recognise", accion: "Pick the right one" },

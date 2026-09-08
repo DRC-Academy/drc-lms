@@ -7,8 +7,11 @@ import { conFoco } from "@/lib/foco";
 import { UMBRAL_DOMINADO } from "@/lib/progreso";
 import { anotarParadaCerrada } from "@/lib/cierre-ruta";
 import { desdePractica } from "@/lib/ejercicio-unificado";
+import { conTraduccion } from "@/lib/traduccion-bloque";
 import LateralFases from "@/components/ejercicios/LateralFases";
 import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
+import { usarIdioma } from "@/components/ejercicios/usarIdioma";
+import { usarTraduccion } from "@/components/ejercicios/usarTraduccion";
 
 /**
  * Un bloque de práctica generada.
@@ -45,7 +48,24 @@ export default function Practica({
    */
   foco?: string | null;
 }) {
-  const unificados = useMemo(() => bloque.ejercicios.map(desdePractica), [bloque.ejercicios]);
+  // QUÉ VERSIÓN DEL BLOQUE SE PINTA.
+  //
+  // El idioma lo elige el alumno con el botón del visor, pero la
+  // decisión se toma AQUÍ, que es donde está el bloque entero: el visor
+  // recibe ejercicios ya normalizados y no sabe —ni tiene por qué— que
+  // existe una traducción. Los dos leen el mismo store, así que no hay
+  // forma de que el mueble y el contenido acaben en idiomas distintos.
+  //
+  // `conTraduccion` devuelve el MISMO bloque mientras no haya nada que
+  // aplicar, así que hasta que llega la traducción esto no recalcula
+  // nada.
+  const { idioma } = usarIdioma();
+  const { traduccion, pidiendo, fallo } = usarTraduccion(bloque, idioma, alumnoId);
+  const mostrado = useMemo(
+    () => conTraduccion(bloque, traduccion, idioma),
+    [bloque, traduccion, idioma]
+  );
+  const unificados = useMemo(() => mostrado.ejercicios.map(desdePractica), [mostrado.ejercicios]);
 
   /**
    * Manda a guardar sin esperar respuesta.
@@ -123,6 +143,11 @@ export default function Practica({
         // cabecera, y la cabecera se queda en español: el visor le pone
         // delante el "Volver a" o el "Back to" que toque.
         volver={{ seccion: "Para ti", href: conFoco("/practica", foco) }}
+      // El estado de la traducción, solo para que el botón de idioma
+      // pueda decir que está trabajando. La lección del curso no lo trae
+      // porque no tiene andamio que traducir: sus ejercicios son
+      // material de punta a punta.
+      traduccion={{ pidiendo, fallo }}
       alSuceso={alSuceso}
       // Ancla el ejercicio a la clase de la que salió. Dato secundario:
       // una línea, sin adornos. En la fase de producir no se enseña,
@@ -136,7 +161,7 @@ export default function Practica({
       }
       lateral={({ indice, respondido, acertado, t }) => (
         <LateralFases
-          titulo={bloque.titulo}
+          titulo={mostrado.titulo}
           ejercicios={unificados}
           indice={indice}
           respondido={respondido}
@@ -162,7 +187,7 @@ export default function Practica({
                 {pct}%
               </div>
               <h2 className="font-display text-[26px] font-semibold leading-tight text-drc-titular">
-                {bloque.titulo}
+                {mostrado.titulo}
               </h2>
               <p className="mt-3 text-[15px] leading-[1.55] text-drc-cuerpo">
                 {t.cierrePractica(pct)}
