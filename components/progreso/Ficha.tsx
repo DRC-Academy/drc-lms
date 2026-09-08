@@ -436,7 +436,12 @@ const CSS_FICHA = `
 @keyframes pg-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
 /* ── Cabecera de contenido ──────────────────────────────────────────────── */
-.pg-intro { padding: 6px 2px 4px; }
+/* LA ENTRADILLA VA CENTRADA ENTERA, no solo el h1.
+   El rótulo, el titular y la bajada son un solo bloque de cabecera: se
+   leen en vertical y de un tirón. Centrar el titular y dejar los otros
+   dos pegados a la izquierda no se lee como una decisión, se lee como
+   que algo se ha descolocado. */
+.pg-intro { padding: 6px 2px 4px; text-align: center; }
 .pg-eyebrow {
   font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--pg-green-dark); margin: 0 0 12px;
@@ -454,7 +459,10 @@ const CSS_FICHA = `
   font-size: clamp(25px, 5.4vw, 31px); font-weight: 700; letter-spacing: -0.03em;
   line-height: 1.12; margin: 0; text-wrap: balance;
 }
-.pg-lede { font-size: 15.5px; line-height: 1.6; color: var(--pg-muted); margin: 12px 0 0; max-width: 46ch; }
+.pg-lede {
+  font-size: 15.5px; line-height: 1.6; color: var(--pg-muted);
+  margin: 12px auto 0; max-width: 46ch;
+}
 
 /* ── Tarjeta base ───────────────────────────────────────────────────────── */
 .pg-card {
@@ -467,7 +475,8 @@ const CSS_FICHA = `
 }
 .pg-body { font-size: 15px; line-height: 1.7; color: var(--pg-ink); margin: 0; white-space: pre-wrap; }
 .pg-section-title {
-  font-size: 19px; font-weight: 700; letter-spacing: -0.02em; margin: 18px 0 14px; padding-left: 2px;
+  font-size: 19px; font-weight: 700; letter-spacing: -0.02em; margin: 18px 0 14px;
+  text-align: center;
 }
 
 /* ── Escalera MCER ──────────────────────────────────────────────────────── */
