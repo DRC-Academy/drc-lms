@@ -87,18 +87,18 @@ export default function BannerAmpliar({
             `opcionesDeHoras` devuelve null cuando el alumno ya está en el
             plan más alto —5h, el techo del sistema—, y son 5 alumnos.
             Con la primera versión de este banner esos cinco leían «con
-            más horas a la semana…» y un botón de «{t.ampliaTuPlan}» que no
+            más horas a la semana…» y un botón de «Amplía tu plan» que no
             les podía dar nada: se les ofrecía algo que no existe.
 
             Así que sin escalera cambia el titular y desaparece el botón,
             exactamente igual que hace el banner de estimación cuando
             `mereceLaPena` es falso. Un alumno que ya está arriba del todo
             merece que se lo digan, no que se le venda. */}
-        <h2 className="amp-title">{opciones ? "{t.llegaMasPreparado}" : "{t.vasAlMaximo}"}</h2>
+        <h2 className="amp-title">{opciones ? t.llegaMasPreparado : t.vasAlMaximo}</h2>
         <p className="amp-sub">
           {opciones
-            ? "{t.examenMasHoras}"
-            : "{t.examenAlMaximo}"}
+            ? t.examenMasHoras
+            : t.examenAlMaximo}
         </p>
 
         {/* ---------------------------------------------------------------
@@ -205,18 +205,18 @@ export default function BannerAmpliar({
       <h2 className="amp-title">
         {mereceLaPena
           ? esPreparacion
-            ? "{t.puedesLlegarAntesPreparado}"
-            : "{t.puedesLlegarAntes}"
-          : "{t.vasAlMejorRitmo}"}
+            ? t.puedesLlegarAntesPreparado
+            : t.puedesLlegarAntes
+          : t.vasAlMejorRitmo}
       </h2>
       <p className="amp-sub">
         {esPreparacion
           ? mereceLaPena
-            ? "{t.cuantoTardariasExamen}"
-            : "{t.loQueTardariasExamen}"
+            ? t.cuantoTardariasExamen
+            : t.loQueTardariasExamen
           : mereceLaPena
-            ? "{t.cuantoTardariasObjetivo}"
-            : "{t.loQueTardariasObjetivo}"}
+            ? t.cuantoTardariasObjetivo
+            : t.loQueTardariasObjetivo}
       </p>
 
       <ol className="amp-planes">

@@ -441,8 +441,17 @@ const CSS_FICHA = `
   font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--pg-green-dark); margin: 0 0 12px;
 }
+/* EN UNA SOLA LÍNEA, y lo que lo impedía era el tamaño y no el salto.
+   A 40px la frase mide unos 840px contra los 740 de la columna, así que
+   partía siempre; el text-wrap: balance solo decidía POR DÓNDE.
+
+   Con 31px cabe entera con holgura para un nombre normal. El balance
+   se queda de red: un nombre muy largo prefiere partirse en dos líneas
+   equilibradas antes que desbordar la tarjeta, que es lo que pasaría
+   con un nowrap. En móvil sigue partiendo, que es lo correcto: ahí no
+   cabe en una línea ni a 25px. */
 .pg-h1 {
-  font-size: clamp(27px, 6.2vw, 40px); font-weight: 700; letter-spacing: -0.03em;
+  font-size: clamp(25px, 5.4vw, 31px); font-weight: 700; letter-spacing: -0.03em;
   line-height: 1.12; margin: 0; text-wrap: balance;
 }
 .pg-lede { font-size: 15.5px; line-height: 1.6; color: var(--pg-muted); margin: 12px 0 0; max-width: 46ch; }

@@ -13,30 +13,29 @@
 // un vistazo.
 //
 // Se copió, y no se expuso el resultado ya calculado en la vista de
-// Gestión, porque meter la tabla de Cambridge y la detección de examen
-// en SQL sería tener la fórmula en dos lenguajes en vez de en dos
-// archivos del mismo. Por el contrato viajan hechos; el cálculo se
-// repite. Ver la cabecera de `supabase/gestion-vista-perfil-ritmo.sql`.
+// Gestión, porque meter el horizonte y la detección de examen en SQL
+// sería tener la fórmula en dos lenguajes en vez de en dos archivos del
+// mismo. Por el contrato viajan hechos; el cálculo se repite. Ver la
+// cabecera de `supabase/gestion-vista-perfil-ritmo.sql`.
+//
+// ⚠ Y AQUÍ LOS DOS ARCHIVOS YA NO DICEN LO MISMO. Gestión sigue con las
+// horas de Cambridge; el LMS usa el horizonte propio de abajo. Es una
+// divergencia DELIBERADA —las dos pantallas responden a preguntas
+// distintas— pero es la primera que hay, así que conviene no leer ya
+// este archivo como un port literal de aquel.
 //
 // ---------------------------------------------------------------
 // DE DÓNDE SALEN LAS HORAS (para poder defenderlo si un alumno pregunta)
 //
-// Son las *Guided Learning Hours* que publica Cambridge English para
-// cada uno de sus exámenes, que es la referencia pública y citable
-// sobre cuántas horas de estudio guiado lleva alcanzar cada nivel:
+// Salían de las *Guided Learning Hours* de Cambridge English, que es la
+// referencia pública y citable. Ya no: ahora es un horizonte propio de
+// la academia, y el porqué está escrito entero en `HORAS_OBJETIVO`.
 //
-//     A2 Key            180 – 200 h
-//     B1 Preliminary    350 – 400 h
-//     B2 First          500 – 600 h
-//     C1 Advanced       700 – 800 h
-//     C2 Proficiency  1.000 – 1.200 h
-//
-// Se usa el valor medio de cada rango.
-//
-// EL A1 NO ES DE CAMBRIDGE y conviene saberlo antes de enseñárselo a
-// nadie: no hay examen a ese nivel, así que no publican horas. Las 90
-// son la cifra de consenso habitual y solo se usan como suelo de la
-// escalera, nunca como objetivo.
+// LA DIFERENCIA IMPORTA SI ALGUIEN PREGUNTA. Con Cambridge la respuesta
+// era «lo dice Cambridge»; ahora la respuesta honesta es «es el plazo
+// con el que trabajamos nosotros». No hay una tercera respuesta, y
+// desde luego no se puede seguir citando a Cambridge para un número que
+// ya no es suyo.
 //
 // NO SON HORAS DE CLASE, SON HORAS GUIADAS. Es la distinción que
 // justifica el multiplicador de práctica: quien da una hora de clase no
@@ -55,46 +54,45 @@ import { ESCALERA_MCER, nivelMcer, type NivelMcer } from "@/lib/recorrido";
 // LAS CONSTANTES AJUSTABLES. Es el único sitio donde se tocan.
 // ---------------------------------------------------------------
 
-/** Horas guiadas ACUMULADAS para alcanzar cada nivel. */
-export const HORAS_GUIADAS_HASTA: Record<NivelMcer, number> = {
-  A1: 90,
-  A2: 190,
-  B1: 375,
-  B2: 550,
-  C1: 750,
-  C2: 1100,
-};
-
 /**
- * HORAS DE PREPARACIÓN ESPECÍFICA DEL EXAMEN.
+ * EL HORIZONTE DE LA ACADEMIA. Horas guiadas hasta el objetivo.
  *
- * NO ES LO MISMO QUE `HORAS_GUIADAS_HASTA`, y por eso es otra tabla con
- * otro nombre. Aquella mide ADQUIRIR un nivel: cuántas horas guiadas
- * separan un peldaño del siguiente. Esta mide otra cosa distinta:
- * cuántas horas lleva llegar preparado a un examen ESTANDO YA en su
- * nivel —el formato, las cuatro partes, la gestión del tiempo—.
+ * ---------------------------------------------------------------
+ * POR QUÉ YA NO SE USA LA REFERENCIA DE CAMBRIDGE
  *
- * Mezclarlas sería el error fácil: sumar 200 horas de B2 a C1 a un
- * alumno que no quiere subir de nivel, sino aprobar el B2.
+ * Aquí había dos tablas de referencia externa: las horas guiadas
+ * acumuladas del MCER —90, 190, 375, 550, 750, 1100— y las horas de
+ * preparación de examen de Cambridge. Eran datos reales y el cálculo era
+ * correcto; el problema es lo que salía por el otro lado.
  *
- * ORIGEN: es la referencia habitual del sector para preparación de
- * examen con el nivel ya adquirido.
+ * Subir de B1 a B2 son 175 horas guiadas por esa tabla. A dos horas de
+ * clase por semana eso son QUINCE MESES, y quince meses no es una
+ * promesa: es una razón para no empezar. El alumno no lee «esto cuesta
+ * lo que cuesta», lee «no voy a llegar», y el banner que existía para
+ * animarle acababa haciendo lo contrario.
  *
- * ⚠ PENDIENTE DE VALIDAR con los profesores que preparan exámenes. Por
- * eso está aquí, en una constante suelta y comentada, y no repartida por
- * el cálculo: el día que la academia tenga su propio dato se cambia este
- * bloque y nada más.
+ * Así que se cambia lo que se MIDE, no la aritmética. El objetivo deja
+ * de ser «adquirir la banda entera del MCER» —que ni es lo que la
+ * mayoría viene a buscar ni es un hito que se note— y pasa a ser el
+ * siguiente tramo de progreso que el alumno reconoce en sí mismo.
  *
- * PARCIAL A PROPÓSITO. Solo están los tres exámenes con referencia. Un
- * alumno que prepare el A2 Key o el C2 Proficiency no recibe una cifra
- * extrapolada: recibe el banner sin estimación, que es lo honesto
- * mientras nadie haya medido eso.
+ * ESTE NÚMERO ES NUESTRO Y HAY QUE DECIRLO. No lo respalda Cambridge ni
+ * el Consejo de Europa: es el horizonte con el que la academia trabaja.
+ * Está calibrado para que el plan de referencia —2 h/semana— caiga en
+ * SIETE MESES, que es el plazo en el que un adulto todavía se ve
+ * llegando:
+ *
+ *     84 h ÷ (2 h/sem × 1,5 × 4 sem) = 7 meses
+ *
+ * CONSECUENCIA QUE CONVIENE TENER PRESENTE: el plazo sigue siendo
+ * proporcional al ritmo, que es justo lo que hace que la ampliación
+ * valga algo. Quien va a 1 h/semana sigue viendo catorce meses, y para
+ * ese alumno el banner ofrece exactamente lo que le acorta el camino.
+ * Si algún día eso deja de parecer aceptable, lo que hay que tocar es
+ * esta constante, no el cálculo.
+ * ---------------------------------------------------------------
  */
-export const HORAS_PREPARACION_EXAMEN: Partial<Record<NivelMcer, number>> = {
-  B1: 80, // B1 Preliminary
-  B2: 100, // B2 First
-  C1: 120, // C1 Advanced
-};
+export const HORAS_OBJETIVO = 84;
 
 /**
  * Horas guiadas que produce cada hora de clase.
@@ -243,10 +241,15 @@ export function detectarMeta(
 // ARITMÉTICA
 // ---------------------------------------------------------------
 
-/** Horas guiadas que separan dos niveles. 0 si la meta no está por encima. */
-export function horasEntre(desde: NivelMcer, hasta: NivelMcer): number {
-  const diferencia = HORAS_GUIADAS_HASTA[hasta] - HORAS_GUIADAS_HASTA[desde];
-  return diferencia > 0 ? diferencia : 0;
+/**
+ * Las horas que faltan hasta el objetivo.
+ *
+ * Ya no depende de qué peldaño se persiga: el horizonte de la academia
+ * es el mismo tramo de progreso lo persiga quien lo persiga, y lo que
+ * cambia el plazo es el RITMO, no la distancia. Ver `HORAS_OBJETIVO`.
+ */
+export function horasHastaElObjetivo(): number {
+  return HORAS_OBJETIVO;
 }
 
 /** Meses que lleva cubrir `horas` a razón de `porSemana` horas de clase. */
@@ -445,16 +448,16 @@ export function calcularEstimacion(datos: DatosDeEstimacion): Estimacion | null 
 
   if (meta) {
     metaFinal = meta;
-    horasQueFaltan = horasEntre(nivelActual, meta.nivel);
+    horasQueFaltan = horasHastaElObjetivo();
   } else if (preparaSuPropioExamen(datos.textosDelPlan, nivelActual)) {
-    // Sin referencia para ese examen no se inventa una: se sigue sin
-    // estimar, como antes. Solo hay cifra para B1, B2 y C1.
-    const horas = HORAS_PREPARACION_EXAMEN[nivelActual];
-    if (!horas) return null;
-
+    // AHORA TODOS LOS EXÁMENES TIENEN CIFRA, y antes no: solo B1, B2 y
+    // C1 tenían referencia de Cambridge, así que quien preparaba el A2
+    // Key o el C2 Proficiency se quedaba sin estimación. Con un
+    // horizonte propio ya no hay ninguno sin referencia, porque la
+    // referencia dejó de ser de fuera.
     tipo = "preparar-examen";
     metaFinal = { nivel: nivelActual, origen: "examen" };
-    horasQueFaltan = horas;
+    horasQueFaltan = horasHastaElObjetivo();
   } else {
     // C2, o cualquier otro caso sin peldaño por encima.
     return null;
