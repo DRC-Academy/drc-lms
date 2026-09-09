@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+
+    /* Aquí las barras van QUIETAS a propósito: son tres estados puestos
+       uno al lado del otro para compararlos, y tres cargas a la vez
+       serían ruido. La animación se ve en el artboard de al lado. */
+    .est-rotulo { margin: 0 0 10px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #8A9891; }
+    .est-linea { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 11px; }
+    .est-texto { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 14.5px; line-height: 1.25; color: #4C5C53; }
+    .est-cifra { font-family: 'Radio Canada Big', 'Radio Canada', system-ui, sans-serif; font-weight: 700; font-variant-numeric: tabular-nums; color: #12211A; }
+    .est-de { font-size: 12.5px; line-height: 1; color: #8A9891; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .est-pista { position: relative; height: 8px; border-radius: 4px; background: #E8EEE9; }
+    .est-relleno { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #1E9E3A 0%, #37C25A 100%); }
+    .est-cabeza { position: absolute; top: 50%; width: 8px; height: 8px; border-radius: 50%; background: #6FD98A; transform: translate(-50%, -50%); }
+  </style>
+</helmet>
+
+<div style="background: #F4F7F4; padding: 34px 36px; box-sizing: border-box; display: flex; flex-direction: column; gap: 34px">
+
+  <!-- ---------- Recién empezado ---------- -->
+  <section>
+    <p class="est-rotulo">Recién empezado</p>
+    <div class="est-linea">
+      <p class="est-texto">
+        <svg viewBox="0 0 20 20" style="width: 16px; height: 16px; flex-shrink: 0; display: block" fill="none" stroke="#14722A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5.6 4.2h8.6a1.9 1.9 0 0 1 1.9 1.9v7.8a1.9 1.9 0 0 1-1.9 1.9H5.6"></path>
+          <ellipse cx="5.6" cy="10" rx="1.8" ry="5.8"></ellipse>
+          <path d="M8.9 8.2h4.6M8.9 11.4h3"></path>
+        </svg>
+        <span><span class="est-cifra">68</span> lecciones para tu diploma</span>
+      </p>
+      <span class="est-de">4 de 72</span>
+    </div>
+    <div class="est-pista">
+      <div class="est-relleno" style="width: 6%"></div>
+      <span class="est-cabeza" style="left: 6%"></span>
+    </div>
+  </section>
+
+  <!-- ---------- A media ---------- -->
+  <section>
+    <p class="est-rotulo">A media</p>
+    <div class="est-linea">
+      <p class="est-texto">
+        <svg viewBox="0 0 20 20" style="width: 16px; height: 16px; flex-shrink: 0; display: block" fill="none" stroke="#14722A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5.6 4.2h8.6a1.9 1.9 0 0 1 1.9 1.9v7.8a1.9 1.9 0 0 1-1.9 1.9H5.6"></path>
+          <ellipse cx="5.6" cy="10" rx="1.8" ry="5.8"></ellipse>
+          <path d="M8.9 8.2h4.6M8.9 11.4h3"></path>
+        </svg>
+        <span><span class="est-cifra">12</span> lecciones para tu diploma</span>
+      </p>
+      <span class="est-de">60 de 72</span>
+    </div>
+    <div class="est-pista">
+      <div class="est-relleno" style="width: 83%"></div>
+      <span class="est-cabeza" style="left: 83%"></span>
+    </div>
+  </section>
+
+  <!-- ---------- Conseguido ----------
+       El único momento en el que la pieza sube el tono, y sigue sin
+       caja: la línea pasa a verde y el carril se llena entero, con el
+       sello al final en vez de la cabeza. Pasa una vez en todo el
+       curso, así que aquí sí puede celebrar. -->
+  <section>
+    <p class="est-rotulo">Conseguido</p>
+    <div class="est-linea">
+      <p class="est-texto">
+        <svg viewBox="0 0 20 20" style="width: 16px; height: 16px; flex-shrink: 0; display: block" fill="none" stroke="#14722A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5.6 4.2h8.6a1.9 1.9 0 0 1 1.9 1.9v7.8a1.9 1.9 0 0 1-1.9 1.9H5.6"></path>
+          <ellipse cx="5.6" cy="10" rx="1.8" ry="5.8"></ellipse>
+          <path d="M8.9 10.2l1.7 1.7 3.2-3.4"></path>
+        </svg>
+        <span style="color: #14603A"><span class="est-cifra" style="color: #14722A">Diploma conseguido</span></span>
+      </p>
+      <span class="est-de" style="color: #4C5C53">72 de 72</span>
+    </div>
+    <div class="est-pista" style="padding-right: 0">
+      <div class="est-relleno" style="width: 100%"></div>
+      <span style="position: absolute; right: -3px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; border-radius: 50%; background: #1E9E3A; border: 2px solid #F4F7F4; display: grid; place-items: center">
+        <svg viewBox="0 0 20 20" style="width: 10px; height: 10px; display: block" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.4 10.4l2.4 2.4 4.8-5.2"></path>
+        </svg>
+      </span>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+</body>
+</html>

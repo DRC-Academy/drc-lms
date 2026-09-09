@@ -3,37 +3,47 @@ import type { ReactNode } from "react";
 import { textoDiploma, type EstadoDiploma } from "@/lib/diploma";
 
 /**
- * EL DIPLOMA, EN SU PROPIO BANNER.
+ * EL DIPLOMA, EN UN FILETE.
  *
  * Va entre el saludo y la rejilla, a lo ancho: es lo primero que se ve
- * al entrar. Lo tuvo dentro de la franja del curso —como su cifra
- * grande— y ahí se leía como un dato más del curso; el sitio no era el
- * problema, era compartir caja.
+ * al entrar.
  *
- * UNA SOLA LÍNEA DE TEXTO: "12 lecciones para tu diploma". Tuvo cuatro
- * —la etiqueta con el nombre del curso, la cifra, el pie con el avance y
- * la nota del lateral— y las tres que sobraban no añadían ningún dato:
- * el avance ya lo enseña la barra, el curso lo dice la franja de debajo
- * y la regla de emisión no cambia nada de lo que el alumno hace hoy. La
- * redacción de lo que queda vive en `lib/diploma.ts`.
+ * ---------------------------------------------------------------
+ * SE LE QUITÓ LA CAJA, Y ESO ES TODO EL REDISEÑO
  *
- * PERGAMINO Y NO OTRA FRANJA. La superficie crema con doble filete es la
- * única de ese color en la pantalla, así que se separa sola de la franja
- * en tinta y de las tarjetas blancas. Se probó también en tinta —más
- * contundente— y deja dos bandas oscuras seguidas: la tinta dejaría de
- * significar «la pieza principal» y el ámbar pasaría de acento a
- * superficie, que es justo la excepción que se quitó de la aplicación al
- * pasar la franja a tinta.
+ * Tenía superficie de pergamino con doble filete interior, un círculo
+ * de 68px con el icono dentro y la cifra a 28px. Tres piezas que
+ * pesaban como una franja de acción, para decir un dato que no se puede
+ * pulsar: el banner ocupaba como la pieza principal de la pantalla sin
+ * serlo.
  *
- * NI UN BOTÓN. El verde de acción es de la franja y de la práctica, y un
- * tercer botón aquí daría una pantalla con tres llamadas discutiendo.
- * Cuando exista la descarga del diploma, este es su sitio: entonces
- * habrá algo que pulsar y será lo único que se pueda pulsar aquí.
+ * Ahora no hay caja. Una línea de texto y un carril de 8px a ancho
+ * completo, sobre el fondo de la página. Lo que antes era un objeto
+ * pasa a ser una marca de agua del progreso: se ve —la barra cruza la
+ * pantalla entera y se llena al entrar— sin meterse en medio de nada.
  *
- * DOS ANCHOS, UN SOLO ORDEN. En móvil el icono y la cifra van en una
- * fila y la barra debajo, a ancho completo; a partir de `min-[900px]`
- * los tres se ponen en línea. Nada cambia de sitio entre los dos: se
- * estira.
+ * LA BARRA ES LA PIEZA. Por eso engorda de los 7-8px que tenía dentro
+ * de la caja a 8px sin caja, que a ancho completo y sin nada alrededor
+ * pesa mucho más que antes. La cifra baja de 28px a 14,5: el número
+ * mayor del inicio ya no es el único que no se puede pulsar.
+ *
+ * NI UN BOTÓN, que eso no cambia. El verde de acción es de la franja y
+ * de la práctica. Cuando exista la descarga del diploma, este es su
+ * sitio y será lo único pulsable aquí.
+ *
+ * ---------------------------------------------------------------
+ * LA CARGA, Y POR QUÉ NO PARPADEA
+ *
+ * Al entrar, el carril se llena de cero a su sitio (`.llena`), un
+ * brillo lo recorre tres veces (`.barre`) y la punta asoma con un halo
+ * que se apaga (`.punta`). Se ve moverse cada vez que el alumno abre el
+ * inicio, que es cuando lo mira.
+ *
+ * Y ahí se acaba. Un elemento que late en bucle en una pantalla que se
+ * lee entera pide atención sin tener nada que ofrecer a cambio, y
+ * además promete una acción que aquí no existe. Carga, llega y se
+ * queda. Los tres gestos están en `globals.css` y cumplen su regla: con
+ * movimiento reducido la barra sale llena y quieta.
  *
  * Se renderiza en el servidor: no tiene estado ni interacción.
  */
@@ -48,8 +58,7 @@ export default function BannerDiploma({
    * Solo lo pasa el inicio. El curso no, y no es un olvido: allí el
    * temario entero está debajo, mes a mes y desplegable, así que un
    * mapa de seis nodos encima sería un resumen de lo que se ve completo
-   * dos dedos más abajo. Donde hace falta es en el inicio, que es la
-   * pantalla que no enseña el curso.
+   * dos dedos más abajo.
    */
   sendero?: ReactNode;
 }) {
@@ -58,82 +67,70 @@ export default function BannerDiploma({
   if (texto === null) return null;
 
   const conseguido = estado.estado === "conseguido";
+  const total = estado.estado === "sin-curso" ? 0 : estado.total;
+  const hechas = estado.estado === "en-curso" ? estado.completadas : total;
 
   // Solo para el lector de pantalla: la barra sin narrar es un
   // porcentaje suelto, y el número de al lado no dice de cuántas.
   const descripcion = conseguido
     ? t.cursoCompletado
-    : t.faltanParaDiploma(texto.cifra ?? 0, estado.estado === "en-curso" ? estado.total : 0);
+    : t.faltanParaDiploma(texto.cifra ?? 0, total);
 
   return (
-    <section
-      aria-label={t.tuDiploma}
-      className={`rounded-[16px] px-[18px] py-[18px] min-[900px]:px-7 min-[900px]:py-[22px] ${
-        conseguido
-          ? "border border-marca-verde bg-marca-verdeFondo shadow-[inset_0_0_0_3px_#F0FAF2,inset_0_0_0_4px_#A9DFB7] min-[900px]:shadow-[inset_0_0_0_4px_#F0FAF2,inset_0_0_0_5px_#A9DFB7]"
-          : "border border-marca-perfilBorde bg-marca-perfil shadow-[inset_0_0_0_3px_#FFFDF5,inset_0_0_0_4px_#EFE3C0] min-[900px]:shadow-[inset_0_0_0_4px_#FFFDF5,inset_0_0_0_5px_#EFE3C0]"
-      }`}
-    >
-      <div className="flex flex-col gap-3.5 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-[26px]">
-        {/* ----------------------- ICONO Y CIFRA -----------------------
-            Juntos en la misma fila también en móvil: el icono solo no
-            dice nada y la cifra sola no dice de qué. */}
-        <div className="flex items-center gap-3.5 min-[900px]:contents">
+    <section aria-label={t.tuDiploma}>
+      {/* ------------------------- LA LÍNEA -------------------------
+          El icono y la frase a la izquierda; el recuento a la derecha,
+          en el gris más apagado. El recuento es la escala de la barra:
+          sin él, el carril es un porcentaje sin denominador. */}
+      <div className="mb-[11px] flex items-baseline justify-between gap-4">
+        <p className="flex min-w-0 items-center gap-2.5">
           <IconoDiploma conseguido={conseguido} />
-
           {texto.cifra === null ? (
-            <p className="min-w-0 flex-1 font-display text-[20px] font-extrabold leading-[1.1] tracking-[-0.02em] text-marca-tinta min-[900px]:flex-none min-[900px]:text-[24px]">
+            <span className="truncate font-display text-[14.5px] font-bold leading-[1.25] text-marca-verdeOsc">
               {texto.unidad}
-            </p>
+            </span>
           ) : (
-            <p className="flex min-w-0 flex-1 items-baseline gap-2 min-[900px]:flex-none min-[900px]:gap-2.5">
-              {/* LA CIFRA YA NO ES LO MÁS GRANDE DE LA PANTALLA.
-                  Medía 42px en escritorio contra los 34 del titular de la
-                  franja y los 30 del saludo: el número mayor del inicio
-                  era el único que no se puede pulsar. En móvil pasaba lo
-                  mismo —32 contra los 26 del titular—, así que se corrigen
-                  los dos anchos y no solo uno.
-
-                  Ahora la escala baja como debe: franja 26/34, saludo
-                  22/30, cifra 24/28. El diploma sigue siendo la cifra
-                  grande de su propia caja sin discutirle la pantalla a la
-                  acción principal. */}
-              <span className="font-display text-[24px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-marca-tinta min-[900px]:text-[28px]">
+            <span className="text-pretty text-[14.5px] leading-[1.25] text-marca-tintaMedia">
+              <span className="font-display font-bold tabular-nums text-marca-tinta">
                 {texto.cifra}
-              </span>
-              <span className="text-pretty text-[14px] font-semibold leading-[1.25] text-marca-tintaMedia min-[900px]:text-[17px]">
-                {texto.unidad}
-              </span>
-            </p>
+              </span>{" "}
+              {texto.unidad}
+            </span>
           )}
-        </div>
+        </p>
 
-        {/* La barra se lleva lo que sobre: a ancho completo en móvil,
-            y en escritorio todo lo que quede a la derecha de la cifra.
-            No lleva pie —el porcentaje no se escribe— porque la
-            distancia se ve mejor de lo que se lee.
-
-            O EL SENDERO, DONDE LO HAYA. El inicio pasa un camino y el
-            curso no pasa nada, así que cada pantalla cuenta el avance
-            una sola vez: allí el mapa, aquí la barra. Enseñar los dos a
-            la vez sería decir dos veces lo mismo a un dedo de
-            distancia, que es el fallo que esta pieza lleva evitando
-            desde que se le quitó la columna de cifra a la franja. */}
-        {!conseguido &&
-          (sendero ? (
-            <div className="min-[900px]:flex-1">{sendero}</div>
-          ) : (
-            <div className="min-[900px]:flex-1">
-              <Barra relleno={texto.relleno} descripcion={descripcion} />
-            </div>
-          ))}
+        {total > 0 && (
+          <span className="shrink-0 whitespace-nowrap text-[12.5px] leading-none tabular-nums text-marca-grisTenue">
+            {t.progresoDiploma(hechas, total)}
+          </span>
+        )}
       </div>
+
+      {/* O EL SENDERO, DONDE LO HAYA. El inicio pasa un camino y el
+          curso no pasa nada, así que cada pantalla cuenta el avance una
+          sola vez: allí el mapa, aquí la barra. */}
+      {sendero ?? <Barra relleno={texto.relleno} descripcion={descripcion} conseguido={conseguido} />}
     </section>
   );
 }
 
-/** La barra del curso entero. El porcentaje solo se ve, no se escribe. */
-function Barra({ relleno, descripcion }: { relleno: number; descripcion: string }) {
+/**
+ * El carril del curso entero. El porcentaje solo se ve, no se escribe:
+ * la distancia se lee mejor de lo que se cuenta.
+ *
+ * La punta —el punto claro donde llega el relleno— es el único adorno,
+ * y está donde el ojo ya mira. Al llegar al final se convierte en el
+ * sello, que es lo único que celebra en toda la pieza.
+ */
+function Barra({
+  relleno,
+  descripcion,
+  conseguido,
+}: {
+  relleno: number;
+  descripcion: string;
+  conseguido: boolean;
+}) {
   return (
     <div
       role="progressbar"
@@ -141,68 +138,75 @@ function Barra({ relleno, descripcion }: { relleno: number; descripcion: string 
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={descripcion}
-      className="h-[7px] overflow-hidden rounded-[4px] bg-marca-calidoBadge min-[900px]:h-2"
+      className="relative h-2 rounded-[4px] bg-marca-pista"
     >
       {/* El ancho se queda en línea —es el estado en reposo, y el
-          correcto— y lo que se anima es la escala. Ver `.llena` en
-          `globals.css`: el `transition-[width]` que había aquí nunca
-          llegó a ejecutarse, porque en un componente de servidor no hay
-          cambio de estado que dispare una transición. */}
+          correcto— y lo que se anima es la escala. Ver `.llena`. */}
       <div
-        className="llena h-full rounded-[4px] bg-marca-verde"
+        className="barre llena relative h-full overflow-hidden rounded-[4px] bg-gradient-to-r from-marca-verde to-marca-verdeClaro"
         style={{ width: `${relleno}%` }}
       />
+
+      {conseguido ? (
+        <span
+          aria-hidden
+          className="punta absolute right-[-3px] top-1/2 grid h-[18px] w-[18px] -translate-y-1/2 place-items-center rounded-full border-2 border-marca-niebla bg-marca-verde"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            className="h-2.5 w-2.5"
+            fill="none"
+            stroke="#FFFFFF"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M6.4 10.4l2.4 2.4 4.8-5.2" />
+          </svg>
+        </span>
+      ) : (
+        <span
+          aria-hidden
+          className="punta absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#6FD98A]"
+          style={{ left: `${relleno}%` }}
+        />
+      )}
     </div>
   );
 }
 
 /**
- * EL DIPLOMA, NO UNA MEDALLA. Aquí hubo un medallón con su cinta, que es
- * el icono de ganar una carrera: premia un resultado y lo compara con el
- * de otros. Un diploma no es eso —acredita que has hecho un curso— y
- * además el medallón repetía la forma del círculo que lo envuelve.
+ * EL DIPLOMA, NO UNA MEDALLA. Un medallón con cinta es el icono de ganar
+ * una carrera: premia un resultado y lo compara con el de otros. Un
+ * diploma acredita que has hecho un curso, y eso se dibuja como un
+ * pergamino: la hoja con su rollo a la izquierda.
  *
- * Ahora es un pergamino: la hoja con su rollo a la izquierda, que es la
- * forma en la que se dibuja un diploma desde antes de que hubiera
- * iconos. Dentro lleva dos renglones mientras se persigue, y una marca
- * de visto cuando ya está: el documento es el mismo, cambia lo escrito.
- *
- * Relleno y en verde cuando el diploma ya está; de contorno y en ámbar
- * mientras se persigue.
+ * SIN CÍRCULO DETRÁS. Lo llevaba —52px en móvil, 68 en escritorio— y era
+ * la mitad de la altura de la pieza para envolver un icono de 27px. Sin
+ * caja alrededor no hay nada que ese círculo separe de nada.
  */
 function IconoDiploma({ conseguido }: { conseguido: boolean }) {
-  const trazo = conseguido ? "#FFFFFF" : "#9A7B00";
-
   return (
-    <span
+    <svg
       aria-hidden
-      className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full border min-[900px]:h-[68px] min-[900px]:w-[68px] ${
-        conseguido ? "border-marca-verdeOsc bg-marca-verde" : "border-[#E9DCA9] bg-[#FFF8E1]"
-      }`}
+      viewBox="0 0 20 20"
+      className="h-4 w-4 shrink-0"
+      fill="none"
+      stroke="#14722A"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <svg
-        viewBox="0 0 18 18"
-        className="h-[27px] w-[27px] min-[900px]:h-[34px] min-[900px]:w-[34px]"
-        fill="none"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {/* La hoja. Se cierra sola por la izquierda, donde va el rollo. */}
-        <path
-          d="M4.6 3.6h8.7a1.8 1.8 0 0 1 1.8 1.8v7.2a1.8 1.8 0 0 1-1.8 1.8H4.6"
-          stroke={trazo}
-          fill={conseguido ? "#FFFFFF" : "none"}
-          fillOpacity={conseguido ? 0.18 : 1}
-        />
-        {/* El rollo. */}
-        <ellipse cx="4.6" cy="9" rx="1.7" ry="5.4" stroke={trazo} />
-        {conseguido ? (
-          <path d="M8.2 9.3l1.6 1.6 3-3.2" stroke={trazo} />
-        ) : (
-          <path d="M7.8 7.4h4.6M7.8 10.4h3" stroke={trazo} />
-        )}
-      </svg>
-    </span>
+      {/* La hoja. Se cierra sola por la izquierda, donde va el rollo. */}
+      <path d="M5.6 4.2h8.6a1.9 1.9 0 0 1 1.9 1.9v7.8a1.9 1.9 0 0 1-1.9 1.9H5.6" />
+      {/* El rollo. */}
+      <ellipse cx="5.6" cy="10" rx="1.8" ry="5.8" />
+      {/* Dos renglones mientras se persigue; un visto cuando ya está. */}
+      {conseguido ? (
+        <path d="M8.9 10.2l1.7 1.7 3.2-3.4" />
+      ) : (
+        <path d="M8.9 8.2h4.6M8.9 11.4h3" />
+      )}
+    </svg>
   );
 }

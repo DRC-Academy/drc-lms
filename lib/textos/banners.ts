@@ -44,6 +44,8 @@ export type TextosBanners = {
   diplomaConseguido: string;
   leccionesParaTuDiploma: (n: number) => string;
   faltanParaDiploma: (restantes: number, total: number) => string;
+  /** El recuento junto al carril: es la escala de la barra. */
+  progresoDiploma: (hechas: number, total: number) => string;
 
   // --- ampliar el plan ---
   llegaMasPreparado: string;
@@ -88,6 +90,7 @@ const ES: TextosBanners = {
   leccionesParaTuDiploma: (n) => (n === 1 ? "lección para tu diploma" : "lecciones para tu diploma"),
   faltanParaDiploma: (restantes, total) =>
     `Te ${restantes === 1 ? "falta" : "faltan"} ${restantes} de ${total} lecciones para tu diploma`,
+  progresoDiploma: (hechas, total) => `${hechas} de ${total}`,
 
   llegaMasPreparado: "Llega más preparado",
   vasAlMaximo: "Vas al máximo de horas",
@@ -134,6 +137,7 @@ const EN: TextosBanners = {
   leccionesParaTuDiploma: (n) => (n === 1 ? "lesson to your diploma" : "lessons to your diploma"),
   faltanParaDiploma: (restantes, total) =>
     `${restantes} of ${total} ${restantes === 1 ? "lesson" : "lessons"} to go for your diploma`,
+  progresoDiploma: (hechas, total) => `${hechas} of ${total}`,
 
   llegaMasPreparado: "Arrive better prepared",
   vasAlMaximo: "You're on the maximum hours",

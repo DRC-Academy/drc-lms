@@ -1,0 +1,23 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 420, "title": "Filete · el banner" },
+    { "file": "Estados.dc.html", "x": 1580, "y": 0, "w": 1000, "h": 420, "title": "Los tres estados" }
+  ],
+  "annotations": [
+    {
+      "id": "carga",
+      "x": 0,
+      "y": 500,
+      "w": 340,
+      "text": "La carga corre al abrir: el relleno crece de cero a su sitio, un brillo lo recorre tres veces y la cabeza asoma con un halo que se apaga.\n\nNo late en bucle a propósito. Un elemento que parpadea para siempre en una pantalla que se lee entera es justo lo invasivo que querías evitar: carga, llega y se queda.\n\nRecarga el artboard para volver a verlo."
+    },
+    {
+      "id": "grosor",
+      "x": 400,
+      "y": 500,
+      "w": 320,
+      "text": "El carril pasa de 4px a 8px — el doble, y aun así la mitad que la barra del banner viejo.\n\nSigue sin caja, sin borde y sin superficie, que es lo que hacía discreta esta dirección."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}
