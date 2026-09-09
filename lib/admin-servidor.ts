@@ -92,28 +92,11 @@ export type Adopcion = {
   /** Secundaria: completó alguna lección aquí, esté o no al día. */
   avanzaron: FichaPanel[];
   nuncaEntraron: FichaPanel[];
-};
-
-/**
- * Si el enlace mágico está funcionando.
- *
- * La pregunta de la semana del lanzamiento, y la que `sesiones` sola no
- * podía contestar: solo guardaba los finales felices, así que 152
- * personas que no entran eran silencio.
- */
-export type Acceso = {
-  /** Sesiones abiertas en el periodo, por dónde entraron. */
-  sesionesMagicLink: number;
-  sesionesWoo: number;
-  /** Enlaces que salieron por correo: el denominador. */
-  enlacesEnviados: number;
-  /** Enlaces enviados que acabaron en sesión, en porcentaje. */
-  conversion: number;
-  enviosFallidos: number;
-  enlacesCaducados: number;
-  sinCuenta: number;
-  emailsInvalidos: number;
-  sinFicha: number;
+  /**
+   * La última vez que entró cada uno, por id. Solo la traen los que han
+   * entrado; el resto no está en el mapa.
+   */
+  ultimaSesion: Record<string, string>;
 };
 
 export type UsoDeModo = {
@@ -136,9 +119,17 @@ export type Atencion = {
 
 export type DatosPanel = {
   periodo: Periodo;
+  /**
+   * Todos los alumnos con ficha.
+   *
+   * El panel ya los lee para calcular las métricas, así que servir la
+   * vista «todos» desde aquí no cuesta una consulta: la ahorra. Antes
+   * la página pedía además `listarAlumnos` a Gestión para su propio
+   * buscador, y eran los mismos.
+   */
+  alumnos: FichaPanel[];
   /** Cuándo se calculó. El panel está cacheado y conviene decirlo. */
   calculadoEn: string;
-  acceso: Acceso;
   adopcion: Adopcion;
   modos: UsoDeModo[];
   atencion: Atencion;
@@ -152,8 +143,7 @@ export type DatosPanel = {
 
 type FilaAlumno = { alumno_id: string };
 type FilaBloque = { alumno_id: string; modo: string };
-type FilaSesion = { alumno_id: string | null; origen: string };
-type FilaIntento = { resultado: string };
+type FilaSesion = { alumno_id: string | null; creada_en: string };
 type FilaModuloPanel = { id: string; curso_id: string; visible_after: number };
 type FilaLeccionPanel = { id: string; modulo_id: string };
 type FilaProgresoPanel = { alumno_id: string; leccion_id: string };
@@ -211,29 +201,21 @@ async function bloquesDelPeriodo(desde: string | null): Promise<FilaBloque[] | n
   return data ?? [];
 }
 
-/** Sesiones del periodo con su origen, para el desglose de acceso. */
+/**
+ * Sesiones del periodo con su fecha.
+ *
+ * Antes se pedía el ORIGEN —enlace mágico o WooCommerce— para partir la
+ * cifra de acceso en dos. Esa partición se fue del panel: al equipo no
+ * le cambia nada por dónde entró alguien. En su sitio va la FECHA, que
+ * sí decide algo: quién entró una vez hace dos meses y no ha vuelto.
+ */
 async function sesionesDelPeriodo(desde: string | null): Promise<FilaSesion[] | null> {
-  let consulta = baseLms().from("sesiones").select("alumno_id, origen").eq("rol", "alumno");
+  let consulta = baseLms().from("sesiones").select("alumno_id, creada_en").eq("rol", "alumno");
   if (desde) consulta = consulta.gte("creada_en", desde);
 
   const { data, error } = await consulta.returns<FilaSesion[]>();
   if (error) {
     console.error("[panel] No se pudieron leer las sesiones:", error.message);
-    return null;
-  }
-  return data ?? [];
-}
-
-/** Los intentos que no acabaron en sesión, más los enlaces enviados. */
-async function intentosDelPeriodo(desde: string | null): Promise<FilaIntento[] | null> {
-  let consulta = baseLms().from("intentos_acceso").select("resultado");
-  if (desde) consulta = consulta.gte("creado_en", desde);
-
-  const { data, error } = await consulta.returns<FilaIntento[]>();
-  if (error) {
-    // La tabla es nueva: si todavía no existe en este entorno, el panel
-    // enseña el resto y no se cae por un bloque.
-    console.error("[panel] No se pudieron leer los intentos de acceso:", error.message);
     return null;
   }
   return data ?? [];
@@ -337,7 +319,7 @@ async function calcularAlDia(
 async function calcular(periodo: Periodo): Promise<DatosPanel> {
   const desde = desdeDe(periodo);
 
-  const [alumnos, clases, sesiones, bloques, avanzaron, completaron, generaronNunca, filasSesion, intentos] =
+  const [alumnos, clases, sesiones, bloques, avanzaron, completaron, generaronNunca, filasSesion] =
     await Promise.all([
       alumnosDelPanel(),
       clasesDelPanel(),
@@ -353,14 +335,13 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
       // nada, y aparecería como que sí.
       alumnosCon("bloques_generados", "generado_en", null, ["generado_por_equipo", false]),
       sesionesDelPeriodo(desde),
-      intentosDelPeriodo(desde),
     ]);
 
-  // `intentos` cuenta como las demás. Se quedó fuera de esta lista y el
-  // efecto fue el que esta bandera existe para evitar: con la tabla
-  // `intentos_acceso` sin crear, la lectura fallaba, el bloque de Acceso
-  // enseñaba cinco ceros y el panel no decía nada. Un cero y un "no lo
-  // sé" se leen igual en pantalla, y no significan lo mismo.
+  // TODAS LAS LECTURAS CUENTAN AQUÍ, sin excepciones. La lección viene
+  // de una que se quedó fuera: con su tabla sin crear, la lectura
+  // fallaba, el bloque que dependía de ella enseñaba ceros y el panel no
+  // avisaba de nada. Un cero y un "no lo sé" se leen igual en pantalla y
+  // no significan lo mismo.
   const incompleto =
     sesiones === null ||
     bloques === null ||
@@ -368,7 +349,6 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
     completaron === null ||
     generaronNunca === null ||
     filasSesion === null ||
-    intentos === null ||
     alumnos.length === 0;
 
   // Las fichas: el perfil de Gestión más lo que decide elegibilidad.
@@ -395,6 +375,17 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
   const idsSesion = sesiones ?? new Set<string>();
   const generaronEnPeriodo = new Set((bloques ?? []).map((b) => b.alumno_id));
 
+  // --- La última vez que entró cada uno ---
+  // Se queda la más reciente de sus sesiones. La tabla trae una fila por
+  // sesión, así que sin este paso un alumno que entra a diario saldría
+  // tantas veces como días.
+  const ultimaSesion: Record<string, string> = {};
+  for (const fila of filasSesion ?? []) {
+    if (!fila.alumno_id) continue;
+    const previa = ultimaSesion[fila.alumno_id];
+    if (previa === undefined || fila.creada_en > previa) ultimaSesion[fila.alumno_id] = fila.creada_en;
+  }
+
   const adopcion: Adopcion = {
     totalActivos: fichas.length,
     entraron: de(sesiones),
@@ -406,6 +397,7 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
     // días: un alumno que entró hace un mes no es alguien a quien
     // invitar, y mezclarlos convertiría la lista en ruido.
     nuncaEntraron: sesiones === null ? [] : fichas.filter((f) => !idsSesion.has(f.alumnoId)),
+    ultimaSesion,
   };
 
   // ---------------------------------------------------------------
@@ -468,29 +460,12 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
         : fichas.filter((f) => idsGeneraron.has(f.alumnoId) && !idsCompletaron.has(f.alumnoId)),
   };
 
-  // --- Desglose de acceso ---
-  const cuentaIntento = (cual: string) => (intentos ?? []).filter((i) => i.resultado === cual).length;
-  const sesionesMagicLink = (filasSesion ?? []).filter((s) => s.origen === "magic_link").length;
-  const enlacesEnviados = cuentaIntento("enlace_enviado");
 
-  const acceso: Acceso = {
-    sesionesMagicLink,
-    sesionesWoo: (filasSesion ?? []).filter((s) => s.origen === "woocommerce").length,
-    enlacesEnviados,
-    // Se compara con las sesiones de enlace mágico, no con todas: las de
-    // WooCommerce no vienen de ningún correo nuestro.
-    conversion: enlacesEnviados > 0 ? Math.round((sesionesMagicLink / enlacesEnviados) * 100) : 0,
-    enviosFallidos: cuentaIntento("envio_fallido"),
-    enlacesCaducados: cuentaIntento("enlace_caducado"),
-    sinCuenta: cuentaIntento("sin_cuenta"),
-    emailsInvalidos: cuentaIntento("email_invalido"),
-    sinFicha: cuentaIntento("sin_ficha"),
-  };
 
   return {
     periodo,
     calculadoEn: new Date().toISOString(),
-    acceso,
+    alumnos: fichas,
     adopcion,
     modos,
     atencion,
@@ -509,4 +484,79 @@ export function cargarPanel(periodo: Periodo): Promise<DatosPanel> {
     revalidate: 300,
     tags: ["panel-admin"],
   })();
+}
+
+// ---------------------------------------------------------------
+// LAS VISTAS: DE UNA MÉTRICA A SUS ALUMNOS
+//
+// Cada métrica del panel es un filtro de la única lista que hay debajo,
+// y esta tabla es la traducción entre las dos. Vive aquí y no en el
+// componente porque la vista viaja en la URL —`?ver=`— y quien la lee
+// es la página, que es de servidor.
+//
+// POR QUÉ EN LA URL Y NO EN ESTADO DE CLIENTE. Porque el periodo y el
+// buscador ya viajan ahí, así que las tres cosas que definen lo que
+// estás mirando se guardan igual: el enlace que le pasas a alguien
+// abre lo que tú estabas viendo, y el botón de atrás deshace el filtro.
+// Con estado de cliente ninguna de las dos cosas es verdad.
+// ---------------------------------------------------------------
+
+export const VISTAS = [
+  "todos",
+  "entraron",
+  "generaron",
+  "alDia",
+  "nuncaEntraron",
+  "sinPerfil",
+  "sinCompletar",
+] as const;
+
+export type Vista = (typeof VISTAS)[number];
+
+/** La que trae puesta el panel al abrirse. */
+export const VISTA_POR_DEFECTO: Vista = "entraron";
+
+export function esVista(valor: unknown): valor is Vista {
+  return typeof valor === "string" && (VISTAS as readonly string[]).includes(valor);
+}
+
+export type DetalleVista = {
+  titulo: string;
+  alumnos: FichaPanel[];
+  /** Ámbar en las que son trabajo pendiente; verde en las demás. */
+  urge: boolean;
+  /**
+   * Si la fila enseña la última vez que entró.
+   *
+   * Solo en `entraron`, y no por ahorro: en las demás o no han entrado
+   * —y la columna saldría vacía— o el dato no decide nada. Aquí sí:
+   * separa a quien entró ayer de quien entró una vez hace dos meses.
+   */
+  conUltimaVez: boolean;
+};
+
+export function detalleDeVista(datos: DatosPanel, vista: Vista): DetalleVista {
+  const { adopcion, atencion } = datos;
+
+  switch (vista) {
+    case "todos":
+      return { titulo: "Todos los alumnos", alumnos: datos.alumnos, urge: false, conUltimaVez: false };
+    case "entraron":
+      return { titulo: "Entraron", alumnos: adopcion.entraron, urge: false, conUltimaVez: true };
+    case "generaron":
+      return { titulo: "Generaron práctica", alumnos: adopcion.generaron, urge: false, conUltimaVez: false };
+    case "alDia":
+      return { titulo: "Al día con lo abierto", alumnos: adopcion.alDia, urge: false, conUltimaVez: false };
+    case "nuncaEntraron":
+      return { titulo: "Nunca han entrado", alumnos: adopcion.nuncaEntraron, urge: true, conUltimaVez: false };
+    case "sinPerfil":
+      return { titulo: "Sin perfil completado", alumnos: atencion.sinPerfil, urge: false, conUltimaVez: false };
+    case "sinCompletar":
+      return {
+        titulo: "Generaron y no completaron",
+        alumnos: atencion.generaronSinCompletar,
+        urge: false,
+        conUltimaVez: false,
+      };
+  }
 }

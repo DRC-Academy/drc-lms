@@ -1,0 +1,45 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1120, "title": "El panel · escritorio 1440" },
+    { "file": "Filtrado.dc.html", "x": 1580, "y": 0, "w": 960, "h": 760, "title": "Cómo se pasa de la métrica a los alumnos" },
+    { "file": "Movil.dc.html", "x": 2640, "y": 0, "w": 390, "h": 1000, "title": "Móvil · 390" }
+  ],
+  "annotations": [
+    {
+      "id": "jerarquia",
+      "x": 0,
+      "y": 1220,
+      "w": 420,
+      "text": "LA JERARQUÍA, EN TRES CAPAS\n\n1 · El embudo — dónde se pierde la gente. Las cifras de adopción dejan de ser tarjetas iguales y se ponen una debajo de otra contra el mismo total: así se lee la caída de un vistazo.\n\n2 · Las pilas — a quién hay que ir a buscar. Aquí el panel deja de informar y empieza a servir.\n\n3 · La lista — el trabajo. Una sola, siempre presente."
+    },
+    {
+      "id": "sin-descolocar",
+      "x": 1580,
+      "y": 830,
+      "w": 420,
+      "text": "SIN DESPLEGABLES\n\nHoy cada métrica abre su lista en línea y empuja todo lo de abajo. Por eso la página se descoloca.\n\nAquí las métricas no despliegan: FILTRAN la lista de abajo. El bloque de métricas conserva su altura para siempre y lo único que cambia es el contenido de una caja que ya estaba ahí.\n\nEfecto secundario que sale gratis: solo puedes mirar una cosa a la vez, que es lo que quieres cuando estás repartiendo trabajo."
+    },
+    {
+      "id": "acceso",
+      "x": 2100,
+      "y": 830,
+      "w": 400,
+      "text": "EL ACCESO, REDUCIDO A UNA CIFRA\n\nDel bloque de acceso queda una sola cosa: cuántos entraron. Da igual por dónde —el desglose entre enlace y WooCommerce se funde— y se va también «no llegaron a entrar».\n\nEsa cifra es la primera fila del embudo, y la lista ABRE FILTRADA POR ELLA: cuántos arriba, quiénes debajo.\n\n«Enlaces enviados» se va con lo demás: era el denominador de una conversión que ya no se enseña."
+    },
+    {
+      "id": "pendiente",
+      "x": 2100,
+      "y": 1180,
+      "w": 400,
+      "text": "LO QUE HAY QUE DECIDIR\n\nEl panel abre en «quiénes entraron» (23), como pediste. Pero el encargo original decía que tenía que dejar claro a quién ir a buscar, y eso son los 154.\n\nSon dos cosas distintas y solo una puede ser el arranque. Ahora mismo abre en los 23 y los 154 están a un clic, en la única pila de color de la fila.\n\nSi al usarlo ves que casi siempre acabas pulsando la ámbar, se invierte cambiando cuál viene seleccionada."
+    },
+    {
+      "id": "datos",
+      "x": 2640,
+      "y": 1080,
+      "w": 390,
+      "text": "Las cifras son de ejemplo salvo las dos que diste: 154 de 177 nunca han entrado. Los nombres son inventados.\n\nSin emails en ninguna vista.\n\nTodo con vuestros tokens: #1E9E3A, #FFC400, #12211A, #F4F7F4, #E2E8E4 y Radio Canada."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

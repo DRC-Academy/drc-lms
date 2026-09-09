@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; color: #12211A; }
+    * { box-sizing: border-box; }
+    .rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7A8A80; margin: 0; }
+    .cifra { font-family: 'Radio Canada Big', system-ui, sans-serif; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .tarjeta { background: #FFFFFF; border: 1px solid #E2E8E4; border-radius: 16px; overflow: hidden; }
+    .cab { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 18px; border-bottom: 1px solid #E2E8E4; background: #FBFCFB; }
+    .cols { display: grid; grid-template-columns: 1fr 74px 118px 20px; gap: 12px; padding: 8px 14px; border-bottom: 1px solid #E2E8E4; }
+    .fila { display: grid; grid-template-columns: 1fr 74px 118px 20px; align-items: center; gap: 12px; padding: 9px 14px; border-bottom: 1px solid #EDF1EE; }
+    .fila:last-child { border-bottom: none; }
+    .nom { font-size: 13.5px; font-weight: 600; }
+    .dato { font-size: 12.5px; color: #5F6F66; }
+    .fle { color: #8A9891; font-size: 12.5px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 25px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+    .nota { padding: 10px 18px; border-top: 1px solid #E2E8E4; background: #FBFCFB; font-size: 12px; color: #8A9891; }
+  </style>
+</helmet>
+
+<div style="background: #F4F7F4; padding: 30px 30px 36px">
+<div style="max-width: 900px; margin: 0 auto">
+
+  <p class="rotulo" style="margin-bottom: 6px">La misma caja, tres contenidos</p>
+  <p style="margin: 0 0 22px; font-size: 14px; line-height: 1.5; color: #4C5C53; max-width: 62ch">
+    Las métricas de arriba no despliegan nada: filtran esta lista. La caja
+    está siempre, en el mismo sitio y con la misma altura, y lo único que
+    cambia es lo que hay dentro. Por eso al pasar de una métrica a otra
+    no se mueve nada de la página.
+  </p>
+
+  <!-- ---------- Sin filtro ---------- -->
+  <div class="tarjeta" style="margin-bottom: 18px">
+    <div class="cab">
+      <div style="display: flex; align-items: baseline; gap: 11px">
+        <h2 class="cifra" style="margin: 0; font-size: 17px; color: #12211A">Todos los alumnos</h2>
+        <span style="font-size: 12.5px; color: #5F6F66; font-variant-numeric: tabular-nums">177</span>
+      </div>
+      <span style="font-size: 12px; color: #8A9891">Estado de partida</span>
+    </div>
+    <div class="cols"><span class="rotulo">Alumno</span><span class="rotulo">Nivel</span><span class="rotulo">Profesor</span><span></span></div>
+    <div class="fila"><span class="nom">Marta Iglesias Ruiz</span><span class="dato">B1</span><span class="dato">Aoife</span><span class="fle">→</span></div>
+    <div class="fila"><span class="nom">Julen Amondarain</span><span class="dato">B2</span><span class="dato">Jimena</span><span class="fle">→</span></div>
+    <div class="fila"><span class="nom">Alberto Sanchís</span><span class="dato">A2</span><span class="dato">Aoife</span><span class="fle">→</span></div>
+    <div class="nota">Enseñando 3 de 177</div>
+  </div>
+
+  <!-- ---------- Filtrado por una pila ámbar ---------- -->
+  <div class="tarjeta" style="margin-bottom: 18px">
+    <div class="cab">
+      <div style="display: flex; align-items: baseline; gap: 11px">
+        <h2 class="cifra" style="margin: 0; font-size: 17px; color: #12211A">Nunca han entrado</h2>
+        <span style="font-size: 12.5px; color: #5F6F66; font-variant-numeric: tabular-nums">154 alumnos</span>
+        <span class="chip" style="background: #FFF8E1; border: 1px solid #EFE3C0; color: #6B5A2E">Filtrado <span aria-hidden style="font-size: 12px">×</span></span>
+      </div>
+      <span style="font-size: 12px; color: #8A9891">Desde la pila ámbar</span>
+    </div>
+    <div class="cols"><span class="rotulo">Alumno</span><span class="rotulo">Nivel</span><span class="rotulo">Profesor</span><span></span></div>
+    <div class="fila"><span class="nom">Nerea Otxoa</span><span class="dato">B1</span><span class="dato">Ciara</span><span class="fle">→</span></div>
+    <div class="fila"><span class="nom">Rubén Castedo Vila</span><span class="dato">C1</span><span class="dato">Jimena</span><span class="fle">→</span></div>
+    <div class="fila"><span class="nom">Lucía Ferrán</span><span class="dato">A2</span><span class="dato">Ciara</span><span class="fle">→</span></div>
+    <div class="nota">Enseñando 3 de 154</div>
+  </div>
+
+  <!-- ---------- Filtrado por un paso del embudo ----------
+       La columna de la derecha cambia con el filtro: aquí interesa
+       CUÁNDO entró, que es lo que decide si hay que llamarle. Es el
+       único sitio donde la lista se adapta a la métrica. -->
+  <div class="tarjeta">
+    <div class="cab">
+      <div style="display: flex; align-items: baseline; gap: 11px">
+        <h2 class="cifra" style="margin: 0; font-size: 17px; color: #12211A">Entraron</h2>
+        <span style="font-size: 12.5px; color: #5F6F66; font-variant-numeric: tabular-nums">23 alumnos</span>
+        <span class="chip" style="background: #F0FAF2; border: 1px solid #A9DFB7; color: #14603A">Filtrado <span aria-hidden style="font-size: 12px">×</span></span>
+      </div>
+      <span style="font-size: 12px; color: #8A9891">Por defecto, desde el embudo</span>
+    </div>
+    <div class="cols" style="grid-template-columns: 1fr 74px 118px 96px 20px">
+      <span class="rotulo">Alumno</span><span class="rotulo">Nivel</span><span class="rotulo">Profesor</span><span class="rotulo" style="text-align: right">Última vez</span><span></span>
+    </div>
+    <div class="fila" style="grid-template-columns: 1fr 74px 118px 96px 20px">
+      <span class="nom">Aitor Zubeldia</span><span class="dato">B2</span><span class="dato">Aoife</span><span class="dato" style="text-align: right">hace 2 d</span><span class="fle">→</span>
+    </div>
+    <div class="fila" style="grid-template-columns: 1fr 74px 118px 96px 20px">
+      <span class="nom">Paula Marín</span><span class="dato">B1</span><span class="dato">Jimena</span><span class="dato" style="text-align: right">hace 9 d</span><span class="fle">→</span>
+    </div>
+    <div class="fila" style="grid-template-columns: 1fr 74px 118px 96px 20px">
+      <span class="nom">Diego Lameiro</span><span class="dato">C1</span><span class="dato">Ciara</span><span class="dato" style="text-align: right">hace 26 d</span><span class="fle">→</span>
+    </div>
+    <div class="nota">Enseñando 3 de 23</div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>

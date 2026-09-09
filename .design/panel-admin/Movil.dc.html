@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; color: #12211A; }
+    * { box-sizing: border-box; }
+    .rotulo { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7A8A80; margin: 0; }
+    .cifra { font-family: 'Radio Canada Big', system-ui, sans-serif; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .tarjeta { background: #FFFFFF; border: 1px solid #E2E8E4; border-radius: 14px; }
+    .pista { height: 9px; border-radius: 5px; background: #E8EEE9; overflow: hidden; }
+    .relleno { display: block; height: 100%; border-radius: 5px; background: #1E9E3A; }
+  </style>
+</helmet>
+
+<div style="background: #F4F7F4; padding: 16px 14px 28px; min-height: 1000px">
+
+  <p class="rotulo">DRC Academy · equipo</p>
+  <h1 class="cifra" style="margin: 7px 0 0; font-size: 23px; line-height: 1.12">Cómo va la plataforma</h1>
+
+  <!-- El selector de periodo se estira a ancho completo: a 390px, tres
+       píldoras centradas dejan aire muerto a los lados. -->
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 14px; padding: 3px; border: 1px solid #E2E8E4; border-radius: 999px; background: #FFFFFF">
+    <span style="display: grid; place-items: center; height: 32px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #5F6F66">7 días</span>
+    <span style="display: grid; place-items: center; height: 32px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #5F6F66">30 días</span>
+    <span style="display: grid; place-items: center; height: 32px; border-radius: 999px; background: #12211A; color: #FFFFFF; font-size: 13px; font-weight: 600">Todo</span>
+  </div>
+
+  <!-- ===== EL EMBUDO: las cuatro columnas de escritorio se apilan =====
+       El nombre y la cifra en una fila, la barra debajo a ancho
+       completo. Mismo orden que en escritorio: no cambia de sitio
+       nada, se estira. -->
+  <section class="tarjeta" style="margin-top: 14px; padding: 15px 15px 13px">
+    <p class="rotulo">El recorrido, de 177 activos</p>
+    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 13px">
+
+      <div>
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+          <span style="font-size: 13.5px; font-weight: 600">Entraron</span>
+          <span style="display: flex; align-items: baseline; gap: 6px">
+            <span class="cifra" style="font-size: 19px">23</span>
+            <span style="font-size: 12px; color: #5F6F66; font-variant-numeric: tabular-nums">13%</span>
+          </span>
+        </div>
+        <div class="pista" style="margin-top: 7px"><span class="relleno" style="width: 13%"></span></div>
+      </div>
+
+      <div>
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+          <span style="font-size: 13.5px; font-weight: 600">Generaron práctica</span>
+          <span style="display: flex; align-items: baseline; gap: 6px">
+            <span class="cifra" style="font-size: 19px">9</span>
+            <span style="font-size: 12px; color: #5F6F66; font-variant-numeric: tabular-nums">5%</span>
+          </span>
+        </div>
+        <div class="pista" style="margin-top: 7px"><span class="relleno" style="width: 5%"></span></div>
+      </div>
+
+      <div>
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+          <span style="font-size: 13.5px; font-weight: 600">Al día con lo abierto</span>
+          <span style="display: flex; align-items: baseline; gap: 6px">
+            <span class="cifra" style="font-size: 19px">4</span>
+            <span style="font-size: 12px; color: #5F6F66; font-variant-numeric: tabular-nums">de 31</span>
+          </span>
+        </div>
+        <div class="pista" style="margin-top: 7px"><span class="relleno" style="width: 13%"></span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== LAS PILAS: de tres columnas a dos =====
+       La primera ocupa las dos: es la que decide el día, así que en
+       móvil tampoco comparte fila con nadie. Las otras dos van a
+       media fila cada una. -->
+  <p class="rotulo" style="margin-top: 20px">A quién hay que ir a buscar</p>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 9px">
+
+    <div style="grid-column: 1 / -1; padding: 14px 15px 15px; border-radius: 14px; border: 1.5px solid #9A7B00; background: #FFF8E1">
+      <p class="rotulo" style="color: #9A7B00">Nunca han entrado</p>
+      <p style="margin: 8px 0 0; display: flex; align-items: baseline; gap: 8px">
+        <span class="cifra" style="font-size: 31px; color: #9A7B00">154</span>
+        <span style="font-size: 12.5px; color: #6B5A2E; font-variant-numeric: tabular-nums">de 177 · 87%</span>
+      </p>
+      <p style="margin: 7px 0 0; font-size: 12px; line-height: 1.4; color: #6B5A2E">Tienen ficha y nunca han abierto la plataforma.</p>
+    </div>
+
+    <div style="padding: 13px 14px 14px; border-radius: 14px; border: 1.5px solid #E2E8E4; background: #FFFFFF">
+      <p class="rotulo">Sin perfil</p>
+      <p class="cifra" style="margin: 7px 0 0; font-size: 26px">88</p>
+      <p style="margin: 6px 0 0; font-size: 11.5px; line-height: 1.4; color: #5F6F66">Su práctica sale genérica.</p>
+    </div>
+
+    <div style="padding: 13px 14px 14px; border-radius: 14px; border: 1.5px solid #E2E8E4; background: #FFFFFF">
+      <p class="rotulo">Sin completar</p>
+      <p class="cifra" style="margin: 7px 0 0; font-size: 26px">5</p>
+      <p style="margin: 6px 0 0; font-size: 11.5px; line-height: 1.4; color: #5F6F66">Pidieron un bloque y lo dejaron.</p>
+    </div>
+
+  </div>
+
+  <!-- ===== LA LISTA =====
+       Se cae la columna de nivel y profesor como columnas y pasan a
+       una segunda línea bajo el nombre, y con ellos la «última vez»
+       cuando el filtro la trae: a 390px, cuatro columnas no caben sin
+       truncar el nombre, que es el único dato con el que se busca a
+       alguien. -->
+  <div class="tarjeta" style="margin-top: 20px; overflow: hidden">
+    <div style="padding: 13px 15px; border-bottom: 1px solid #E2E8E4; background: #FBFCFB">
+      <div style="display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap">
+        <h2 class="cifra" style="margin: 0; font-size: 16px">Entraron</h2>
+        <span style="font-size: 12.5px; color: #5F6F66; font-variant-numeric: tabular-nums">23</span>
+        <span style="display: inline-flex; align-items: center; gap: 5px; height: 23px; padding: 0 9px; border-radius: 999px; background: #F0FAF2; border: 1px solid #A9DFB7; font-size: 11px; font-weight: 600; color: #14603A">Filtrado ×</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 7px; height: 34px; margin-top: 10px; padding: 0 12px; border: 1px solid #E2E8E4; border-radius: 999px; background: #FFFFFF; font-size: 13px; color: #8A9891">
+        <svg viewBox="0 0 20 20" style="width: 14px; height: 14px" fill="none" stroke="#8A9891" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="9" r="5.4"></circle><path d="M13 13l3.5 3.5"></path></svg>
+        Buscar por nombre o profesor…
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; padding: 11px 15px; border-bottom: 1px solid #EDF1EE">
+      <span style="min-width: 0; flex: 1">
+        <span style="display: block; font-size: 14px; font-weight: 600">Aitor Zubeldia</span>
+        <span style="display: block; margin-top: 2px; font-size: 12px; color: #7A8A80">B2 · Aoife · hace 2 d</span>
+      </span>
+      <span aria-hidden style="color: #8A9891; font-size: 13px">→</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 11px 15px; border-bottom: 1px solid #EDF1EE">
+      <span style="min-width: 0; flex: 1">
+        <span style="display: block; font-size: 14px; font-weight: 600">Paula Marín</span>
+        <span style="display: block; margin-top: 2px; font-size: 12px; color: #7A8A80">B1 · Jimena · hace 9 d</span>
+      </span>
+      <span aria-hidden style="color: #8A9891; font-size: 13px">→</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 11px 15px">
+      <span style="min-width: 0; flex: 1">
+        <span style="display: block; font-size: 14px; font-weight: 600">Diego Lameiro</span>
+        <span style="display: block; margin-top: 2px; font-size: 12px; color: #7A8A80">C1 · Ciara · hace 26 d</span>
+      </span>
+      <span aria-hidden style="color: #8A9891; font-size: 13px">→</span>
+    </div>
+
+    <div style="padding: 11px 15px; border-top: 1px solid #E2E8E4; background: #FBFCFB; font-size: 12px; color: #8A9891">Enseñando 3 de 23</div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

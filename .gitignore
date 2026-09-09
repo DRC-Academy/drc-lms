@@ -14,3 +14,4 @@ next-env.d.ts
 # El lienzo ya montado: 2,5 MB de editor por diseño. Las fuentes
 # (*.dc.html y canvas.json) sí se versionan; el montaje se rehace.
 .design/**/banner-diploma.html
+.design/**/panel-admin.html

@@ -1,0 +1,215 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@300..700&family=Radio+Canada+Big:wght@400..700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Radio Canada', system-ui, sans-serif; color: #12211A; }
+    * { box-sizing: border-box; }
+    a { color: #14722A; } a:hover { color: #12211A; }
+
+    .rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7A8A80; margin: 0; }
+    .cifra { font-family: 'Radio Canada Big', system-ui, sans-serif; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #12211A; }
+    .tarjeta { background: #FFFFFF; border: 1px solid #E2E8E4; border-radius: 16px; }
+
+    .paso { display: grid; grid-template-columns: 190px 64px 1fr 96px; align-items: center; gap: 16px; padding: 11px 14px; border-radius: 11px; border: 1.5px solid transparent; }
+    .paso:hover { background: #F4F7F4; }
+    .paso.sel { background: #F0FAF2; border-color: #1E9E3A; }
+    .pista { height: 10px; border-radius: 5px; background: #E8EEE9; overflow: hidden; }
+    .relleno { height: 100%; border-radius: 5px; background: #1E9E3A; }
+
+    .pila { padding: 15px 16px 16px; border-radius: 14px; border: 1.5px solid #E2E8E4; background: #FFFFFF; }
+    .pila.urge { border-color: #EFE3C0; background: #FFFBEB; }
+
+    .fila { display: grid; grid-template-columns: 1fr 92px 150px 110px 20px; align-items: center; gap: 14px; padding: 10px 14px; border-bottom: 1px solid #EDF1EE; }
+    .fila:last-child { border-bottom: none; }
+    .fila:hover { background: #F4F7F4; }
+    .periodo { display: inline-flex; border: 1px solid #E2E8E4; border-radius: 999px; background: #FFFFFF; padding: 3px; gap: 2px; }
+    .periodo span { display: inline-flex; align-items: center; height: 30px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #5F6F66; }
+    .periodo span.on { background: #12211A; color: #FFFFFF; }
+  </style>
+</helmet>
+
+<div style="background: #F4F7F4; padding: 28px 36px 44px; min-height: 1120px">
+<div style="max-width: 1368px; margin: 0 auto">
+
+  <!-- ===================== CABECERA ===================== -->
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 22px">
+    <div>
+      <p class="rotulo">DRC Academy · equipo</p>
+      <h1 class="cifra" style="margin: 9px 0 0; font-size: 30px; line-height: 1.1">Cómo va la plataforma</h1>
+    </div>
+    <div style="display: flex; align-items: center; gap: 14px">
+      <span style="font-size: 12.5px; color: #8A9891">Calculado hace 4 min</span>
+      <span class="periodo">
+        <span>7 días</span><span>30 días</span><span class="on">Todo</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- ===================== 1 · EL EMBUDO =====================
+       Del acceso solo queda una cosa: CUÁNTOS ENTRARON. El desglose
+       por vía se fue —da igual si llegaron por el enlace o por
+       WooCommerce— y el de fallos también. Lo que queda es la primera
+       fila de este embudo, y debajo, quiénes son. -->
+  <section class="tarjeta" style="padding: 20px 22px 18px; margin-bottom: 14px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px">
+      <p class="rotulo">El recorrido, de 177 alumnos activos</p>
+      <span style="font-size: 12px; color: #8A9891">Pulsa cualquier fila para ver quiénes son</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <div class="paso sel">
+        <span style="font-size: 14.5px; font-weight: 600; color: #12211A">Entraron</span>
+        <span class="cifra" style="font-size: 23px; text-align: right">23</span>
+        <span class="pista"><span class="relleno" style="display: block; width: 13%"></span></span>
+        <span style="font-size: 13px; color: #5F6F66; font-variant-numeric: tabular-nums; text-align: right">13% de 177</span>
+      </div>
+
+      <div class="paso">
+        <span style="font-size: 14.5px; font-weight: 600; color: #12211A">Generaron práctica</span>
+        <span class="cifra" style="font-size: 23px; text-align: right">9</span>
+        <span class="pista"><span class="relleno" style="display: block; width: 5%"></span></span>
+        <span style="font-size: 13px; color: #5F6F66; font-variant-numeric: tabular-nums; text-align: right">5% de 177</span>
+      </div>
+
+      <!-- Este NO se mide contra 177 y por eso lo dice: solo puede
+           estar al día quien tiene algo abierto. -->
+      <div class="paso">
+        <span style="font-size: 14.5px; font-weight: 600; color: #12211A">Al día con lo abierto</span>
+        <span class="cifra" style="font-size: 23px; text-align: right">4</span>
+        <span class="pista"><span class="relleno" style="display: block; width: 13%"></span></span>
+        <span style="font-size: 13px; color: #5F6F66; font-variant-numeric: tabular-nums; text-align: right">13% de 31</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 2 · LAS PILAS =====================
+       De cuatro a tres. Sin la de fallos de acceso queda una sola
+       ámbar, y eso la hace más fuerte: en una fila de tres, la única
+       de color es la que decide el día. -->
+  <section style="margin-bottom: 22px">
+    <p class="rotulo" style="margin-bottom: 10px">A quién hay que ir a buscar</p>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+
+      <div class="pila urge">
+        <p class="rotulo" style="color: #9A7B00">Nunca han entrado</p>
+        <p style="margin: 9px 0 0; display: flex; align-items: baseline; gap: 8px">
+          <span class="cifra" style="font-size: 34px; color: #9A7B00">154</span>
+          <span style="font-size: 13px; color: #6B5A2E; font-variant-numeric: tabular-nums">de 177 · 87%</span>
+        </p>
+        <p style="margin: 9px 0 0; font-size: 12.5px; line-height: 1.4; color: #6B5A2E">Tienen ficha y nunca han abierto la plataforma. Es el trabajo de esta semana.</p>
+      </div>
+
+      <div class="pila">
+        <p class="rotulo">Sin perfil completado</p>
+        <p style="margin: 9px 0 0; display: flex; align-items: baseline; gap: 8px">
+          <span class="cifra" style="font-size: 34px">88</span>
+        </p>
+        <p style="margin: 9px 0 0; font-size: 12.5px; line-height: 1.4; color: #5F6F66">Su práctica sale genérica hasta que rellenen el formulario.</p>
+      </div>
+
+      <div class="pila">
+        <p class="rotulo">Generaron y no completaron</p>
+        <p style="margin: 9px 0 0; display: flex; align-items: baseline; gap: 8px">
+          <span class="cifra" style="font-size: 34px">5</span>
+        </p>
+        <p style="margin: 9px 0 0; font-size: 12.5px; line-height: 1.4; color: #5F6F66">Pidieron un bloque y lo dejaron a medias.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== 3 · LA LISTA =====================
+       ABRE EN «QUIÉNES ENTRARON», que es lo que pediste: la cifra
+       arriba y las personas debajo. Las métricas no despliegan nada;
+       filtran esta caja, así que el bloque de arriba conserva su
+       altura y lo único que cambia es lo de dentro. -->
+  <section class="tarjeta" style="overflow: hidden">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 18px; border-bottom: 1px solid #E2E8E4; background: #FBFCFB">
+      <div style="display: flex; align-items: baseline; gap: 12px; min-width: 0">
+        <h2 class="cifra" style="margin: 0; font-size: 19px">Entraron</h2>
+        <span style="font-size: 13.5px; color: #5F6F66; font-variant-numeric: tabular-nums">23 alumnos</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; background: #F0FAF2; border: 1px solid #A9DFB7; font-size: 12px; font-weight: 600; color: #14603A">
+          Filtrado
+          <span aria-hidden style="font-size: 13px; line-height: 1">×</span>
+        </span>
+      </div>
+
+      <span style="display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 13px; border: 1px solid #E2E8E4; border-radius: 999px; background: #FFFFFF; font-size: 13px; color: #8A9891; min-width: 230px; flex-shrink: 0">
+        <svg viewBox="0 0 20 20" style="width: 14px; height: 14px" fill="none" stroke="#8A9891" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="9" r="5.4"></circle><path d="M13 13l3.5 3.5"></path></svg>
+        Buscar por nombre o profesor…
+      </span>
+    </div>
+
+    <!-- Sin email, que son 177 personas y basta una captura. -->
+    <div style="display: grid; grid-template-columns: 1fr 92px 150px 110px 20px; gap: 14px; padding: 9px 14px; border-bottom: 1px solid #E2E8E4; background: #FFFFFF">
+      <span class="rotulo">Alumno</span>
+      <span class="rotulo">Nivel</span>
+      <span class="rotulo">Profesor</span>
+      <span class="rotulo" style="text-align: right">Última vez</span>
+      <span></span>
+    </div>
+
+    <div>
+      <div class="fila">
+        <span style="font-size: 14px; font-weight: 600">Aitor Zubeldia</span>
+        <span style="font-size: 13px; color: #5F6F66">B2</span>
+        <span style="font-size: 13px; color: #5F6F66">Aoife</span>
+        <span style="font-size: 13px; color: #5F6F66; text-align: right">hace 2 d</span>
+        <span aria-hidden style="color: #8A9891; font-size: 13px">→</span>
+      </div>
+      <div class="fila">
+        <span style="font-size: 14px; font-weight: 600">Paula Marín</span>
+        <span style="font-size: 13px; color: #5F6F66">B1</span>
+        <span style="font-size: 13px; color: #5F6F66">Jimena</span>
+        <span style="font-size: 13px; color: #5F6F66; text-align: right">hace 9 d</span>
+        <span aria-hidden style="color: #8A9891; font-size: 13px">→</span>
+      </div>
+      <div class="fila">
+        <span style="font-size: 14px; font-weight: 600">Diego Lameiro</span>
+        <span style="font-size: 13px; color: #5F6F66">C1</span>
+        <span style="font-size: 13px; color: #5F6F66">Ciara</span>
+        <span style="font-size: 13px; color: #5F6F66; text-align: right">hace 26 d</span>
+        <span aria-hidden style="color: #8A9891; font-size: 13px">→</span>
+      </div>
+      <div class="fila">
+        <span style="font-size: 14px; font-weight: 600">Marta Iglesias Ruiz</span>
+        <span style="font-size: 13px; color: #5F6F66">B1</span>
+        <span style="font-size: 13px; color: #5F6F66">Aoife</span>
+        <span style="font-size: 13px; color: #5F6F66; text-align: right">hace 31 d</span>
+        <span aria-hidden style="color: #8A9891; font-size: 13px">→</span>
+      </div>
+      <div class="fila">
+        <span style="font-size: 14px; font-weight: 600">Rubén Castedo Vila</span>
+        <span style="font-size: 13px; color: #5F6F66">C1</span>
+        <span style="font-size: 13px; color: #5F6F66">Jimena</span>
+        <span style="font-size: 13px; color: #5F6F66; text-align: right">hace 44 d</span>
+        <span aria-hidden style="color: #8A9891; font-size: 13px">→</span>
+      </div>
+      <div class="fila">
+        <span style="font-size: 14px; font-weight: 600">Lucía Ferrán</span>
+        <span style="font-size: 13px; color: #5F6F66">A2</span>
+        <span style="font-size: 13px; color: #5F6F66">Ciara</span>
+        <span style="font-size: 13px; color: #5F6F66; text-align: right">hace 58 d</span>
+        <span aria-hidden style="color: #8A9891; font-size: 13px">→</span>
+      </div>
+    </div>
+
+    <div style="padding: 12px 18px; border-top: 1px solid #E2E8E4; background: #FBFCFB; font-size: 12.5px; color: #8A9891">
+      Enseñando 6 de 23 · ordenados por la última vez que entraron
+    </div>
+  </section>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>

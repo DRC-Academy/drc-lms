@@ -1,490 +1,301 @@
 import Link from "next/link";
-import type { DatosPanel, FichaPanel, UsoDeModo } from "@/lib/admin-servidor";
-import { ETIQUETA_PERIODO, PERIODOS } from "@/lib/admin-servidor";
-import ListaAlumnos from "@/components/admin/ListaAlumnos";
-import { refrescarPanel } from "@/app/acciones-panel";
+import type { DatosPanel } from "@/lib/admin-servidor";
+import { ETIQUETA_PERIODO, PERIODOS, type Periodo, type Vista } from "@/lib/admin-servidor";
 
 /**
- * Hace cuánto se calcularon estos datos.
+ * LAS MÉTRICAS DEL PANEL DEL EQUIPO.
  *
- * Se resuelve en el servidor y no en el cliente a propósito: la página
- * es dinámica, así que en cada carga se vuelve a medir contra el momento
- * real. Un contador en el navegador solo añadiría hidratación para decir
- * lo mismo.
+ * ---------------------------------------------------------------
+ * DOS BLOQUES, Y NINGUNO DESPLIEGA NADA
+ *
+ * Tenía cuatro secciones con su título y su párrafo —Acceso, Adopción,
+ * Uso por modo, Requieren atención— y dentro de cada una, tarjetas que
+ * abrían su lista de alumnos EN LÍNEA. Dos problemas de una vez: había
+ * que bajar para ver todas las cifras, y abrir cualquiera empujaba
+ * media página hacia abajo.
+ *
+ * Ahora son dos bloques y caben juntos en la primera pantalla:
+ *
+ *   EL EMBUDO   dónde se pierde la gente. Las cifras de adopción, una
+ *               debajo de otra y contra el mismo total. Tres tarjetas
+ *               del mismo tamaño no dicen dónde está la caída; tres
+ *               filas apiladas con su barra, sí.
+ *
+ *   LAS PILAS   a quién hay que ir a buscar. Aquí el panel deja de
+ *               informar y empieza a servir: cada una es un montón de
+ *               gente con un motivo y un siguiente paso.
+ *
+ * Y NADA SE DESPLIEGA. Cada métrica es un enlace que FILTRA la única
+ * lista que hay debajo, así que este bloque conserva su altura para
+ * siempre y lo único que cambia es el contenido de una caja que ya
+ * estaba en pantalla. Ver `components/admin/ListaPanel.tsx`.
+ *
+ * ---------------------------------------------------------------
+ * LO QUE SE FUE
+ *
+ * EL DESGLOSE DE ACCESO. «Entraron con el enlace» y «entraron por
+ * WooCommerce» eran la misma pregunta partida en dos, y al equipo no le
+ * cambia nada por dónde entró alguien: queda «Entraron», que es la
+ * primera fila del embudo. Con ellas se fueron «enlaces enviados» —el
+ * denominador de una conversión que ya no se enseña— y «no llegaron a
+ * entrar», y con esta última la lectura entera de `intentos_acceso`.
+ *
+ * EL USO POR MODO. Contaba cuatro modos de generación de los que hoy
+ * solo se genera uno; los otros tres estaban marcados como retirados y
+ * seguían ocupando una sección entera. Con un solo modo vivo, «cuántos
+ * bloques se generaron» es exactamente la segunda fila del embudo.
+ *
+ * Se renderiza en el servidor: la vista y el periodo viajan en la URL.
  */
-function Frescura({ calculadoEn }: { calculadoEn: string }) {
-  const minutos = Math.max(0, Math.floor((Date.now() - Date.parse(calculadoEn)) / 60_000));
+export default function PanelAdmin({
+  datos,
+  periodo,
+  vista,
+  busqueda,
+}: {
+  datos: DatosPanel;
+  periodo: Periodo;
+  /** La métrica seleccionada. Pinta el estado y decide la lista. */
+  vista: Vista;
+  /** Se conserva al cambiar de métrica o de periodo. */
+  busqueda: string;
+}) {
+  const { adopcion, atencion, incompleto } = datos;
+  const total = adopcion.totalActivos;
 
-  const texto =
-    minutos === 0
-      ? "Actualizado ahora mismo"
-      : minutos === 1
-        ? "Actualizado hace 1 minuto"
-        : `Actualizado hace ${minutos} minutos`;
+  /** Un enlace que cambia una cosa y conserva las otras dos. */
+  const href = (cambio: { periodo?: Periodo; vista?: Vista }) => {
+    const p = new URLSearchParams();
+    p.set("periodo", cambio.periodo ?? periodo);
+    p.set("ver", cambio.vista ?? vista);
+    if (busqueda) p.set("q", busqueda);
+    return `/?${p.toString()}`;
+  };
 
-  return <span className="text-[12px] text-marca-grisSuave">{texto}</span>;
-}
-
-/**
- * El panel del equipo.
- *
- * Tres bloques por ahora, en orden de urgencia: si esto lo usa alguien,
- * qué modo tira, y a quién hay que ir a buscar. Todo lo pinta el
- * servidor; lo único de cliente son los desplegables de cada lista.
- *
- * NADA DE ESTO SE DUPLICA DE DRC GESTIÓN. Aquí solo vive lo que pasa
- * dentro del LMS —sesiones, generación, progreso— porque tener el mismo
- * número en dos sitios es cómo se desincronizan.
- */
-
-const NOMBRE_MODO: Record<UsoDeModo["modo"], string> = {
-  practica: "Bloque de práctica",
-  repaso: "Repaso de clase",
-  examen: "Preparación de examen",
-  contexto: "Su día a día",
-};
-
-const REQUISITO_MODO: Record<UsoDeModo["modo"], string> = {
-  practica: "tienen alguna fuente (clase, examen o perfil)",
-  repaso: "necesitaban clase analizada",
-  examen: "preparan un examen",
-  contexto: "tienen perfil con ocupación u objetivo",
-};
-
-function porcentaje(parte: number, total: number): number {
-  return total > 0 ? Math.round((parte / total) * 100) : 0;
-}
-
-/** Una barra fina. Sin librerías: es un div con un ancho. */
-function Barra({ valor, tono = "verde" }: { valor: number; tono?: "verde" | "amarillo" }) {
   return (
-    <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-marca-pista">
-      <div
-        className={`h-full rounded-full ${tono === "verde" ? "bg-marca-verde" : "bg-marca-amarillo"}`}
-        style={{ width: `${Math.min(100, valor)}%` }}
-      />
+    <div>
+      {/* ------------------------- EL PERIODO ------------------------- */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-grisSuave">
+          {ETIQUETA_PERIODO[periodo]}
+        </p>
+        <div className="inline-flex gap-0.5 rounded-full border border-marca-borde bg-white p-[3px]">
+          {PERIODOS.map((p) => (
+            <Link
+              key={p}
+              href={href({ periodo: p })}
+              aria-current={p === periodo ? "true" : undefined}
+              className={`inline-flex h-[30px] items-center rounded-full px-3.5 text-[13px] font-semibold transition-colors ${
+                p === periodo
+                  ? "bg-marca-tinta text-white"
+                  : "text-marca-gris hover:text-marca-tinta"
+              }`}
+            >
+              {p === "todo" ? "Todo" : `${p} días`}
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {incompleto && (
+        <p className="mt-3 rounded-[12px] border border-marca-examenBorde bg-marca-examen px-4 py-3 text-[13px] leading-[1.45] text-marca-amarilloTexto">
+          Alguna lectura ha fallado, así que estas cifras están incompletas. No son ceros: son
+          datos que no hemos podido leer.
+        </p>
+      )}
+
+      {/* ------------------------- EL EMBUDO -------------------------
+          El «al día» NO se mide contra el total y por eso lo dice: solo
+          puede estar al día quien tiene algo abierto. Compararlo con
+          177 sería contar como retraso a quien está esperando. */}
+      <section className="mt-4 rounded-[16px] border border-marca-borde bg-white p-4 lg:p-[22px]">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-grisSuave">
+            El recorrido, de {total} alumnos activos
+          </p>
+          <p className="text-[12px] text-marca-grisTenue">Pulsa cualquier fila para ver quiénes son</p>
+        </div>
+
+        <div className="mt-3.5 flex flex-col gap-[3px]">
+          <Paso
+            href={href({ vista: "entraron" })}
+            activo={vista === "entraron"}
+            titulo="Entraron"
+            valor={adopcion.entraron.length}
+            de={total}
+          />
+          <Paso
+            href={href({ vista: "generaron" })}
+            activo={vista === "generaron"}
+            titulo="Generaron práctica"
+            valor={adopcion.generaron.length}
+            de={total}
+          />
+          <Paso
+            href={href({ vista: "alDia" })}
+            activo={vista === "alDia"}
+            titulo="Al día con lo abierto"
+            valor={adopcion.alDia.length}
+            de={adopcion.conContenidoAbierto}
+          />
+        </div>
+      </section>
+
+      {/* ------------------------- LAS PILAS ------------------------- */}
+      <section className="mt-5">
+        <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-grisSuave">
+          A quién hay que ir a buscar
+        </p>
+
+        <div className="mt-2.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Pila
+            href={href({ vista: "nuncaEntraron" })}
+            activo={vista === "nuncaEntraron"}
+            titulo="Nunca han entrado"
+            valor={adopcion.nuncaEntraron.length}
+            de={total}
+            pie="Tienen ficha y nunca han abierto la plataforma."
+            urge
+          />
+          <Pila
+            href={href({ vista: "sinPerfil" })}
+            activo={vista === "sinPerfil"}
+            titulo="Sin perfil completado"
+            valor={atencion.sinPerfil.length}
+            pie="Su práctica sale genérica hasta que rellenen el formulario."
+          />
+          <Pila
+            href={href({ vista: "sinCompletar" })}
+            activo={vista === "sinCompletar"}
+            titulo="Generaron y no completaron"
+            valor={atencion.generaronSinCompletar.length}
+            pie="Pidieron un bloque y lo dejaron a medias."
+          />
+        </div>
+      </section>
     </div>
   );
 }
 
-function Tarjeta({
+/**
+ * Una fila del embudo.
+ *
+ * Cuatro columnas en escritorio —nombre, cifra, barra, proporción— y
+ * dos filas en móvil, donde la barra pasa debajo a ancho completo: a
+ * 375px, una barra con 190px de etiqueta delante mide cuarenta píxeles
+ * y deja de ser una barra.
+ */
+function Paso({
+  href,
+  activo,
   titulo,
   valor,
   de,
-  ayuda,
-  children,
-  tono,
 }: {
+  href: string;
+  activo: boolean;
   titulo: string;
   valor: number;
-  /** El total contra el que se lee la cifra. */
-  de?: number;
-  ayuda: string;
-  children?: React.ReactNode;
-  tono?: "verde" | "amarillo";
+  de: number;
 }) {
-  const pct = de === undefined ? null : porcentaje(valor, de);
+  const pct = de > 0 ? Math.round((valor / de) * 100) : 0;
 
   return (
-    <article className="rounded-[16px] border border-marca-borde bg-white p-4 lg:p-5">
-      <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
+    <Link
+      href={href}
+      aria-current={activo ? "true" : undefined}
+      className={`grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 rounded-[11px] border-[1.5px] px-3.5 py-2.5 transition-colors lg:grid-cols-[190px_64px_minmax(0,1fr)_96px] ${
+        activo
+          ? "border-marca-verde bg-marca-verdeFondo"
+          : "border-transparent hover:bg-marca-niebla"
+      }`}
+    >
+      <span className="text-[14px] font-semibold text-marca-tinta lg:text-[14.5px]">{titulo}</span>
+      <span className="font-display text-[21px] font-bold leading-none tabular-nums text-marca-tinta lg:text-[23px] lg:text-right">
+        {valor}
+      </span>
+      <span className="col-span-2 h-2.5 overflow-hidden rounded-[5px] bg-marca-pista lg:col-span-1">
+        <span className="block h-full rounded-[5px] bg-marca-verde" style={{ width: `${pct}%` }} />
+      </span>
+      <span className="col-span-2 text-[12.5px] tabular-nums text-marca-gris lg:col-span-1 lg:text-right lg:text-[13px]">
+        {pct}% de {de}
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * Una pila de trabajo.
+ *
+ * `urge` la pinta en ámbar. Hoy la lleva una sola —la de los que nunca
+ * han entrado— y conviene que siga siendo así: en una fila de tres, la
+ * única de color es la que decide el día. Con dos, ninguna lo decide.
+ */
+function Pila({
+  href,
+  activo,
+  titulo,
+  valor,
+  de,
+  pie,
+  urge,
+}: {
+  href: string;
+  activo: boolean;
+  titulo: string;
+  valor: number;
+  de?: number;
+  pie: string;
+  urge?: boolean;
+}) {
+  const pct = de !== undefined && de > 0 ? Math.round((valor / de) * 100) : null;
+
+  return (
+    <Link
+      href={href}
+      aria-current={activo ? "true" : undefined}
+      className={`block rounded-[14px] border-[1.5px] px-4 py-[15px] transition-colors ${
+        urge
+          ? activo
+            ? "border-marca-amarilloTexto bg-[#FFF8E1]"
+            : "border-marca-examenBorde bg-marca-examen hover:border-marca-amarilloTexto"
+          : activo
+            ? "border-marca-verde bg-marca-verdeFondo"
+            : "border-marca-borde bg-white hover:border-marca-verde"
+      }`}
+    >
+      <p
+        className={`text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] ${
+          urge ? "text-marca-amarilloTexto" : "text-marca-grisSuave"
+        }`}
+      >
         {titulo}
       </p>
-      <p className="mt-3 flex items-baseline gap-1.5">
-        <span className="font-display text-[30px] font-bold leading-none text-marca-tinta tabular-nums lg:text-[34px]">
+      <p className="mt-2.5 flex items-baseline gap-2">
+        <span
+          className={`font-display text-[30px] font-bold leading-none tabular-nums lg:text-[34px] ${
+            urge ? "text-marca-amarilloTexto" : "text-marca-tinta"
+          }`}
+        >
           {valor}
         </span>
-        {de !== undefined && (
-          <span className="text-[13px] font-medium text-marca-grisSuave tabular-nums">
+        {pct !== null && (
+          <span
+            className={`text-[13px] tabular-nums ${
+              urge ? "text-marca-calidoBadgeTexto" : "text-marca-gris"
+            }`}
+          >
             de {de} · {pct}%
           </span>
         )}
       </p>
-      {pct !== null && <Barra valor={pct} tono={tono} />}
-      <p className="mt-2.5 text-[12.5px] leading-[1.45] text-marca-gris">{ayuda}</p>
-      {children}
-    </article>
-  );
-}
-
-/** Una cifra suelta: sin porcentaje, sin barra y sin lista detrás. */
-function Cifra({
-  titulo,
-  valor,
-  pie,
-  alerta,
-}: {
-  titulo: string;
-  valor: number;
-  pie: string;
-  /** Pinta el número en ámbar: algo que mirar, no siempre un fallo. */
-  alerta?: boolean;
-}) {
-  return (
-    <article className="rounded-[16px] border border-marca-borde bg-white p-4">
-      <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-        {titulo}
-      </p>
       <p
-        className={`mt-2.5 font-display text-[26px] font-bold leading-none tabular-nums lg:text-[30px] ${
-          alerta ? "text-marca-amarilloTexto" : "text-marca-tinta"
+        className={`mt-2.5 text-pretty text-[12.5px] leading-[1.4] ${
+          urge ? "text-marca-calidoBadgeTexto" : "text-marca-gris"
         }`}
       >
-        {valor}
+        {pie}
       </p>
-      <p className="mt-2 text-[12px] leading-[1.4] text-marca-gris">{pie}</p>
-    </article>
-  );
-}
-
-function Seccion({
-  id,
-  titulo,
-  entradilla,
-  children,
-}: {
-  id: string;
-  titulo: string;
-  entradilla: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section id={id} className="mt-10 scroll-mt-6 lg:mt-14">
-      <h2 className="font-display text-[21px] font-bold leading-[1.15] text-marca-tinta lg:text-[26px]">
-        {titulo}
-      </h2>
-      <p className="mt-1.5 max-w-[62ch] text-pretty text-[13.5px] leading-[1.5] text-marca-gris lg:text-[15px]">
-        {entradilla}
-      </p>
-      {children}
-    </section>
-  );
-}
-
-export default function PanelAdmin({ datos }: { datos: DatosPanel }) {
-  const { acceso, adopcion, modos, atencion, periodo } = datos;
-  const total = adopcion.totalActivos;
-
-  const sinUso =
-    adopcion.entraron.length === 0 &&
-    adopcion.generaron.length === 0 &&
-    adopcion.avanzaron.length === 0;
-
-  return (
-    <>
-      {/* --------------------------- SELECTOR DE PERIODO --------------------------- */}
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        {PERIODOS.map((p) => (
-          <Link
-            key={p}
-            href={p === "7" ? "/" : `/?periodo=${p}`}
-            scroll={false}
-            className={`inline-flex min-h-[36px] items-center rounded-full border px-4 text-[12.5px] font-semibold transition-colors ${
-              p === periodo
-                ? "border-marca-verde bg-marca-verdeFondo text-marca-verdeOsc"
-                : "border-marca-borde bg-white text-marca-gris hover:border-marca-verde"
-            }`}
-          >
-            {ETIQUETA_PERIODO[p]}
-          </Link>
-        ))}
-      </div>
-
-      {/* Los datos están cacheados cinco minutos. Sin decirlo, mirando
-          el panel cada rato el día del lanzamiento no se sabe si lo que
-          hay en pantalla es de ahora o de hace cuatro minutos. */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <Frescura calculadoEn={datos.calculadoEn} />
-        <form action={refrescarPanel}>
-          <button
-            type="submit"
-            className="inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-marca-borde bg-white px-3 text-[12px] font-semibold text-marca-gris transition-colors hover:border-marca-verde hover:text-marca-verdeOsc"
-          >
-            <span aria-hidden>↻</span> Refrescar
-          </button>
-        </form>
-      </div>
-
-      {datos.incompleto && (
-        <p className="mt-4 rounded-[12px] bg-marca-examen px-4 py-3 text-[13px] leading-[1.5] text-marca-tinta">
-          Alguna consulta no ha respondido, así que hay cifras que pueden estar por debajo de lo
-          real. Vuelve a cargar en un momento.
-        </p>
-      )}
-
-      {/* Con la plataforma recién abierta todo son ceros. Decirlo evita
-          que un panel en blanco se lea como que algo está roto. */}
-      {sinUso && !datos.incompleto && (
-        <p className="mt-4 rounded-[12px] border border-marca-borde bg-white px-4 py-3 text-[13px] leading-[1.5] text-marca-gris">
-          Todavía no hay actividad en este periodo. Los {total} alumnos con ficha están cargados y
-          esperando; en cuanto entren, esto se llena.
-        </p>
-      )}
-
-      {/* ------------------------------- 0. ACCESO ------------------------------- */}
-      <Seccion
-        id="acceso"
-        titulo="Acceso"
-        entradilla="Si el enlace del email está funcionando. Antes solo se guardaban los accesos que salían bien, así que quien no conseguía entrar era silencio."
-      >
-        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Cifra
-            titulo="Enlaces enviados"
-            valor={acceso.enlacesEnviados}
-            pie="Correos que salieron en el periodo."
-          />
-          <Cifra
-            titulo="Entraron con el enlace"
-            valor={acceso.sesionesMagicLink}
-            pie={
-              acceso.enlacesEnviados > 0
-                ? `${acceso.conversion}% de los enviados`
-                : "Todavía no se ha enviado ninguno."
-            }
-            alerta={acceso.enlacesEnviados >= 10 && acceso.conversion < 50}
-          />
-          <Cifra
-            titulo="Entraron por WooCommerce"
-            valor={acceso.sesionesWoo}
-            pie="Sin pasar por el correo."
-          />
-          <Cifra
-            titulo="No llegaron a entrar"
-            valor={
-              acceso.enviosFallidos +
-              acceso.enlacesCaducados +
-              acceso.sinCuenta +
-              acceso.emailsInvalidos +
-              acceso.sinFicha
-            }
-            pie={
-              [
-                acceso.enviosFallidos ? `${acceso.enviosFallidos} sin enviar` : "",
-                acceso.enlacesCaducados ? `${acceso.enlacesCaducados} caducados` : "",
-                acceso.sinCuenta ? `${acceso.sinCuenta} sin cuenta` : "",
-                acceso.emailsInvalidos ? `${acceso.emailsInvalidos} mal escritos` : "",
-                acceso.sinFicha ? `${acceso.sinFicha} sin ficha` : "",
-              ]
-                .filter(Boolean)
-                .join(" · ") || "Ninguno."
-            }
-            alerta={acceso.enviosFallidos > 0}
-          />
-        </div>
-
-        {acceso.enviosFallidos > 0 && (
-          <p className="mt-3 rounded-[12px] bg-marca-examen px-4 py-3 text-[13px] leading-[1.5] text-marca-tinta">
-            Hay {acceso.enviosFallidos} {acceso.enviosFallidos === 1 ? "correo" : "correos"} que no
-            llegaron a salir. Conviene mirar la clave de Resend y el remitente antes de mandar más
-            invitaciones.
-          </p>
-        )}
-      </Seccion>
-
-      {/* ------------------------------ 1. ADOPCIÓN ------------------------------ */}
-      <Seccion
-        id="adopcion"
-        titulo="Adopción"
-        entradilla={`Cuántos de los ${total} alumnos con ficha están usando la plataforma. Cada cifra se abre y enseña quiénes son.`}
-      >
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Tarjeta
-            titulo="Entraron"
-            valor={adopcion.entraron.length}
-            de={total}
-            ayuda="Abrieron sesión al menos una vez en el periodo."
-          >
-            <ListaAlumnos alumnos={adopcion.entraron} vacio="Nadie ha entrado en este periodo." />
-          </Tarjeta>
-
-          <Tarjeta
-            titulo="Generaron práctica"
-            valor={adopcion.generaron.length}
-            de={total}
-            ayuda="Se prepararon al menos un bloque de ejercicios."
-          >
-            <ListaAlumnos alumnos={adopcion.generaron} vacio="Nadie ha generado práctica todavía." />
-          </Tarjeta>
-
-          <Tarjeta
-            titulo="Al día con lo disponible"
-            valor={adopcion.alDia.length}
-            de={adopcion.conContenidoAbierto}
-            ayuda={
-              adopcion.conContenidoAbierto === 0
-                ? "Todavía nadie tiene contenido abierto: el curso se libera por semanas."
-                : "Terminaron todo lo que el curso les tiene abierto. Se compara con quienes tienen algo abierto, no con el total."
-            }
-          >
-            <ListaAlumnos
-              alumnos={adopcion.alDia}
-              vacio="Nadie ha terminado todavía lo que tiene disponible."
-            />
-            {/* La cifra de antes, ahora en pequeño: sigue diciendo si
-                alguien ha tocado el curso, aunque no si va al día. */}
-            <p className="mt-2.5 border-t border-marca-borde pt-2.5 text-[12px] leading-[1.4] text-marca-grisSuave">
-              <strong className="font-semibold text-marca-gris tabular-nums">
-                {adopcion.avanzaron.length}
-              </strong>{" "}
-              completaron alguna lección en el periodo.
-            </p>
-          </Tarjeta>
-
-          <Tarjeta
-            titulo="Nunca han entrado"
-            valor={adopcion.nuncaEntraron.length}
-            de={total}
-            tono="amarillo"
-            ayuda="Sin una sola sesión, en todo el tiempo. No depende del periodo."
-          >
-            <ListaAlumnos
-              alumnos={adopcion.nuncaEntraron}
-              vacio="Todos han entrado alguna vez."
-            />
-          </Tarjeta>
-        </div>
-      </Seccion>
-
-      {/* --------------------------- 2. USO POR MODO --------------------------- */}
-      <Seccion
-        id="modos"
-        titulo="Uso por modo"
-        entradilla="Desde el 19-08-2026 solo se genera un modo, que combina la última clase, los patrones de las anteriores, el perfil y el examen. Los tres anteriores siguen aquí mientras tengan bloques en el periodo: son el histórico, no una opción que alguien pueda elegir hoy."
-      >
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {modos.map((m) => {
-            const pct = porcentaje(m.usuarios.length, m.elegibles);
-
-            return (
-              <article
-                key={m.modo}
-                className="rounded-[16px] border border-marca-borde bg-white p-4 lg:p-5"
-              >
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-                  {NOMBRE_MODO[m.modo]}
-                  {/* Los tres modos antiguos siguen contando su histórico,
-                      pero ya no se generan. Sin este sello, un panel de
-                      hace un mes y otro de mañana se leerían igual. */}
-                  {m.retirado && (
-                    <span className="rounded-full bg-marca-pista px-2 py-1 text-[9.5px] tracking-[0.08em] text-marca-gris">
-                      Retirado
-                    </span>
-                  )}
-                </p>
-
-                <p className="mt-3 flex items-baseline gap-1.5">
-                  <span className="font-display text-[30px] font-bold leading-none text-marca-tinta tabular-nums lg:text-[34px]">
-                    {m.bloques}
-                  </span>
-                  <span className="text-[13px] font-medium text-marca-grisSuave">
-                    {m.bloques === 1 ? "bloque" : "bloques"}
-                  </span>
-                </p>
-
-                <Barra valor={pct} />
-
-                <p className="mt-2.5 text-[12.5px] leading-[1.45] text-marca-gris">
-                  <strong className="font-semibold text-marca-tinta tabular-nums">
-                    {m.usuarios.length} de {m.elegibles}
-                  </strong>{" "}
-                  ({pct}%) de los que {REQUISITO_MODO[m.modo]} lo{" "}
-                  {m.retirado ? "usaron" : "han usado"}.
-                </p>
-
-                {m.elegibles === 0 && (
-                  <p className="mt-1.5 text-[12px] leading-[1.4] text-marca-grisSuave">
-                    Ningún alumno cumple hoy el requisito, así que el 0% no dice nada del modo.
-                  </p>
-                )}
-
-                <ListaAlumnos
-                  alumnos={m.usuarios.map((u) => u.alumno)}
-                  vacio="Nadie ha usado este modo en el periodo."
-                  detalles={Object.fromEntries(
-                    m.usuarios.map((u) => [
-                      u.alumno.alumnoId,
-                      `${u.bloques} ${u.bloques === 1 ? "bloque" : "bloques"}`,
-                    ])
-                  )}
-                />
-              </article>
-            );
-          })}
-        </div>
-      </Seccion>
-
-      {/* ------------------------- 5. REQUIEREN ATENCIÓN ------------------------- */}
-      <Seccion
-        id="atencion"
-        titulo="Requieren atención"
-        entradilla="Listas sobre las que se puede actuar hoy. No dependen del periodo: son estados, no actividad."
-      >
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <FilaAtencion
-            titulo="Sin transcript en su última clase"
-            alumnos={atencion.sinTranscript}
-            total={total}
-            ayuda="Sin análisis de clase no hay repaso que generar. Es el cuello de botella real del producto, y dice qué profesores no están subiendo."
-            vacio="Todos tienen su última clase analizada."
-            detalles={Object.fromEntries(
-              atencion.sinTranscript.map((a) => [a.alumnoId, a.profesor || "sin profesor"])
-            )}
-          />
-          <FilaAtencion
-            titulo="Sin perfil completado"
-            alumnos={atencion.sinPerfil}
-            total={total}
-            ayuda="Sin ocupación ni objetivo no se les puede ofrecer la tarjeta de su día a día."
-            vacio="Todos tienen perfil."
-          />
-          <FilaAtencion
-            titulo="Nunca entraron"
-            alumnos={atencion.nuncaEntraron}
-            total={total}
-            ayuda="Candidatos a un email de invitación."
-            vacio="Todos han entrado alguna vez."
-          />
-          <FilaAtencion
-            titulo="Generaron y no completaron"
-            alumnos={atencion.generaronSinCompletar}
-            total={total}
-            ayuda="Entraron, se prepararon un bloque y no llegaron a terminarlo. Algo no enganchó."
-            vacio="Nadie se ha quedado a medias."
-          />
-        </div>
-      </Seccion>
-    </>
-  );
-}
-
-function FilaAtencion({
-  titulo,
-  alumnos,
-  total,
-  ayuda,
-  vacio,
-  detalles,
-}: {
-  titulo: string;
-  alumnos: FichaPanel[];
-  total: number;
-  ayuda: string;
-  vacio: string;
-  detalles?: Record<string, string>;
-}) {
-  return (
-    <article className="rounded-[16px] border border-marca-borde bg-white p-4 lg:p-5">
-      <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-pretty font-display text-[15px] font-bold leading-[1.25] text-marca-tinta lg:text-[16px]">
-          {titulo}
-        </h3>
-        <span className="shrink-0 font-display text-[22px] font-bold leading-none text-marca-tinta tabular-nums">
-          {alumnos.length}
-        </span>
-      </div>
-      <Barra valor={porcentaje(alumnos.length, total)} tono="amarillo" />
-      <p className="mt-2.5 text-[12.5px] leading-[1.45] text-marca-gris">{ayuda}</p>
-      <ListaAlumnos alumnos={alumnos} vacio={vacio} detalles={detalles} />
-    </article>
+    </Link>
   );
 }
