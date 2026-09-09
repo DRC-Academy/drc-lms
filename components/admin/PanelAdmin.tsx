@@ -14,16 +14,29 @@ import { ETIQUETA_PERIODO, PERIODOS, type Periodo, type Vista } from "@/lib/admi
  * que bajar para ver todas las cifras, y abrir cualquiera empujaba
  * media página hacia abajo.
  *
- * Ahora son dos bloques y caben juntos en la primera pantalla:
+ * Ahora son tres bloques y caben juntos en la primera pantalla:
  *
  *   EL EMBUDO   dónde se pierde la gente. Las cifras de adopción, una
  *               debajo de otra y contra el mismo total. Tres tarjetas
  *               del mismo tamaño no dicen dónde está la caída; tres
  *               filas apiladas con su barra, sí.
  *
+ *   LO QUE      qué sabemos del alumno: si su ficha está entera y si
+ *   SABEMOS     alguien ha medido su nivel. Mismas filas y misma barra
+ *               que el embudo, en la misma tarjeta y detrás de una raya.
+ *               No son peldaños de aquel —no van después ni dependen de
+ *               él—, y por eso no se leen como una caída más.
+ *
  *   LAS PILAS   a quién hay que ir a buscar. Aquí el panel deja de
  *               informar y empieza a servir: cada una es un montón de
  *               gente con un motivo y un siguiente paso.
+ *
+ * LAS DOS MITADES DE LA MISMA PREGUNTA VIVEN EN BLOQUES DISTINTOS, y es
+ * deliberado: «ficha al día» arriba y «sin perfil completado» abajo son
+ * el mismo corte visto por sus dos caras. Arriba se mira para saber cómo
+ * va la cosa; abajo se pincha para repartir trabajo, y solo esa lista
+ * lleva la columna de cuánto lleva esperando cada uno. Igual con «nivel
+ * medido» y «sin el nivel medido».
  *
  * Y NADA SE DESPLIEGA. Cada métrica es un enlace que FILTRA la única
  * lista que hay debajo, así que este bloque conserva su altura para
@@ -139,6 +152,44 @@ export default function PanelAdmin({
             de={adopcion.conContenidoAbierto}
           />
         </div>
+
+        {/* ------------------- LO QUE SABEMOS DE ELLOS -------------------
+            Mismo trato que el embudo —cifra, barra y proporción sobre el
+            total— pero SEPARADO por una raya, porque no son peldaños de
+            lo mismo. El embudo se lee de arriba abajo como una caída:
+            entraron, generaron, están al día. Estas dos no van después de
+            aquellas ni dependen de ellas; miden lo que la academia sabe
+            del alumno, y meterlas en la misma pila haría leer una pérdida
+            donde no la hay.
+
+            Las dos van contra el total y no contra un subconjunto: la
+            ficha y la prueba se le pueden pedir a cualquiera, así que
+            aquí no hay «denominador honesto» que buscar como en el al
+            día. */}
+        <div className="mt-4 border-t border-marca-borde pt-3.5">
+          <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-grisSuave">
+            Lo que sabemos de ellos
+          </p>
+
+          <div className="mt-2.5 flex flex-col gap-[3px]">
+            <Paso
+              href={href({ vista: "fichaAlDia" })}
+              activo={vista === "fichaAlDia"}
+              titulo="Ficha al día"
+              detalle="Ocupación y objetivo rellenos"
+              valor={adopcion.fichaAlDia.length}
+              de={total}
+            />
+            <Paso
+              href={href({ vista: "nivelMedido" })}
+              activo={vista === "nivelMedido"}
+              titulo="Nivel medido"
+              detalle={desgloseDelNivel(adopcion)}
+              valor={adopcion.nivelMedido.length}
+              de={total}
+            />
+          </div>
+        </div>
       </section>
 
       {/* ------------------------- LAS PILAS ------------------------- */}
@@ -147,7 +198,7 @@ export default function PanelAdmin({
           A quién hay que ir a buscar
         </p>
 
-        <div className="mt-2.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-2.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Pila
             href={href({ vista: "nuncaEntraron" })}
             activo={vista === "nuncaEntraron"}
@@ -162,7 +213,16 @@ export default function PanelAdmin({
             activo={vista === "sinPerfil"}
             titulo="Sin perfil completado"
             valor={atencion.sinPerfil.length}
+            de={total}
             pie="Su práctica sale genérica hasta que rellenen el formulario."
+          />
+          <Pila
+            href={href({ vista: "sinNivelMedido" })}
+            activo={vista === "sinNivelMedido"}
+            titulo="Sin el nivel medido"
+            valor={atencion.sinNivelMedido.length}
+            de={total}
+            pie="Llevan el nivel que se tecleó al darlos de alta."
           />
           <Pila
             href={href({ vista: "sinCompletar" })}
@@ -178,23 +238,53 @@ export default function PanelAdmin({
 }
 
 /**
+ * El desglose de «nivel medido»: quién hizo la medición.
+ *
+ * Solo salen los que tienen a alguien detrás, y por eso se arma en vez
+ * de escribirse: `ficha` es cero hoy y escribir "0 por la ficha" gasta
+ * una línea en decir que no hay nada. El día que se rellene, aparece
+ * sola y el desglose sigue sumando el total.
+ *
+ * NO SE PUEDE LEER COMO «CUÁNTOS HICIERON LA PRUEBA», y conviene saberlo
+ * antes de citar la cifra: manda la fuente de más prioridad, así que un
+ * alumno que hizo la prueba Y tiene el nivel confirmado por su profesor
+ * cuenta en «profesor». Hoy son 16 los que están en ese caso: 44 tienen
+ * la prueba hecha y solo 28 llevan puesto el nivel que dio.
+ */
+function desgloseDelNivel(adopcion: DatosPanel["adopcion"]): string {
+  const partes: string[] = [];
+  if (adopcion.nivelPorProfesor > 0) partes.push(`${adopcion.nivelPorProfesor} por su profesor`);
+  if (adopcion.nivelPorFicha > 0) partes.push(`${adopcion.nivelPorFicha} por la ficha`);
+  if (adopcion.nivelPorPrueba > 0) partes.push(`${adopcion.nivelPorPrueba} por la prueba`);
+  return partes.length > 0 ? partes.join(" · ") : "Nadie ha medido ninguno";
+}
+
+/**
  * Una fila del embudo.
  *
  * Cuatro columnas en escritorio —nombre, cifra, barra, proporción— y
  * dos filas en móvil, donde la barra pasa debajo a ancho completo: a
  * 375px, una barra con 190px de etiqueta delante mide cuarenta píxeles
  * y deja de ser una barra.
+ *
+ * `detalle` es una segunda línea bajo el título, y va DENTRO de la celda
+ * del título a propósito: como quinta columna estrecharía la barra en
+ * todas las filas, incluidas las tres que no lo llevan, y entonces las
+ * cinco barras dejarían de ser comparables entre sí, que es lo único
+ * que hacen.
  */
 function Paso({
   href,
   activo,
   titulo,
+  detalle,
   valor,
   de,
 }: {
   href: string;
   activo: boolean;
   titulo: string;
+  detalle?: string;
   valor: number;
   de: number;
 }) {
@@ -210,7 +300,16 @@ function Paso({
           : "border-transparent hover:bg-marca-niebla"
       }`}
     >
-      <span className="text-[14px] font-semibold text-marca-tinta lg:text-[14.5px]">{titulo}</span>
+      <span className="min-w-0">
+        <span className="block text-[14px] font-semibold text-marca-tinta lg:text-[14.5px]">
+          {titulo}
+        </span>
+        {detalle && (
+          <span className="mt-0.5 block text-pretty text-[12px] leading-[1.35] text-marca-grisSuave">
+            {detalle}
+          </span>
+        )}
+      </span>
       <span className="font-display text-[21px] font-bold leading-none tabular-nums text-marca-tinta lg:text-[23px] lg:text-right">
         {valor}
       </span>

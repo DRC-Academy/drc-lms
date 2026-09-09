@@ -27,6 +27,7 @@ import { unstable_cache } from "next/cache";
 import { baseLms } from "@/lib/supabase-lms";
 import { alumnosDelPanel, clasesDelPanel, type AlumnoPanel } from "@/lib/gestion";
 import { detectarExamen } from "@/lib/perfil";
+import { origenDelNivel, nivelEsFiable, type OrigenNivel } from "@/lib/estimacion";
 import { calcularApertura } from "@/lib/drip";
 import { comoFecha } from "@/lib/fechas";
 import { cursosDelPlan } from "@/lib/cursos";
@@ -66,8 +67,35 @@ export type FichaPanel = AlumnoPanel & {
   conTranscript: boolean;
   /** Tiene fila de última clase, aunque venga vacía. */
   conClase: boolean;
-  /** Ocupación u objetivo: es lo que habilita contexto. */
+  /** Ocupación **o** objetivo: es lo que habilita contexto. */
   conContexto: boolean;
+  /**
+   * Ocupación **y** objetivo: la ficha de Gestión está entera.
+   *
+   * NO ES LO MISMO QUE `conContexto`, aunque hoy dé el mismo número.
+   * Aquel pregunta «¿hay algo con lo que personalizar?» y por eso es un
+   * O; este pregunta «¿está la ficha hecha?» y por eso es un Y. Hoy los
+   * 94 que tienen una tienen la otra —y los 83 restantes no tienen
+   * ninguna—, así que las dos cifras coinciden; el día que la IA de
+   * Gestión escriba una sola de las dos, dejan de coincidir y cada
+   * pregunta seguirá teniendo su respuesta.
+   */
+  fichaAlDia: boolean;
+  /**
+   * De dónde sale su nivel: profesor, ficha, prueba o la casilla del
+   * alta. Misma regla que usa el resto de la aplicación.
+   */
+  origenNivel: OrigenNivel;
+  /**
+   * Su nivel lo ha MEDIDO alguien —el profesor, la ficha de IA o la
+   * prueba— en vez de teclearlo quien le dio de alta.
+   *
+   * No mira `NIVEL_CONGELADO`: un alumno congelado tiene su medición
+   * hecha, lo que pasa es que todavía no se le aplica. «Tener el nivel
+   * medido» y «estar dando el curso de ese nivel» son dos preguntas, y
+   * esta es la primera.
+   */
+  nivelMedido: boolean;
 };
 
 export type Adopcion = {
@@ -91,6 +119,33 @@ export type Adopcion = {
   conContenidoAbierto: number;
   /** Secundaria: completó alguna lección aquí, esté o no al día. */
   avanzaron: FichaPanel[];
+  /**
+   * Tiene la ficha de Gestión entera: ocupación y objetivo.
+   *
+   * Es lo que separa una práctica escrita para esa persona de una
+   * genérica, y va contra el total: aquí no hay denominador honesto que
+   * valga —la ficha se le puede pedir a cualquiera—.
+   */
+  fichaAlDia: FichaPanel[];
+  /**
+   * Tiene un nivel MEDIDO, no tecleado en el alta.
+   *
+   * La distinción importa porque del nivel salen el curso que ve, los
+   * ejercicios que recibe y su estimación, y la casilla del alta trae un
+   * valor por defecto: de los que solo tienen esa casilla, más de la
+   * mitad están en B1 porque nadie tocó el desplegable.
+   */
+  nivelMedido: FichaPanel[];
+  /**
+   * El desglose de `nivelMedido`: quién hizo la medición. Los tres
+   * suman exactamente `nivelMedido.length`, y por eso está `porFicha`
+   * aunque hoy sea cero: sin él, el día que la columna histórica de la
+   * ficha de IA vuelva a rellenarse el desglose dejaría de cuadrar con
+   * su propio total y nadie lo notaría.
+   */
+  nivelPorProfesor: number;
+  nivelPorFicha: number;
+  nivelPorPrueba: number;
   nuncaEntraron: FichaPanel[];
   /**
    * La última vez que entró cada uno, por id. Solo la traen los que han
@@ -112,7 +167,10 @@ export type UsoDeModo = {
 
 export type Atencion = {
   sinTranscript: FichaPanel[];
+  /** El complemento exacto de `adopcion.fichaAlDia`: a estos hay que pedírsela. */
   sinPerfil: FichaPanel[];
+  /** El complemento exacto de `adopcion.nivelMedido`: nadie ha medido su nivel. */
+  sinNivelMedido: FichaPanel[];
   nuncaEntraron: FichaPanel[];
   generaronSinCompletar: FichaPanel[];
 };
@@ -356,12 +414,29 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
 
   const fichas: FichaPanel[] = alumnos.map((alumno) => {
     const clase = claseDe.get(alumno.alumnoId);
+
+    // La misma regla que usa el alumno al entrar. Se llama a
+    // `origenDelNivel` en vez de mirar si las columnas están rellenas
+    // porque son texto libre: `nivel` dice cosas como "B1 Exámenes" o
+    // "Inglés general", y una columna rellena sin MCER dentro no es un
+    // nivel. Contarla lo sería inflaría la cifra con lo que menos
+    // sabemos.
+    const origen = origenDelNivel(
+      alumno.nivelProfesor,
+      alumno.nivelFicha,
+      alumno.nivelPrueba,
+      alumno.nivel
+    );
+
     return {
       ...alumno,
       examen: detectarExamen(alumno.plan),
       conClase: clase !== undefined,
       conTranscript: clase?.conTranscript ?? false,
       conContexto: alumno.ocupacion !== null || alumno.objetivoPerfil !== null,
+      fichaAlDia: alumno.ocupacion !== null && alumno.objetivoPerfil !== null,
+      origenNivel: origen,
+      nivelMedido: nivelEsFiable(origen),
     };
   });
 
@@ -393,6 +468,14 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
     alDia: puntual === null ? [] : fichas.filter((f) => puntual.alDia.has(f.alumnoId)),
     conContenidoAbierto: puntual === null ? 0 : puntual.conAbierto.size,
     avanzaron: de(avanzaron),
+    // Estas dos no dependen de ninguna lectura del LMS: salen de la
+    // ficha de Gestión, que ya está en `fichas`. Por eso no pueden
+    // quedarse a medias ni marcar el panel como incompleto.
+    fichaAlDia: fichas.filter((f) => f.fichaAlDia),
+    nivelMedido: fichas.filter((f) => f.nivelMedido),
+    nivelPorProfesor: fichas.filter((f) => f.origenNivel === "profesor").length,
+    nivelPorFicha: fichas.filter((f) => f.origenNivel === "ficha").length,
+    nivelPorPrueba: fichas.filter((f) => f.origenNivel === "prueba").length,
     // "Nunca" es siempre desde el principio, aunque el periodo sea de 7
     // días: un alumno que entró hace un mes no es alguien a quien
     // invitar, y mezclarlos convertiría la lista en ruido.
@@ -452,7 +535,15 @@ async function calcular(periodo: Periodo): Promise<DatosPanel> {
     // Sin fila de clase o con la fila vacía: en los dos casos el modo
     // repaso no tiene de dónde tirar, que es lo que importa aquí.
     sinTranscript: fichas.filter((f) => !f.conTranscript),
-    sinPerfil: fichas.filter((f) => !f.conContexto),
+    // COMPLEMENTO DE `fichaAlDia`, no negación de `conContexto`.
+    //
+    // Hoy las dos formas dan los mismos 83, pero solo esta se sostiene:
+    // con la negación del O, un alumno con la ocupación puesta y el
+    // objetivo vacío no saldría ni en «ficha al día» ni aquí, y se
+    // quedaría en un hueco entre las dos cifras que nadie mira. El
+    // complemento no deja huecos por construcción.
+    sinPerfil: fichas.filter((f) => !f.fichaAlDia),
+    sinNivelMedido: fichas.filter((f) => !f.nivelMedido),
     nuncaEntraron: adopcion.nuncaEntraron,
     generaronSinCompletar:
       completaron === null || generaronNunca === null
@@ -506,8 +597,11 @@ export const VISTAS = [
   "entraron",
   "generaron",
   "alDia",
+  "fichaAlDia",
+  "nivelMedido",
   "nuncaEntraron",
   "sinPerfil",
+  "sinNivelMedido",
   "sinCompletar",
 ] as const;
 
@@ -533,30 +627,81 @@ export type DetalleVista = {
    * separa a quien entró ayer de quien entró una vez hace dos meses.
    */
   conUltimaVez: boolean;
+  /**
+   * El rótulo de la columna de espera, o null si esta lista no la lleva.
+   *
+   * Va SOLO en las listas de los que FALTAN, que es donde el tiempo
+   * decide a quién llamas primero: un alumno de tres días sin ficha no
+   * es un problema y uno de catorce meses sí. En las listas de los que
+   * ya lo tienen no hay espera que contar.
+   *
+   * El texto cambia con la lista —«sin ficha», «sin medir»— porque una
+   * columna que dijera «Espera» en las dos obligaría a mirar el título
+   * de arriba para saber espera de qué.
+   */
+  etiquetaEspera: string | null;
 };
 
 export function detalleDeVista(datos: DatosPanel, vista: Vista): DetalleVista {
   const { adopcion, atencion } = datos;
 
+  /** Casi todas las vistas comparten estos tres. */
+  const llana = { urge: false, conUltimaVez: false, etiquetaEspera: null };
+
+  /**
+   * Copia ordenada de más a menos tiempo esperando.
+   *
+   * Las listas llegan por nombre, que es el orden con el que se BUSCA a
+   * alguien. En las de lo que falta no se busca: se reparte trabajo, y
+   * entonces el orden alfabético esconde justo lo que la columna de
+   * tiempo acaba de sacar a la luz. Quien lleva catorce meses sin ficha
+   * tiene que salir el primero, no por la letra de su apellido.
+   *
+   * Copia, sin tocar el original: los arrays vienen del panel cacheado y
+   * ordenar en el sitio se lo llevaría por delante para las demás
+   * vistas.
+   *
+   * Sin fecha o con fecha futura van al final: de un alumno que empieza
+   * la semana que viene no se puede decir que lleve esperando.
+   */
+  const porEsperaMasLarga = (lista: FichaPanel[]): FichaPanel[] => {
+    const inicio = (f: FichaPanel) => {
+      const t = f.fechaInicio ? new Date(f.fechaInicio).getTime() : NaN;
+      return Number.isFinite(t) && t <= Date.now() ? t : Number.POSITIVE_INFINITY;
+    };
+    return [...lista].sort((a, b) => inicio(a) - inicio(b));
+  };
+
   switch (vista) {
     case "todos":
-      return { titulo: "Todos los alumnos", alumnos: datos.alumnos, urge: false, conUltimaVez: false };
+      return { titulo: "Todos los alumnos", alumnos: datos.alumnos, ...llana };
     case "entraron":
-      return { titulo: "Entraron", alumnos: adopcion.entraron, urge: false, conUltimaVez: true };
+      return { titulo: "Entraron", alumnos: adopcion.entraron, ...llana, conUltimaVez: true };
     case "generaron":
-      return { titulo: "Generaron práctica", alumnos: adopcion.generaron, urge: false, conUltimaVez: false };
+      return { titulo: "Generaron práctica", alumnos: adopcion.generaron, ...llana };
     case "alDia":
-      return { titulo: "Al día con lo abierto", alumnos: adopcion.alDia, urge: false, conUltimaVez: false };
+      return { titulo: "Al día con lo abierto", alumnos: adopcion.alDia, ...llana };
+    case "fichaAlDia":
+      return { titulo: "Con la ficha al día", alumnos: adopcion.fichaAlDia, ...llana };
+    case "nivelMedido":
+      return { titulo: "Con el nivel medido", alumnos: adopcion.nivelMedido, ...llana };
     case "nuncaEntraron":
-      return { titulo: "Nunca han entrado", alumnos: adopcion.nuncaEntraron, urge: true, conUltimaVez: false };
+      return { titulo: "Nunca han entrado", alumnos: adopcion.nuncaEntraron, ...llana, urge: true };
     case "sinPerfil":
-      return { titulo: "Sin perfil completado", alumnos: atencion.sinPerfil, urge: false, conUltimaVez: false };
-    case "sinCompletar":
       return {
-        titulo: "Generaron y no completaron",
-        alumnos: atencion.generaronSinCompletar,
-        urge: false,
-        conUltimaVez: false,
+        titulo: "Sin perfil completado",
+        alumnos: porEsperaMasLarga(atencion.sinPerfil),
+        ...llana,
+        etiquetaEspera: "Sin ficha",
       };
+    case "sinNivelMedido":
+      return {
+        titulo: "Sin el nivel medido",
+        alumnos: porEsperaMasLarga(atencion.sinNivelMedido),
+        ...llana,
+        etiquetaEspera: "Sin medir",
+      };
+    case "sinCompletar":
+      return { titulo: "Generaron y no completaron", alumnos: atencion.generaronSinCompletar, ...llana };
   }
 }

@@ -96,6 +96,7 @@ export default async function Home({
             busqueda={busqueda}
             ultimaSesion={datos.adopcion.ultimaSesion}
             conUltimaVez={detalle.conUltimaVez}
+            etiquetaEspera={detalle.etiquetaEspera}
             urge={detalle.urge}
             filtrada={vista !== VISTA_POR_DEFECTO}
           />

@@ -21,11 +21,22 @@ import GestorAccesos from "@/components/admin/GestorAccesos";
  * identifica a cualquiera dentro del equipo, y lo demás está en su
  * ficha, detrás de un guard.
  *
- * LA COLUMNA DE LA DERECHA CAMBIA CON EL FILTRO, y es la única
- * excepción a que la tabla sea siempre igual. En «Entraron» enseña
- * cuándo fue la última vez, que es lo que separa a quien entró ayer de
- * quien entró una vez hace dos meses. En las demás o no han entrado —y
- * saldría vacía— o el dato no decide nada.
+ * HAY UNA CUARTA COLUMNA QUE CAMBIA CON EL FILTRO, y es la única
+ * excepción a que la tabla sea siempre igual. Siempre es un TIEMPO, y
+ * siempre es el que decide a quién llamas primero:
+ *
+ *   en «Entraron»            cuándo fue la última vez, que separa a
+ *                            quien entró ayer de quien entró una vez
+ *                            hace dos meses.
+ *   en las listas de lo que  cuánto lleva el alumno en la academia sin
+ *   FALTA                    completarlo. Un alumno de tres días sin
+ *                            ficha no es un problema; uno de catorce
+ *                            meses lleva catorce meses recibiendo
+ *                            práctica genérica.
+ *
+ * En las demás no sale: o no han entrado —y saldría vacía— o el dato no
+ * decide nada. Nunca salen las dos a la vez, así que es una sola
+ * columna con dos rótulos, no dos columnas que se turnan.
  *
  * Se renderiza en el servidor. Lo único de cliente es `GestorAccesos`,
  * que ya lo era.
@@ -38,6 +49,7 @@ export default function ListaPanel({
   busqueda,
   ultimaSesion,
   conUltimaVez,
+  etiquetaEspera,
   urge,
   filtrada,
 }: {
@@ -49,12 +61,24 @@ export default function ListaPanel({
   /** Última entrada por id de alumno. Solo se usa con `conUltimaVez`. */
   ultimaSesion: Record<string, string>;
   conUltimaVez: boolean;
+  /** Rótulo de la columna de espera, o null si esta lista no la lleva. */
+  etiquetaEspera: string | null;
   /** El chip en ámbar: la lista que se está mirando es trabajo pendiente. */
   urge: boolean;
   /** false en la vista por defecto: entonces no hay filtro que quitar. */
   filtrada: boolean;
 }) {
-  const columnas = conUltimaVez
+  const rotuloTiempo = conUltimaVez ? "Última vez" : etiquetaEspera;
+
+  /** El texto de la cuarta columna para un alumno, o "" si no la hay. */
+  const tiempoDe = (alumno: AlumnoPanel) =>
+    conUltimaVez
+      ? desdeCuando(ultimaSesion[alumno.alumnoId])
+      : etiquetaEspera
+        ? llevaEsperando(alumno.fechaInicio)
+        : "";
+
+  const columnas = rotuloTiempo
     ? "grid-cols-[1fr_auto] lg:grid-cols-[minmax(0,1fr)_92px_150px_110px_auto]"
     : "grid-cols-[1fr_auto] lg:grid-cols-[minmax(0,1fr)_92px_150px_auto]";
 
@@ -133,9 +157,9 @@ export default function ListaPanel({
             <span className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
               Profesor
             </span>
-            {conUltimaVez && (
+            {rotuloTiempo && (
               <span className="text-right text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-                Última vez
+                {rotuloTiempo}
               </span>
             )}
             <span />
@@ -160,7 +184,7 @@ export default function ListaPanel({
                     <span className="mt-0.5 block truncate text-[12px] text-marca-grisSuave lg:hidden">
                       {alumno.nivel || "sin nivel"}
                       {alumno.profesor ? ` · ${alumno.profesor}` : ""}
-                      {conUltimaVez ? ` · ${desdeCuando(ultimaSesion[alumno.alumnoId])}` : ""}
+                      {rotuloTiempo ? ` · ${tiempoDe(alumno)}` : ""}
                     </span>
                   </span>
 
@@ -170,9 +194,9 @@ export default function ListaPanel({
                   <span className="hidden truncate text-[13px] text-marca-gris lg:block">
                     {alumno.profesor || "—"}
                   </span>
-                  {conUltimaVez && (
+                  {rotuloTiempo && (
                     <span className="hidden text-right text-[13px] tabular-nums text-marca-gris lg:block">
-                      {desdeCuando(ultimaSesion[alumno.alumnoId])}
+                      {tiempoDe(alumno)}
                     </span>
                   )}
 
@@ -213,4 +237,34 @@ function desdeCuando(iso: string | undefined): string {
 
   const meses = Math.round(dias / 30);
   return `hace ${meses} meses`;
+}
+
+/**
+ * CUÁNTO LLEVA EN LA ACADEMIA SIN COMPLETARLO: "12 d" · "4 meses".
+ *
+ * Es una DURACIÓN, no un instante, y por eso no dice "hace": la columna
+ * de al lado ya usa esa forma para la última visita y las dos no
+ * significan lo mismo. Corta en días hasta el segundo mes por la misma
+ * razón que `desdeCuando`: a partir de ahí "111 d" obliga a dividir de
+ * cabeza justo para saber si eso es mucho.
+ *
+ * LOS DOS BORDES SON DATOS REALES, no defensa por si acaso. Hoy hay un
+ * alumno sin `fecha_inicio` y ocho cuya fecha todavía no ha llegado
+ * —altas firmadas que empiezan la semana que viene—. A esos ocho no se
+ * les puede reclamar nada: no llevan esperando, es que aún no han
+ * empezado, y meterlos en la cuenta con un cero los pondría los
+ * primeros de la lista, que es exactamente al revés.
+ */
+function llevaEsperando(fechaInicio: string | null): string {
+  if (!fechaInicio) return "—";
+
+  const dias = Math.floor((Date.now() - new Date(fechaInicio).getTime()) / 86_400_000);
+  if (!Number.isFinite(dias)) return "—";
+  if (dias < 0) return "aún no empieza";
+  if (dias === 0) return "hoy";
+  if (dias === 1) return "1 d";
+  if (dias < 60) return `${dias} d`;
+
+  const meses = Math.round(dias / 30);
+  return `${meses} meses`;
 }

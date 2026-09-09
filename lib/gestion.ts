@@ -188,12 +188,35 @@ export type AlumnoPanel = {
   ocupacion: string | null;
   objetivoPerfil: string | null;
   fechaInicio: string | null;
+  /**
+   * Las tres columnas de nivel de la ficha de IA. Con ellas y con
+   * `nivel` —la casilla del alta— el panel puede contestar si el nivel
+   * de un alumno está MEDIDO o solo tecleado, que no es lo mismo.
+   *
+   * La regla que las ordena es `origenDelNivel` en `lib/estimacion.ts`,
+   * y no se repite aquí: esto solo las trae.
+   */
+  nivelProfesor: string | null;
+  nivelFicha: string | null;
+  nivelPrueba: string | null;
 };
 
-/** Todos los alumnos con ficha, sin recortar. */
+/**
+ * Todos los alumnos con ficha, sin recortar.
+ *
+ * DEPENDE DE `supabase/gestion-vista-perfil-ritmo.sql`, que es lo que
+ * pone las tres columnas de nivel en la vista. A diferencia de
+ * `obtenerPerfil`, que lee con `select("*")` y aguanta que falten, aquí
+ * se piden por nombre: si la migración se revirtiera, PostgREST daría
+ * 42703 y esta función devolvería la lista vacía. No es silencioso —el
+ * panel se marca `incompleto` y lo dice en pantalla—, pero conviene
+ * saberlo antes de tocar la vista de Gestión.
+ */
 export async function alumnosDelPanel(): Promise<AlumnoPanel[]> {
   const { data, error } = await soloLectura("vista_perfil_alumno")
-    .select("alumno_id, nombre, nivel, plan, profesor, ocupacion, objetivo_perfil, fecha_inicio")
+    .select(
+      "alumno_id, nombre, nivel, plan, profesor, ocupacion, objetivo_perfil, fecha_inicio, nivel_profesor, nivel_ficha, nivel_prueba"
+    )
     .order("nombre", { ascending: true })
     .returns<Fila[]>();
 
@@ -211,6 +234,9 @@ export async function alumnosDelPanel(): Promise<AlumnoPanel[]> {
     ocupacion: comoTextoOpcional(fila.ocupacion),
     objetivoPerfil: comoTextoOpcional(fila.objetivo_perfil),
     fechaInicio: comoTextoOpcional(fila.fecha_inicio),
+    nivelProfesor: comoTextoOpcional(fila.nivel_profesor),
+    nivelFicha: comoTextoOpcional(fila.nivel_ficha),
+    nivelPrueba: comoTextoOpcional(fila.nivel_prueba),
   }));
 }
 
