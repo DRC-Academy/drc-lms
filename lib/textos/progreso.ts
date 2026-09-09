@@ -22,6 +22,22 @@
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
+import type { FormatoFecha } from "@/lib/perfil";
+
+// Los nombres de mes, para las fechas que esta pantalla escribe. Se
+// repiten aquí en vez de usar `Intl` por lo mismo que en
+// `lib/textos/banners.ts`: el `es-ES` de Node no está garantizado en
+// todos los runtimes y esto se renderiza en el servidor.
+const MESES_ES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+const MESES_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 
 export type TextosProgreso = {
   tuProgreso: string;
@@ -51,6 +67,8 @@ export type TextosProgreso = {
   recorridoVacio: string;
   verLasClases: (n: number) => string;
   claseNumero: (n: number) => string;
+  /** "19 de agosto de 2026" / "19 August 2026". */
+  fechaLarga: FormatoFecha;
   hito: string;
 };
 
@@ -85,6 +103,7 @@ const ES: TextosProgreso = {
     "Aquí irá apareciendo el resumen de cada clase. Se irá llenando a medida que avances.",
   verLasClases: (n) => `Ver las ${n} clases`,
   claseNumero: (n) => `Clase ${n}`,
+  fechaLarga: (dia, indiceMes, anio) => `${dia} de ${MESES_ES[indiceMes]} de ${anio}`,
   hito: "Hito",
 };
 
@@ -120,6 +139,7 @@ const EN: TextosProgreso = {
   recorridoVacio: "A summary of each class will show up here as you go along.",
   verLasClases: (n) => `See all ${n} classes`,
   claseNumero: (n) => `Class ${n}`,
+  fechaLarga: (dia, indiceMes, anio) => `${dia} ${MESES_EN[indiceMes]} ${anio}`,
   hito: "Milestone",
 };
 

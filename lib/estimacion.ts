@@ -49,6 +49,7 @@
 // ---------------------------------------------------------------
 
 import { ESCALERA_MCER, nivelMcer, type NivelMcer } from "@/lib/recorrido";
+import type { TextosBanners } from "@/lib/textos/banners";
 
 // ---------------------------------------------------------------
 // LAS CONSTANTES AJUSTABLES. Es el único sitio donde se tocan.
@@ -259,10 +260,6 @@ export function mesesPara(horas: number, porSemana: number): number {
   return Math.max(1, Math.round(horas / alMes));
 }
 
-const MESES_LARGOS = [
-  "enero", "febrero", "marzo", "abril", "mayo", "junio",
-  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
-];
 
 /**
  * "mayo de 2028" a partir de hoy más `meses`.
@@ -277,9 +274,9 @@ const MESES_LARGOS = [
  * Un mes en inglés dentro de una frase en español sería peor que
  * cualquier otra cosa que pueda fallar aquí.
  */
-export function mesDeLlegada(meses: number, desde: Date): string {
+export function mesDeLlegada(meses: number, desde: Date, t: TextosBanners): string {
   const fecha = new Date(Date.UTC(desde.getUTCFullYear(), desde.getUTCMonth() + meses, 1));
-  return `${MESES_LARGOS[fecha.getUTCMonth()]} de ${fecha.getUTCFullYear()}`;
+  return t.mesDeLlegada(fecha.getUTCMonth(), fecha.getUTCFullYear());
 }
 
 // ---------------------------------------------------------------
@@ -334,7 +331,10 @@ export type OpcionDeHoras = {
  * Null cuando no se saben las horas o cuando ya está en el plan más
  * alto: sin nada por encima no hay escalera, hay un peldaño.
  */
-export function opcionesDeHoras(horasSemanales: number | null | undefined): OpcionDeHoras[] | null {
+export function opcionesDeHoras(
+  horasSemanales: number | null | undefined,
+  t: TextosBanners
+): OpcionDeHoras[] | null {
   const semanales = Math.round(Number(horasSemanales ?? 0));
   if (!Number.isFinite(semanales) || semanales < 1) return null;
 
@@ -403,6 +403,8 @@ export type DatosDeEstimacion = {
   textosDelPlan: Array<string | null | undefined>;
   /** Inyectable para poder fijar la fecha en una prueba. */
   ahora?: Date;
+  /** Para redactar los meses y la fecha de llegada en su idioma. */
+  t: TextosBanners;
 };
 
 /**
@@ -482,7 +484,7 @@ export function calcularEstimacion(datos: DatosDeEstimacion): Estimacion | null 
   const opciones: OpcionDeRitmo[] = crudas.map((opcion) => ({
     horasSemanales: opcion.horasSemanales,
     meses: opcion.meses,
-    llegada: mesDeLlegada(opcion.meses, ahora),
+    llegada: mesDeLlegada(opcion.meses, ahora, datos.t),
     // El 12 de suelo es para que la barra más corta siga siendo una
     // barra: a 4 meses contra 8, un 50% se ve; a 1 mes contra 15, un 7%
     // sería una raya que no se lee como nada.
@@ -502,9 +504,14 @@ export function calcularEstimacion(datos: DatosDeEstimacion): Estimacion | null 
   };
 }
 
-/** "1 mes" · "15 meses". */
-export function enMeses(cantidad: number): string {
-  return cantidad === 1 ? "1 mes" : `${cantidad} meses`;
+/**
+ * "1 mes" · "15 months".
+ *
+ * Aquí ya no se redacta: se delega. El plural y el idioma son del
+ * diccionario, y este módulo solo sabe cuántos meses son.
+ */
+export function enMeses(cantidad: number, t: TextosBanners): string {
+  return t.enMeses(cantidad);
 }
 
 // ---------------------------------------------------------------

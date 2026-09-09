@@ -1,3 +1,5 @@
+import { textosActuales } from "@/lib/idioma-servidor";
+
 /**
  * Lo que se ve mientras carga una lección.
  *
@@ -163,7 +165,7 @@ export default function Cargando() {
         </div>
       </div>
 
-      <span className="sr-only">Cargando la lección…</span>
+      <span className="sr-only">{textosActuales().curso.cargandoLaLeccion}</span>
     </div>
   );
 }

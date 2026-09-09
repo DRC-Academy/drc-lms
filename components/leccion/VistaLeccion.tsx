@@ -213,7 +213,7 @@ export default function VistaLeccion({
                     la salida. Ver `TiraRevision`. */}
 
                 <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-                  Lección {posicion + 1} de {hermanas.length}
+                  {t.leccionDeTotal(posicion + 1, hermanas.length)}
                 </p>
 
                 <h1 className="mt-2.5 text-pretty font-display text-[24px] font-bold leading-[1.18] text-marca-tinta min-[1100px]:text-[33px]">
@@ -301,6 +301,7 @@ export default function VistaLeccion({
                   <div className="flex items-center gap-3 min-[1100px]:gap-4">
                     <FlechaLeccion
                       href={anteriorId ? conFoco(`/curso/${cursoSlug}/${anteriorId}`, foco) : null}
+                      etiqueta={t.anterior}
                     />
 
                     <BotonCompletar
@@ -362,7 +363,7 @@ export default function VistaLeccion({
                   />
                 </div>
                 <span className="shrink-0 text-[12.5px] font-medium text-marca-gris tabular-nums">
-                  {hechasModulo} de {hermanas.length}
+                  {t.contador(hechasModulo, hermanas.length)}
                 </span>
               </div>
             </div>
@@ -387,7 +388,7 @@ export default function VistaLeccion({
                 href={conFoco(`/curso/${cursoSlug}`, foco)}
                 className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-marca-borde bg-marca-niebla px-3 py-[13px] text-[14px] font-semibold text-marca-tinta"
               >
-                Ver el curso completo
+                {t.verElCursoCompleto}
                 <span aria-hidden className="text-marca-grisSuave">
                   →
                 </span>
@@ -405,7 +406,7 @@ export default function VistaLeccion({
  * queda el hueco: quitarla movería el botón principal de sitio al pasar
  * de la primera a la segunda lección.
  */
-function FlechaLeccion({ href }: { href: string | null }) {
+function FlechaLeccion({ href, etiqueta }: { href: string | null; etiqueta: string }) {
   const clase =
     "grid h-11 w-11 shrink-0 place-items-center rounded-full border border-marca-borde text-[15px] leading-none text-marca-tinta transition-colors hover:bg-marca-niebla min-[1100px]:h-auto min-[1100px]:w-auto min-[1100px]:px-[18px] min-[1100px]:py-[11px] min-[1100px]:text-[14.5px] min-[1100px]:font-medium";
 
@@ -416,7 +417,7 @@ function FlechaLeccion({ href }: { href: string | null }) {
   return (
     <Link href={href} className={clase}>
       <span className="min-[1100px]:hidden">←</span>
-      <span className="hidden min-[1100px]:inline">← Anterior</span>
+      <span className="hidden min-[1100px]:inline">{etiqueta}</span>
     </Link>
   );
 }

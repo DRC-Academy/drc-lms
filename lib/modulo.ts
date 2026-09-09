@@ -54,6 +54,8 @@
 // Aquí se limpia el título y no se toca el temario.
 // ---------------------------------------------------------------
 
+import type { TextosCurso } from "@/lib/textos/curso";
+
 export type ModuloPartido = {
   /** El número de semana del título, o null si no venía. */
   semana: number | null;
@@ -91,8 +93,8 @@ export function partirModulo(titulo: string, orden: number): ModuloPartido {
 }
 
 /** "Semana 1 · Módulo 3" para la etiqueta, o solo el módulo si no hay semana. */
-export function etiquetaModulo(partido: ModuloPartido): string {
+export function etiquetaModulo(partido: ModuloPartido, t: TextosCurso): string {
   return partido.semana === null
-    ? `Módulo ${partido.numero}`
-    : `Semana ${partido.semana} · Módulo ${partido.numero}`;
+    ? t.moduloNumero(partido.numero)
+    : t.semanaYModulo(partido.semana, partido.numero);
 }

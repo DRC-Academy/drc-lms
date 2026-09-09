@@ -136,13 +136,13 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   // "trabajó contigo el…", que sonaría a recordarle algo que no pasó.
   // ---------------------------------------------------------------
   const primerNombre = nombre.split(" ")[0] ?? "";
-  const saludo = ultimaClase ? `Hola, ${primerNombre}` : `Bienvenido, ${primerNombre}`;
+  const tp = textosActuales().practica;
+  const saludo = ultimaClase ? tp.saludoConClase(primerNombre) : tp.saludoSinClase(primerNombre);
 
+  const quien = profesor || tp.tuProfesor;
   const subtitulo = ultimaClase
-    ? `${profesor || "Tu profesor"} trabajó contigo el ${formatearFecha(
-        ultimaClase.fechaClase
-      )}. Aquí tienes por dónde seguir.`
-    : `${profesor || "Tu profesor"} ya te ha dejado el curso preparado. Empieza cuando quieras.`;
+    ? tp.trabajoContigoElDia(quien, formatearFecha(ultimaClase.fechaClase, tp.fechaCorta))
+    : tp.cursoPreparado(quien);
 
   // ---------------------------------------------------------------
   // LA COLUMNA DE LA DERECHA

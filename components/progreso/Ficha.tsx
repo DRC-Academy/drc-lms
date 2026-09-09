@@ -363,7 +363,7 @@ function Tarjeta(clase: ClaseDelRecorrido) {
   // cadena y no con `new Date()`: construir una fecha desde un ISO corto
   // la ancla a UTC y en España puede retroceder un día. Gestión usa
   // `new Date()` y se salva por estar en UTC+1; esto no depende de eso.
-  const fecha = clase.fechaClase !== "" ? formatearFechaLarga(clase.fechaClase) : null;
+  const fecha = clase.fechaClase !== "" ? formatearFechaLarga(clase.fechaClase, t.fechaLarga) : null;
 
   return (
     <li key={clase.id} className={`pg-tl-item${marcado ? " is-milestone" : ""}`}>

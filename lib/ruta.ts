@@ -30,6 +30,7 @@
 
 import type { Bloque } from "@/lib/data";
 import { UMBRAL_DOMINADO, type RegistroAvance, type RegistroProgreso } from "@/lib/progreso";
+import type { TextosRuta } from "@/lib/textos/ruta";
 
 export type ProgresoBloques = Record<string, RegistroProgreso>;
 export type AvanceBloques = Record<string, RegistroAvance>;
@@ -121,7 +122,9 @@ export function estaDominado(progreso: ProgresoBloques, bloque: Bloque): boolean
 export function construirRuta(
   bloques: Bloque[],
   progreso: ProgresoBloques,
-  generacion: EstadoGeneracionRuta
+  generacion: EstadoGeneracionRuta,
+  /** Los títulos de parada se redactan aquí, así que el idioma entra aquí. */
+  t: TextosRuta
 ): Parada[] {
   const indiceActual = bloques.findIndex((bloque) => !estaCerrado(progreso, bloque));
 
@@ -147,7 +150,7 @@ export function construirRuta(
       clave: "generacion",
       tipo: "generacion",
       numero: paradas.length + 1,
-      titulo: generacion === "abierta" ? "Lista para abrir" : "Se abre con tu próxima clase",
+      titulo: generacion === "abierta" ? t.listaParaAbrir : t.seAbreConTuProximaClase,
       bloque: null,
       porcentaje: null,
       agrupadas: 0,
@@ -180,14 +183,12 @@ export function construirRuta(
 
 export type Plegado = { atras: boolean; delante: boolean };
 
-function grupo(agrupadas: number, futuro: boolean): Parada {
+function grupo(agrupadas: number, futuro: boolean, t: TextosRuta): Parada {
   return {
     clave: futuro ? "grupo-delante" : "grupo-atras",
     tipo: "resumen",
     numero: null,
-    titulo: futuro
-      ? `${agrupadas} ${agrupadas === 1 ? "parada más" : "paradas más"}`
-      : `${agrupadas} ${agrupadas === 1 ? "parada hecha" : "paradas hechas"}`,
+    titulo: futuro ? t.paradasMas(agrupadas) : t.paradasHechas(agrupadas),
     bloque: null,
     porcentaje: null,
     agrupadas,
@@ -197,7 +198,7 @@ function grupo(agrupadas: number, futuro: boolean): Parada {
 }
 
 /** Las paradas que se pintan, con sus dos nodos de grupo si hacen falta. */
-export function plegarRuta(paradas: Parada[], abierto: Plegado): Parada[] {
+export function plegarRuta(paradas: Parada[], abierto: Plegado, t: TextosRuta): Parada[] {
   const hechas = paradas.filter((p) => p.tipo === "hecha");
   const actual = paradas.find((p) => p.tipo === "actual") ?? null;
   const pendientes = paradas.filter((p) => p.tipo === "pendiente");
@@ -209,7 +210,7 @@ export function plegarRuta(paradas: Parada[], abierto: Plegado): Parada[] {
   const visibles: Parada[] = [];
 
   if (sobranAtras > 0) {
-    visibles.push(grupo(sobranAtras, false));
+    visibles.push(grupo(sobranAtras, false, t));
     if (abierto.atras) visibles.push(...hechas.slice(0, sobranAtras));
     visibles.push(...hechas.slice(sobranAtras));
   } else {
@@ -220,7 +221,7 @@ export function plegarRuta(paradas: Parada[], abierto: Plegado): Parada[] {
 
   if (sobranDelante > 0) {
     visibles.push(...pendientes.slice(0, PENDIENTES_A_LA_VISTA));
-    visibles.push(grupo(sobranDelante, true));
+    visibles.push(grupo(sobranDelante, true, t));
     if (abierto.delante) visibles.push(...pendientes.slice(PENDIENTES_A_LA_VISTA));
   } else {
     visibles.push(...pendientes);

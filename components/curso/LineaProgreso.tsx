@@ -64,10 +64,10 @@ export default function LineaProgreso({
       {mesActual && (
         <div className="mb-3 flex items-baseline justify-between gap-3 min-[900px]:hidden">
           <p className="text-[13px] font-semibold text-temario-tinta">
-            Vas por el <span className="text-temario-ambarTexto">mes {mesActual.numero}</span>
+            {t.vasPorElMes(mesActual.numero)}
           </p>
           <p className="shrink-0 text-[12.5px] tabular-nums text-temario-medio">
-            {mesActual.completadas} de {mesActual.totalLecciones} este mes
+            {t.esteMes(mesActual.completadas, mesActual.totalLecciones)}
           </p>
         </div>
       )}
@@ -109,7 +109,7 @@ function Tramo({
   esActual: boolean;
   onIr: () => void;
 }) {
-  const tb = usarIdioma().t.banners;
+  const { curso: t, banners: tb } = usarIdioma().t;
   const bloqueado = mes.diasParaAbrir !== null;
   const completado = mes.estado === "completado";
 
@@ -165,8 +165,8 @@ function Tramo({
           {esActual && (
             <span aria-hidden className="h-[7px] w-[7px] shrink-0 rounded-full bg-temario-ambar" />
           )}
-          Mes {mes.numero}
-          {esActual && <span className="font-semibold normal-case tracking-normal">· vas por aquí</span>}
+          {t.mes(mes.numero)}
+          {esActual && <span className="font-semibold normal-case tracking-normal">· {t.vasPorAqui}</span>}
         </span>
 
         <span
@@ -182,14 +182,14 @@ function Tramo({
             textoDeEspera(mes.diasParaAbrir ?? 1, tb)
           ) : (
             <span className="tabular-nums">
-              {mes.completadas} de {mes.totalLecciones}
+              {t.leccionesDelMes(mes.completadas, mes.totalLecciones)}
             </span>
           )}
         </span>
       </span>
 
       <span className="sr-only">
-        {mes.completadas} de {mes.totalLecciones} lecciones hechas. Ir al mes {mes.numero}.
+        {t.irAlMes(mes.completadas, mes.totalLecciones, mes.numero)}
       </span>
     </button>
   );

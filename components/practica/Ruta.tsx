@@ -20,6 +20,9 @@ import type { TarjetaPractica } from "@/lib/modos";
 import type { EstadoGeneracion } from "@/components/usarGenerador";
 import type { EtapaGeneracion } from "@/lib/generacion";
 import { recogerParadaCerrada } from "@/lib/cierre-ruta";
+import { usarTraduccion } from "@/components/ejercicios/usarTraduccion";
+import { conTraduccion } from "@/lib/traduccion-bloque";
+import type { Bloque } from "@/lib/data";
 import AvanceGeneracion from "@/components/AvanceGeneracion";
 
 /**
@@ -210,7 +213,7 @@ export default function Ruta({
     return () => clearTimeout(reloj);
   }, [paradas]);
 
-  const visibles = useMemo(() => plegarRuta(paradas, plegado), [paradas, plegado]);
+  const visibles = useMemo(() => plegarRuta(paradas, plegado, t), [paradas, plegado, t]);
   const bandas = useMemo(() => bandasMovil(visibles), [visibles]);
 
   const actual = visibles.find((p) => p.tipo === "actual") ?? null;
@@ -342,7 +345,7 @@ export default function Ruta({
         <div className="relative">
           <div className="flex items-baseline justify-between gap-4 px-4 min-[900px]:px-0">
             <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-verdeOsc min-[900px]:text-[11px]">
-              Tu ruta · {total} {total === 1 ? "parada" : "paradas"}
+              {t.tuRutaParadas(total)}
             </p>
             <p className="shrink-0 text-[12.5px] font-semibold text-marca-verdeOsc">{rotulo}</p>
           </div>
@@ -661,7 +664,7 @@ export default function Ruta({
 
           <span className="min-w-0 flex-1">
             <span className="block text-[10.5px] font-extrabold uppercase leading-none tracking-[0.13em] text-marca-amarilloTexto">
-              Parada {actual.numero} · estás aquí
+              {t.paradaEstasAqui(actual.numero)}
             </span>
             <span className="mt-[3px] block truncate text-[14px] font-semibold leading-[1.25] text-marca-tinta">
               {actual.titulo}
@@ -1021,6 +1024,47 @@ function BotonPreparar({
 // compitiendo por ser la acción.
 // ---------------------------------------------------------------
 
+/**
+ * EL BLOQUE DE LA TARJETA, EN EL IDIOMA DEL ALUMNO.
+ *
+ * El título y la intro los escribe el modelo, así que no están en el
+ * diccionario: se traducen con el mismo mecanismo que el visor
+ * —`usarTraduccion` más `conTraduccion`—, que pide la otra versión sola
+ * cuando el idioma pedido no es el del bloque y la deja cacheada.
+ *
+ * FALTABA JUSTO AQUÍ, y era la costura más visible que quedaba: el
+ * visor sí traducía, pero la tarjeta que lo anuncia no, así que un
+ * bloque en español —los 21 de 22 que hay hoy— se leía en español sobre
+ * una pantalla en inglés hasta que se abría.
+ *
+ * NO ES UNA TRADUCCIÓN DE MÁS. La tarjeta es una sola en toda la
+ * pantalla y es la del bloque que el alumno tiene delante para abrir:
+ * la petición que se hace aquí es la misma que se iba a hacer al
+ * abrirlo, unos segundos antes. Lo que sigue sin traducirse por
+ * adelantado es lo que nadie ha mirado.
+ *
+ * Mientras llega, se enseña el original: es exactamente lo que hay hoy,
+ * y un hueco en blanco donde va el título sería peor.
+ */
+function BloqueDeTarjeta({
+  bloque,
+  alumnoId,
+  children,
+}: {
+  bloque: Bloque;
+  alumnoId: string;
+  children: (mostrado: Bloque) => ReactNode;
+}) {
+  const { idioma } = usarIdioma();
+  const { traduccion } = usarTraduccion(bloque, idioma, alumnoId);
+  const mostrado = useMemo(
+    () => conTraduccion(bloque, traduccion, idioma),
+    [bloque, traduccion, idioma]
+  );
+
+  return <>{children(mostrado)}</>;
+}
+
 function Tarjeta({
   parada,
   alumnoId,
@@ -1049,22 +1093,27 @@ function Tarjeta({
         <div className="min-w-0 min-[900px]:flex-1">
           <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
             <span className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-amarilloTexto min-[900px]:text-[11px]">
-              Parada {parada.numero} · {parada.bloque.area}
+              {t.paradaConArea(parada.numero, parada.bloque.area)}
             </span>
             <span aria-hidden className="h-[3px] w-[3px] shrink-0 rounded-full bg-marca-puntoPendiente" />
             <span className="text-[10.5px] font-bold uppercase leading-none tracking-[0.14em] text-marca-grisSuave min-[900px]:text-[11px]">
-              {parada.bloque.ejercicios.length}{" "}
-              {parada.bloque.ejercicios.length === 1 ? "ejercicio" : "ejercicios"}
+              {t.ejerciciosCuenta(parada.bloque.ejercicios.length)}
             </span>
           </p>
 
-          <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[32px]">
-            {parada.bloque.titulo}
-          </h2>
+          <BloqueDeTarjeta bloque={parada.bloque} alumnoId={alumnoId}>
+            {(mostrado) => (
+              <>
+                <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[32px]">
+                  {mostrado.titulo}
+                </h2>
 
-          <p className="mt-2.5 max-w-[56ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">
-            {parada.bloque.intro}
-          </p>
+                <p className="mt-2.5 max-w-[56ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">
+                  {mostrado.intro}
+                </p>
+              </>
+            )}
+          </BloqueDeTarjeta>
         </div>
 
         <div className="mt-4 shrink-0 min-[900px]:mt-0 min-[900px]:text-center">
@@ -1077,7 +1126,7 @@ function Tarjeta({
           </Link>
           {profesor !== "" && (
             <p className="mt-2.5 text-center text-[12.5px] leading-[1.4] text-marca-grisSuave min-[900px]:mt-3 min-[900px]:mx-auto min-[900px]:max-w-[22ch] min-[900px]:text-[13px]">
-              Lo que escribas al final lo lee {profesor} antes de vuestra próxima clase.
+              {t.loQueEscribasLoLee(profesor)}
             </p>
           )}
         </div>
@@ -1090,17 +1139,19 @@ function Tarjeta({
     return (
       <article className={`${caja} border-marca-rutaTarjeta border-t-[3px] border-t-marca-verde`}>
         <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-verdeOsc min-[900px]:text-[11px]">
-          Parada {parada.numero} · hecha
+          {t.paradaHecha(parada.numero)}
           {parada.porcentaje !== null && (
-            <span className="tabular-nums"> · {parada.porcentaje}% de aciertos</span>
+            <span className="tabular-nums">{t.paradaAciertos(parada.porcentaje)}</span>
           )}
         </p>
-        <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[30px]">
-          {parada.bloque.titulo}
-        </h2>
-        <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">
-          {parada.bloque.intro}
-        </p>
+        <BloqueDeTarjeta bloque={parada.bloque} alumnoId={alumnoId}>
+          {(mostrado) => (
+            <>
+              <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[30px]">{mostrado.titulo}</h2>
+              <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">{mostrado.intro}</p>
+            </>
+          )}
+        </BloqueDeTarjeta>
         <Link
           href={`/alumno/${alumnoId}/${parada.bloque.id}`}
           className="mt-4 flex min-h-[48px] w-full items-center justify-center rounded-full btn-verde-linea bg-white px-7 text-[15.5px] font-bold min-[900px]:w-auto"
@@ -1119,14 +1170,16 @@ function Tarjeta({
     return (
       <article className={`${caja} border-marca-rutaTarjeta`}>
         <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-gris min-[900px]:text-[11px]">
-          Parada {parada.numero} · te espera aquí
+          {t.paradaTeEsperaAqui(parada.numero)}
         </p>
-        <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tintaCuerpo min-[900px]:text-[30px]">
-          {parada.bloque.titulo}
-        </h2>
-        <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">
-          {parada.bloque.intro}
-        </p>
+        <BloqueDeTarjeta bloque={parada.bloque} alumnoId={alumnoId}>
+          {(mostrado) => (
+            <>
+              <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tintaCuerpo min-[900px]:text-[30px]">{mostrado.titulo}</h2>
+              <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">{mostrado.intro}</p>
+            </>
+          )}
+        </BloqueDeTarjeta>
         <Aviso>
           {numeroActual !== null
             ? t.llegasAlCerrar(numeroActual)
@@ -1146,7 +1199,7 @@ function Tarjeta({
       >
         <div className="min-w-0 min-[900px]:flex-1">
           <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-verdeOsc min-[900px]:text-[11px]">
-            Parada {parada.numero} · lista para abrir
+            {t.paradaListaParaAbrirN(parada.numero)}
           </p>
 
           <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[32px]">
@@ -1169,7 +1222,7 @@ function Tarjeta({
             disabled={generando}
             className="flex min-h-[52px] w-full items-center justify-center rounded-full btn-verde px-11 text-[16.5px] font-bold shadow-[0_4px_0_#14722A,0_10px_20px_rgba(30,158,58,0.26)] disabled:cursor-wait disabled:opacity-60 min-[900px]:min-h-[58px] min-[900px]:w-auto min-[900px]:text-[17.5px]"
           >
-            {generando ? "Preparando…" : t.prepararLaParada(parada.numero)}
+            {generando ? t.preparando : t.prepararLaParada(parada.numero)}
           </button>
           <p className="mt-2.5 text-center text-[12.5px] leading-[1.4] text-marca-grisSuave min-[900px]:mt-3 min-[900px]:mx-auto min-[900px]:max-w-[22ch] min-[900px]:text-[13px]">
             {t.tardaMenosDeUnMinuto}
@@ -1188,7 +1241,7 @@ function Tarjeta({
     return (
       <article className={`${caja} border-marca-rutaTarjeta`}>
         <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-grisSuave min-[900px]:text-[11px]">
-          Parada {parada.numero} · aún no está
+          {t.paradaAunNoEsta(parada.numero)}
         </p>
         <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tintaCuerpo min-[900px]:text-[30px]">
           {t.seAbreConTuProximaClase}

@@ -21,6 +21,20 @@
 
 import type { Idioma } from "@/lib/idioma";
 
+// Los doce meses en cada idioma. Estaban en `lib/estimacion.ts` y solo
+// en español; el comentario de allí explicaba que no se usa `Intl`
+// porque el `es-ES` de Node no está garantizado en todos los runtimes.
+// Esa razón sigue en pie, así que se duplican en vez de formatearse.
+const MESES_ES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+const MESES_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 export type TextosBanners = {
   // --- banner del curso ---
   sinCursoTitulo: string;
@@ -32,6 +46,8 @@ export type TextosBanners = {
   repasarElCurso: string;
   verMiCurso: string;
   continuar: string;
+  /** El CTA corto de quien no ha empezado. Era la única rama sin traducir. */
+  empezar: string;
   todoLoAbierto: string;
   leccionDeTotal: (posicion: number, total: number) => string;
   disponibleManana: string;
@@ -64,6 +80,23 @@ export type TextosBanners = {
   estariasListoEn: string;
   llegariasEn: string;
 
+  // --- los meses y las fechas del banner de ampliar ---
+  //
+  // La cabecera de arriba decía que «los meses y las fechas los redacta
+  // `lib/estimacion.ts`». Los redactaba, sí, pero solo en español: el
+  // banner acababa diciendo "15 meses" y "marzo de 2027" debajo de un
+  // titular en inglés. Ahora aquel calcula y esto redacta, que es el
+  // reparto que ya sigue el resto de la aplicación.
+  //
+  // `mesDeLlegada` recibe el índice del mes y el año, no una fecha, para
+  // no depender de que el `es-ES` de Node exista en el runtime — que es
+  // la razón por la que esto no usaba `Intl` desde el principio.
+  enMeses: (cantidad: number) => string;
+  mesDeLlegada: (indiceMes: number, anio: number) => string;
+  mesesAntes: (cantidad: number) => string;
+  horasALaSemana: (horas: number) => string;
+  horasExtraCadaSemana: (horas: number) => string;
+
   // --- posición dentro del temario ---
   posicion: (mes: number, semana: number, modulo: number) => string;
 };
@@ -78,6 +111,7 @@ const ES: TextosBanners = {
   repasarElCurso: "Repasar el curso",
   verMiCurso: "Ver mi curso",
   continuar: "Continuar",
+  empezar: "Empezar",
   todoLoAbierto: "Has hecho todo lo que tienes abierto",
   leccionDeTotal: (posicion, total) => `Lección ${posicion} de ${total}`,
   disponibleManana: "Disponible mañana",
@@ -111,6 +145,12 @@ const ES: TextosBanners = {
   estariasListoEn: "Estarías listo en",
   llegariasEn: "Llegarías en",
 
+  enMeses: (cantidad) => `${cantidad} ${cantidad === 1 ? "mes" : "meses"}`,
+  mesDeLlegada: (indiceMes, anio) => `${MESES_ES[indiceMes]} de ${anio}`,
+  mesesAntes: (cantidad) => `${cantidad} ${cantidad === 1 ? "mes" : "meses"} antes`,
+  horasALaSemana: (horas) => `${horas} h a la semana`,
+  horasExtraCadaSemana: (horas) => `+${horas} h cada semana`,
+
   posicion: (mes, semana, modulo) => `Mes ${mes} · Semana ${semana} · Módulo ${modulo}`,
 };
 
@@ -125,6 +165,7 @@ const EN: TextosBanners = {
   repasarElCurso: "Go over the course again",
   verMiCurso: "See my course",
   continuar: "Carry on",
+  empezar: "Start",
   todoLoAbierto: "You've done everything that's open",
   leccionDeTotal: (posicion, total) => `Lesson ${posicion} of ${total}`,
   disponibleManana: "Available tomorrow",
@@ -157,6 +198,12 @@ const EN: TextosBanners = {
   ampliaTuPlan: "Extend your plan",
   estariasListoEn: "You'd be ready in",
   llegariasEn: "You'd get there in",
+
+  enMeses: (cantidad) => `${cantidad} ${cantidad === 1 ? "month" : "months"}`,
+  mesDeLlegada: (indiceMes, anio) => `${MESES_EN[indiceMes]} ${anio}`,
+  mesesAntes: (cantidad) => `${cantidad} ${cantidad === 1 ? "month" : "months"} sooner`,
+  horasALaSemana: (horas) => `${horas} h a week`,
+  horasExtraCadaSemana: (horas) => `+${horas} h every week`,
 
   posicion: (mes, semana, modulo) => `Month ${mes} · Week ${semana} · Module ${modulo}`,
 };

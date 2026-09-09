@@ -34,6 +34,42 @@ export type TextosCurso = {
   modulosCompletados: (n: number) => string;
   tuRecorrido: string;
 
+  // --- las coordenadas del temario ---
+  //
+  // Estas seis salían escritas en el código, y por eso el temario leía
+  // "Mes 1 · Weeks 1 – 4 · Módulos 1 a 8": `semanas` ya estaba aquí y
+  // sus vecinas no. Van juntas a propósito — se pintan en la misma
+  // línea y tienen que sonar igual.
+  mes: (numero: number) => string;
+  semana: (numero: number) => string;
+  /** El rótulo de un mes sin tema propio: "Módulos 1 a 8". */
+  modulosDe: (primero: number, ultimo: number) => string;
+  /** El contador del mes: "31 de 32 lecciones". */
+  leccionesDelMes: (hechas: number, total: number) => string;
+  /** El de la línea de progreso, que ya dice "mes" en su rótulo. */
+  esteMes: (hechas: number, total: number) => string;
+  irAlMes: (hechas: number, total: number, mes: number) => string;
+  vasPorAqui: string;
+  /** El rótulo móvil de la línea de progreso: "Vas por el mes 3". */
+  vasPorElMes: (numero: number) => string;
+  /** Contador desnudo, para huecos estrechos: "3 de 12". */
+  contador: (hechas: number, total: number) => string;
+  anterior: string;
+
+  // --- la etiqueta de un módulo suelto ---
+  moduloNumero: (numero: number) => string;
+  semanaYModulo: (semana: number, modulo: number) => string;
+
+  /**
+   * Los temas editoriales de cada mes, por slug de curso.
+   *
+   * Viven aquí y no en `lib/temario.ts` por lo mismo que el resto: son
+   * texto que el alumno lee, y allí solo existían en español. Un curso
+   * que no esté en el mapa no se rompe — su cabecera cae a `modulosDe`,
+   * que es lo que ya hacía.
+   */
+  temasDeCurso: Record<string, string[]>;
+
   // --- una fila de módulo ---
   metaModulo: (total: number, hechas: number) => string;
   repasarElModulo: (numero: number) => string;
@@ -47,6 +83,7 @@ export type TextosCurso = {
   continuar: string;
   continuarFlecha: string;
   cargandoElCurso: string;
+  cargandoLaLeccion: string;
   leccionesEnEsteModulo: (hechas: number, total: number) => string;
 
   // --- dentro de la lección ---
@@ -86,6 +123,34 @@ const ES: TextosCurso = {
   modulosCompletados: (n) => `${n === 1 ? "módulo completado" : "módulos completados"}`,
   tuRecorrido: "Tu recorrido por el curso",
 
+  mes: (numero) => `Mes ${numero}`,
+  semana: (numero) => `Semana ${numero}`,
+  modulosDe: (primero, ultimo) =>
+    primero === ultimo ? `Módulo ${primero}` : `Módulos ${primero} a ${ultimo}`,
+  leccionesDelMes: (hechas, total) =>
+    `${hechas} de ${total} ${total === 1 ? "lección" : "lecciones"}`,
+  esteMes: (hechas, total) => `${hechas} de ${total} este mes`,
+  irAlMes: (hechas, total, mes) =>
+    `${hechas} de ${total} ${total === 1 ? "lección hecha" : "lecciones hechas"}. Ir al mes ${mes}.`,
+  vasPorAqui: "vas por aquí",
+  vasPorElMes: (numero) => `Vas por el mes ${numero}`,
+  contador: (hechas, total) => `${hechas} de ${total}`,
+  anterior: "← Anterior",
+
+  moduloNumero: (numero) => `Módulo ${numero}`,
+  semanaYModulo: (semana, modulo) => `Semana ${semana} · Módulo ${modulo}`,
+
+  temasDeCurso: {
+    "cae-c1-cambridge": [
+      "Gramática, léxico y las cuatro destrezas",
+      "Escritura compleja y práctica cronometrada",
+      "Estrategias avanzadas y primeros simulacros",
+      "Consolidación y práctica guiada",
+      "Precisión y registro bajo presión",
+      "Simulacros completos y repaso final",
+    ],
+  },
+
   metaModulo: (total, hechas) =>
     `${total} ${total === 1 ? "lección" : "lecciones"} · ${hechas} ${hechas === 1 ? "hecha" : "hechas"}`,
   repasarElModulo: (numero) => `Repasar el módulo ${numero}`,
@@ -98,6 +163,7 @@ const ES: TextosCurso = {
   continuar: "Continuar",
   continuarFlecha: "Continuar →",
   cargandoElCurso: "Cargando el curso…",
+  cargandoLaLeccion: "Cargando la lección…",
   leccionesEnEsteModulo: (hechas, total) =>
     `${hechas} de ${total} ${total === 1 ? "lección" : "lecciones"} en este módulo`,
 
@@ -137,6 +203,34 @@ const EN: TextosCurso = {
   modulosCompletados: (n) => `${n === 1 ? "module done" : "modules done"}`,
   tuRecorrido: "Your way through the course",
 
+  mes: (numero) => `Month ${numero}`,
+  semana: (numero) => `Week ${numero}`,
+  modulosDe: (primero, ultimo) =>
+    primero === ultimo ? `Module ${primero}` : `Modules ${primero} to ${ultimo}`,
+  leccionesDelMes: (hechas, total) =>
+    `${hechas} of ${total} ${total === 1 ? "lesson" : "lessons"}`,
+  esteMes: (hechas, total) => `${hechas} of ${total} this month`,
+  irAlMes: (hechas, total, mes) =>
+    `${hechas} of ${total} ${total === 1 ? "lesson" : "lessons"} done. Go to month ${mes}.`,
+  vasPorAqui: "you're here",
+  vasPorElMes: (numero) => `You're on month ${numero}`,
+  contador: (hechas, total) => `${hechas} of ${total}`,
+  anterior: "← Previous",
+
+  moduloNumero: (numero) => `Module ${numero}`,
+  semanaYModulo: (semana, modulo) => `Week ${semana} · Module ${modulo}`,
+
+  temasDeCurso: {
+    "cae-c1-cambridge": [
+      "Grammar, vocabulary and the four skills",
+      "Complex writing and timed practice",
+      "Advanced strategies and first mock tests",
+      "Consolidation and guided practice",
+      "Accuracy and register under pressure",
+      "Full mock tests and final review",
+    ],
+  },
+
   metaModulo: (total, hechas) =>
     `${total} ${total === 1 ? "lesson" : "lessons"} · ${hechas} done`,
   repasarElModulo: (numero) => `Go over module ${numero} again`,
@@ -149,6 +243,7 @@ const EN: TextosCurso = {
   continuar: "Carry on",
   continuarFlecha: "Carry on →",
   cargandoElCurso: "Loading the course…",
+  cargandoLaLeccion: "Loading the lesson…",
   leccionesEnEsteModulo: (hechas, total) =>
     `${hechas} of ${total} ${total === 1 ? "lesson" : "lessons"} in this module`,
 

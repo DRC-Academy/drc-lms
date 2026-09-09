@@ -9,6 +9,7 @@ import { comoFecha } from "@/lib/fechas";
 import { sanearHtml, tieneContenido } from "@/lib/sanear-html";
 import { prepararLeccion } from "@/lib/leccion-html";
 import { etiquetaModulo, partirModulo } from "@/lib/modulo";
+import { textosActuales } from "@/lib/idioma-servidor";
 import { incrustacionYoutube } from "@/lib/youtube";
 import VistaLeccion from "@/components/leccion/VistaLeccion";
 import type { EjercicioVista } from "@/lib/ejercicios";
@@ -122,7 +123,7 @@ export default async function PaginaLeccion({
       cursoSlug={curso.slug}
       cursoCompletadas={cursoCompletadas}
       cursoTotal={cursoTotal}
-      etiquetaModulo={etiquetaModulo(partido)}
+      etiquetaModulo={etiquetaModulo(partido, textosActuales().curso)}
       tituloModulo={partido.titulo}
       leccion={{
         id: leccion.id,

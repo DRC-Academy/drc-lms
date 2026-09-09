@@ -107,7 +107,7 @@ export default function LateralLecciones({
             <div className="h-full rounded-[3px] bg-marca-verde" style={{ width: `${porcentaje}%` }} />
           </div>
           <span className="shrink-0 text-[12.5px] font-medium text-marca-gris tabular-nums">
-            {hechas} de {lecciones.length}
+            {t.contador(hechas, lecciones.length)}
           </span>
         </div>
       </div>

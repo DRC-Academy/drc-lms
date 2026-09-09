@@ -10,6 +10,7 @@ import {
 import { objetivoDelAlumno } from "@/lib/objetivo-servidor";
 import { exigirFoco } from "@/lib/sesion-servidor";
 import { cursosAsignados } from "@/lib/cursos-servidor";
+import { textosActuales } from "@/lib/idioma-servidor";
 import Cabecera from "@/components/Cabecera";
 import Ficha from "@/components/progreso/Ficha";
 
@@ -92,6 +93,7 @@ export default async function PaginaProgreso() {
         horasSemanales: perfil.horasSemanales,
         // Los mismos tres textos que mira Gestión, en el mismo orden.
         textosDelPlan: [perfil.planContratado, perfil.objetivoSetter, perfil.objetivoPerfil],
+        t: textosActuales().banners,
       })
     : null;
 

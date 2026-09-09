@@ -103,7 +103,7 @@ export default function BannerCurso({
       ? t.verMiCurso
       : empezado
         ? t.continuar
-        : "Empezar";
+        : t.empezar;
 
   // ---------------------------------------------------------------
   // EL TITULAR ES DÓNDE ESTÁS, NO QUÉ TOCA

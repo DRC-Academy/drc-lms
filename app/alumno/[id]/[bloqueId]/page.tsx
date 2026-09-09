@@ -2,6 +2,7 @@ import { nivelDelAlumno } from "@/lib/estimacion";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getBloque } from "@/lib/data";
+import { textosActuales } from "@/lib/idioma-servidor";
 import { obtenerAlumno } from "@/lib/gestion";
 import { buscarBloqueGenerado } from "@/lib/progreso-servidor";
 import { cursosAsignados } from "@/lib/cursos-servidor";
@@ -63,7 +64,9 @@ export default async function PaginaBloque({
         <div className="mx-auto max-w-md px-6 pt-16 text-center">
           <div className="tarjeta">
             <h1 className="font-display text-[24px] font-semibold leading-tight text-drc-titular">
-              Este bloque ya no está aquí
+              {sesion.rol === "admin"
+                ? "Este bloque ya no está aquí"
+                : textosActuales().practica.bloquePerdidoTitulo}
             </h1>
             {/* Para el equipo el motivo casi siempre es otro y conviene
                 decirlo: hasta hace poco los bloques que generaba un
@@ -73,10 +76,12 @@ export default async function PaginaBloque({
             <p className="mt-3 text-[15px] leading-[1.55] text-drc-cuerpo">
               {sesion.rol === "admin"
                 ? "Los bloques que el equipo generaba antes no llegaban a guardarse, así que no hay nada que abrir. Genera uno nuevo desde la ficha y ese sí se puede revisar entero."
-                : "No encontramos este bloque entre los tuyos. Genera uno nuevo y seguimos donde lo dejaste."}
+                : textosActuales().practica.bloquePerdidoCuerpo}
             </p>
             <Link href={`/alumno/${params.id}`} className="btn btn-verde mt-7 min-h-[48px] w-full">
-              {sesion.rol === "admin" ? "Volver a la ficha" : "Volver a mis bloques"}
+              {sesion.rol === "admin"
+                ? "Volver a la ficha"
+                : textosActuales().practica.volverAMisBloques}
             </Link>
           </div>
         </div>

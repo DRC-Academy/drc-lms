@@ -22,6 +22,7 @@
 import type { ArbolCurso } from "@/lib/cursos-servidor";
 import { partirModulo, type ModuloPartido } from "@/lib/modulo";
 import type { TextosBanners } from "@/lib/textos/banners";
+import type { TextosCurso } from "@/lib/textos/curso";
 
 /** Cuántos módulos entran en un mes. La regla del curso actual. */
 export const MODULOS_POR_MES = 8;
@@ -35,27 +36,12 @@ export const SEMANAS_POR_MES = 4;
  */
 export const MESES_MAXIMO = 6;
 
-/**
- * Los temas de cada mes, que no están en la base.
- *
- * Son contenido editorial, como el banco de bloques de `lib/banco.ts`, y
- * viven en código por el mismo motivo: no hay tabla donde ponerlos y
- * cambiarlos no debería pedir un despliegue de esquema.
- *
- * La clave es el slug, que el importador genera desde el título
- * ("CAE (C1 Cambridge)" → "cae-c1-cambridge"). Un curso que no esté aquí
- * no se rompe: su cabecera cae al rótulo derivado de los módulos.
- */
-const TEMAS: Record<string, string[]> = {
-  "cae-c1-cambridge": [
-    "Gramática, léxico y las cuatro destrezas",
-    "Escritura compleja y práctica cronometrada",
-    "Estrategias avanzadas y primeros simulacros",
-    "Consolidación y práctica guiada",
-    "Precisión y registro bajo presión",
-    "Simulacros completos y repaso final",
-  ],
-};
+// LOS TEMAS DE CADA MES SE FUERON AL DICCIONARIO. Estaban aquí, en un
+// `TEMAS` por slug de curso, y eran seis frases en español que titulaban
+// los seis meses del temario. Como el resto de lo que el alumno lee,
+// viven ahora en `lib/textos/curso.ts` (`temasDeCurso`), con sus dos
+// versiones. Un curso que no esté en ese mapa sigue sin romperse: su
+// cabecera cae a `modulosDe`, que es lo que ya hacía.
 
 export type EstadoMes = "completado" | "en-curso" | "pendiente";
 
@@ -186,8 +172,8 @@ function porcentajeDe(hechas: number, total: number): number {
  * Todos los contadores salen de sumar los módulos: nada hardcodeado, de
  * modo que si el curso cambia de tamaño la pantalla se ajusta sola.
  */
-export function construirTemario(arbol: ArbolCurso): Temario {
-  const temas = TEMAS[arbol.curso.slug] ?? null;
+export function construirTemario(arbol: ArbolCurso, t: TextosCurso): Temario {
+  const temas = t.temasDeCurso[arbol.curso.slug] ?? null;
 
   // El actual es el primero sin terminar. Un módulo vacío no cuenta: no
   // se puede "estar" en algo a lo que no se entra.
@@ -261,7 +247,7 @@ export function construirTemario(arbol: ArbolCurso): Temario {
     return {
       numero,
       tema,
-      titulo: tema ?? (primero !== undefined ? `Módulos ${primero} a ${ultimo}` : `Mes ${numero}`),
+      titulo: tema ?? (primero !== undefined ? t.modulosDe(primero, ultimo) : t.mes(numero)),
       semanas,
       totalLecciones,
       completadas,

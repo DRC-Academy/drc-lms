@@ -5,6 +5,7 @@ import { obtenerPerfil } from "@/lib/gestion";
 import { arbolDelCurso, cursoPorSlug, cursosAsignados } from "@/lib/cursos-servidor";
 import { sinDripEn } from "@/lib/accesos-manuales";
 import { construirTemario } from "@/lib/temario";
+import { textosActuales } from "@/lib/idioma-servidor";
 import { comoFecha } from "@/lib/fechas";
 import { calcularDiploma } from "@/lib/diploma";
 import Temario from "@/components/curso/Temario";
@@ -78,7 +79,7 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
     : comoFecha(perfil?.fechaInicio);
 
   const arbol = await arbolDelCurso(alumnoId, curso, fechaDrip);
-  const temario = construirTemario(arbol);
+  const temario = construirTemario(arbol, textosActuales().curso);
 
   return (
     // La cabecera entera —navegación incluida— la pone el layout del

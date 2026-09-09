@@ -97,6 +97,8 @@ export default function PanelPractica({
     zonaNuevos,
   } = usarGenerador({ alumnoId, bloques, generadosIniciales });
 
+  const t = usarIdioma().t.ruta;
+
   // ---------------------------------------------------------------
   // EN QUÉ ESTADO LLEGA LA ÚLTIMA PARADA
   //
@@ -113,14 +115,14 @@ export default function PanelPractica({
   const paradas = construirRuta(
     todos,
     progreso,
-    tarjeta === null ? null : tarjeta.espera === null ? "abierta" : "cerrada"
+    tarjeta === null ? null : tarjeta.espera === null ? "abierta" : "cerrada",
+    t
   );
 
   // Todo lo que ha cerrado alguna vez, lo más reciente primero: el
   // camino es esta semana, la lista de abajo es todo.
   const cerrados = todos.filter((bloque) => estaCerrado(progreso, bloque));
 
-  const t = usarIdioma().t.ruta;
   const saludo =
     nombre.trim() !== "" ? t.paraNombre(nombre.trim().split(" ")[0]) : t.paraTi;
   const hoy = new Intl.DateTimeFormat(t.locale, {
@@ -210,9 +212,11 @@ export default function PanelPractica({
  * la misma promesa vacía que el candado no hace.
  */
 function RutaVacia({ generando, profesor }: { generando: boolean; profesor: string }) {
+  const t = usarIdioma().t.ruta;
+
   return (
     <section
-      aria-label="Tu ruta"
+      aria-label={t.tuRuta}
       className="relative overflow-hidden rounded-[24px] border border-marca-rutaBorde bg-marca-ruta px-4 py-6 min-[900px]:rounded-[28px] min-[900px]:px-10 min-[900px]:py-9"
     >
       <span
@@ -222,7 +226,7 @@ function RutaVacia({ generando, profesor }: { generando: boolean; profesor: stri
 
       <div className="relative">
         <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-verdeOsc min-[900px]:text-[11px]">
-          Tu ruta · aún sin paradas
+          {t.tuRutaSinParadas}
         </p>
 
         {/* El camino en traza discontinua, con la primera parada abierta

@@ -72,7 +72,7 @@ export default function BannerAmpliar({
   if (!estimacion) {
     if (!preparaExamen) return null;
 
-    const opciones = opcionesDeHoras(horasSemanales);
+    const opciones = opcionesDeHoras(horasSemanales, t);
 
     return (
       <section
@@ -128,13 +128,13 @@ export default function BannerAmpliar({
                 className={`amp-plan${opcion.esSuPlan ? " es-suyo" : ""}`}
               >
                 <p className="amp-horas">
-                  {opcion.horasSemanales} h a la semana
+                  {t.horasALaSemana(opcion.horasSemanales)}
                   {opcion.esSuPlan && <span className="amp-chip">{t.tuPlan}</span>}
                 </p>
 
                 {opcion.horasExtra > 0 && (
                   <p className="amp-ahorro">
-                    +{opcion.horasExtra} h cada semana
+                    {t.horasExtraCadaSemana(opcion.horasExtra)}
                   </p>
                 )}
 
@@ -223,7 +223,7 @@ export default function BannerAmpliar({
         {estimacion.opciones.map((opcion) => (
           <li key={opcion.horasSemanales} className={`amp-plan${opcion.esSuPlan ? " es-suyo" : ""}`}>
             <p className="amp-horas">
-              {opcion.horasSemanales} h a la semana
+              {t.horasALaSemana(opcion.horasSemanales)}
               {opcion.esSuPlan && <span className="amp-chip">{t.tuPlan}</span>}
             </p>
 
@@ -232,7 +232,7 @@ export default function BannerAmpliar({
                 al lado de la fecha: se leía después que todo lo demás,
                 cuando es lo que hay que leer primero. */}
             {opcion.mesesAhorrados > 0 && (
-              <p className="amp-ahorro">{enMeses(opcion.mesesAhorrados)} antes</p>
+              <p className="amp-ahorro">{t.mesesAntes(opcion.mesesAhorrados)}</p>
             )}
 
             <div className="amp-medida">
@@ -243,7 +243,7 @@ export default function BannerAmpliar({
                   aria-hidden
                 />
               </div>
-              <span className="amp-meses">{enMeses(opcion.meses)}</span>
+              <span className="amp-meses">{t.enMeses(opcion.meses)}</span>
             </div>
 
             <p className="amp-fecha">

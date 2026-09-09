@@ -19,6 +19,22 @@
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
+import type { FormatoFecha } from "@/lib/perfil";
+
+// Los nombres de mes, para las fechas que esta pantalla escribe. Se
+// repiten aquí en vez de usar `Intl` por lo mismo que en
+// `lib/textos/banners.ts`: el `es-ES` de Node no está garantizado en
+// todos los runtimes y esto se renderiza en el servidor.
+const MESES_ES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+const MESES_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 
 export type TextosPractica = {
   // --- las tres fases, como sello del bloque ---
@@ -36,6 +52,24 @@ export type TextosPractica = {
 
   // --- cómo se nombra cada fuente ---
   fuenteClase: (fecha: string) => string;
+  /** El formato de fecha corta de esta pantalla: "19 de agosto" / "19 August". */
+  fechaCorta: FormatoFecha;
+  // --- el saludo de «Para ti» ---
+  //
+  // Estaban armados a mano en `app/alumno/[id]/page.tsx`, que es la
+  // pantalla del alumno aunque su ruta empiece por /alumno.
+  // --- cuando el bloque pedido no existe ---
+  //
+  // Solo la mitad del alumno. La del equipo se queda en español, como
+  // el resto de lo que solo lee DRC: dice otra cosa —que los bloques
+  // viejos del panel no se guardaban— y no tiene lector en inglés.
+  bloquePerdidoTitulo: string;
+  bloquePerdidoCuerpo: string;
+  volverAMisBloques: string;
+  saludoConClase: (nombre: string) => string;
+  saludoSinClase: (nombre: string) => string;
+  trabajoContigoElDia: (profesor: string, fecha: string) => string;
+  cursoPreparado: (profesor: string) => string;
   fuenteRepeticiones: string;
   fuenteContexto: string;
   fuenteExamen: (examen: string) => string;
@@ -125,6 +159,17 @@ const ES: TextosPractica = {
   nuevoTrasCadaClase: "Nuevo tras cada clase",
 
   fuenteClase: (fecha) => `tu clase del ${fecha}`,
+  fechaCorta: (dia, indiceMes) => `${dia} de ${MESES_ES[indiceMes]}`,
+  bloquePerdidoTitulo: "Este bloque ya no está aquí",
+  bloquePerdidoCuerpo:
+    "No encontramos este bloque entre los tuyos. Genera uno nuevo y seguimos donde lo dejaste.",
+  volverAMisBloques: "Volver a mis bloques",
+  saludoConClase: (nombre) => `Hola, ${nombre}`,
+  saludoSinClase: (nombre) => `Bienvenido, ${nombre}`,
+  trabajoContigoElDia: (profesor, fecha) =>
+    `${profesor} trabajó contigo el ${fecha}. Aquí tienes por dónde seguir.`,
+  cursoPreparado: (profesor) =>
+    `${profesor} ya te ha dejado el curso preparado. Empieza cuando quieras.`,
   fuenteRepeticiones: "lo que se te repite",
   fuenteContexto: "tu día a día",
   fuenteExamen: (examen) => `el formato del ${examen}`,
@@ -220,6 +265,17 @@ const EN: TextosPractica = {
   nuevoTrasCadaClase: "New after every class",
 
   fuenteClase: (fecha) => `your class on ${fecha}`,
+  fechaCorta: (dia, indiceMes) => `${dia} ${MESES_EN[indiceMes]}`,
+  bloquePerdidoTitulo: "This block isn't here any more",
+  bloquePerdidoCuerpo:
+    "We can't find this block among yours. Generate a new one and we'll carry on where you left off.",
+  volverAMisBloques: "Back to my blocks",
+  saludoConClase: (nombre) => `Hello, ${nombre}`,
+  saludoSinClase: (nombre) => `Welcome, ${nombre}`,
+  trabajoContigoElDia: (profesor, fecha) =>
+    `${profesor} worked with you on ${fecha}. Here's where to carry on.`,
+  cursoPreparado: (profesor) =>
+    `${profesor} has your course ready. Start whenever you like.`,
   fuenteRepeticiones: "what keeps coming back",
   fuenteContexto: "your working day",
   fuenteExamen: (examen) => `the ${examen} format`,

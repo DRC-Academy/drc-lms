@@ -184,11 +184,29 @@ const MESES = [
 ];
 
 /**
+ * Cómo se escribe una fecha ya partida en sus piezas.
+ *
+ * Se pasa desde fuera porque el ORDEN cambia con el idioma —"19 de
+ * agosto" contra "19 August"— y con un array de nombres de mes no
+ * bastaría. Los diccionarios traen el suyo.
+ *
+ * EL VALOR POR DEFECTO ES EL ESPAÑOL, y no por inercia: quien no pasa
+ * formato es el prompt de generación (`app/api/generar-bloque`), que
+ * está escrito en español entero y quiere sus fechas en español. Los
+ * sitios que lee el alumno sí lo pasan.
+ */
+export type FormatoFecha = (dia: number, indiceMes: number, anio: number) => string;
+
+const ES_CORTA: FormatoFecha = (dia, indiceMes) => `${dia} de ${MESES[indiceMes]}`;
+const ES_LARGA: FormatoFecha = (dia, indiceMes, anio) =>
+  `${dia} de ${MESES[indiceMes]} de ${anio}`;
+
+/**
  * `fecha_clase` llega como `YYYY-MM-DD`. Se formatea partiendo la cadena
  * y no con `new Date()`: construir una fecha desde un ISO corto la ancla
  * a UTC y en España puede retroceder un día.
  */
-export function formatearFecha(iso: string): string {
+export function formatearFecha(iso: string, formato: FormatoFecha = ES_CORTA): string {
   const partes = iso.slice(0, 10).split("-");
   if (partes.length !== 3) return iso;
 
@@ -196,7 +214,7 @@ export function formatearFecha(iso: string): string {
   const mes = Number(partes[1]);
   if (!Number.isFinite(dia) || !Number.isFinite(mes) || mes < 1 || mes > 12) return iso;
 
-  return `${dia} de ${MESES[mes - 1]}`;
+  return formato(dia, mes - 1, Number(partes[0]));
 }
 
 /**
@@ -210,7 +228,7 @@ export function formatearFecha(iso: string): string {
  * Se parte la cadena igual que allí, y por el mismo motivo: construir un
  * `Date` desde un ISO corto lo ancla a UTC y en España retrocede un día.
  */
-export function formatearFechaLarga(iso: string): string {
+export function formatearFechaLarga(iso: string, formato: FormatoFecha = ES_LARGA): string {
   const partes = iso.slice(0, 10).split("-");
   if (partes.length !== 3) return iso;
 
@@ -220,5 +238,5 @@ export function formatearFechaLarga(iso: string): string {
   if (!Number.isFinite(dia) || !Number.isFinite(mes) || mes < 1 || mes > 12) return iso;
   if (!Number.isFinite(anio)) return iso;
 
-  return `${dia} de ${MESES[mes - 1]} de ${anio}`;
+  return formato(dia, mes - 1, anio);
 }

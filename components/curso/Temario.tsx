@@ -222,7 +222,7 @@ function Mes({
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-2.5">
               <span className="text-[10px] font-extrabold uppercase leading-none tracking-[0.14em] text-temario-suave min-[900px]:text-[10.5px] min-[900px]:tracking-[0.16em]">
-                Mes {mes.numero}
+                {t.mes(mes.numero)}
               </span>
               <span aria-hidden className="hidden text-[11px] text-temario-puntoSuave min-[900px]:inline">
                 ·
@@ -267,7 +267,7 @@ function Mes({
               <span className="block h-full rounded-full bg-temario-verde" style={{ width: `${mes.porcentaje}%` }} />
             </span>
             <span className="mt-[7px] block text-[11.5px] font-semibold text-temario-suave tabular-nums">
-              {mes.completadas} de {mes.totalLecciones} lecciones
+              {t.leccionesDelMes(mes.completadas, mes.totalLecciones)}
             </span>
           </span>
 
@@ -311,7 +311,7 @@ function Mes({
                 <div key={semana.numero} className="pt-3.5 min-[900px]:pt-4">
                   <div className="mb-2 flex items-center gap-3">
                     <span className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-temario-suave">
-                      Semana {semana.numero}
+                      {t.semana(semana.numero)}
                     </span>
                     <span aria-hidden className="h-px flex-1 bg-temario-borde" />
                   </div>
