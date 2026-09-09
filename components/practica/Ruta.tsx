@@ -1076,7 +1076,7 @@ function Tarjeta({
             <span className="sr-only"> — {parada.bloque.titulo}</span>
           </Link>
           {profesor !== "" && (
-            <p className="mt-2.5 text-center text-[12.5px] leading-[1.4] text-marca-grisSuave min-[900px]:mt-3 min-[900px]:max-w-[22ch] min-[900px]:text-[13px]">
+            <p className="mt-2.5 text-center text-[12.5px] leading-[1.4] text-marca-grisSuave min-[900px]:mt-3 min-[900px]:mx-auto min-[900px]:max-w-[22ch] min-[900px]:text-[13px]">
               Lo que escribas al final lo lee {profesor} antes de vuestra próxima clase.
             </p>
           )}
@@ -1171,7 +1171,7 @@ function Tarjeta({
           >
             {generando ? "Preparando…" : t.prepararLaParada(parada.numero)}
           </button>
-          <p className="mt-2.5 text-center text-[12.5px] leading-[1.4] text-marca-grisSuave min-[900px]:mt-3 min-[900px]:max-w-[22ch] min-[900px]:text-[13px]">
+          <p className="mt-2.5 text-center text-[12.5px] leading-[1.4] text-marca-grisSuave min-[900px]:mt-3 min-[900px]:mx-auto min-[900px]:max-w-[22ch] min-[900px]:text-[13px]">
             {t.tardaMenosDeUnMinuto}
           </p>
         </div>
