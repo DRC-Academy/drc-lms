@@ -30,14 +30,16 @@ import {
   construirSistema,
   construirUsuario,
   hayMateriaPrima,
-  IDIOMA_BLOQUE_POR_DEFECTO,
+  type IdiomaBloque,
   type MateriaPrima,
 } from "@/lib/prompt-bloque";
 import { bloqueDeBanco } from "@/lib/banco";
+import { idiomaActual } from "@/lib/idioma-servidor";
 import { validarBloque } from "@/lib/validarBloque";
 import { extraerJson } from "@/lib/json";
 import { revisarBloque, type Revision } from "@/lib/revisor";
 import { guardarBloqueGenerado, leerUltimaGeneracion } from "@/lib/progreso-servidor";
+import { copiarTraducciones } from "@/lib/traducciones-servidor";
 import { calcularDisponibilidad, comoFecha } from "@/lib/limites";
 import { abrirPlazo, conLimite, conLimiteOAlternativa, describir, type Plazo } from "@/lib/tiempo";
 import { TIPO_FLUJO, type EventoGeneracion, type Origen } from "@/lib/generacion";
@@ -749,10 +751,25 @@ export async function POST(peticion: Request) {
   const clave = claveCruda?.trim();
   traza("clave", huellaClave(claveCruda));
 
+  // EL BLOQUE SE ESCRIBE EN EL IDIOMA EN EL QUE EL ALUMNO ESTÁ LEYENDO.
+  //
+  // Antes se escribía siempre en el de por defecto y el otro se
+  // conseguía traduciendo después. Traducir sigue existiendo —el alumno
+  // puede cambiar de idioma cuando quiera, y ahí no hay nada que
+  // generar de nuevo— pero pedirle al modelo directamente el idioma que
+  // toca ahorra ese viaje en el caso normal, que es el 100% de las
+  // veces que nadie toca el botón.
+  //
+  // Sale de la cookie, igual que el resto de la aplicación. El cliente
+  // no lo manda en el cuerpo: es la misma preferencia con la que se
+  // pintó la pantalla desde la que se pulsó el botón.
+  const idiomaBloque: IdiomaBloque = idiomaActual();
+  traza("idioma", idiomaBloque);
+
   return flujoDeGeneracion(traza, async (emitir) => {
     if (clave) {
-      const sistema = construirSistema(nivel, IDIOMA_BLOQUE_POR_DEFECTO);
-      const usuario = construirUsuario(materia, IDIOMA_BLOQUE_POR_DEFECTO);
+      const sistema = construirSistema(nivel, idiomaBloque);
+      const usuario = construirUsuario(materia, idiomaBloque);
 
       // El presupuesto de IA es el menor entre su propio tope y lo que
       // queda de la petición: lo gastado en sesión y ficha ya no está, y
@@ -786,7 +803,7 @@ export async function POST(peticion: Request) {
         // la ausencia significa exactamente eso.
         const bloque: Bloque = {
           ...conIdPropio(generado.bloque),
-          idioma: IDIOMA_BLOQUE_POR_DEFECTO,
+          idioma: idiomaBloque,
         };
         // Se guarda antes de responder, no en segundo plano: si la
         // escritura se quedara a medias, el alumno vería el bloque, lo
@@ -840,7 +857,12 @@ export async function POST(peticion: Request) {
       await esperar(ESPERA_BANCO_MS - plazoPeticion.transcurrido());
     }
 
-    const bloque = conIdPropio(bloqueDeBanco(nivel, titulosExcluidos));
+    // El del banco se sirve con un id propio para que cada alumno tenga
+    // su fila, así que su traducción —guardada bajo el id del banco— no
+    // se encontraría sola. Se copia, que no cuesta modelo. Ver
+    // `copiarTraducciones`.
+    const delBanco = bloqueDeBanco(nivel, titulosExcluidos);
+    const bloque = conIdPropio(delBanco);
     const guardadoBanco = await conLimiteOAlternativa(
       guardarBloqueGenerado(alumnoId, bloque, MODO_ACTUAL, "banco", null, porEquipo),
       TIEMPO_BASE_MS,
@@ -848,6 +870,17 @@ export async function POST(peticion: Request) {
       false
     );
     if (!guardadoBanco) avisarGuardadoPerdido(traza, "banco", bloque.id);
+
+    // Con plazo y sin cortar si falla: el bloque ya está listo, y
+    // quedarse sin la copia solo significa que el visor la pedirá al
+    // abrirse, que es lo que hacía antes de que esto existiera.
+    const copiadas = await conLimiteOAlternativa(
+      copiarTraducciones(delBanco.id, bloque.id),
+      TIEMPO_BASE_MS,
+      "copiarTraducciones(banco)",
+      0
+    );
+    traza("traducciones copiadas", String(copiadas));
     traza("salida:banco");
     emitir({ tipo: "listo", bloque, origen: "banco" });
   });

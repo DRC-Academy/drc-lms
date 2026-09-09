@@ -10,7 +10,8 @@ import {
   urlFormulario,
 } from "@/lib/modos";
 import { exigirFoco } from "@/lib/sesion-servidor";
-import { textosActuales } from "@/lib/idioma-servidor";
+import { idiomaActual, textosActuales } from "@/lib/idioma-servidor";
+import { bloquesEnIdioma } from "@/lib/traducciones-servidor";
 import {
   leerBloquesGenerados,
   leerProgresoAlumno,
@@ -60,7 +61,7 @@ export default async function PaginaPractica() {
   // su espera entre generaciones y del panel.
   const { sesion, alumnoId, revisando, paraEnlaces } = await exigirFoco();
 
-  const [datos, progreso, generados, ultimaGeneracion] = await Promise.all([
+  const [datos, progreso, generadosCrudos, ultimaGeneracion] = await Promise.all([
     obtenerAlumno(alumnoId),
     leerProgresoAlumno(alumnoId),
     // Con el rol, igual que en la ficha: los bloques que el equipo
@@ -69,6 +70,19 @@ export default async function PaginaPractica() {
     leerUltimaGeneracion(alumnoId),
   ]);
 
+
+  // LOS BLOQUES, EN EL IDIOMA EN EL QUE SE ESTÁ LEYENDO.
+  //
+  // El título y la intro los escribe el modelo, así que no salen del
+  // diccionario: salen de la traducción del bloque. Se aplica AQUÍ y no
+  // en cada lista porque son tres —la tarjeta de la ruta, las paradas
+  // hechas y la rejilla de generados— y hacerlo abajo significaría una
+  // llamada al modelo por fila en pantalla.
+  //
+  // Esto no encarga ninguna: lee de una sola vez las que ya están
+  // hechas. Lo que falte se queda en su idioma, igual que antes.
+  const generados = await bloquesEnIdioma(generadosCrudos, idiomaActual());
+
   // Sin ficha en Gestión no hay perfil del que generar nada. No es un
   // 404: el alumno existe, es su ficha la que falta.
   const perfil = datos?.perfil ?? null;
@@ -76,7 +90,12 @@ export default async function PaginaPractica() {
 
   const t = textosActuales().practica;
   const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion, t);
-  const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(nivelDelAlumno(alumnoId, perfil))) : [];
+  // El catálogo pasa por lo mismo que lo generado: sus nueve bloques
+  // también están escritos en español y también se pintan en las listas.
+  const bloques = await bloquesEnIdioma(
+    perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(nivelDelAlumno(alumnoId, perfil))) : [],
+    idiomaActual()
+  );
 
   // Solo para que la cabecera pueda pintar "Mi curso" sin cambiar de
   // forma entre pantallas.

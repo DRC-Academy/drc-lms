@@ -4,7 +4,8 @@ import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
 import { formatearFecha, nivelDeBloque } from "@/lib/perfil";
 import { calcularTarjeta } from "@/lib/modos";
-import { textosActuales } from "@/lib/idioma-servidor";
+import { idiomaActual, textosActuales } from "@/lib/idioma-servidor";
+import { bloquesEnIdioma } from "@/lib/traducciones-servidor";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
 import {
   leerBloquesGenerados,
@@ -46,7 +47,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   // Gestión primero: de su `plan` y su `nivel` sale qué cursos le tocan,
   // así que la consulta de cursos no puede ir en el mismo lote.
-  const [datos, progreso, generados, ultimaGeneracion] = await Promise.all([
+  const [datos, progreso, generadosCrudos, ultimaGeneracion] = await Promise.all([
     obtenerAlumno(params.id),
     leerProgresoAlumno(params.id),
     // Con el rol: los bloques que el equipo genera para revisar solo
@@ -54,6 +55,19 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
     leerBloquesGenerados(params.id, sesion.rol === "admin"),
     leerUltimaGeneracion(params.id),
   ]);
+
+
+  // LOS BLOQUES, EN EL IDIOMA EN EL QUE SE ESTÁ LEYENDO.
+  //
+  // El título y la intro los escribe el modelo, así que no salen del
+  // diccionario: salen de la traducción del bloque. Se aplica AQUÍ y no
+  // en cada lista porque son tres —la tarjeta de la ruta, las paradas
+  // hechas y la rejilla de generados— y hacerlo abajo significaría una
+  // llamada al modelo por fila en pantalla.
+  //
+  // Esto no encarga ninguna: lee de una sola vez las que ya están
+  // hechas. Lo que falte se queda en su idioma, igual que antes.
+  const generados = await bloquesEnIdioma(generadosCrudos, idiomaActual());
 
   // Solo es 404 cuando el id no corresponde a nadie. Un alumno con clase
   // pero sin perfil ve su ficha con lo que haya.
@@ -80,7 +94,12 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   // Los bloques estáticos se filtran por nivel exacto. Un A2 no recibe
   // material B1: su contenido sale del banco A2 al generar.
-  const bloques = perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(nivelDelAlumno(params.id, perfil))) : [];
+  // El catálogo pasa por lo mismo que lo generado: sus nueve bloques
+  // también están escritos en español y también se pintan en las listas.
+  const bloques = await bloquesEnIdioma(
+    perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(nivelDelAlumno(params.id, perfil))) : [],
+    idiomaActual()
+  );
 
   // ---------------------------------------------------------------
   // EL DIPLOMA
