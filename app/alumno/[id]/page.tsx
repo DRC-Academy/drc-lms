@@ -11,17 +11,13 @@ import {
   leerProgresoAlumno,
   leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
-import { arbolDelCurso, cursosDelInicio } from "@/lib/cursos-servidor";
-import { sinDripEn } from "@/lib/accesos-manuales";
-import { construirTemario } from "@/lib/temario";
+import { cursosDelInicio } from "@/lib/cursos-servidor";
 import { comoFecha } from "@/lib/fechas";
 import { calcularDiploma } from "@/lib/diploma";
-import { hitos } from "@/lib/gamificacion";
 import Cabecera from "@/components/Cabecera";
 import AvatarProfesor from "@/components/AvatarProfesor";
 import BannerCurso from "@/components/BannerCurso";
 import BannerDiploma from "@/components/BannerDiploma";
-import Sendero from "@/components/Sendero";
 import PanelAlumno from "@/components/PanelAlumno";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
@@ -108,34 +104,23 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   const diploma = calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0);
 
   // ---------------------------------------------------------------
-  // EL TEMARIO, SOLO PARA DIBUJAR EL CAMINO
+  // SE FUE EL TEMARIO, Y CON ÉL LA CONSULTA MÁS CARA DE ESTA PANTALLA
   //
-  // Es la consulta más cara de esta pantalla y entra a sabiendas: el
-  // sendero necesita saber dónde acaba cada mes, y eso no se puede
-  // deducir de `completadas` y `total`. Deducirlo de MODULOS_POR_MES
-  // colocaría mal los nodos en cuanto un módulo no tenga ocho
-  // lecciones, que es justo el tipo de error que nadie ve hasta que un
-  // alumno pregunta por qué su mes 3 empieza a la mitad.
+  // Aquí se construía el temario entero —`arbolDelCurso` + `sinDripEn`,
+  // encadenadas y fuera del lote de arriba porque dependen del curso—
+  // para una sola cosa: saber dónde acaba cada mes y poder colocar los
+  // nodos del sendero.
   //
-  // VA LA ÚLTIMA Y FUERA DEL LOTE de arriba a propósito: depende del
-  // curso, que sale de `cursosDelInicio`, que a su vez depende del
-  // perfil. Encadenadas, no en paralelo.
+  // Sin sendero no hay nada que colocar. La barra del diploma se dibuja
+  // con `completadas` y `total`, que ya vienen en `estadosCurso`, así
+  // que el inicio se ahorra dos viajes a la base en cada visita.
   //
-  // Sin curso asignado no se pide nada y el banner del diploma se
-  // queda con su barra, que es lo que hace en el curso.
+  // Si algún día vuelve un mapa por meses a esta pantalla, esto vuelve
+  // con él: la razón por la que no se puede deducir de MODULOS_POR_MES
+  // sigue siendo válida —un módulo que no tenga ocho lecciones descoloca
+  // los nodos, y eso no se ve hasta que un alumno pregunta por qué su
+  // mes 3 empieza a la mitad—.
   // ---------------------------------------------------------------
-  const temario =
-    principal && perfil
-      ? construirTemario(
-          await arbolDelCurso(
-            params.id,
-            principal.curso,
-            (await sinDripEn(params.id, principal.curso.id))
-              ? null
-              : comoFecha(perfil.fechaInicio)
-          )
-        )
-      : null;
 
   const nombre = perfil?.nombre.trim() ?? "";
   const profesor = perfil?.profesor.trim() ?? "";
@@ -284,10 +269,16 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           className="entra mb-3 min-[900px]:mb-5"
           style={{ animationDelay: "var(--paso-escalonado)" }}
         >
-          <BannerDiploma
-            estado={diploma}
-            sendero={temario ? <Sendero hitos={hitos(temario.meses)} /> : undefined}
-          />
+          {/* SIN SENDERO. Aquí iba el mapa de hitos y la barra se
+              apartaba para dejarle sitio; ahora manda la barra en las
+              dos pantallas.
+
+              El mapa contaba lo mismo con seis nodos y una curva —una
+              pieza alta, con su propia gramática— donde el carril lo
+              dice en 8px de alto: cuánto llevas y cuánto falta. Con el
+              banner sin caja, esa altura era lo único que seguía
+              haciendo del diploma un bloque en vez de una línea. */}
+          <BannerDiploma estado={diploma} />
         </div>
 
         {/* La franja entra como pieza ya renderizada: la pinta el

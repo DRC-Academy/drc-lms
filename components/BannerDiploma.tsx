@@ -1,5 +1,4 @@
 import { textosActuales } from "@/lib/idioma-servidor";
-import type { ReactNode } from "react";
 import { textoDiploma, type EstadoDiploma } from "@/lib/diploma";
 
 /**
@@ -47,21 +46,7 @@ import { textoDiploma, type EstadoDiploma } from "@/lib/diploma";
  *
  * Se renderiza en el servidor: no tiene estado ni interacción.
  */
-export default function BannerDiploma({
-  estado,
-  sendero,
-}: {
-  estado: EstadoDiploma;
-  /**
-   * El camino que sustituye a la barra, o nada.
-   *
-   * Solo lo pasa el inicio. El curso no, y no es un olvido: allí el
-   * temario entero está debajo, mes a mes y desplegable, así que un
-   * mapa de seis nodos encima sería un resumen de lo que se ve completo
-   * dos dedos más abajo.
-   */
-  sendero?: ReactNode;
-}) {
+export default function BannerDiploma({ estado }: { estado: EstadoDiploma }) {
   const t = textosActuales().banners;
   const texto = textoDiploma(estado, t);
   if (texto === null) return null;
@@ -106,10 +91,10 @@ export default function BannerDiploma({
         )}
       </div>
 
-      {/* O EL SENDERO, DONDE LO HAYA. El inicio pasa un camino y el
-          curso no pasa nada, así que cada pantalla cuenta el avance una
-          sola vez: allí el mapa, aquí la barra. */}
-      {sendero ?? <Barra relleno={texto.relleno} descripcion={descripcion} conseguido={conseguido} />}
+      {/* LA MISMA BARRA EN LAS DOS PANTALLAS. El inicio pasaba aquí un
+          sendero de hitos que la sustituía; se fue, y con él la consulta
+          más cara de esa página. Ver la nota en la ficha del alumno. */}
+      <Barra relleno={texto.relleno} descripcion={descripcion} conseguido={conseguido} />
     </section>
   );
 }
