@@ -2,9 +2,12 @@ import { exigirAdministrador } from "@/lib/sesion-servidor";
 import {
   cargarPanel,
   detalleDeVista,
+  esOrden,
   esPeriodo,
   esVista,
+  ORDEN_POR_DEFECTO,
   VISTA_POR_DEFECTO,
+  type Orden,
   type Periodo,
   type Vista,
 } from "@/lib/admin-servidor";
@@ -23,12 +26,18 @@ export const dynamic = "force-dynamic";
  * la página: la lista ya estaba ahí y solo cambia lo que enseña.
  *
  * ---------------------------------------------------------------
- * TRES COSAS EN LA URL, Y NINGUNA EN ESTADO DE CLIENTE
+ * CUATRO COSAS EN LA URL, Y NINGUNA EN ESTADO DE CLIENTE
  *
- * `periodo`, `ver` y `q` definen entre las tres lo que estás mirando, y
- * las tres viajan igual. Eso hace que el enlace que le pasas a alguien
- * abra exactamente tu pantalla, que el botón de atrás deshaga el
- * filtro, y que la página entera siga siendo de servidor.
+ * `periodo`, `ver`, `q` y `orden` definen entre las cuatro lo que estás
+ * mirando, y las cuatro viajan igual. Eso hace que el enlace que le
+ * pasas a alguien abra exactamente tu pantalla, que el botón de atrás
+ * deshaga el filtro o el cambio de orden, y que la página entera siga
+ * siendo de servidor.
+ *
+ * `orden` solo lo miran las dos listas que llevan columna de espera
+ * —sin ficha, sin medir—; en las demás no hay tiempo que ordenar y se
+ * ignora. Y solo aparece en la URL cuando NO es el de por defecto, para
+ * no arrastrar un parámetro que dice lo que ya pasa sin decirlo.
  *
  * SE FUE `listarAlumnos`. La página pedía a Gestión su propio listado
  * para el buscador, y `cargarPanel` ya lee esas mismas fichas para
@@ -45,16 +54,17 @@ export const dynamic = "force-dynamic";
 export default async function Home({
   searchParams,
 }: {
-  searchParams: { q?: string; periodo?: string; ver?: string };
+  searchParams: { q?: string; periodo?: string; ver?: string; orden?: string };
 }) {
   await exigirAdministrador();
 
   const periodo: Periodo = esPeriodo(searchParams.periodo) ? searchParams.periodo : "7";
   const vista: Vista = esVista(searchParams.ver) ? searchParams.ver : VISTA_POR_DEFECTO;
+  const orden: Orden = esOrden(searchParams.orden) ? searchParams.orden : ORDEN_POR_DEFECTO;
   const busqueda = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
 
   const datos = await cargarPanel(periodo);
-  const detalle = detalleDeVista(datos, vista);
+  const detalle = detalleDeVista(datos, vista, orden);
 
   // El buscador mira DENTRO de la lista que hay delante, no en todos.
   // Es lo que corresponde a un filtro: si buscara en todo, quitaría el
@@ -84,7 +94,13 @@ export default async function Home({
         </p>
 
         <div className="mt-6 lg:mt-8">
-          <PanelAdmin datos={datos} periodo={periodo} vista={vista} busqueda={busqueda} />
+          <PanelAdmin
+            datos={datos}
+            periodo={periodo}
+            vista={vista}
+            orden={orden}
+            busqueda={busqueda}
+          />
         </div>
 
         <div className="mt-5 lg:mt-6">
@@ -97,6 +113,7 @@ export default async function Home({
             ultimaSesion={datos.adopcion.ultimaSesion}
             conUltimaVez={detalle.conUltimaVez}
             etiquetaEspera={detalle.etiquetaEspera}
+            orden={orden}
             urge={detalle.urge}
             filtrada={vista !== VISTA_POR_DEFECTO}
           />

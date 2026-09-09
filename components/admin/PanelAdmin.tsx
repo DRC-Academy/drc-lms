@@ -1,6 +1,13 @@
 import Link from "next/link";
 import type { DatosPanel } from "@/lib/admin-servidor";
-import { ETIQUETA_PERIODO, PERIODOS, type Periodo, type Vista } from "@/lib/admin-servidor";
+import {
+  ETIQUETA_PERIODO,
+  ORDEN_POR_DEFECTO,
+  PERIODOS,
+  type Orden,
+  type Periodo,
+  type Vista,
+} from "@/lib/admin-servidor";
 
 /**
  * LAS MÉTRICAS DEL PANEL DEL EQUIPO.
@@ -64,24 +71,33 @@ export default function PanelAdmin({
   datos,
   periodo,
   vista,
+  orden,
   busqueda,
 }: {
   datos: DatosPanel;
   periodo: Periodo;
   /** La métrica seleccionada. Pinta el estado y decide la lista. */
   vista: Vista;
+  /**
+   * El sentido de la columna de espera. Aquí no se pinta nada con él
+   * —lo pone y lo cambia la cabecera de la lista—, pero los enlaces lo
+   * arrastran: cambiar de periodo no es motivo para reordenar la lista
+   * que estabas leyendo.
+   */
+  orden: Orden;
   /** Se conserva al cambiar de métrica o de periodo. */
   busqueda: string;
 }) {
   const { adopcion, atencion, incompleto } = datos;
   const total = adopcion.totalActivos;
 
-  /** Un enlace que cambia una cosa y conserva las otras dos. */
+  /** Un enlace que cambia una cosa y conserva las otras tres. */
   const href = (cambio: { periodo?: Periodo; vista?: Vista }) => {
     const p = new URLSearchParams();
     p.set("periodo", cambio.periodo ?? periodo);
     p.set("ver", cambio.vista ?? vista);
     if (busqueda) p.set("q", busqueda);
+    if (orden !== ORDEN_POR_DEFECTO) p.set("orden", orden);
     return `/?${p.toString()}`;
   };
 

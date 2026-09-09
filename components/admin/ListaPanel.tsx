@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { AlumnoPanel, Periodo, Vista } from "@/lib/admin-servidor";
-import { VISTA_POR_DEFECTO } from "@/lib/admin-servidor";
+import type { AlumnoPanel, Orden, Periodo, Vista } from "@/lib/admin-servidor";
+import { ORDEN_POR_DEFECTO, VISTA_POR_DEFECTO } from "@/lib/admin-servidor";
 import GestorAccesos from "@/components/admin/GestorAccesos";
 
 /**
@@ -50,6 +50,7 @@ export default function ListaPanel({
   ultimaSesion,
   conUltimaVez,
   etiquetaEspera,
+  orden,
   urge,
   filtrada,
 }: {
@@ -63,6 +64,8 @@ export default function ListaPanel({
   conUltimaVez: boolean;
   /** Rótulo de la columna de espera, o null si esta lista no la lleva. */
   etiquetaEspera: string | null;
+  /** En qué sentido está ordenada la columna de espera ahora mismo. */
+  orden: Orden;
   /** El chip en ámbar: la lista que se está mirando es trabajo pendiente. */
   urge: boolean;
   /** false en la vista por defecto: entonces no hay filtro que quitar. */
@@ -79,8 +82,28 @@ export default function ListaPanel({
         : "";
 
   const columnas = rotuloTiempo
-    ? "grid-cols-[1fr_auto] lg:grid-cols-[minmax(0,1fr)_92px_150px_110px_auto]"
+    ? "grid-cols-[1fr_auto] lg:grid-cols-[minmax(0,1fr)_92px_150px_118px_auto]"
     : "grid-cols-[1fr_auto] lg:grid-cols-[minmax(0,1fr)_92px_150px_auto]";
+
+  /** El sentido contrario al que está puesto. Es lo que hace el enlace. */
+  const alReves: Orden = orden === "antiguos" ? "nuevos" : "antiguos";
+
+  /**
+   * Esta misma lista con el orden cambiado.
+   *
+   * Termina en `#alumnos` a propósito: sin el ancla, ordenar te devuelve
+   * al principio de la página y hay que volver a bajar hasta la tabla
+   * que acabas de tocar. Con ella, la lista se queda donde estaba y solo
+   * cambia lo de dentro, que es la misma regla que siguen las métricas
+   * de arriba al filtrar.
+   *
+   * El orden por defecto NO se escribe en la URL: es el que sale al
+   * abrir, y ponerlo solo alargaría todos los enlaces del panel para
+   * decir lo que ya pasa sin decirlo.
+   */
+  const hrefOrden = `/?periodo=${periodo}&ver=${vista}${
+    busqueda ? `&q=${encodeURIComponent(busqueda)}` : ""
+  }${alReves !== ORDEN_POR_DEFECTO ? `&orden=${alReves}` : ""}#alumnos`;
 
   return (
     <section id="alumnos" className="scroll-mt-6 overflow-hidden rounded-[16px] border border-marca-borde bg-white">
@@ -121,6 +144,8 @@ export default function ListaPanel({
         <form method="get" className="flex shrink-0 gap-2">
           <input type="hidden" name="periodo" value={periodo} />
           <input type="hidden" name="ver" value={vista} />
+          {/* Buscar dentro de una lista no es motivo para reordenarla. */}
+          {orden !== ORDEN_POR_DEFECTO && <input type="hidden" name="orden" value={orden} />}
           <label htmlFor="q" className="sr-only">
             Buscar por nombre o profesor
           </label>
@@ -157,11 +182,41 @@ export default function ListaPanel({
             <span className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
               Profesor
             </span>
-            {rotuloTiempo && (
-              <span className="text-right text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-                {rotuloTiempo}
-              </span>
-            )}
+            {/* LA ÚNICA CABECERA QUE SE PULSA, y solo cuando hay espera
+                que ordenar. «Última vez» no lleva enlace: en «Entraron»
+                el orden que importa es el de la propia lista y no hay
+                una segunda pregunta que hacerle a esa columna.
+
+                El sentido puesto se lee en la flecha, y lo que hace el
+                enlace —lo contrario— está en el `title` y en el texto
+                para lector de pantalla. Una flecha sola no distingue
+                «así está» de «así lo vas a dejar». */}
+            {rotuloTiempo &&
+              (etiquetaEspera ? (
+                <Link
+                  href={hrefOrden}
+                  title={
+                    orden === "antiguos"
+                      ? "Ahora: los que llevan más esperando primero. Pulsa para ver antes a los más recientes."
+                      : "Ahora: los más recientes primero. Pulsa para ver antes a los que llevan más esperando."
+                  }
+                  className="flex items-center justify-end gap-1 text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave transition-colors hover:text-marca-tinta"
+                >
+                  {rotuloTiempo}
+                  <span aria-hidden className="text-[11px] leading-none">
+                    {orden === "antiguos" ? "↓" : "↑"}
+                  </span>
+                  <span className="sr-only">
+                    {orden === "antiguos"
+                      ? ". Ordenado de más antiguos a más nuevos. Pulsa para invertirlo."
+                      : ". Ordenado de más nuevos a más antiguos. Pulsa para invertirlo."}
+                  </span>
+                </Link>
+              ) : (
+                <span className="text-right text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
+                  {rotuloTiempo}
+                </span>
+              ))}
             <span />
           </div>
 

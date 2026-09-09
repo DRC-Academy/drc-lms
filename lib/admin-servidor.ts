@@ -614,6 +614,36 @@ export function esVista(valor: unknown): valor is Vista {
   return typeof valor === "string" && (VISTAS as readonly string[]).includes(valor);
 }
 
+// ---------------------------------------------------------------
+// EL ORDEN DE LAS LISTAS DE LO QUE FALTA
+//
+// La cuarta cosa que viaja en la URL, junto al periodo, la vista y el
+// buscador, y por el mismo motivo que las otras tres: así el enlace que
+// le pasas a alguien abre la lista ordenada como tú la estabas viendo,
+// y el botón de atrás deshace el cambio de orden.
+//
+// SOLO APLICA A LAS LISTAS QUE LLEVAN COLUMNA DE ESPERA. En las demás
+// no hay tiempo que ordenar y el parámetro se ignora: la lista sigue
+// llegando por nombre, que es el orden con el que se busca a alguien.
+// ---------------------------------------------------------------
+
+export const ORDENES = ["antiguos", "nuevos"] as const;
+
+export type Orden = (typeof ORDENES)[number];
+
+/**
+ * Los que llevan más esperando primero.
+ *
+ * Es el que trae puesto porque es el que responde a la pregunta con la
+ * que se abre esa lista —a quién llamo hoy—: quien lleva veinticinco
+ * meses sin ficha va antes que quien lleva doce días.
+ */
+export const ORDEN_POR_DEFECTO: Orden = "antiguos";
+
+export function esOrden(valor: unknown): valor is Orden {
+  return typeof valor === "string" && (ORDENES as readonly string[]).includes(valor);
+}
+
 export type DetalleVista = {
   titulo: string;
   alumnos: FichaPanel[];
@@ -642,34 +672,62 @@ export type DetalleVista = {
   etiquetaEspera: string | null;
 };
 
-export function detalleDeVista(datos: DatosPanel, vista: Vista): DetalleVista {
+export function detalleDeVista(
+  datos: DatosPanel,
+  vista: Vista,
+  /** Solo lo miran las listas con columna de espera; las demás lo ignoran. */
+  orden: Orden = ORDEN_POR_DEFECTO
+): DetalleVista {
   const { adopcion, atencion } = datos;
 
   /** Casi todas las vistas comparten estos tres. */
   const llana = { urge: false, conUltimaVez: false, etiquetaEspera: null };
 
   /**
-   * Copia ordenada de más a menos tiempo esperando.
+   * Copia ordenada por tiempo esperando, en el sentido que se pida.
    *
    * Las listas llegan por nombre, que es el orden con el que se BUSCA a
    * alguien. En las de lo que falta no se busca: se reparte trabajo, y
    * entonces el orden alfabético esconde justo lo que la columna de
-   * tiempo acaba de sacar a la luz. Quien lleva catorce meses sin ficha
-   * tiene que salir el primero, no por la letra de su apellido.
+   * tiempo acaba de sacar a la luz. Quien lleva veinticinco meses sin
+   * ficha tiene que salir el primero, no por la letra de su apellido.
+   *
+   * LOS DOS SENTIDOS SIRVEN PARA COSAS DISTINTAS, y por eso la cabecera
+   * de la columna los alterna en vez de fijar uno:
+   *
+   *   antiguos  a quién llamo hoy. El atasco viejo, el que lleva ahí
+   *             tanto que ya nadie lo ve.
+   *   nuevos    quién acaba de entrar sin completarlo. Ahí todavía se
+   *             llega a tiempo, y es la lista con la que se evita que
+   *             el atasco de arriba crezca.
+   *
+   * SIN FECHA O CON FECHA FUTURA VAN AL FINAL EN LOS DOS SENTIDOS, que
+   * es la única asimetría a propósito. Por calendario, quien empieza la
+   * semana que viene es el más nuevo de todos y encabezaría «nuevos»;
+   * pero de él no se puede decir que lleve esperando nada, así que
+   * abriría la lista accionable con las únicas filas sobre las que no
+   * hay nada que hacer.
+   *
+   * Los empates —dos alumnos que empezaron el mismo día— se deshacen
+   * solos por nombre: `sort` es estable y la lista ya venía alfabética.
    *
    * Copia, sin tocar el original: los arrays vienen del panel cacheado y
    * ordenar en el sitio se lo llevaría por delante para las demás
    * vistas.
-   *
-   * Sin fecha o con fecha futura van al final: de un alumno que empieza
-   * la semana que viene no se puede decir que lleve esperando.
    */
-  const porEsperaMasLarga = (lista: FichaPanel[]): FichaPanel[] => {
-    const inicio = (f: FichaPanel) => {
+  const porEspera = (lista: FichaPanel[], orden: Orden): FichaPanel[] => {
+    /** Cuándo empezó, o null si de ese no se puede contar espera. */
+    const inicio = (f: FichaPanel): number | null => {
       const t = f.fechaInicio ? new Date(f.fechaInicio).getTime() : NaN;
-      return Number.isFinite(t) && t <= Date.now() ? t : Number.POSITIVE_INFINITY;
+      return Number.isFinite(t) && t <= Date.now() ? t : null;
     };
-    return [...lista].sort((a, b) => inicio(a) - inicio(b));
+
+    return [...lista].sort((a, b) => {
+      const ta = inicio(a);
+      const tb = inicio(b);
+      if (ta === null || tb === null) return ta === tb ? 0 : ta === null ? 1 : -1;
+      return orden === "antiguos" ? ta - tb : tb - ta;
+    });
   };
 
   switch (vista) {
@@ -690,14 +748,14 @@ export function detalleDeVista(datos: DatosPanel, vista: Vista): DetalleVista {
     case "sinPerfil":
       return {
         titulo: "Sin perfil completado",
-        alumnos: porEsperaMasLarga(atencion.sinPerfil),
+        alumnos: porEspera(atencion.sinPerfil, orden),
         ...llana,
         etiquetaEspera: "Sin ficha",
       };
     case "sinNivelMedido":
       return {
         titulo: "Sin el nivel medido",
-        alumnos: porEsperaMasLarga(atencion.sinNivelMedido),
+        alumnos: porEspera(atencion.sinNivelMedido, orden),
         ...llana,
         etiquetaEspera: "Sin medir",
       };
