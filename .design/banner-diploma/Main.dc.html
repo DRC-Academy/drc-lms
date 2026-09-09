@@ -17,8 +17,8 @@
        para verse, y aun así la mitad que la barra del banner viejo. */
     .dip-pista {
       position: relative;
-      height: 8px;
-      border-radius: 4px;
+      height: 12px;
+      border-radius: 6px;
       background: #E8EEE9;
       overflow: hidden;
     }
@@ -30,7 +30,7 @@
        Carga, llega y se queda. */
     .dip-relleno {
       height: 100%;
-      border-radius: 4px;
+      border-radius: 6px;
       background: linear-gradient(90deg, #1E9E3A 0%, #37C25A 100%);
       transform-origin: left center;
       animation: dip-cargar 1150ms cubic-bezier(0.22, 0.61, 0.36, 1) 180ms backwards;
@@ -45,7 +45,7 @@
     .dip-brillo {
       position: absolute;
       inset: 0;
-      border-radius: 4px;
+      border-radius: 6px;
       overflow: hidden;
       pointer-events: none;
     }
@@ -70,7 +70,7 @@
       position: absolute;
       top: 50%;
       width: 8px;
-      height: 8px;
+      height: 12px;
       border-radius: 50%;
       background: #6FD98A;
       transform: translate(-50%, -50%);
@@ -78,7 +78,7 @@
     }
     @keyframes dip-asomar {
       from { opacity: 0; box-shadow: 0 0 0 0 rgba(55, 194, 90, 0.55); }
-      40%  { opacity: 1; box-shadow: 0 0 0 7px rgba(55, 194, 90, 0.28); }
+      40%  { opacity: 1; box-shadow: 0 0 0 9px rgba(55, 194, 90, 0.26); }
       to   { opacity: 1; box-shadow: 0 0 0 0 rgba(55, 194, 90, 0); }
     }
 

@@ -16,7 +16,7 @@
       "x": 400,
       "y": 500,
       "w": 320,
-      "text": "El carril pasa de 4px a 8px — el doble, y aun así la mitad que la barra del banner viejo.\n\nSigue sin caja, sin borde y sin superficie, que es lo que hacía discreta esta dirección."
+      "text": "El carril pasa de 4px a 12px — el triple del boceto, y ya por encima de la barra del banner viejo.\n\nSigue sin caja, sin borde y sin superficie, que es lo que hacía discreta esta dirección."
     }
   ],
   "launch": { "view": "canvas" }

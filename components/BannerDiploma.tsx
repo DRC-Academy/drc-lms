@@ -16,15 +16,15 @@ import { textoDiploma, type EstadoDiploma } from "@/lib/diploma";
  * pulsar: el banner ocupaba como la pieza principal de la pantalla sin
  * serlo.
  *
- * Ahora no hay caja. Una línea de texto y un carril de 8px a ancho
+ * Ahora no hay caja. Una línea de texto y un carril de 12px a ancho
  * completo, sobre el fondo de la página. Lo que antes era un objeto
  * pasa a ser una marca de agua del progreso: se ve —la barra cruza la
  * pantalla entera y se llena al entrar— sin meterse en medio de nada.
  *
- * LA BARRA ES LA PIEZA. Por eso engorda de los 7-8px que tenía dentro
- * de la caja a 8px sin caja, que a ancho completo y sin nada alrededor
- * pesa mucho más que antes. La cifra baja de 28px a 14,5: el número
- * mayor del inicio ya no es el único que no se puede pulsar.
+ * LA BARRA ES LA PIEZA, y por eso es lo único que engorda: 12px de
+ * carril contra los 7-8 que tenía dentro de la caja. Sin nada alrededor
+ * pesa aún más de lo que dice el número. La cifra, en cambio, baja de
+ * 28px a 14,5: el mayor del inicio ya no es el único que no se pulsa.
  *
  * NI UN BOTÓN, que eso no cambia. El verde de acción es de la franja y
  * de la práctica. Cuando exista la descarga del diploma, este es su
@@ -123,23 +123,23 @@ function Barra({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={descripcion}
-      className="relative h-2 rounded-[4px] bg-marca-pista"
+      className="relative h-3 rounded-[6px] bg-marca-pista"
     >
       {/* El ancho se queda en línea —es el estado en reposo, y el
           correcto— y lo que se anima es la escala. Ver `.llena`. */}
       <div
-        className="barre llena relative h-full overflow-hidden rounded-[4px] bg-gradient-to-r from-marca-verde to-marca-verdeClaro"
+        className="barre llena relative h-full overflow-hidden rounded-[6px] bg-gradient-to-r from-marca-verde to-marca-verdeClaro"
         style={{ width: `${relleno}%` }}
       />
 
       {conseguido ? (
         <span
           aria-hidden
-          className="punta absolute right-[-3px] top-1/2 grid h-[18px] w-[18px] -translate-y-1/2 place-items-center rounded-full border-2 border-marca-niebla bg-marca-verde"
+          className="punta absolute right-[-4px] top-1/2 grid h-[22px] w-[22px] -translate-y-1/2 place-items-center rounded-full border-2 border-marca-niebla bg-marca-verde"
         >
           <svg
             viewBox="0 0 20 20"
-            className="h-2.5 w-2.5"
+            className="h-3 w-3"
             fill="none"
             stroke="#FFFFFF"
             strokeWidth="2.4"
@@ -152,7 +152,7 @@ function Barra({
       ) : (
         <span
           aria-hidden
-          className="punta absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#6FD98A]"
+          className="punta absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#6FD98A]"
           style={{ left: `${relleno}%` }}
         />
       )}
