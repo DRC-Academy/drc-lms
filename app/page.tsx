@@ -14,6 +14,7 @@ import {
 import Cabecera from "@/components/Cabecera";
 import PanelAdmin from "@/components/admin/PanelAdmin";
 import ListaPanel from "@/components/admin/ListaPanel";
+import ListaActivos from "@/components/admin/ListaActivos";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,11 @@ export const dynamic = "force-dynamic";
  * busca entre todos: manda `ver=todos` y la consulta, y aterriza en la
  * lista de todos con la barra de vuelta. Busca por nombre y profesor,
  * como el otro: el panel no carga emails a propósito (ver `lib/gestion.ts`).
+ *
+ * Y DEBAJO DEL PANEL, LA AGENDA. Las siete cifras caben en un iPhone SE;
+ * en cualquier teléfono más alto dejaban un hueco. Lo ocupa la lista de
+ * todos los alumnos activos, por orden alfabético: no compite con las
+ * cifras y es la otra forma de llegar a una ficha, con el pulgar.
  * ---------------------------------------------------------------
  */
 export default async function Home({
@@ -168,6 +174,11 @@ export default async function Home({
               busqueda={busqueda}
             />
           </div>
+
+          {/* Debajo de las siete cifras, la agenda: en un teléfono alto
+              el panel dejaba doscientos píxeles vacíos, y esto es lo que
+              menos compite con las cifras y lo único que además sirve. */}
+          <ListaActivos alumnos={datos.alumnos} />
         </div>
 
         {/* En móvil nunca comparte pantalla con el panel, así que no
