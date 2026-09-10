@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { AlumnoPanel, Orden, Periodo, Vista } from "@/lib/admin-servidor";
-import { ORDEN_POR_DEFECTO, VISTA_POR_DEFECTO } from "@/lib/admin-servidor";
+import { ETIQUETA_PERIODO, ORDEN_POR_DEFECTO, VISTA_POR_DEFECTO } from "@/lib/admin-servidor";
 import GestorAccesos from "@/components/admin/GestorAccesos";
+import Chevron from "@/components/admin/Chevron";
 
 /**
  * LA LISTA DEL PANEL. UNA SOLA, Y ES LA QUE CAMBIA.
@@ -38,6 +39,29 @@ import GestorAccesos from "@/components/admin/GestorAccesos";
  * decide nada. Nunca salen las dos a la vez, así que es una sola
  * columna con dos rótulos, no dos columnas que se turnan.
  *
+ * ---------------------------------------------------------------
+ * EN MÓVIL ES UNA SEGUNDA PANTALLA
+ *
+ * En escritorio la lista está a la vista debajo de las métricas y se
+ * filtra sin moverse. En móvil eso no vale: quedaba a 1.500px de la fila
+ * que acababas de pulsar. Así que en móvil el panel y la lista se
+ * ALTERNAN, y quién de los dos se ve lo decide `explicita`: si `ver`
+ * venía en la URL, se ve la lista; si no, el panel. La página abre en el
+ * panel, se pulsa una métrica y la lista ocupa su sitio; una barra
+ * pegada arriba dice de cuál vienes, cuántos son y desde cuándo cuenta,
+ * y es el botón de volver.
+ *
+ * El modelo no cambia: la métrica sigue siendo un enlace a `?ver=…`, así
+ * que atrás del navegador es la flecha, y un enlace pegado desde el
+ * escritorio abre en el teléfono directamente en su lista. Y no se
+ * descoloca nada porque el panel cabe en una pantalla: al volver está
+ * como lo dejaste.
+ *
+ * Con la lista a pantalla completa sobran en móvil la cabecera de
+ * escritorio —título, cuenta y chip, que ya están en la barra—, las
+ * cabeceras de columna, el orden por espera y el menú «···» de accesos:
+ * repartir y conceder es trabajo, y se hace sentado.
+ *
  * Se renderiza en el servidor. Lo único de cliente es `GestorAccesos`,
  * que ya lo era.
  */
@@ -53,6 +77,8 @@ export default function ListaPanel({
   orden,
   urge,
   filtrada,
+  explicita,
+  dePeriodo,
 }: {
   titulo: string;
   alumnos: AlumnoPanel[];
@@ -70,6 +96,13 @@ export default function ListaPanel({
   urge: boolean;
   /** false en la vista por defecto: entonces no hay filtro que quitar. */
   filtrada: boolean;
+  /**
+   * Si `ver` venía en la URL. Solo lo mira móvil: sin él la lista no se
+   * pinta, porque el panel abre solo. En escritorio se ignora.
+   */
+  explicita: boolean;
+  /** Si la lista cambia con el periodo. Lo dice la barra de móvil. */
+  dePeriodo: boolean;
 }) {
   const rotuloTiempo = conUltimaVez ? "Última vez" : etiquetaEspera;
 
@@ -80,6 +113,17 @@ export default function ListaPanel({
       : etiquetaEspera
         ? llevaEsperando(alumno.fechaInicio)
         : "";
+
+  /**
+   * El mismo tiempo, para la línea de móvil, donde no hay cabecera de
+   * columna que diga espera DE QUÉ: «14 meses» solo no se entiende, «14
+   * meses sin ficha» sí. Solo se añade a las duraciones; «aún no
+   * empieza» y el guion se explican solos.
+   */
+  const tiempoEnLinea = (alumno: AlumnoPanel) => {
+    const t = tiempoDe(alumno);
+    return etiquetaEspera && /^\d/.test(t) ? `${t} ${etiquetaEspera.toLowerCase()}` : t;
+  };
 
   const columnas = rotuloTiempo
     ? "grid-cols-[1fr_auto] lg:grid-cols-[minmax(0,1fr)_92px_150px_118px_auto]"
@@ -105,21 +149,55 @@ export default function ListaPanel({
     busqueda ? `&q=${encodeURIComponent(busqueda)}` : ""
   }${alReves !== ORDEN_POR_DEFECTO ? `&orden=${alReves}` : ""}#alumnos`;
 
+  const cuenta = `${alumnos.length} ${alumnos.length === 1 ? "alumno" : "alumnos"}`;
+
   return (
-    <section id="alumnos" className="scroll-mt-6 overflow-hidden rounded-[16px] border border-marca-borde bg-white">
+    // En móvil, sin caja: la tarjeta se la pone la lista de filas, para
+    // que la barra de vuelta pueda ser `sticky` —dentro de un
+    // `overflow-hidden` no se pegaría—.
+    <section
+      id="alumnos"
+      className={`scroll-mt-6 lg:overflow-hidden lg:rounded-[16px] lg:border lg:border-marca-borde lg:bg-white ${
+        explicita ? "" : "hidden lg:block"
+      }`}
+    >
+      {/* ------------------------- LA BARRA DE VUELTA -------------------------
+          Solo móvil. Pegada justo debajo de la cabecera de la aplicación
+          —60px, 68 desde `sm`— y a sangre, deshaciendo el margen de la
+          página. Vuelve al panel con el periodo puesto y nada más: ni la
+          vista, ni la búsqueda, ni el orden, que eran de esta lista. */}
+      <div className="sticky top-[60px] z-20 -mx-5 border-b border-marca-borde bg-white/[0.96] backdrop-blur-md sm:top-[68px] lg:hidden">
+        <Link
+          href={`/?periodo=${periodo}`}
+          className="grid min-h-[54px] grid-cols-[24px_minmax(0,1fr)] items-center gap-x-1.5 py-2 pl-3 pr-5"
+        >
+          <Chevron direccion="izquierda" className="justify-self-center text-marca-verdeOsc" />
+          <span className="min-w-0">
+            <span
+              className={`block truncate font-display text-[16px] font-bold leading-[1.15] ${
+                urge ? "text-marca-amarilloTexto" : "text-marca-tinta"
+              }`}
+            >
+              {titulo}
+            </span>
+            <span className="mt-0.5 block text-[12px] tabular-nums text-marca-gris">
+              {cuenta} · {dePeriodo ? ETIQUETA_PERIODO[periodo].toLowerCase() : "desde el principio"}
+            </span>
+          </span>
+          <span className="sr-only">Volver al panel</span>
+        </Link>
+      </div>
+
       {/* ------------------------- LA CABECERA -------------------------
           Qué estás mirando, cuántos son y cómo salir del filtro. El
           buscador va aquí y no arriba: busca DENTRO de lo que hay
           delante, y ponerlo junto a las métricas sugeriría que busca
-          en todo. */}
-      <div className="flex flex-col gap-3 border-b border-marca-borde bg-marca-casiBlanco px-4 py-3.5 lg:flex-row lg:items-center lg:justify-between lg:px-[18px] lg:py-4">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1.5">
-          <h2 className="font-display text-[17px] font-bold leading-none text-marca-tinta lg:text-[19px]">
-            {titulo}
-          </h2>
-          <span className="text-[13px] tabular-nums text-marca-gris lg:text-[13.5px]">
-            {alumnos.length} {alumnos.length === 1 ? "alumno" : "alumnos"}
-          </span>
+          en todo. En móvil solo queda el buscador: lo demás lo dice la
+          barra de arriba. */}
+      <div className="mt-3 flex flex-col gap-3 lg:mt-0 lg:flex-row lg:items-center lg:justify-between lg:border-b lg:border-marca-borde lg:bg-marca-casiBlanco lg:px-[18px] lg:py-4">
+        <div className="hidden min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1.5 lg:flex">
+          <h2 className="font-display text-[19px] font-bold leading-none text-marca-tinta">{titulo}</h2>
+          <span className="text-[13.5px] tabular-nums text-marca-gris">{cuenta}</span>
 
           {filtrada && (
             <Link
@@ -140,134 +218,153 @@ export default function ListaPanel({
         </div>
 
         {/* Formulario normal: lo filtra el servidor. La vista y el
-            periodo viajan en campos ocultos para no perderlos. */}
+            periodo viajan en campos ocultos para no perderlos. El
+            rótulo dice «en esta lista» en los dos tamaños, porque en
+            móvil hay otro buscador arriba que busca en todos. */}
         <form method="get" className="flex shrink-0 gap-2">
           <input type="hidden" name="periodo" value={periodo} />
           <input type="hidden" name="ver" value={vista} />
           {/* Buscar dentro de una lista no es motivo para reordenarla. */}
           {orden !== ORDEN_POR_DEFECTO && <input type="hidden" name="orden" value={orden} />}
           <label htmlFor="q" className="sr-only">
-            Buscar por nombre o profesor
+            Buscar en esta lista por nombre o profesor
           </label>
           <input
             id="q"
             name="q"
             type="search"
             defaultValue={busqueda}
-            placeholder="Buscar por nombre o profesor…"
-            className="h-[34px] w-full min-w-0 rounded-full border border-marca-borde bg-white px-4 text-[13px] text-marca-tinta outline-none transition-colors placeholder:text-marca-grisTenue focus:border-marca-verde lg:w-[250px]"
+            placeholder="Buscar en esta lista…"
+            className="h-[38px] w-full min-w-0 rounded-full border border-marca-borde bg-white px-4 text-marca-tinta outline-none transition-colors placeholder:text-marca-grisTenue focus:border-marca-verde lg:h-[34px] lg:w-[250px] lg:text-[13px]"
           />
         </form>
       </div>
 
       {alumnos.length === 0 ? (
-        <p className="px-4 py-8 text-center text-[13.5px] text-marca-grisSuave">
+        <p className="mt-3 rounded-[16px] border border-marca-borde bg-white px-4 py-8 text-center text-[13.5px] text-marca-grisSuave lg:mt-0 lg:rounded-none lg:border-0">
           {busqueda
             ? `Nadie de esta lista responde a «${busqueda}».`
             : "No hay nadie en este grupo."}
         </p>
       ) : (
         <>
-          {/* Los rótulos de columna solo en escritorio: en móvil las
-              filas no son columnas, así que no habría nada que rotular. */}
-          <div
-            className={`hidden gap-3.5 border-b border-marca-borde px-3.5 py-2 lg:grid ${columnas}`}
-          >
-            <span className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-              Alumno
-            </span>
-            <span className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-              Nivel
-            </span>
-            <span className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-              Profesor
-            </span>
-            {/* LA ÚNICA CABECERA QUE SE PULSA, y solo cuando hay espera
-                que ordenar. «Última vez» no lleva enlace: en «Entraron»
-                el orden que importa es el de la propia lista y no hay
-                una segunda pregunta que hacerle a esa columna.
+          <div className="mt-3 overflow-hidden rounded-[16px] border border-marca-borde bg-white lg:mt-0 lg:overflow-visible lg:rounded-none lg:border-0">
+            {/* Los rótulos de columna solo en escritorio: en móvil las
+                filas no son columnas, así que no habría nada que rotular. */}
+            <div
+              className={`hidden gap-3.5 border-b border-marca-borde px-3.5 py-2 lg:grid ${columnas}`}
+            >
+              <span className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
+                Alumno
+              </span>
+              <span className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
+                Nivel
+              </span>
+              <span className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
+                Profesor
+              </span>
+              {/* LA ÚNICA CABECERA QUE SE PULSA, y solo cuando hay espera
+                  que ordenar. «Última vez» no lleva enlace: en «Entraron»
+                  el orden que importa es el de la propia lista y no hay
+                  una segunda pregunta que hacerle a esa columna.
 
-                El sentido puesto se lee en la flecha, y lo que hace el
-                enlace —lo contrario— está en el `title` y en el texto
-                para lector de pantalla. Una flecha sola no distingue
-                «así está» de «así lo vas a dejar». */}
-            {rotuloTiempo &&
-              (etiquetaEspera ? (
-                <Link
-                  href={hrefOrden}
-                  title={
-                    orden === "antiguos"
-                      ? "Ahora: los que llevan más esperando primero. Pulsa para ver antes a los más recientes."
-                      : "Ahora: los más recientes primero. Pulsa para ver antes a los que llevan más esperando."
-                  }
-                  className="flex items-center justify-end gap-1 text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave transition-colors hover:text-marca-tinta"
-                >
-                  {rotuloTiempo}
-                  <span aria-hidden className="text-[11px] leading-none">
-                    {orden === "antiguos" ? "↓" : "↑"}
+                  El sentido puesto se lee en la flecha, y lo que hace el
+                  enlace —lo contrario— está en el `title` y en el texto
+                  para lector de pantalla. Una flecha sola no distingue
+                  «así está» de «así lo vas a dejar». */}
+              {rotuloTiempo &&
+                (etiquetaEspera ? (
+                  <Link
+                    href={hrefOrden}
+                    title={
+                      orden === "antiguos"
+                        ? "Ahora: los que llevan más esperando primero. Pulsa para ver antes a los más recientes."
+                        : "Ahora: los más recientes primero. Pulsa para ver antes a los que llevan más esperando."
+                    }
+                    className="flex items-center justify-end gap-1 text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave transition-colors hover:text-marca-tinta"
+                  >
+                    {rotuloTiempo}
+                    <span aria-hidden className="text-[11px] leading-none">
+                      {orden === "antiguos" ? "↓" : "↑"}
+                    </span>
+                    <span className="sr-only">
+                      {orden === "antiguos"
+                        ? ". Ordenado de más antiguos a más nuevos. Pulsa para invertirlo."
+                        : ". Ordenado de más nuevos a más antiguos. Pulsa para invertirlo."}
+                    </span>
+                  </Link>
+                ) : (
+                  <span className="text-right text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
+                    {rotuloTiempo}
                   </span>
-                  <span className="sr-only">
-                    {orden === "antiguos"
-                      ? ". Ordenado de más antiguos a más nuevos. Pulsa para invertirlo."
-                      : ". Ordenado de más nuevos a más antiguos. Pulsa para invertirlo."}
-                  </span>
-                </Link>
-              ) : (
-                <span className="text-right text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-                  {rotuloTiempo}
-                </span>
+                ))}
+              <span />
+            </div>
+
+            <ul>
+              {alumnos.map((alumno) => (
+                <li key={alumno.alumnoId} className="relative border-b border-marca-nieblaOscura last:border-b-0">
+                  <Link
+                    href={`/alumno/${alumno.alumnoId}`}
+                    className={`grid items-center gap-x-3.5 py-2.5 pl-4 pr-3.5 transition-colors hover:bg-marca-niebla lg:pl-3.5 lg:pr-12 ${columnas}`}
+                  >
+                    <span className="min-w-0">
+                      {/* El nombre no se trunca en móvil: es el único
+                          dato con el que se busca a alguien, y si es
+                          largo ocupa dos líneas. Lo que se trunca es la
+                          segunda línea. */}
+                      <span className="block text-pretty text-[14px] font-semibold leading-[1.3] text-marca-tinta lg:truncate lg:leading-normal">
+                        {alumno.nombre || "Sin nombre"}
+                      </span>
+                      {/* En móvil no hay columnas: nivel, profesor y el
+                          tiempo bajan a una segunda línea. A 375px,
+                          cuatro columnas solo caben truncando el nombre. */}
+                      <span className="mt-0.5 block truncate text-[12.5px] text-marca-grisSuave lg:hidden">
+                        {alumno.nivel || "sin nivel"}
+                        {alumno.profesor ? ` · ${alumno.profesor}` : ""}
+                        {rotuloTiempo ? ` · ${tiempoEnLinea(alumno)}` : ""}
+                      </span>
+                    </span>
+
+                    <span className="hidden text-[13px] text-marca-gris lg:block">
+                      {alumno.nivel || "—"}
+                    </span>
+                    <span className="hidden truncate text-[13px] text-marca-gris lg:block">
+                      {alumno.profesor || "—"}
+                    </span>
+                    {rotuloTiempo && (
+                      <span className="hidden text-right text-[13px] tabular-nums text-marca-gris lg:block">
+                        {tiempoDe(alumno)}
+                      </span>
+                    )}
+
+                    <span aria-hidden className="text-[13px] text-marca-grisTenue">
+                      →
+                    </span>
+                  </Link>
+
+                  {/* Solo escritorio. `lg:contents` y no `lg:block` para
+                      que el envoltorio no se convierta en el contenedor
+                      del menú, que se posiciona contra el `li`. */}
+                  <div className="hidden lg:contents">
+                    <GestorAccesos
+                      alumnoId={alumno.alumnoId}
+                      nombre={alumno.nombre}
+                      nivel={alumno.nivel}
+                    />
+                  </div>
+                </li>
               ))}
-            <span />
+            </ul>
           </div>
 
-          <ul>
-            {alumnos.map((alumno) => (
-              <li key={alumno.alumnoId} className="relative border-b border-marca-nieblaOscura last:border-b-0">
-                <Link
-                  href={`/alumno/${alumno.alumnoId}`}
-                  className={`grid items-center gap-x-3.5 py-2.5 pl-3.5 pr-12 transition-colors hover:bg-marca-niebla ${columnas}`}
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-[14px] font-semibold text-marca-tinta">
-                      {alumno.nombre || "Sin nombre"}
-                    </span>
-                    {/* En móvil no hay columnas: nivel, profesor y la
-                        última vez bajan a una segunda línea. A 375px,
-                        cuatro columnas solo caben truncando el nombre,
-                        que es el único dato con el que se busca a
-                        alguien. */}
-                    <span className="mt-0.5 block truncate text-[12px] text-marca-grisSuave lg:hidden">
-                      {alumno.nivel || "sin nivel"}
-                      {alumno.profesor ? ` · ${alumno.profesor}` : ""}
-                      {rotuloTiempo ? ` · ${tiempoDe(alumno)}` : ""}
-                    </span>
-                  </span>
-
-                  <span className="hidden text-[13px] text-marca-gris lg:block">
-                    {alumno.nivel || "—"}
-                  </span>
-                  <span className="hidden truncate text-[13px] text-marca-gris lg:block">
-                    {alumno.profesor || "—"}
-                  </span>
-                  {rotuloTiempo && (
-                    <span className="hidden text-right text-[13px] tabular-nums text-marca-gris lg:block">
-                      {tiempoDe(alumno)}
-                    </span>
-                  )}
-
-                  <span aria-hidden className="text-[13px] text-marca-grisTenue">
-                    →
-                  </span>
-                </Link>
-
-                <GestorAccesos
-                  alumnoId={alumno.alumnoId}
-                  nombre={alumno.nombre}
-                  nivel={alumno.nivel}
-                />
-              </li>
-            ))}
-          </ul>
+          {/* Al final de una lista larga, la cuenta otra vez: la barra
+              de arriba queda lejos. */}
+          {alumnos.length > 8 && (
+            <p className="mt-3.5 text-center text-[12px] tabular-nums text-marca-grisTenue lg:hidden">
+              {cuenta}
+            </p>
+          )}
         </>
       )}
     </section>

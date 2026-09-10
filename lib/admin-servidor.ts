@@ -670,6 +670,16 @@ export type DetalleVista = {
    * de arriba para saber espera de qué.
    */
   etiquetaEspera: string | null;
+  /**
+   * Si la lista cambia con el periodo.
+   *
+   * Solo las tres del recorrido: entraron, generaron y al día se miden
+   * dentro de la ventana elegida. Las pilas cuentan desde el principio
+   * —«nunca» es siempre desde el principio, y la ficha o el nivel sin
+   * medir son estados, no ventanas—. Lo lee la cabecera de móvil, que
+   * dice al lado de la cuenta desde cuándo cuenta.
+   */
+  dePeriodo: boolean;
 };
 
 export function detalleDeVista(
@@ -681,7 +691,7 @@ export function detalleDeVista(
   const { adopcion, atencion } = datos;
 
   /** Casi todas las vistas comparten estos tres. */
-  const llana = { urge: false, conUltimaVez: false, etiquetaEspera: null };
+  const llana = { urge: false, conUltimaVez: false, etiquetaEspera: null, dePeriodo: false };
 
   /**
    * Copia ordenada por tiempo esperando, en el sentido que se pida.
@@ -734,11 +744,17 @@ export function detalleDeVista(
     case "todos":
       return { titulo: "Todos los alumnos", alumnos: datos.alumnos, ...llana };
     case "entraron":
-      return { titulo: "Entraron", alumnos: adopcion.entraron, ...llana, conUltimaVez: true };
+      return {
+        titulo: "Entraron",
+        alumnos: adopcion.entraron,
+        ...llana,
+        conUltimaVez: true,
+        dePeriodo: true,
+      };
     case "generaron":
-      return { titulo: "Generaron práctica", alumnos: adopcion.generaron, ...llana };
+      return { titulo: "Generaron práctica", alumnos: adopcion.generaron, ...llana, dePeriodo: true };
     case "alDia":
-      return { titulo: "Al día con lo abierto", alumnos: adopcion.alDia, ...llana };
+      return { titulo: "Al día con lo abierto", alumnos: adopcion.alDia, ...llana, dePeriodo: true };
     case "fichaAlDia":
       return { titulo: "Con la ficha al día", alumnos: adopcion.fichaAlDia, ...llana };
     case "nivelMedido":

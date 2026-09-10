@@ -8,6 +8,7 @@ import {
   type Periodo,
   type Vista,
 } from "@/lib/admin-servidor";
+import Chevron from "@/components/admin/Chevron";
 
 /**
  * LAS MÉTRICAS DEL PANEL DEL EQUIPO.
@@ -49,6 +50,41 @@ import {
  * lista que hay debajo, así que este bloque conserva su altura para
  * siempre y lo único que cambia es el contenido de una caja que ya
  * estaba en pantalla. Ver `components/admin/ListaPanel.tsx`.
+ *
+ * ---------------------------------------------------------------
+ * EN MÓVIL SE MIRA, NO SE TRABAJA
+ *
+ * A 375px el mismo panel medía 1.500px hasta llegar a la lista. La regla
+ * que lo recorta: si algo explica el panel a quien no lo conoce, sobra
+ * —lo usan cuatro personas cada día—; si sirve para repartir trabajo,
+ * es de escritorio. Con ella:
+ *
+ *   SIETE CIFRAS EN UNA PANTALLA. Las mismas tres filas del embudo y las
+ *   cuatro pilas, pero las pilas dejan de ser tarjetas y pasan a filas
+ *   de una tarjeta. Una tarjeta apilada cuesta 120px; una fila, 46.
+ *
+ *   LA BARRA VA DEBAJO DEL NOMBRE, a ancho completo. Delante, como en
+ *   escritorio, mediría 40px y dejaría de ser una barra.
+ *
+ *   SOLO EL EMBUDO LLEVA BARRA. Es una caída contra el mismo total y la
+ *   barra la dibuja. En las pilas decoraba, y quitarla es lo que deja a
+ *   la única de color como lo primero que se ve.
+ *
+ *   «LO QUE SABEMOS» NO SALE. Es la cara positiva de dos pilas, y en el
+ *   móvil pagar dos veces el mismo dato es justo lo que no cabe. El
+ *   desglose de quién midió el nivel es análisis, y el análisis se hace
+ *   sentado.
+ *
+ *   EL PERIODO ENTRA EN LA TARJETA DEL EMBUDO, porque solo gobierna esas
+ *   tres filas: «nunca» cuenta siempre desde el principio, y la ficha o
+ *   el nivel sin medir son estados, no ventanas. En escritorio sigue
+ *   encima de todo; ahí hay sitio para el rótulo y el hábito ya está
+ *   hecho. Son dos copias del mismo selector, una por tamaño.
+ *
+ * Todo son clases responsive: bajo `lg:` no hay nada que en escritorio
+ * no estuviera ya. El estado «seleccionado» de una fila solo se pinta en
+ * escritorio: en móvil, cuando hay una métrica abierta, este bloque
+ * entero está oculto y la lista ocupa su sitio (ver `app/page.tsx`).
  *
  * ---------------------------------------------------------------
  * LO QUE SE FUE
@@ -101,33 +137,45 @@ export default function PanelAdmin({
     return `/?${p.toString()}`;
   };
 
+  /**
+   * El selector de periodo. Se pinta dos veces —arriba en escritorio,
+   * dentro de la tarjeta del embudo en móvil— y por eso está aquí una
+   * sola vez. En móvil se estira a las tres columnas: a 375px, tres
+   * píldoras encogidas dejan aire muerto a los lados.
+   */
+  const selector = (
+    <div className="grid grid-cols-3 gap-0.5 rounded-full border border-marca-borde bg-white p-[3px] lg:inline-flex">
+      {PERIODOS.map((p) => (
+        <Link
+          key={p}
+          href={href({ periodo: p })}
+          aria-current={p === periodo ? "true" : undefined}
+          className={`inline-flex h-[30px] items-center justify-center rounded-full px-3.5 text-[13px] font-semibold transition-colors ${
+            p === periodo
+              ? "bg-marca-tinta text-white"
+              : "text-marca-gris hover:text-marca-tinta"
+          }`}
+        >
+          {p === "todo" ? "Todo" : `${p} días`}
+        </Link>
+      ))}
+    </div>
+  );
+
   return (
     <div>
-      {/* ------------------------- EL PERIODO ------------------------- */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* ------------------------- EL PERIODO -------------------------
+          Solo en escritorio: en móvil va dentro de la tarjeta de abajo,
+          sin rótulo, porque el segmento seleccionado ya dice lo mismo. */}
+      <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
         <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-grisSuave">
           {ETIQUETA_PERIODO[periodo]}
         </p>
-        <div className="inline-flex gap-0.5 rounded-full border border-marca-borde bg-white p-[3px]">
-          {PERIODOS.map((p) => (
-            <Link
-              key={p}
-              href={href({ periodo: p })}
-              aria-current={p === periodo ? "true" : undefined}
-              className={`inline-flex h-[30px] items-center rounded-full px-3.5 text-[13px] font-semibold transition-colors ${
-                p === periodo
-                  ? "bg-marca-tinta text-white"
-                  : "text-marca-gris hover:text-marca-tinta"
-              }`}
-            >
-              {p === "todo" ? "Todo" : `${p} días`}
-            </Link>
-          ))}
-        </div>
+        {selector}
       </div>
 
       {incompleto && (
-        <p className="mt-3 rounded-[12px] border border-marca-examenBorde bg-marca-examen px-4 py-3 text-[13px] leading-[1.45] text-marca-amarilloTexto">
+        <p className="rounded-[12px] border border-marca-examenBorde bg-marca-examen px-4 py-3 text-[13px] leading-[1.45] text-marca-amarilloTexto lg:mt-3">
           Alguna lectura ha fallado, así que estas cifras están incompletas. No son ceros: son
           datos que no hemos podido leer.
         </p>
@@ -137,15 +185,20 @@ export default function PanelAdmin({
           El «al día» NO se mide contra el total y por eso lo dice: solo
           puede estar al día quien tiene algo abierto. Compararlo con
           177 sería contar como retraso a quien está esperando. */}
-      <section className="mt-4 rounded-[16px] border border-marca-borde bg-white p-4 lg:p-[22px]">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
+      <section className="mt-3 rounded-[16px] border border-marca-borde bg-white px-4 pb-1 pt-3 lg:mt-4 lg:p-[22px]">
+        <div className="lg:hidden">{selector}</div>
+
+        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3 lg:mt-0">
           <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-grisSuave">
             El recorrido, de {total} alumnos activos
           </p>
-          <p className="text-[12px] text-marca-grisTenue">Pulsa cualquier fila para ver quiénes son</p>
+          {/* En móvil lo dice la flecha de cada fila. */}
+          <p className="hidden text-[12px] text-marca-grisTenue lg:block">
+            Pulsa cualquier fila para ver quiénes son
+          </p>
         </div>
 
-        <div className="mt-3.5 flex flex-col gap-[3px]">
+        <div className="mt-1.5 flex flex-col lg:mt-3.5 lg:gap-[3px]">
           <Paso
             href={href({ vista: "entraron" })}
             activo={vista === "entraron"}
@@ -166,6 +219,7 @@ export default function PanelAdmin({
             titulo="Al día con lo abierto"
             valor={adopcion.alDia.length}
             de={adopcion.conContenidoAbierto}
+            baseDistinta
           />
         </div>
 
@@ -181,8 +235,11 @@ export default function PanelAdmin({
             Las dos van contra el total y no contra un subconjunto: la
             ficha y la prueba se le pueden pedir a cualquiera, así que
             aquí no hay «denominador honesto» que buscar como en el al
-            día. */}
-        <div className="mt-4 border-t border-marca-borde pt-3.5">
+            día.
+
+            Solo en escritorio: son la cara positiva de dos pilas, y en
+            móvil la pila es la que sirve. */}
+        <div className="mt-4 hidden border-t border-marca-borde pt-3.5 lg:block">
           <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-grisSuave">
             Lo que sabemos de ellos
           </p>
@@ -208,13 +265,22 @@ export default function PanelAdmin({
         </div>
       </section>
 
-      {/* ------------------------- LAS PILAS ------------------------- */}
-      <section className="mt-5">
-        <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-grisSuave">
-          A quién hay que ir a buscar
-        </p>
+      {/* ------------------------- LAS PILAS -------------------------
+          En móvil, el «desde el principio» junto al rótulo cierra la
+          duda que abre haber metido el periodo en la tarjeta de arriba:
+          estas cuatro no cambian con él. */}
+      <section className="mt-4 lg:mt-5">
+        <div className="flex items-baseline justify-between gap-3 px-0.5 lg:block lg:px-0">
+          <p className="text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-grisSuave">
+            A quién hay que ir a buscar
+          </p>
+          <span className="text-[11.5px] text-marca-grisTenue lg:hidden">Desde el principio</span>
+        </div>
 
-        <div className="mt-2.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Una tarjeta con cuatro filas en móvil; cuatro tarjetas en
+            escritorio. El paso intermedio de dos columnas se fue con
+            las filas: en una tableta también se lee mejor la lista. */}
+        <div className="mt-2 overflow-hidden rounded-[16px] border border-marca-borde bg-white lg:mt-2.5 lg:grid lg:grid-cols-4 lg:gap-3 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent">
           <Pila
             href={href({ vista: "nuncaEntraron" })}
             activo={vista === "nuncaEntraron"}
@@ -279,15 +345,30 @@ function desgloseDelNivel(adopcion: DatosPanel["adopcion"]): string {
  * Una fila del embudo.
  *
  * Cuatro columnas en escritorio —nombre, cifra, barra, proporción— y
- * dos filas en móvil, donde la barra pasa debajo a ancho completo: a
- * 375px, una barra con 190px de etiqueta delante mide cuarenta píxeles
- * y deja de ser una barra.
+ * dos filas en móvil: nombre, cifra y flecha arriba, la barra debajo a
+ * ancho completo. A 375px, una barra con 190px de etiqueta delante mide
+ * cuarenta píxeles y deja de ser una barra.
+ *
+ * EL MISMO DOM SIRVE A LOS DOS. La cifra y la proporción van juntas en
+ * un `span` que en móvil es un `flex` —comparten celda— y en escritorio
+ * es `contents`: desaparece como caja y sus dos hijos vuelven a ser
+ * celdas del grid, cada uno en su columna por `order`. Sin eso habría
+ * que pintar la cifra dos veces.
+ *
+ * EL «DE 177» SOLO SALE EN ESCRITORIO: en móvil el total va una vez, en
+ * el rótulo de la tarjeta. La excepción es `baseDistinta`, la fila del
+ * al día, cuya base es otra y hay que decirla en los dos tamaños.
  *
  * `detalle` es una segunda línea bajo el título, y va DENTRO de la celda
  * del título a propósito: como quinta columna estrecharía la barra en
  * todas las filas, incluidas las tres que no lo llevan, y entonces las
  * cinco barras dejarían de ser comparables entre sí, que es lo único
  * que hacen.
+ *
+ * La raya entre filas de móvil va en un envoltorio y no en el enlace:
+ * `first:` tiene más especificidad que `lg:`, y puesta en el propio
+ * enlace se llevaría el borde superior de la primera fila seleccionada
+ * en escritorio.
  */
 function Paso({
   href,
@@ -296,6 +377,7 @@ function Paso({
   detalle,
   valor,
   de,
+  baseDistinta,
 }: {
   href: string;
   activo: boolean;
@@ -303,44 +385,63 @@ function Paso({
   detalle?: string;
   valor: number;
   de: number;
+  baseDistinta?: boolean;
 }) {
   const pct = de > 0 ? Math.round((valor / de) * 100) : 0;
 
   return (
-    <Link
-      href={href}
-      aria-current={activo ? "true" : undefined}
-      className={`grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 rounded-[11px] border-[1.5px] px-3.5 py-2.5 transition-colors lg:grid-cols-[190px_64px_minmax(0,1fr)_96px] ${
-        activo
-          ? "border-marca-verde bg-marca-verdeFondo"
-          : "border-transparent hover:bg-marca-niebla"
-      }`}
-    >
-      <span className="min-w-0">
-        <span className="block text-[14px] font-semibold text-marca-tinta lg:text-[14.5px]">
-          {titulo}
-        </span>
-        {detalle && (
-          <span className="mt-0.5 block text-pretty text-[12px] leading-[1.35] text-marca-grisSuave">
-            {detalle}
+    <div className="border-t border-marca-nieblaOscura first:border-t-0 lg:border-t-0">
+      <Link
+        href={href}
+        aria-current={activo ? "true" : undefined}
+        className={`grid grid-cols-[minmax(0,1fr)_auto_14px] items-center gap-x-2.5 py-2 transition-colors lg:grid-cols-[190px_64px_minmax(0,1fr)_96px] lg:gap-x-4 lg:gap-y-2 lg:rounded-[11px] lg:border-[1.5px] lg:px-3.5 lg:py-2.5 ${
+          activo
+            ? "lg:border-marca-verde lg:bg-marca-verdeFondo"
+            : "lg:border-transparent lg:hover:bg-marca-niebla"
+        }`}
+      >
+        <span className="min-w-0">
+          <span className="block text-[14px] font-semibold text-marca-tinta lg:text-[14.5px]">
+            {titulo}
           </span>
-        )}
-      </span>
-      <span className="font-display text-[21px] font-bold leading-none tabular-nums text-marca-tinta lg:text-[23px] lg:text-right">
-        {valor}
-      </span>
-      <span className="col-span-2 h-2.5 overflow-hidden rounded-[5px] bg-marca-pista lg:col-span-1">
-        <span className="block h-full rounded-[5px] bg-marca-verde" style={{ width: `${pct}%` }} />
-      </span>
-      <span className="col-span-2 text-[12.5px] tabular-nums text-marca-gris lg:col-span-1 lg:text-right lg:text-[13px]">
-        {pct}% de {de}
-      </span>
-    </Link>
+          {detalle && (
+            <span className="mt-0.5 block text-pretty text-[12px] leading-[1.35] text-marca-grisSuave">
+              {detalle}
+            </span>
+          )}
+        </span>
+        <span className="flex items-baseline gap-1.5 lg:contents">
+          <span className="font-display text-[20px] font-bold leading-none tabular-nums text-marca-tinta lg:order-2 lg:text-right lg:text-[23px]">
+            {valor}
+          </span>
+          <span className="text-[12.5px] tabular-nums text-marca-gris lg:order-4 lg:text-right lg:text-[13px]">
+            {pct}%<span className={baseDistinta ? "" : "hidden lg:inline"}> de {de}</span>
+          </span>
+        </span>
+        <Chevron className="text-marca-grisTenue lg:hidden" />
+        <span className="col-span-3 mt-0.5 h-1.5 overflow-hidden rounded-[3px] bg-marca-pista lg:order-3 lg:col-span-1 lg:mt-0 lg:h-2.5 lg:rounded-[5px]">
+          <span
+            className="block h-full rounded-[3px] bg-marca-verde lg:rounded-[5px]"
+            style={{ width: `${pct}%` }}
+          />
+        </span>
+      </Link>
+    </div>
   );
 }
 
 /**
  * Una pila de trabajo.
+ *
+ * Tarjeta en escritorio y fila en móvil: cifra, nombre, proporción y
+ * flecha, en ese orden. El pie no sale en móvil —explica la etiqueta a
+ * quien no la conoce, y ocupa la mitad de la tarjeta— y el «de 177»
+ * tampoco, por lo mismo que en el embudo.
+ *
+ * Como en `Paso`, es un solo DOM: en móvil la fila es un grid y cada
+ * pieza va a su celda por `col-start`; el párrafo que en escritorio
+ * junta cifra y proporción es `contents` en móvil para que las dos sean
+ * celdas sueltas.
  *
  * `urge` la pinta en ámbar. Hoy la lleva una sola —la de los que nunca
  * han entrado— y conviene que siga siendo así: en una fila de tres, la
@@ -366,51 +467,59 @@ function Pila({
   const pct = de !== undefined && de > 0 ? Math.round((valor / de) * 100) : null;
 
   return (
-    <Link
-      href={href}
-      aria-current={activo ? "true" : undefined}
-      className={`block rounded-[14px] border-[1.5px] px-4 py-[15px] transition-colors ${
-        urge
-          ? activo
-            ? "border-marca-amarilloTexto bg-[#FFF8E1]"
-            : "border-marca-examenBorde bg-marca-examen hover:border-marca-amarilloTexto"
-          : activo
-            ? "border-marca-verde bg-marca-verdeFondo"
-            : "border-marca-borde bg-white hover:border-marca-verde"
-      }`}
-    >
-      <p
-        className={`text-[10.5px] font-semibold uppercase leading-none tracking-[0.1em] ${
-          urge ? "text-marca-amarilloTexto" : "text-marca-grisSuave"
+    <div className="border-t border-marca-nieblaOscura first:border-t-0 lg:border-t-0">
+      <Link
+        href={href}
+        aria-current={activo ? "true" : undefined}
+        className={`grid min-h-[46px] grid-cols-[46px_minmax(0,1fr)_auto_14px] items-center gap-x-3 pl-3 pr-3.5 transition-colors lg:block lg:h-full lg:rounded-[14px] lg:border-[1.5px] lg:px-4 lg:py-[15px] ${
+          urge
+            ? activo
+              ? "bg-marca-examen lg:border-marca-amarilloTexto lg:bg-[#FFF8E1]"
+              : "bg-marca-examen lg:border-marca-examenBorde lg:hover:border-marca-amarilloTexto"
+            : activo
+              ? "bg-white lg:border-marca-verde lg:bg-marca-verdeFondo"
+              : "bg-white lg:border-marca-borde lg:hover:border-marca-verde"
         }`}
       >
-        {titulo}
-      </p>
-      <p className="mt-2.5 flex items-baseline gap-2">
-        <span
-          className={`font-display text-[30px] font-bold leading-none tabular-nums lg:text-[34px] ${
-            urge ? "text-marca-amarilloTexto" : "text-marca-tinta"
+        <p
+          className={`col-start-2 row-start-1 text-[14px] font-semibold lg:text-[10.5px] lg:uppercase lg:leading-none lg:tracking-[0.1em] ${
+            urge ? "text-marca-amarilloTexto" : "text-marca-tinta lg:text-marca-grisSuave"
           }`}
         >
-          {valor}
-        </span>
-        {pct !== null && (
+          {titulo}
+        </p>
+        <p className="contents lg:mt-2.5 lg:flex lg:items-baseline lg:gap-2">
           <span
-            className={`text-[13px] tabular-nums ${
-              urge ? "text-marca-calidoBadgeTexto" : "text-marca-gris"
+            className={`col-start-1 row-start-1 text-right font-display text-[22px] font-bold leading-none tabular-nums lg:text-left lg:text-[34px] ${
+              urge ? "text-marca-amarilloTexto" : "text-marca-tinta"
             }`}
           >
-            de {de} · {pct}%
+            {valor}
           </span>
-        )}
-      </p>
-      <p
-        className={`mt-2.5 text-pretty text-[12.5px] leading-[1.4] ${
-          urge ? "text-marca-calidoBadgeTexto" : "text-marca-gris"
-        }`}
-      >
-        {pie}
-      </p>
-    </Link>
+          {pct !== null && (
+            <span
+              className={`col-start-3 row-start-1 text-[12.5px] tabular-nums lg:text-[13px] ${
+                urge ? "text-marca-calidoBadgeTexto" : "text-marca-gris"
+              }`}
+            >
+              <span className="hidden lg:inline">de {de} · </span>
+              {pct}%
+            </span>
+          )}
+        </p>
+        <p
+          className={`hidden text-pretty text-[12.5px] leading-[1.4] lg:mt-2.5 lg:block ${
+            urge ? "text-marca-calidoBadgeTexto" : "text-marca-gris"
+          }`}
+        >
+          {pie}
+        </p>
+        <Chevron
+          className={`col-start-4 row-start-1 lg:hidden ${
+            urge ? "text-marca-amarilloTexto" : "text-marca-grisTenue"
+          }`}
+        />
+      </Link>
+    </div>
   );
 }
