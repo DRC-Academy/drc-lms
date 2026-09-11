@@ -24,12 +24,17 @@
 // ---------------------------------------------------------------
 
 import type { TextosBanners } from "@/lib/textos/banners";
-import { diasNaturales } from "@/lib/fechas";
+import { diaLocal, diasNaturales, sumarDias } from "@/lib/fechas";
 
 export type Apertura =
   | { abierto: true }
-  /** Cuántos días naturales faltan. Siempre 1 o más. */
-  | { abierto: false; diasRestantes: number };
+  /**
+   * Cuántos días naturales faltan —siempre 1 o más— y QUÉ DÍA abre, como
+   * "2026-09-26". La fecha sale de los datos y no de `ahora`: es el día
+   * de inicio más los días que pide el módulo, así que el servidor y el
+   * navegador la escriben igual aunque los separe una medianoche.
+   */
+  | { abierto: false; diasRestantes: number; abreEl: string };
 
 const ABIERTO: Apertura = { abierto: true };
 
@@ -55,7 +60,11 @@ export function calcularApertura(
   const transcurridos = Math.max(0, diasNaturales(fechaInicio, ahora));
   if (transcurridos >= visibleAfter) return ABIERTO;
 
-  return { abierto: false, diasRestantes: visibleAfter - transcurridos };
+  return {
+    abierto: false,
+    diasRestantes: visibleAfter - transcurridos,
+    abreEl: sumarDias(diaLocal(fechaInicio), visibleAfter),
+  };
 }
 
 /**
@@ -74,7 +83,26 @@ export function aperturaDeLeccion(
   return calcularApertura(visibleAfter, fechaInicio, ahora);
 }
 
-/** "Mañana", "En 3 días". Lo que se le enseña al alumno. */
-export function textoDeEspera(diasRestantes: number, t: TextosBanners): string {
-  return diasRestantes <= 1 ? t.disponibleManana : t.disponibleEnDias(diasRestantes);
+/**
+ * «Se abre mañana» · «Se abre en 5 días» · «Se abre el 26 de sept.».
+ *
+ * SE ABRE, NO «DISPONIBLE» NI «BLOQUEADO». Abrirse es algo que le pasa al
+ * módulo en una fecha, sin que el alumno tenga que hacer nada; «disponible»
+ * describe un estado que a alguien le falta, y «bloqueado» una puerta.
+ *
+ * Hasta una semana se cuenta en días, que es como se piensa lo cercano.
+ * De ahí en adelante, la fecha: un día en el calendario se siente como
+ * algo que llega; un contador de doce días, como una espera. Sin la
+ * fecha —el dato viene de datos viejos o de un módulo sin inicio— se
+ * sigue contando en días.
+ */
+export function textoDeEspera(
+  diasRestantes: number,
+  abreEl: string | null,
+  t: TextosBanners
+): string {
+  if (diasRestantes <= 1) return t.seAbreManana;
+  if (diasRestantes <= 7 || !abreEl) return t.seAbreEnDias(diasRestantes);
+  const [, mes, dia] = abreEl.split("-").map(Number);
+  return t.seAbreElDia(dia, mes - 1);
 }

@@ -61,6 +61,8 @@ export type ModuloTemario = {
   disponible: boolean;
   /** Días que faltan para abrirse, o null si ya está abierto. */
   diasParaAbrir: number | null;
+  /** Qué día abre, como "2026-09-26", o null si ya está abierto. */
+  abreEl: string | null;
   /** A la primera lección pendiente, o null si el módulo está vacío. */
   destino: string | null;
 };
@@ -90,6 +92,8 @@ export type MesTemario = {
    * semanas" sin desplegarlo.
    */
   diasParaAbrir: number | null;
+  /** El día en que abre ese primer módulo, o null. */
+  abreEl: string | null;
 };
 
 export type Temario = {
@@ -204,6 +208,7 @@ export function construirTemario(arbol: ArbolCurso, t: TextosCurso): Temario {
       esActual: i === indiceActual,
       disponible: modulo.disponible,
       diasParaAbrir: modulo.diasParaAbrir,
+      abreEl: modulo.abreEl,
       // Un módulo cerrado no lleva a ningún sitio: la fila no es enlace.
       destino: modulo.disponible ? ((pendiente ?? modulo.lecciones[0])?.id ?? null) : null,
     };
@@ -257,6 +262,13 @@ export function construirTemario(arbol: ArbolCurso, t: TextosCurso): Temario {
       diasParaAbrir: delMes.some((m) => m.disponible)
         ? null
         : Math.min(...delMes.map((m) => m.diasParaAbrir ?? 0)),
+      // El del módulo que antes abre: el primero de la lista ordenada por
+      // días, que es el mismo que da el mínimo de arriba.
+      abreEl: delMes.some((m) => m.disponible)
+        ? null
+        : (delMes
+            .filter((m) => m.diasParaAbrir !== null)
+            .sort((a, b) => (a.diasParaAbrir ?? 0) - (b.diasParaAbrir ?? 0))[0]?.abreEl ?? null),
     };
   });
 

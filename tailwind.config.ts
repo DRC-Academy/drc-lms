@@ -83,6 +83,15 @@ const config: Config = {
           pillHover: "#A9BFB0",
           /** Fondo del círculo de mes pendiente, solo en móvil. */
           mesPendiente: "#F3F5F1",
+          /**
+           * El check de lo hecho: el verde del mes completado, un tono
+           * más abajo. Es el mismo valor que `marca.verdePalido`, y se
+           * repite aquí para que el temario siga pintándose solo con su
+           * paleta.
+           */
+          verdePalido: "#A9DFB7",
+          /** El borde discontinuo de lo que viene después. Un paso por debajo de `circulo`. */
+          discontinuo: "#D6DBD7",
         },
         // ---------------------------------------------------------------
         // EL BANNER, Y SOLO EL BANNER

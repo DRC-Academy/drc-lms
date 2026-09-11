@@ -179,7 +179,7 @@ function Tramo({
           }`}
         >
           {bloqueado ? (
-            textoDeEspera(mes.diasParaAbrir ?? 1, tb)
+            textoDeEspera(mes.diasParaAbrir ?? 1, mes.abreEl, tb)
           ) : (
             <span className="tabular-nums">
               {t.leccionesDelMes(mes.completadas, mes.totalLecciones)}

@@ -1,0 +1,62 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1240,
+      "h": 900,
+      "title": "Escritorio · un mes abierto"
+    },
+    {
+      "file": "Movil.dc.html",
+      "x": 1340,
+      "y": 0,
+      "w": 375,
+      "h": 1000,
+      "title": "Móvil · 375"
+    },
+    {
+      "file": "Estados.dc.html",
+      "x": 0,
+      "y": 1160,
+      "w": 1360,
+      "h": 1520,
+      "title": "Los cuatro estados, con sus valores"
+    },
+    {
+      "file": "Alternativas.dc.html",
+      "x": 1460,
+      "y": 1160,
+      "w": 720,
+      "h": 740,
+      "title": "Alternativas para «se abre después»"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "tono",
+      "x": 1340,
+      "y": 1060,
+      "w": 375,
+      "text": "EL TONO\n\n«Se abre en 5 días» y no «Disponible en 5 días»: abrirse es algo que le pasa al módulo, en una fecha; «disponible» describe un estado que a alguien le falta. Y nunca «bloqueado» en pantalla.\n\nDe 7 días en adelante, la fecha («Se abre el 26 de sept.»): un día en el calendario se siente como algo que llega; un contador, como una espera."
+    },
+    {
+      "id": "movil",
+      "x": 1780,
+      "y": 0,
+      "w": 320,
+      "text": "MÓVIL\n\nLa fecha baja bajo el título, donde en las demás filas va «4 lecciones · 0 hechas», y la derecha queda vacía. Es lo que deja al título sus 240px a 375: con la fecha a la derecha, «Used to y would para hábitos del pasado» partía en tres líneas."
+    },
+    {
+      "id": "codigo",
+      "x": 1460,
+      "y": 1980,
+      "w": 720,
+      "text": "QUÉ CAMBIA EN EL CÓDIGO\n\nTodo en components/curso/FilaModulo.tsx: la marca (anillo+punto, anillo, check pálido, candado SVG), el string `aspecto` (borde discontinuo y sin fondo para lo que viene después; check pálido y título en `medio` para lo hecho) y en móvil la fecha en la línea de meta. Y un texto nuevo en el diccionario: banners.seAbreEn / seAbreEl, que sustituye a disponibleEnDias en la fila y en la cabecera del mes."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

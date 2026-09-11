@@ -6,6 +6,7 @@ import PanelPlan from "@/components/curso/PanelPlan";
 import LineaProgreso from "@/components/curso/LineaProgreso";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import FilaModulo from "@/components/curso/FilaModulo";
+import { IconoCheck } from "@/components/curso/Iconos";
 import { textoDeEspera } from "@/lib/drip";
 
 /**
@@ -245,7 +246,7 @@ function Mes({
                 lee como una contradicción. */}
             {mes.diasParaAbrir !== null && mes.estado !== "completado" && (
               <span className="mt-[5px] block text-[11.5px] font-semibold text-temario-suave min-[900px]:mt-1.5 min-[900px]:text-[12px]">
-                {textoDeEspera(mes.diasParaAbrir, tb)}
+                {textoDeEspera(mes.diasParaAbrir, mes.abreEl, tb)}
               </span>
             )}
           </span>
@@ -375,9 +376,9 @@ function Completados({
       >
         <span
           aria-hidden
-          className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-temario-circulo text-[10px] font-extrabold text-white"
+          className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-temario-verdePalido text-temario-verdeTexto"
         >
-          ✓
+          <IconoCheck />
         </span>
 
         <span className="flex-1 text-[12.5px] font-semibold text-temario-suave min-[900px]:text-[13px]">

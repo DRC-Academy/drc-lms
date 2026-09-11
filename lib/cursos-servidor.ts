@@ -76,6 +76,8 @@ export type EstadoCurso = {
    * significado que en `ModuloIndice`.
    */
   diasParaAbrir: number | null;
+  /** Qué día abre, como "2026-09-26", o null si no hay espera. */
+  abreEl: string | null;
   /** Cuándo tocó este curso por última vez. Decide cuál va en el banner. */
   ultimaActividad: string | null;
 };
@@ -175,6 +177,7 @@ export async function estadoDelCurso(
     completadas: 0,
     siguiente: null,
     diasParaAbrir: null,
+    abreEl: null,
     ultimaActividad: null,
   };
 
@@ -241,6 +244,7 @@ export async function estadoDelCurso(
   let completadas = 0;
   let siguiente: SiguienteLeccion | null = null;
   let diasParaAbrir: number | null = null;
+  let abreEl: string | null = null;
   let ultimaActividad: string | null = null;
 
   const ahora = new Date();
@@ -276,7 +280,10 @@ export async function estadoDelCurso(
       // Se anota cuándo se abre la primera que está esperando y se
       // sigue mirando: puede haber un módulo sin espera más adelante, y
       // entonces sí hay a dónde ir hoy.
-      if (diasParaAbrir === null) diasParaAbrir = apertura.diasRestantes;
+      if (diasParaAbrir === null) {
+        diasParaAbrir = apertura.diasRestantes;
+        abreEl = apertura.abreEl;
+      }
       return;
     }
 
@@ -297,6 +304,7 @@ export async function estadoDelCurso(
     // Si hay a dónde ir hoy, lo que tarde el módulo de más allá no le
     // interesa a nadie.
     diasParaAbrir: siguiente === null ? diasParaAbrir : null,
+    abreEl: siguiente === null ? abreEl : null,
     ultimaActividad,
   };
 }
@@ -326,6 +334,8 @@ export type ModuloIndice = {
   disponible: boolean;
   /** Cuántos días faltan, o null si ya está abierto. */
   diasParaAbrir: number | null;
+  /** Qué día abre, o null si ya está abierto. */
+  abreEl: string | null;
 };
 
 export type ArbolCurso = {
@@ -472,6 +482,7 @@ export async function arbolDelCurso(
       visibleAfter,
       disponible: apertura.abierto,
       diasParaAbrir: apertura.abierto ? null : apertura.diasRestantes,
+      abreEl: apertura.abierto ? null : apertura.abreEl,
     };
   });
 
@@ -502,6 +513,8 @@ export type LeccionCompleta = {
   disponible: boolean;
   /** Días que faltan, o null si ya está abierta. */
   diasParaAbrir: number | null;
+  /** Qué día abre, o null si ya está abierta. */
+  abreEl: string | null;
   curso: CursoFila;
   moduloTitulo: string;
   /** Posición del módulo en el curso, desde 0: la etiqueta lo numera. */
@@ -731,6 +744,7 @@ export async function leccionParaVer(
   return {
     disponible: apertura.abierto,
     diasParaAbrir: apertura.abierto ? null : apertura.diasRestantes,
+    abreEl: apertura.abierto ? null : apertura.abreEl,
     curso,
     moduloTitulo: modulo.titulo,
     moduloOrden: modulo.orden,

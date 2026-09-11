@@ -58,8 +58,6 @@ export type TextosCurso = {
 
   // --- la etiqueta de un módulo suelto ---
   moduloNumero: (numero: number) => string;
-  /** Solo para lector de pantalla: la fila apagada dice cuándo deja de estarlo. */
-  moduloSeAbreEn: (dias: number) => string;
   semanaYModulo: (semana: number, modulo: number) => string;
 
   /**
@@ -140,7 +138,6 @@ const ES: TextosCurso = {
   anterior: "← Anterior",
 
   moduloNumero: (numero) => `Módulo ${numero}`,
-  moduloSeAbreEn: (dias) => (dias <= 1 ? "Se abre mañana" : `Se abre en ${dias} días`),
   semanaYModulo: (semana, modulo) => `Semana ${semana} · Módulo ${modulo}`,
 
   temasDeCurso: {
@@ -221,7 +218,6 @@ const EN: TextosCurso = {
   anterior: "← Previous",
 
   moduloNumero: (numero) => `Module ${numero}`,
-  moduloSeAbreEn: (dias) => (dias <= 1 ? "Opens tomorrow" : `Opens in ${dias} days`),
   semanaYModulo: (semana, modulo) => `Week ${semana} · Module ${modulo}`,
 
   temasDeCurso: {

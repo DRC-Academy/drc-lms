@@ -52,8 +52,11 @@ export type TextosBanners = {
   empezar: string;
   todoLoAbierto: string;
   leccionDeTotal: (posicion: number, total: number) => string;
-  disponibleManana: string;
-  disponibleEnDias: (dias: number) => string;
+  /** Lo que viene después: cuándo. Ver `textoDeEspera` en `lib/drip.ts`. */
+  seAbreManana: string;
+  seAbreEnDias: (dias: number) => string;
+  /** A partir de una semana, la fecha: "Se abre el 26 de sept.". */
+  seAbreElDia: (dia: number, indiceMes: number) => string;
   /** "El mes 3 se abre en 5 días." Antes salía de recortar la cadena de arriba. */
   elMesSeAbre: (mes: number, dias: number) => string;
 
@@ -103,6 +106,11 @@ export type TextosBanners = {
   posicion: (mes: number, semana: number, modulo: number) => string;
 };
 
+// Los meses abreviados de la fecha de apertura. Con punto en español,
+// que es como abrevia la RAE; sin él en inglés, que no lo lleva.
+const MESES_CORTOS_ES = ["ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sept.", "oct.", "nov.", "dic."];
+const MESES_CORTOS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"];
+
 const ES: TextosBanners = {
   sinCursoTitulo: "Tu plan todavía no tiene un curso asociado. Coméntaselo a tu profesor y lo activamos.",
   sinCursoCuerpo: "Mientras tanto, tu práctica de abajo funciona con normalidad.",
@@ -117,8 +125,9 @@ const ES: TextosBanners = {
   empezar: "Empezar",
   todoLoAbierto: "Has hecho todo lo que tienes abierto",
   leccionDeTotal: (posicion, total) => `Lección ${posicion} de ${total}`,
-  disponibleManana: "Disponible mañana",
-  disponibleEnDias: (dias) => `Disponible en ${dias} días`,
+  seAbreManana: "Se abre mañana",
+  seAbreEnDias: (dias) => `Se abre en ${dias} días`,
+  seAbreElDia: (dia, indiceMes) => `Se abre el ${dia} de ${MESES_CORTOS_ES[indiceMes]}`,
   elMesSeAbre: (mes, dias) =>
     dias <= 1 ? `El mes ${mes} se abre mañana.` : `El mes ${mes} se abre en ${dias} días.`,
 
@@ -172,8 +181,9 @@ const EN: TextosBanners = {
   empezar: "Start",
   todoLoAbierto: "You've done everything that's open",
   leccionDeTotal: (posicion, total) => `Lesson ${posicion} of ${total}`,
-  disponibleManana: "Available tomorrow",
-  disponibleEnDias: (dias) => `Available in ${dias} days`,
+  seAbreManana: "Opens tomorrow",
+  seAbreEnDias: (dias) => `Opens in ${dias} days`,
+  seAbreElDia: (dia, indiceMes) => `Opens ${dia} ${MESES_CORTOS_EN[indiceMes]}`,
   elMesSeAbre: (mes, dias) =>
     dias <= 1 ? `Month ${mes} opens tomorrow.` : `Month ${mes} opens in ${dias} days.`,
 

@@ -29,6 +29,17 @@ export function diaLocal(momento: Date): string {
 }
 
 /**
+ * Un día natural más N días, como texto: "2026-08-13" + 12 → "2026-08-25".
+ *
+ * Aritmética sobre el DÍA y no sobre el instante: así el resultado no
+ * depende de la hora ni de la zona de quien lo calcule, que es lo que
+ * hace falta para que el servidor y el navegador digan la misma fecha.
+ */
+export function sumarDias(dia: string, n: number): string {
+  return new Date(Date.parse(`${dia}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
  * Días naturales entre dos instantes, contando cambios de fecha y no
  * periodos de 24 horas: de las 23:00 del lunes a las 09:00 del martes
  * hay un día, no cero.

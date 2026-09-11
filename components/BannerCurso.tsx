@@ -61,7 +61,7 @@ export default function BannerCurso({
 
   const principal = estados[0];
   const otros = estados.slice(1);
-  const { curso, total, completadas, siguiente, diasParaAbrir } = principal;
+  const { curso, total, completadas, siguiente, diasParaAbrir, abreEl } = principal;
 
   const empezado = completadas > 0;
 
@@ -151,7 +151,7 @@ export default function BannerCurso({
           siguiente
             ? t.leccionDeTotal(siguiente.posicion, total)
             : esperando && diasParaAbrir !== null
-              ? textoDeEspera(diasParaAbrir, t)
+              ? textoDeEspera(diasParaAbrir, abreEl, t)
               : undefined
         }
       />

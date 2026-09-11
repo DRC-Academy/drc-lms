@@ -5,25 +5,50 @@ import Link from "next/link";
 import type { ModuloTemario } from "@/lib/temario";
 import { textoDeEspera } from "@/lib/drip";
 import { conFoco } from "@/lib/foco";
+import { IconoCandado, IconoCheck } from "@/components/curso/Iconos";
 
 /**
  * Un módulo dentro de su semana.
  *
  * Dos formas en el mismo componente: en escritorio va todo en una línea
- * —código, título, contador— y en móvil se apila en tres, con el check a
+ * —código, título, contador— y en móvil se apila en tres, con la marca a
  * la izquierda. El corte es el mismo que el del resto de la pantalla.
  *
- * EL MÓDULO EN CURSO LLEVA BORDE VERDE, y es lo único de la lista que
- * lo lleva. Antes era fondo crema con borde discontinuo y punto ámbar:
- * un tercer color para decir «estás aquí» cuando el verde ya significa
- * exactamente eso en toda la aplicación —es el color del botón que lleva
- * a esta misma fila—. Ahora el borde, el punto, el número y el
- * «Continuar →» son la misma cosa y el mismo verde.
+ * ---------------------------------------------------------------
+ * CUATRO ESTADOS QUE SE DISTINGUEN SIN LEER
  *
- * LO YA HECHO VA EN GRIS. Misma fila, sin blanco de tarjeta y sin check
- * verde: se lee como archivo, no como tarea. Y no se pinta aquí en
- * medio, sino dentro del desplegable de completados que monta
- * `Temario`.
+ * Antes lo cerrado y lo abierto casi no se distinguían: un círculo
+ * discontinuo frente a uno continuo, y un texto algo más claro. Había
+ * que leer cada fila para saber cuál se podía abrir, y quien no leía
+ * pulsaba una cerrada y no entendía por qué no pasaba nada.
+ *
+ * Ahora cada estado cambia TRES cosas a la vez —la marca de la
+ * izquierda, el contenedor y el peso del título—, y sin opacidad: los
+ * colores son explícitos, que a los sesenta un texto al 50% no se lee.
+ *
+ *   EN CURSO       anillo verde con punto, borde verde, título bold y
+ *                  «Continuar →». Lo único con borde verde de la lista.
+ *
+ *   DISPONIBLE     tarjeta blanca —es lo que dice «se puede pulsar»— con
+ *                  un anillo vacío, un tono más visible que antes.
+ *
+ *   COMPLETADO     check en verde pálido, el mismo verde con el que el
+ *                  mes completado lleva su círculo, un tono más abajo.
+ *                  Sin blanco de tarjeta: es archivo, no tarea. Vive en
+ *                  el desplegable de completados que monta `Temario`.
+ *
+ *   SE ABRE        deja de ser una tarjeta: sin blanco y con el borde
+ *   DESPUÉS        discontinuo, la forma de lo que todavía no está. El
+ *                  candado va fino y del gris de los rótulos, nunca de
+ *                  color de aviso, y el texto dice cuándo: «Se abre en 5
+ *                  días», «Se abre el 26 de sept.». Nada que hacer para
+ *                  abrirlo; solo llega.
+ *
+ * EN MÓVIL LA FECHA BAJA BAJO EL TÍTULO, donde en las demás filas va «4
+ * lecciones · 0 hechas», y la derecha queda vacía. Es lo que le deja al
+ * título su ancho a 375px: con la fecha a la derecha, un título largo
+ * partía en tres líneas.
+ * ---------------------------------------------------------------
  */
 export default function FilaModulo({
   modulo,
@@ -39,41 +64,39 @@ export default function FilaModulo({
   const { esActual, hecho, totalLecciones, completadas, disponible } = modulo;
 
   const meta = t.metaModulo(totalLecciones, completadas);
+  const espera = disponible ? null : textoDeEspera(modulo.diasParaAbrir ?? 1, modulo.abreEl, tb);
+
+  // La marca ocupa 18×18 en los cuatro estados para que las filas no se
+  // desalineen entre sí.
+  const cajaMarca =
+    "mt-[1px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full min-[900px]:mt-0";
 
   const contenido = (
     <>
-      {/* Punto ámbar en el actual; check redondo en el resto. Ocupan lo
-          mismo para que las filas no se desalineen entre sí. */}
       {!disponible ? (
-        // Círculo hueco y apagado: ni hecho ni por hacer todavía. Es el
-        // mismo peso visual que los demás para que la fila no se hunda.
-        <span
-          aria-hidden
-          className="mt-[1px] block h-[18px] w-[18px] shrink-0 rounded-full border-[1.5px] border-dashed border-temario-circulo min-[900px]:mt-0"
-        />
+        <span aria-hidden className={`${cajaMarca} text-temario-tenue`}>
+          <IconoCandado />
+        </span>
       ) : esActual ? (
-        <span
-          aria-hidden
-          className="mt-[3px] block h-[7px] w-[7px] shrink-0 rounded-full bg-temario-verde min-[900px]:mt-0"
-        />
+        <span aria-hidden className={`${cajaMarca} border-[1.5px] border-temario-verde`}>
+          <span className="block h-[7px] w-[7px] rounded-full bg-temario-verde" />
+        </span>
       ) : hecho ? (
-        <span
-          aria-hidden
-          className="mt-[1px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-temario-circulo text-[10px] font-extrabold text-white min-[900px]:mt-0"
-        >
-          ✓
+        <span aria-hidden className={`${cajaMarca} bg-temario-verdePalido text-temario-verdeTexto`}>
+          <IconoCheck />
         </span>
       ) : (
-        <span
-          aria-hidden
-          className="mt-[1px] block h-[18px] w-[18px] shrink-0 rounded-full border-[1.5px] border-temario-circulo min-[900px]:mt-0"
-        />
+        <span aria-hidden className={`${cajaMarca} border-[1.5px] border-temario-separador`} />
       )}
 
       <div className="min-w-0 flex-1 min-[900px]:flex min-[900px]:items-center min-[900px]:gap-4">
         <span
           className={`block text-[12px] font-extrabold uppercase leading-none min-[900px]:w-[78px] min-[900px]:shrink-0 ${
-            esActual ? "text-temario-verdeTexto" : "text-temario-tenue"
+            esActual
+              ? "text-temario-verdeTexto"
+              : !disponible
+                ? "text-temario-puntoSuave"
+                : "text-temario-tenue"
           }`}
         >
           {/* La misma función que la cabecera del mes: era el único sitio
@@ -82,9 +105,18 @@ export default function FilaModulo({
           {t.moduloNumero(modulo.numero)}
         </span>
 
+        {/* El peso del título es uno de los tres rasgos del estado: bold
+            en curso, semibold en lo que se puede abrir, medium en lo que
+            todavía no. */}
         <span
           className={`mt-1 block text-pretty text-[14px] leading-[1.3] min-[900px]:mt-0 min-[900px]:flex-1 min-[900px]:text-[15.5px] ${
-            esActual ? "font-bold" : "font-semibold"
+            esActual
+              ? "font-bold text-temario-tinta"
+              : !disponible
+                ? "font-medium text-temario-suave"
+                : hecho
+                  ? "font-semibold text-temario-medio"
+                  : "font-semibold text-temario-tinta"
           }`}
         >
           {modulo.titulo}
@@ -97,11 +129,18 @@ export default function FilaModulo({
             {meta}
           </span>
         )}
+
+        {/* La fecha, en el sitio de la cuenta, solo en móvil. */}
+        {espera && (
+          <span className="mt-[5px] block text-[11.5px] font-medium text-temario-suave min-[900px]:hidden">
+            {espera}
+          </span>
+        )}
       </div>
 
-      {!disponible ? (
-        <span className="mt-[2px] shrink-0 whitespace-nowrap text-[12.5px] font-semibold text-temario-suave min-[900px]:mt-0">
-          {textoDeEspera(modulo.diasParaAbrir ?? 1, tb)}
+      {espera ? (
+        <span className="hidden shrink-0 whitespace-nowrap text-[12.5px] font-medium text-temario-suave min-[900px]:block">
+          {espera}
         </span>
       ) : esActual ? (
         <span className="mt-[2px] shrink-0 whitespace-nowrap text-[13px] font-bold text-temario-verdeTexto min-[900px]:mt-0">
@@ -121,27 +160,25 @@ export default function FilaModulo({
     "flex min-h-[44px] items-start gap-3 rounded-[12px] px-4 py-3 transition-colors min-[900px]:items-center min-[900px]:gap-4 min-[900px]:px-[18px] min-[900px]:py-[14px]";
 
   const aspecto = !disponible
-    ? // Se ve, con su título y su sitio, pero no invita a pulsar: sin
-      // hover, sin blanco de tarjeta. Lo que retiene es saber que está
-      // ahí y cuándo llega, no que se pueda tocar.
-      "border border-temario-borde bg-temario-rail/50 text-temario-suave"
+    ? // Ni blanco ni borde continuo: no es una tarjeta, y por eso no
+      // invita a pulsar. Sin hover, por lo mismo.
+      "border border-dashed border-temario-discontinuo bg-transparent"
     : esActual
       ? "border-[1.5px] border-temario-verde bg-white"
       : hecho
-        ? // En gris y sin blanco: sigue siendo un enlace —se repasa
-          // desde aquí— pero no compite con lo que queda por hacer.
-          "border border-temario-bordeFila bg-temario-rail/40 text-temario-suave hover:border-temario-bordeHover"
+        ? // Sin blanco: sigue siendo un enlace —se repasa desde aquí—
+          // pero no compite con lo que queda por hacer.
+          "border border-temario-bordeFila bg-temario-rail/40 hover:border-temario-bordeHover"
         : "border border-temario-bordeFila bg-white hover:border-temario-bordeHover hover:bg-temario-filaHover";
 
   // Sin lecciones no hay a dónde entrar: se pinta apagado en vez de
   // llevar a una pantalla vacía.
   if (!modulo.destino) {
     return (
+      // La fecha ya va en el propio contenido —visible en un tamaño u
+      // otro—, así que el lector de pantalla la lee sin duplicarla.
       <li className={`${base} ${aspecto}`} aria-disabled>
         {contenido}
-        {!disponible && (
-          <span className="sr-only">{t.moduloSeAbreEn(modulo.diasParaAbrir ?? 1)}</span>
-        )}
       </li>
     );
   }
