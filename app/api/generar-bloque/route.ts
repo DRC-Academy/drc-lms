@@ -34,7 +34,7 @@ import {
   type MateriaPrima,
 } from "@/lib/prompt-bloque";
 import { bloqueDeBanco } from "@/lib/banco";
-import { idiomaActual } from "@/lib/idioma-servidor";
+import { idiomaActual, textosActuales } from "@/lib/idioma-servidor";
 import { validarBloque } from "@/lib/validarBloque";
 import { extraerJson } from "@/lib/json";
 import { revisarBloque, type Revision } from "@/lib/revisor";
@@ -194,6 +194,10 @@ function flujoDeGeneracion(
   ejecutar: (emitir: (evento: EventoGeneracion) => void) => Promise<void>
 ): Response {
   const codificador = new TextEncoder();
+  // Se resuelve AQUÍ, con la petición todavía en curso: dentro del flujo,
+  // cuando haga falta, la cookie del idioma puede quedar ya fuera de
+  // alcance.
+  const mensajeRoto = textosActuales().practica.apiGeneracionRota;
 
   const cuerpo = new ReadableStream<Uint8Array>({
     async start(controlador) {
@@ -211,10 +215,7 @@ function flujoDeGeneracion(
         // deja al alumno con la barra a medias y sin mensaje.
         traza("flujo:error", describir(error));
         console.error("[generar-bloque] La generación se rompió:", describir(error));
-        emitir({
-          tipo: "error",
-          mensaje: "No hemos podido preparar el bloque. Inténtalo otra vez.",
-        });
+        emitir({ tipo: "error", mensaje: mensajeRoto });
       } finally {
         abierto = false;
         controlador.close();
@@ -242,10 +243,14 @@ function flujoDeGeneracion(
  * tarjeta —de qué depende, no qué tiene prohibido— porque el alumno no
  * tiene forma de saber que su pantalla estaba vieja.
  */
+/**
+ * En el idioma de la pantalla: `usarGenerador` enseña este texto tal
+ * cual, así que sale del mismo diccionario que el resto de «Para ti».
+ * Igual que todos los `error` de esta ruta que llegan al alumno.
+ */
 function mensajeDeEspera(tuvoClase: boolean): string {
-  return tuvoClase
-    ? "Ya has practicado lo de tu última clase. En cuanto tengas la siguiente, preparamos el próximo bloque."
-    : "Ya tienes tu bloque con lo que sabemos de ti. En cuanto se analice tu primera clase, preparamos el siguiente.";
+  const t = textosActuales().practica;
+  return tuvoClase ? t.esperaTrasClase : t.esperaSinClase;
 }
 
 /**
@@ -544,7 +549,7 @@ export async function POST(peticion: Request) {
     traza("sesión:fallo", describir(error));
     console.error("[generar-bloque] No se pudo comprobar la sesión:", describir(error));
     return NextResponse.json(
-      { error: "No hemos podido comprobar tu sesión. Vuelve a intentarlo en un momento." },
+      { error: textosActuales().practica.apiSesionNoComprobada },
       { status: 503 }
     );
   }
@@ -552,7 +557,7 @@ export async function POST(peticion: Request) {
   if (!sesion) {
     traza("sesión:ausente");
     return NextResponse.json(
-      { error: "Tu sesión ha caducado. Vuelve a entrar desde el enlace de tu email." },
+      { error: textosActuales().practica.apiSesionCaducada },
       { status: 401 }
     );
   }
@@ -562,7 +567,7 @@ export async function POST(peticion: Request) {
   try {
     cuerpo = await peticion.json();
   } catch {
-    return NextResponse.json({ error: "El cuerpo de la petición no es JSON." }, { status: 400 });
+    return NextResponse.json({ error: textosActuales().practica.apiCuerpoNoJson }, { status: 400 });
   }
 
   // `modo` ya no se lee. Si llega —de una pestaña abierta desde antes
@@ -577,7 +582,7 @@ export async function POST(peticion: Request) {
   // generar para cualquiera: es lo que le deja revisar el producto.
   const alumnoId = sesion.rol === "alumno" ? sesion.alumnoId : pedido;
   if (sesion.rol === "alumno" && pedido !== "" && pedido !== sesion.alumnoId) {
-    return NextResponse.json({ error: "Esa ficha no es la tuya." }, { status: 403 });
+    return NextResponse.json({ error: textosActuales().practica.apiFichaAjena }, { status: 403 });
   }
 
   /**
@@ -632,14 +637,14 @@ export async function POST(peticion: Request) {
     traza("gestión:fallo", describir(error));
     console.error("[generar-bloque] No se pudo leer la ficha del alumno:", describir(error));
     return NextResponse.json(
-      { error: "No hemos podido leer tu ficha ahora mismo. Vuelve a intentarlo en un momento." },
+      { error: textosActuales().practica.apiFichaNoLeida },
       { status: 503 }
     );
   }
 
   if (!alumno) {
     traza("gestión:sin ficha");
-    return NextResponse.json({ error: "No encontramos a ese alumno." }, { status: 404 });
+    return NextResponse.json({ error: textosActuales().practica.apiAlumnoNoEncontrado }, { status: 404 });
   }
 
   const { perfil, ultimaClase } = alumno;
@@ -695,7 +700,7 @@ export async function POST(peticion: Request) {
   if (!hayMateriaPrima(materia)) {
     traza("sin materia prima");
     return NextResponse.json(
-      { error: "Todavía no sabemos lo suficiente de ti para prepararte un bloque." },
+      { error: textosActuales().practica.apiSinDatosSuficientes },
       { status: 409 }
     );
   }

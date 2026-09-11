@@ -39,6 +39,8 @@ export type TextosBanners = {
   // --- banner del curso ---
   sinCursoTitulo: string;
   sinCursoCuerpo: string;
+  /** "También tienes acceso a <curso>." El título va detrás, como enlace. */
+  tambienTienesAccesoA: string;
   cursoCompletado: string;
   estasAlDia: string;
   continuaDondeLoDejaste: string;
@@ -104,6 +106,7 @@ export type TextosBanners = {
 const ES: TextosBanners = {
   sinCursoTitulo: "Tu plan todavía no tiene un curso asociado. Coméntaselo a tu profesor y lo activamos.",
   sinCursoCuerpo: "Mientras tanto, tu práctica de abajo funciona con normalidad.",
+  tambienTienesAccesoA: "También tienes acceso a",
   cursoCompletado: "Curso completado",
   estasAlDia: "Estás al día",
   continuaDondeLoDejaste: "Continúa donde lo dejaste",
@@ -158,6 +161,7 @@ const EN: TextosBanners = {
   sinCursoTitulo:
     "Your plan doesn't have a course attached yet. Mention it to your teacher and we'll switch it on.",
   sinCursoCuerpo: "In the meantime, your practice below works as normal.",
+  tambienTienesAccesoA: "You also have access to",
   cursoCompletado: "Course finished",
   estasAlDia: "You're up to date",
   continuaDondeLoDejaste: "Carry on where you left off",

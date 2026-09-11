@@ -320,7 +320,7 @@ function HuecoVacio({
 
         {!sinNinguno && totalPractica > 0 && (
           <p className="mt-3 text-[13.5px] leading-[1.45] text-marca-gris">
-            Puedes repetir cualquiera desde{" "}
+            {t.puedesRepetirCualquieraDesde}{" "}
             <Link
               href={conFoco("/practica", foco)}
               className="font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"

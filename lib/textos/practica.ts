@@ -110,6 +110,23 @@ export type TextosPractica = {
   errorGenerico: string;
   errorTardando: string;
   errorFormaInesperada: string;
+
+  // --- lo que responde la API de generar ---
+  // Estos mensajes los escribe el servidor y la pantalla los enseña tal
+  // cual, así que viven aquí y no en la ruta: la ruta ya sabe el idioma
+  // (lee la misma cookie) y no tenía dónde buscar el texto.
+  apiSesionNoComprobada: string;
+  apiSesionCaducada: string;
+  apiCuerpoNoJson: string;
+  apiFichaAjena: string;
+  apiFichaNoLeida: string;
+  apiAlumnoNoEncontrado: string;
+  apiSinDatosSuficientes: string;
+  /** El flujo se rompió a mitad: viaja dentro del stream, ya con el 200 enviado. */
+  apiGeneracionRota: string;
+  /** El 409 de «todavía no toca», con y sin clase analizada detrás. */
+  esperaTrasClase: string;
+  esperaSinClase: string;
   errorCortado: string;
 
   // --- la lista de bloques ---
@@ -131,6 +148,8 @@ export type TextosPractica = {
   // --- las paradas hechas ---
   paradasHechas: (n: number) => string;
   puedesRepetirCualquiera: string;
+  /** "Puedes repetir cualquiera desde <Para ti>." El enlace va detrás. */
+  puedesRepetirCualquieraDesde: string;
   deAciertos: string;
   repetir: string;
 
@@ -212,6 +231,19 @@ const ES: TextosPractica = {
   errorTardando:
     "La preparación ha tardado más de lo que podemos esperar. Vuelve a darle y lo intentamos otra vez.",
   errorFormaInesperada: "El bloque recibido no tiene la forma esperada",
+
+  apiSesionNoComprobada: "No hemos podido comprobar tu sesión. Vuelve a intentarlo en un momento.",
+  apiSesionCaducada: "Tu sesión ha caducado. Vuelve a entrar desde el enlace de tu email.",
+  apiCuerpoNoJson: "El cuerpo de la petición no es JSON.",
+  apiFichaAjena: "Esa ficha no es la tuya.",
+  apiFichaNoLeida: "No hemos podido leer tu ficha ahora mismo. Vuelve a intentarlo en un momento.",
+  apiAlumnoNoEncontrado: "No encontramos a ese alumno.",
+  apiSinDatosSuficientes: "Todavía no sabemos lo suficiente de ti para prepararte un bloque.",
+  apiGeneracionRota: "No hemos podido preparar el bloque. Inténtalo otra vez.",
+  esperaTrasClase:
+    "Ya has practicado lo de tu última clase. En cuanto tengas la siguiente, preparamos el próximo bloque.",
+  esperaSinClase:
+    "Ya tienes tu bloque con lo que sabemos de ti. En cuanto se analice tu primera clase, preparamos el siguiente.",
   errorCortado: "La preparación se ha cortado antes de terminar.",
 
   tuLeccionPersonalizada: "Tu lección personalizada",
@@ -234,6 +266,7 @@ const ES: TextosPractica = {
 
   paradasHechas: (n) => `${n} ${n === 1 ? "parada hecha" : "paradas hechas"}`,
   puedesRepetirCualquiera: "Puedes repetir cualquiera",
+  puedesRepetirCualquieraDesde: "Puedes repetir cualquiera desde",
   deAciertos: "de aciertos",
   repetir: "Repetir",
 
@@ -317,6 +350,19 @@ const EN: TextosPractica = {
   errorGenerico: "The connection is being slow. Give it another go and we'll build it.",
   errorTardando: "It took longer than we can wait. Give it another go and we'll try again.",
   errorFormaInesperada: "The block that came back isn't the right shape",
+
+  apiSesionNoComprobada: "We couldn't check your session. Try again in a moment.",
+  apiSesionCaducada: "Your session has expired. Sign in again from the link in your email.",
+  apiCuerpoNoJson: "The request body isn't JSON.",
+  apiFichaAjena: "That profile isn't yours.",
+  apiFichaNoLeida: "We couldn't read your profile just now. Try again in a moment.",
+  apiAlumnoNoEncontrado: "We couldn't find that student.",
+  apiSinDatosSuficientes: "We don't know enough about you yet to build you a block.",
+  apiGeneracionRota: "We couldn't build the block. Give it another go.",
+  esperaTrasClase:
+    "You've already practised what came up in your last class. As soon as you have the next one, we'll build the next block.",
+  esperaSinClase:
+    "You already have your block with what we know about you. As soon as your first class is analysed, we'll build the next one.",
   errorCortado: "The build was cut short before it finished.",
 
   tuLeccionPersonalizada: "Your personal lesson",
@@ -339,6 +385,7 @@ const EN: TextosPractica = {
 
   paradasHechas: (n) => `${n} ${n === 1 ? "stop done" : "stops done"}`,
   puedesRepetirCualquiera: "You can redo any of them",
+  puedesRepetirCualquieraDesde: "You can redo any of them from",
   deAciertos: "correct",
   repetir: "Redo",
 

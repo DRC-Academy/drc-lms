@@ -101,7 +101,9 @@ export function avisoFormulario(
 
   return {
     titulo: t.avisoFormularioEnviadoTitulo,
-    cuerpo: t.avisoFormularioEnviadoCuerpo(quien, formatearFecha(enviadoEn)),
+    // Con el formato del idioma: sin él, la fecha salía en español dentro
+    // de una frase en inglés.
+    cuerpo: t.avisoFormularioEnviadoCuerpo(quien, formatearFecha(enviadoEn, t.fechaCorta)),
   };
 }
 
@@ -209,7 +211,7 @@ function describirFuentes(
   const frases: string[] = [];
 
   if (ultimaClase) {
-    frases.push(t.fuenteClase(formatearFecha(ultimaClase.fechaClase)));
+    frases.push(t.fuenteClase(formatearFecha(ultimaClase.fechaClase, t.fechaCorta)));
     // El historial no se nombra con número de clases: al alumno no le
     // dice nada "tus últimas cuatro clases" y suena a expediente.
     frases.push(t.fuenteRepeticiones);

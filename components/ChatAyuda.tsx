@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { FAQ, buscar, enlaceSoporte, preguntaPorId } from "@/lib/faq";
+import { usarIdioma } from "@/components/ProveedorIdioma";
+import type { Idioma } from "@/lib/idioma";
+import type { TextosAyuda } from "@/lib/textos/ayuda";
 
 /**
  * LA AYUDA DEL ALUMNO. Un buscador de FAQ con forma de conversación.
@@ -30,6 +33,13 @@ import { FAQ, buscar, enlaceSoporte, preguntaPorId } from "@/lib/faq";
  * de preguntas dentro no se puede usar con el pulgar; a partir de 640
  * vuelve a ser un panel flotante, que ahí sí hay sitio para las dos
  * cosas a la vez.
+ *
+ * EN EL IDIOMA DE LA PANTALLA, como todo lo demás. Lo que dice el
+ * widget sale de `lib/textos/ayuda.ts`; lo que contesta, de `lib/faq.ts`
+ * en su par `{ es, en }`. Los mensajes ya escritos en la conversación
+ * guardan su texto tal cual —cambiar de idioma no reescribe lo que el
+ * alumno ya leyó—, pero las respuestas y las listas de opciones se
+ * pintan al vuelo por `id`, así que sí cambian.
  */
 
 /** El contenido de un mensaje. La conversación es una lista de estos. */
@@ -51,10 +61,10 @@ type Mensaje =
  */
 type SinId<T> = T extends unknown ? Omit<T, "id"> : never;
 
-const SALUDO = "¡Hola! Soy la ayuda de DRC Academy. ¿Sobre qué necesitas una mano?";
-
 export default function ChatAyuda({ nombre }: { nombre: string }) {
   const ruta = usePathname() ?? "/";
+  const { idioma, t: textos } = usarIdioma();
+  const t = textos.ayuda;
 
   const [abierto, setAbierto] = useState(false);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
@@ -83,7 +93,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
   function abrir() {
     setAbierto(true);
     if (mensajes.length === 0) {
-      anadir({ de: "bot", tipo: "categorias", texto: SALUDO });
+      anadir({ de: "bot", tipo: "categorias", texto: t.saludo });
     }
   }
 
@@ -129,11 +139,11 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
     if (!categoria) return;
 
     anadir(
-      { de: "alumno", texto: categoria.nombre },
+      { de: "alumno", texto: categoria.nombre[idioma] },
       {
         de: "bot",
         tipo: "preguntas",
-        texto: `Esto es lo que más se pregunta sobre ${categoria.nombre.toLowerCase()}:`,
+        texto: t.loQueMasSePregunta(categoria.nombre[idioma]),
         ids: categoria.preguntas.map((p) => p.id),
       }
     );
@@ -144,7 +154,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
     if (!pregunta) return;
 
     anadir(
-      { de: "alumno", texto: pregunta.pregunta },
+      { de: "alumno", texto: pregunta.pregunta[idioma] },
       { de: "bot", tipo: "respuesta", idPregunta: id, util: null }
     );
   }
@@ -157,14 +167,14 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
     );
 
     if (util === "si") {
-      anadir({ de: "alumno", texto: "Sí, gracias" }, { de: "bot", tipo: "categorias", texto: "¡Genial! ¿Te ayudo con algo más?" });
+      anadir({ de: "alumno", texto: t.siGracias }, { de: "bot", tipo: "categorias", texto: t.genialAlgoMas });
     } else {
       anadir(
-        { de: "alumno", texto: "No del todo" },
+        { de: "alumno", texto: t.noDelTodo },
         {
           de: "bot",
           tipo: "soporte",
-          texto: "Vaya, siento no haberlo resuelto. Escríbenos y te contestamos nosotros.",
+          texto: t.sientoNoResolverlo,
           asunto,
         }
       );
@@ -173,11 +183,11 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
 
   function pedirSoporte() {
     anadir(
-      { de: "alumno", texto: "Quiero hablar con soporte" },
+      { de: "alumno", texto: t.quieroHablarConSoporte },
       {
         de: "bot",
         tipo: "soporte",
-        texto: "Claro. Te abrimos WhatsApp con tu nombre y la pantalla desde la que escribes.",
+        texto: t.teAbrimosWhatsApp,
         asunto: "",
       }
     );
@@ -190,7 +200,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
     if (texto === "") return;
 
     setConsulta("");
-    const encontradas = buscar(texto);
+    const encontradas = buscar(texto, idioma);
 
     if (encontradas.length === 0) {
       anadir(
@@ -199,7 +209,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
           de: "bot",
           tipo: "soporte",
           // Es nuestro fallo, no suyo: no encontramos, no "no existe".
-          texto: "Esto no lo tengo escrito. Te paso con soporte, que sí sabrá.",
+          texto: t.noLoTengoEscrito,
           asunto: texto,
         }
       );
@@ -211,10 +221,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
       {
         de: "bot",
         tipo: "preguntas",
-        texto:
-          encontradas.length === 1
-            ? "Creo que va por aquí:"
-            : "Puede que sea alguna de estas:",
+        texto: encontradas.length === 1 ? t.creoQueVaPorAqui : t.puedeQueSeaAlguna,
         ids: encontradas.map((r) => r.pregunta.id),
       }
     );
@@ -225,7 +232,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
       {abierto && (
         <section
           role="dialog"
-          aria-label="Ayuda de DRC Academy"
+          aria-label={t.dialogo}
           className="fixed inset-0 flex flex-col overflow-hidden bg-marca-niebla min-[640px]:static min-[640px]:h-[min(620px,calc(100vh-150px))] min-[640px]:w-[380px] min-[640px]:rounded-[16px] min-[640px]:border min-[640px]:border-marca-borde min-[640px]:shadow-[0_18px_44px_-16px_rgba(18,33,26,0.35)]"
         >
           {/* ------------------------------ CABECERA ------------------------------ */}
@@ -239,11 +246,9 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
 
             <div className="min-w-0 flex-1">
               <p className="font-display text-[15px] font-bold leading-tight text-marca-tinta">
-                Ayuda
+                {t.titulo}
               </p>
-              <p className="text-[12.5px] leading-tight text-marca-gris">
-                Respuestas a lo que más se pregunta
-              </p>
+              <p className="text-[12.5px] leading-tight text-marca-gris">{t.subtitulo}</p>
             </div>
 
             <button
@@ -251,7 +256,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
               onClick={cerrar}
               className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-marca-gris transition-colors hover:bg-marca-nieblaOscura hover:text-marca-tinta"
             >
-              <span className="sr-only">Cerrar la ayuda</span>
+              <span className="sr-only">{t.cerrarLaAyuda}</span>
               <svg aria-hidden viewBox="0 0 20 20" className="h-4 w-4" fill="none" strokeWidth="1.8" strokeLinecap="round">
                 <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" />
               </svg>
@@ -261,7 +266,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
           {/* ------------------------------ BUSCADOR ------------------------------ */}
           <form onSubmit={enviarBusqueda} className="shrink-0 border-b border-marca-borde bg-white px-4 pb-3">
             <label htmlFor="ayuda-consulta" className="sr-only">
-              Escribe tu duda
+              {t.escribeTuDuda}
             </label>
             <div className="flex gap-2">
               <input
@@ -270,7 +275,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
                 type="text"
                 value={consulta}
                 onChange={(e) => setConsulta(e.target.value)}
-                placeholder="Escribe tu duda…"
+                placeholder={t.escribeTuDudaPlaceholder}
                 autoComplete="off"
                 className="min-h-[42px] w-full flex-1 rounded-full border border-marca-borde bg-marca-niebla px-4 text-[15px] text-marca-tinta outline-none transition-colors placeholder:text-marca-grisTenue focus:border-marca-verde"
               />
@@ -279,7 +284,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
                 disabled={consulta.trim() === ""}
                 className="btn-verde grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <span className="sr-only">Buscar en la ayuda</span>
+                <span className="sr-only">{t.buscarEnLaAyuda}</span>
                 <svg aria-hidden viewBox="0 0 20 20" className="h-[18px] w-[18px]" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="9" cy="9" r="5.5" stroke="currentColor" />
                   <path d="M13.2 13.2 17 17" stroke="currentColor" />
@@ -306,13 +311,17 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
                 </p>
               ) : (
                 <div key={mensaje.id} className="flex max-w-[92%] flex-col gap-2.5 self-start">
-                  <Burbuja>{mensaje.tipo === "respuesta" ? textoRespuesta(mensaje.idPregunta) : mensaje.texto}</Burbuja>
+                  <Burbuja>
+                    {mensaje.tipo === "respuesta"
+                      ? textoRespuesta(mensaje.idPregunta, idioma, t)
+                      : mensaje.texto}
+                  </Burbuja>
 
                   {mensaje.tipo === "categorias" && (
                     <ListaOpciones>
                       {FAQ.map((categoria) => (
                         <Opcion key={categoria.id} onClick={() => elegirCategoria(categoria.id)}>
-                          {categoria.nombre}
+                          {categoria.nombre[idioma]}
                         </Opcion>
                       ))}
                     </ListaOpciones>
@@ -325,7 +334,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
                         if (!pregunta) return null;
                         return (
                           <Opcion key={id} onClick={() => elegirPregunta(id)} completa>
-                            {pregunta.pregunta}
+                            {pregunta.pregunta[idioma]}
                           </Opcion>
                         );
                       })}
@@ -335,21 +344,26 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
                   {mensaje.tipo === "respuesta" && (
                     <Valoracion
                       util={mensaje.util}
+                      t={t}
                       onValorar={(util) =>
-                        valorar(mensaje.id, util, preguntaPorId(mensaje.idPregunta)?.pregunta ?? "")
+                        valorar(
+                          mensaje.id,
+                          util,
+                          preguntaPorId(mensaje.idPregunta)?.pregunta[idioma] ?? ""
+                        )
                       }
                     />
                   )}
 
                   {mensaje.tipo === "soporte" && (
                     <a
-                      href={enlaceSoporte({ nombre, ruta, asunto: mensaje.asunto })}
+                      href={enlaceSoporte({ nombre, ruta, asunto: mensaje.asunto, idioma })}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-verde inline-flex min-h-[44px] items-center justify-center gap-2 self-start rounded-full px-5 text-[14.5px] font-semibold"
                     >
                       <IconoWhatsApp className="h-[18px] w-[18px]" />
-                      Escribir por WhatsApp
+                      {t.escribirPorWhatsApp}
                     </a>
                   )}
                 </div>
@@ -369,7 +383,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
               onClick={pedirSoporte}
               className="text-[13.5px] font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
             >
-              ¿Prefieres hablar con soporte?
+              {t.prefieresSoporte}
             </button>
           </div>
         </section>
@@ -389,15 +403,15 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
         }`}
       >
         <IconoAyuda className="h-[19px] w-[19px]" />
-        {abierto ? "Cerrar" : "Ayuda"}
+        {abierto ? t.cerrar : t.ayuda}
       </button>
     </div>
   );
 }
 
 /** El texto de una respuesta, por si la pregunta desapareciera del FAQ. */
-function textoRespuesta(id: string): string {
-  return preguntaPorId(id)?.respuesta ?? "Esta respuesta ya no está disponible.";
+function textoRespuesta(id: string, idioma: Idioma, t: TextosAyuda): string {
+  return preguntaPorId(id)?.respuesta[idioma] ?? t.respuestaNoDisponible;
 }
 
 function Burbuja({ children }: { children: React.ReactNode }) {
@@ -448,35 +462,37 @@ function Opcion({
  */
 function Valoracion({
   util,
+  t,
   onValorar,
 }: {
   util: "si" | "no" | null;
+  t: TextosAyuda;
   onValorar: (util: "si" | "no") => void;
 }) {
   if (util !== null) {
     return (
       <p className="text-[12.5px] text-marca-grisSuave">
-        {util === "si" ? "Marcaste que te ha servido." : "Marcaste que no te ha servido."}
+        {util === "si" ? t.marcasteQueSirvio : t.marcasteQueNoSirvio}
       </p>
     );
   }
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[12.5px] text-marca-gris">¿Te ha servido?</span>
+      <span className="text-[12.5px] text-marca-gris">{t.teHaServido}</span>
       <button
         type="button"
         onClick={() => onValorar("si")}
         className="min-h-[32px] rounded-full border border-marca-bordeSuave bg-white px-3.5 text-[13px] font-semibold text-marca-tinta transition-colors hover:border-marca-tinta"
       >
-        Sí
+        {t.si}
       </button>
       <button
         type="button"
         onClick={() => onValorar("no")}
         className="min-h-[32px] rounded-full border border-marca-bordeSuave bg-white px-3.5 text-[13px] font-semibold text-marca-tinta transition-colors hover:border-marca-tinta"
       >
-        No
+        {t.no}
       </button>
     </div>
   );

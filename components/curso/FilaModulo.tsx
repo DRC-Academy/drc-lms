@@ -72,11 +72,14 @@ export default function FilaModulo({
 
       <div className="min-w-0 flex-1 min-[900px]:flex min-[900px]:items-center min-[900px]:gap-4">
         <span
-          className={`block text-[12px] font-extrabold leading-none min-[900px]:w-[78px] min-[900px]:shrink-0 ${
+          className={`block text-[12px] font-extrabold uppercase leading-none min-[900px]:w-[78px] min-[900px]:shrink-0 ${
             esActual ? "text-temario-verdeTexto" : "text-temario-tenue"
           }`}
         >
-          MÓDULO {modulo.numero}
+          {/* La misma función que la cabecera del mes: era el único sitio
+              que escribía la palabra a mano, y seguía en español con el
+              idioma en inglés. Las mayúsculas las pone el CSS. */}
+          {t.moduloNumero(modulo.numero)}
         </span>
 
         <span
@@ -137,9 +140,7 @@ export default function FilaModulo({
       <li className={`${base} ${aspecto}`} aria-disabled>
         {contenido}
         {!disponible && (
-          <span className="sr-only">
-            Se abre en {modulo.diasParaAbrir} días
-          </span>
+          <span className="sr-only">{t.moduloSeAbreEn(modulo.diasParaAbrir ?? 1)}</span>
         )}
       </li>
     );

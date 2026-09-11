@@ -1,36 +1,50 @@
 "use client";
 
+import type { Idioma } from "@/lib/idioma";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 
 /**
- * EL BOTÓN QUE CAMBIA EL IDIOMA DE TODO.
+ * El conmutador de idioma de la cabecera.
  *
- * Vive en la cabecera, una sola vez, y desde ahí gobierna la aplicación
- * entera: la navegación, el curso, la ruta, el progreso y los
- * ejercicios. Antes había uno dentro del visor y otro en cada pantalla
- * de cierre, porque solo los ejercicios tenían dos idiomas; ahora que
- * los tiene todo, tres botones para una sola preferencia serían tres
- * sitios donde buscar lo mismo.
+ * ERA UN BOTÓN CON EL NOMBRE DEL OTRO IDIOMA —«Español» con la pantalla
+ * en inglés— y se leía de dos maneras: como el idioma que hay puesto o
+ * como el que se pondría al pulsar. Ahora son los dos códigos, ES y EN,
+ * con el activo marcado. No hay forma de leerlo al revés: lo marcado es
+ * lo que hay, lo otro es a lo que se cambia.
  *
- * NOMBRA EL IDIOMA AL QUE LLEVA, no el que está puesto. Un botón que
- * ponga "English" mientras se lee inglés no se sabe si informa o si
- * ofrece.
+ * Los códigos no se traducen: «ES» y «EN» se leen igual en los dos
+ * idiomas, que es justo lo que se les pide. El nombre del idioma
+ * destino sigue en el `aria-label`, para quien no ve la marca.
  *
- * NO DICE "TRADUCIR". Traducir es lo que hace la máquina por dentro; lo
- * que el alumno pide es leerlo en su idioma, y el rótulo nombra eso.
+ * ES UN SOLO BOTÓN, no dos: solo hay dos idiomas y solo hay una acción,
+ * cambiar al otro. Dos botones obligarían a decidir qué hace pulsar el
+ * que ya está puesto.
  */
+
+/** En este orden se leen: el de la academia primero. */
+const CODIGOS: readonly Idioma[] = ["es", "en"];
+
 export default function BotonIdioma({ className = "" }: { className?: string }) {
-  const { t, alternar } = usarIdioma();
+  const { idioma, t, alternar } = usarIdioma();
 
   return (
     <button
       type="button"
       onClick={alternar}
       aria-label={t.navegacion.otroIdiomaAria}
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border border-marca-borde bg-white px-3 py-[6px] text-[12.5px] font-semibold text-marca-gris transition-colors hover:bg-marca-niebla hover:text-marca-tinta ${className}`}
+      className={`inline-flex shrink-0 items-center gap-0.5 rounded-full border border-marca-borde bg-white p-[3px] transition-colors hover:border-marca-grisTenue ${className}`}
     >
-      <span aria-hidden>↔</span>
-      {t.navegacion.otroIdioma}
+      {CODIGOS.map((codigo) => (
+        <span
+          key={codigo}
+          aria-hidden
+          className={`inline-flex h-[24px] min-w-[30px] items-center justify-center rounded-full px-1.5 text-[11.5px] font-semibold uppercase leading-none tracking-[0.04em] transition-colors ${
+            codigo === idioma ? "bg-marca-tinta text-white" : "text-marca-grisSuave"
+          }`}
+        >
+          {codigo}
+        </span>
+      ))}
     </button>
   );
 }

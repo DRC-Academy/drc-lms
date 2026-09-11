@@ -49,6 +49,7 @@ import { CURSO, type TextosCurso } from "@/lib/textos/curso";
 import { PROGRESO, type TextosProgreso } from "@/lib/textos/progreso";
 import { RUTA, type TextosRuta } from "@/lib/textos/ruta";
 import { BANNERS, type TextosBanners } from "@/lib/textos/banners";
+import { AYUDA, type TextosAyuda } from "@/lib/textos/ayuda";
 
 export type Textos = {
   ejercicios: TextosEjercicios;
@@ -59,6 +60,7 @@ export type Textos = {
   progreso: TextosProgreso;
   ruta: TextosRuta;
   banners: TextosBanners;
+  ayuda: TextosAyuda;
 };
 
 export const TEXTOS: Record<Idioma, Textos> = {
@@ -71,6 +73,7 @@ export const TEXTOS: Record<Idioma, Textos> = {
     progreso: PROGRESO.en,
     ruta: RUTA.en,
     banners: BANNERS.en,
+    ayuda: AYUDA.en,
   },
   es: {
     ejercicios: EJERCICIOS.es,
@@ -81,5 +84,6 @@ export const TEXTOS: Record<Idioma, Textos> = {
     progreso: PROGRESO.es,
     ruta: RUTA.es,
     banners: BANNERS.es,
+    ayuda: AYUDA.es,
   },
 };

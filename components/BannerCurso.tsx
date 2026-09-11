@@ -161,7 +161,7 @@ export default function BannerCurso({
           segunda acción dentro competiría con el botón. */}
       {otros.map((otro) => (
         <p key={otro.curso.id} className="mt-3 px-1 text-[14px] leading-[1.5] text-marca-gris">
-          También tienes acceso a{" "}
+          {t.tambienTienesAccesoA}{" "}
           <Link
             href={conFoco(`/curso/${otro.curso.slug}`, foco)}
             className="font-medium text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
