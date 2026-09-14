@@ -61,13 +61,37 @@ type Mensaje =
  */
 type SinId<T> = T extends unknown ? Omit<T, "id"> : never;
 
-export default function ChatAyuda({ nombre }: { nombre: string }) {
+/**
+ * El nombre del suceso con el que otra pieza abre la ayuda. Lo lanza la
+ * barra de iconos de la lección, que tiene su propio botón de «Ayuda» y
+ * no puede llegar hasta aquí por props: vive en el layout y esto en la
+ * misma barra, pero como hermanos.
+ */
+export const SUCESO_ABRIR_AYUDA = "drc:abrir-ayuda";
+
+export function abrirAyuda() {
+  window.dispatchEvent(new Event(SUCESO_ABRIR_AYUDA));
+}
+
+export default function ChatAyuda({
+  nombre,
+  botonFlotante = "siempre",
+}: {
+  nombre: string;
+  /**
+   * Cuándo se ve el botón flotante. En la lección, la barra de iconos ya
+   * tiene uno de «Ayuda» a partir de 900px, y dos botones para lo mismo
+   * en la misma pantalla sobran: ahí el flotante solo sale en móvil.
+   */
+  botonFlotante?: "siempre" | "movil";
+}) {
   const ruta = usePathname() ?? "/";
   const { idioma, t: textos } = usarIdioma();
   const t = textos.ayuda;
 
   const [abierto, setAbierto] = useState(false);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
+  const lanzadorSoloMovil = botonFlotante === "movil";
   const [consulta, setConsulta] = useState("");
 
   const lanzador = useRef<HTMLButtonElement>(null);
@@ -103,6 +127,20 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
     // acaba al principio de la página después de cerrar.
     lanzador.current?.focus();
   }, []);
+
+  // Alguien de fuera —el icono de la barra de la lección— pide abrir.
+  useEffect(() => {
+    function alPedir() {
+      setAbierto(true);
+      setMensajes((previos) =>
+        previos.length === 0
+          ? [{ id: ++siguienteId.current, de: "bot", tipo: "categorias", texto: t.saludo }]
+          : previos
+      );
+    }
+    window.addEventListener(SUCESO_ABRIR_AYUDA, alPedir);
+    return () => window.removeEventListener(SUCESO_ABRIR_AYUDA, alPedir);
+  }, [t.saludo]);
 
   // Escape cierra, esté el foco donde esté dentro del panel.
   useEffect(() => {
@@ -400,7 +438,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
         aria-expanded={abierto}
         className={`btn-verde inline-flex min-h-[48px] items-center gap-2 rounded-full px-5 text-[15px] font-semibold ${
           abierto ? "hidden min-[640px]:inline-flex" : ""
-        }`}
+        } ${lanzadorSoloMovil && !abierto ? "min-[900px]:hidden" : ""}`}
       >
         <IconoAyuda className="h-[19px] w-[19px]" />
         {abierto ? t.cerrar : t.ayuda}

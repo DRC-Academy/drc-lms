@@ -188,8 +188,11 @@ export const config = {
     // mientras el navegador no tuviera cookie, y el hueco quedaba en
     // blanco sin un solo error en consola.
     //
+    // `simbolo-drc.png` es el mismo logotipo recortado —solo el globo—
+    // para la barra de iconos de la lección, y va por lo mismo.
+    //
     // `/lecciones/` NO se abre: esas son las imágenes de los ejercicios,
     // que son el material del curso y sí van detrás de la puerta.
-    "/((?!acceso(?:/|$)|entrar(?:/|$)|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo-drc\\.png).*)",
+    "/((?!acceso(?:/|$)|entrar(?:/|$)|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo-drc\\.png|simbolo-drc\\.png).*)",
   ],
 };

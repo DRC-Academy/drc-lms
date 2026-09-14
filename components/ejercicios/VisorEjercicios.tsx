@@ -41,6 +41,13 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
 
 const LETRAS = "ABCDEFGH";
 
+/**
+ * La caja del ejercicio cuando el visor va embebido: la misma que la de
+ * cada parte del texto en la lección (`VistaLeccion`).
+ */
+const CONTENEDOR =
+  "flex min-w-0 flex-col rounded-[16px] border border-marca-borde bg-white px-5 py-6 min-[900px]:px-11 min-[900px]:py-8";
+
 const NUMERO_FASE = { reconocer: 1, transformar: 2, producir: 3 };
 
 /**
@@ -55,7 +62,11 @@ export type SucesoVisor =
   | { tipo: "intento"; ejercicio: EjercicioUnificado; correcto: boolean }
   | { tipo: "avance"; indice: number; total: number }
   | { tipo: "produccion"; ejercicio: EjercicioUnificado; texto: string }
-  | { tipo: "final"; aciertos: number; total: number };
+  | { tipo: "final"; aciertos: number; total: number }
+  // Los dos de abajo no guardan nada: son para quien pinta el estado
+  // del visor desde fuera —el panel del curso, en la lección—.
+  | { tipo: "salto"; indice: number }
+  | { tipo: "reinicio" };
 
 type Estado = {
   /** Opciones marcadas. */
@@ -96,6 +107,7 @@ export default function VisorEjercicios({
   traduccion,
   alSuceso,
   guardarIntentos = true,
+  embebido = false,
 }: {
   ejercicios: EjercicioUnificado[];
   /**
@@ -159,6 +171,14 @@ export default function VisorEjercicios({
   alSuceso?: (suceso: SucesoVisor) => void;
   /** false para el equipo: revisa el curso, no lo cursa. */
   guardarIntentos?: boolean;
+  /**
+   * DENTRO DE OTRA PANTALLA, no a pantalla entera. Es como lo usa la
+   * lección por partes: el ejercicio va en un contenedor blanco con
+   * borde, como cada parte del texto, y los botones debajo del
+   * contenedor, no pegados al fondo de la ventana. Se va también la
+   * fila de «Volver a», porque la lección ya tiene su propia salida.
+   */
+  embebido?: boolean;
 }) {
   const { t: todos } = usarIdioma();
   const t = todos.ejercicios;
@@ -285,12 +305,14 @@ export default function VisorEjercicios({
     setEstados(ejercicios.map(VACIO));
     setIndice(0);
     setCerrado(false);
+    anunciar({ tipo: "reinicio" });
     window.scrollTo({ top: 0 });
   }
 
   function verEjercicio(i: number) {
     setIndice(i);
     setCerrado(false);
+    anunciar({ tipo: "salto", indice: i });
     window.scrollTo({ top: 0 });
   }
 
@@ -361,7 +383,7 @@ export default function VisorEjercicios({
   if (cerrado) {
     const aciertos = ejercicios.filter((_, i) => acertado(i)).length;
     return conMarco(
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className={embebido ? CONTENEDOR : "flex min-w-0 flex-1 flex-col"}>
         {cierre({
           aciertos,
           total: ejercicios.length,
@@ -428,8 +450,15 @@ export default function VisorEjercicios({
     <div className="flex min-w-0 flex-1 flex-col">
       {/* El mismo ancho, el mismo padding y la misma tipografía que la
           columna de texto de la lección: el `7rem` que se suma es el
-          padding lateral, para que la caja mida de verdad sus 760px. */}
-      <div className="mx-auto flex w-full max-w-[calc(760px+7rem)] flex-1 flex-col px-4 pb-6 pt-4 min-[1100px]:px-14 min-[1100px]:pt-[26px]">
+          padding lateral, para que la caja mida de verdad sus 760px.
+          Embebido, la caja es el contenedor de la parte. */}
+      <div
+        className={
+          embebido
+            ? CONTENEDOR
+            : "mx-auto flex w-full max-w-[calc(760px+7rem)] flex-1 flex-col px-4 pb-6 pt-4 min-[1100px]:px-14 min-[1100px]:pt-[26px]"
+        }
+      >
         {/* ------------------------------- LA SALIDA -------------------------------
             LO PRIMERO DE LA COLUMNA, en las dos vistas y con el mismo
             tratamiento. Aquí se entraba y no se salía: quedaba un "Salir"
@@ -454,7 +483,7 @@ export default function VisorEjercicios({
             mismo que la salida nombra su destino. Un botón que ponga
             "English" mientras se lee inglés es un botón que no se sabe
             si informa o si ofrece. */}
-        <div className="flex items-center justify-between gap-3">
+        <div className={`flex items-center justify-between gap-3 ${embebido ? "hidden" : ""}`}>
           <Link
             href={volver.href}
             className="inline-flex items-center gap-1.5 rounded-full border border-marca-borde bg-white px-3.5 py-[7px] text-[13px] font-semibold text-marca-tinta transition-colors hover:bg-marca-niebla min-[1100px]:text-[13.5px]"
@@ -493,7 +522,11 @@ export default function VisorEjercicios({
         )}
 
         {/* ------------------------------ PROGRESO ------------------------------ */}
-      <div className="mt-4 flex items-center gap-4 min-[1100px]:mt-[18px] min-[1100px]:gap-5">
+      <div
+        className={`flex items-center gap-4 min-[1100px]:gap-5 ${
+          embebido ? "" : "mt-4 min-[1100px]:mt-[18px]"
+        }`}
+      >
         <span className="shrink-0 text-[13px] font-semibold text-marca-gris tabular-nums">
           {t.progreso(indice + 1, ejercicios.length)}
         </span>
@@ -528,7 +561,7 @@ export default function VisorEjercicios({
           {!esHuecos && (
             <h2
               className={`text-pretty font-display text-[22px] font-bold leading-[1.25] text-marca-tinta min-[1100px]:text-[29px] ${
-                ejercicio.fase ? "" : "mt-8 min-[1100px]:mt-10"
+                ejercicio.fase ? "" : embebido ? "mt-6" : "mt-8 min-[1100px]:mt-10"
               }`}
             >
               {ejercicio.enunciado}
@@ -686,10 +719,20 @@ export default function VisorEjercicios({
       {/* Sobre la navegación de secciones, no debajo: ver la nota de
           la barra equivalente en `components/leccion/VistaLeccion.tsx`. */}
       <div
-        data-barra-inferior
-        className="sticky bottom-[var(--nav-inferior)] border-t border-marca-borde bg-white/[0.94] backdrop-blur-md"
+        data-barra-inferior={embebido ? undefined : ""}
+        className={
+          embebido
+            ? "mt-5"
+            : "sticky bottom-[var(--nav-inferior)] border-t border-marca-borde bg-white/[0.94] backdrop-blur-md"
+        }
       >
-        <div className="mx-auto w-full max-w-[calc(760px+7rem)] px-3.5 pb-4 pt-3 min-[1100px]:px-14 min-[1100px]:py-3.5">
+        <div
+          className={
+            embebido
+              ? ""
+              : "mx-auto w-full max-w-[calc(760px+7rem)] px-3.5 pb-4 pt-3 min-[1100px]:px-14 min-[1100px]:py-3.5"
+          }
+        >
           <div className="flex items-center gap-3 min-[1100px]:gap-4">
             <FlechaAtras t={t} alPulsar={indice > 0 ? () => verEjercicio(indice - 1) : null} />
 

@@ -6,7 +6,7 @@ import type { TextosEjercicios } from "@/lib/textos/ejercicios";
 /**
  * El lateral de un bloque de práctica.
  *
- * ES EL MISMO MUEBLE QUE `LateralLecciones` del curso, con otro
+ * ES EL MISMO MUEBLE QUE TENÍA EL LATERAL DE LECCIONES del curso —hoy sustituido por el panel—, con otro
  * contenido dentro: columna de 300px pegada, blanca, con borde a la
  * derecha; arriba el título y el progreso, en medio la lista, abajo un
  * pie. Lo que cambia es qué se lista —las tres fases con sus ejercicios

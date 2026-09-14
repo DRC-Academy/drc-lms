@@ -3,11 +3,17 @@ import { notFound, redirect } from "next/navigation";
 import { focoActual } from "@/lib/sesion-servidor";
 import { conFoco } from "@/lib/foco";
 import { obtenerPerfil } from "@/lib/gestion";
-import { cursoPorSlug, cursosAsignados, leccionParaVer } from "@/lib/cursos-servidor";
+import {
+  arbolDelCurso,
+  cursoPorSlug,
+  cursosAsignados,
+  ejerciciosPorLeccion,
+  leccionParaVer,
+} from "@/lib/cursos-servidor";
 import { sinDripEn } from "@/lib/accesos-manuales";
 import { comoFecha } from "@/lib/fechas";
 import { sanearHtml, tieneContenido } from "@/lib/sanear-html";
-import { prepararLeccion } from "@/lib/leccion-html";
+import { partesDeLeccion, prepararLeccion } from "@/lib/leccion-html";
 import { etiquetaModulo, partirModulo } from "@/lib/modulo";
 import { textosActuales } from "@/lib/idioma-servidor";
 import { incrustacionYoutube } from "@/lib/youtube";
@@ -64,9 +70,14 @@ export default async function PaginaLeccion({
   // se ahorra una espera entera. Nada de esto llega al navegador antes
   // del `redirect`.
 
-  const [suyos, vista] = await Promise.all([
+  // EL ÁRBOL DEL CURSO ENTERO va en la misma ola: el panel de la
+  // izquierda ya no enseña solo el módulo de esta lección, sino todos
+  // los del curso con el actual abierto. Es la misma lectura que hace el
+  // temario, y solo necesita el curso y el alumno, que ya se saben.
+  const [suyos, vista, arbol] = await Promise.all([
     perfil ? cursosAsignados(perfil.plan, nivelDelAlumno(alumnoId, perfil), alumnoId) : Promise.resolve([]),
     leccionParaVer(alumnoId, curso, params.leccion, fechaDrip),
+    arbolDelCurso(alumnoId, curso, fechaDrip),
   ]);
 
   // El guard del plan vale igual en revisión: si el alumno no puede
@@ -98,13 +109,22 @@ export default async function PaginaLeccion({
     cursoTotal,
   } = vista;
 
+  // LA TERCERA OLA, y la única que depende de la segunda: los ejercicios
+  // hechos y totales de las lecciones de ESTE módulo, que hasta aquí no
+  // se sabía cuál era. Son dos consultas pequeñas en paralelo.
+  const cuentaEjercicios = await ejerciciosPorLeccion(
+    alumnoId,
+    hermanas.map((h) => h.id)
+  );
+
   // El orden importa: primero el saneado —que quita scripts, manejadores
   // e iframes que no sean de YouTube o Podbean— y después la preparación,
   // que quita emojis y pone las anclas de los títulos. Al revés, las
   // anclas podrían acabar dentro de algo que el saneador se lleva.
+  // Y al final, el corte en partes por esos mismos títulos.
   const saneado = sanearHtml(leccion.contenido);
-  const { html, titulos } = prepararLeccion(saneado);
-  const contenidoHtml = tieneContenido(html) ? html : "";
+  const { html } = prepararLeccion(saneado);
+  const partes = tieneContenido(html) ? partesDeLeccion(html, leccion.titulo) : [];
 
   const ejerciciosVista: EjercicioVista[] = ejercicios.map((e) => ({
     id: e.id,
@@ -118,20 +138,26 @@ export default async function PaginaLeccion({
   const partido = partirModulo(moduloTitulo, moduloOrden);
   const posicion = hermanas.findIndex((h) => h.id === leccion.id);
 
+  // El módulo de esta lección dentro del árbol: es el que el panel abre.
+  const moduloActual =
+    arbol.modulos.find((m) => m.lecciones.some((l) => l.id === leccion.id))?.id ?? "";
+
   return (
     <VistaLeccion
       cursoSlug={curso.slug}
+      cursoTitulo={curso.titulo}
       cursoCompletadas={cursoCompletadas}
       cursoTotal={cursoTotal}
       etiquetaModulo={etiquetaModulo(partido, textosActuales().curso)}
-      tituloModulo={partido.titulo}
+      moduloId={moduloActual}
+      modulos={arbol.modulos}
+      ejerciciosPorLeccion={cuentaEjercicios}
       leccion={{
         id: leccion.id,
         titulo: leccion.titulo,
         videoIncrustado: incrustacionYoutube(leccion.videoUrl),
       }}
-      contenidoHtml={contenidoHtml}
-      titulos={titulos}
+      partes={partes}
       hermanas={hermanas}
       ejercicios={ejerciciosVista}
       completada={completada}

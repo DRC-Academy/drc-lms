@@ -1,39 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { LeccionIndice } from "@/lib/cursos-servidor";
-import type { TituloLeccion } from "@/lib/leccion-html";
+import type { EjerciciosDeLeccion, LeccionIndice, ModuloIndice } from "@/lib/cursos-servidor";
+import type { ParteLeccion } from "@/lib/leccion-html";
 import type { EjercicioVista } from "@/lib/ejercicios";
-import { TiraProgreso } from "@/components/leccion/CabeceraLeccion";
 import { usarIdioma } from "@/components/ProveedorIdioma";
-import LateralLecciones, { ItemLeccion } from "@/components/leccion/LateralLecciones";
-import IndiceLeccion from "@/components/leccion/IndiceLeccion";
+import BotonIdioma from "@/components/BotonIdioma";
 import FlujoEjercicios from "@/components/leccion/FlujoEjercicios";
 import BotonCompletar from "@/components/leccion/BotonCompletar";
-import Banner from "@/components/Banner";
+import PanelCurso, { type EstadoEjerciciosActual } from "@/components/leccion/PanelCurso";
+import PasoAPaso, { type Paso } from "@/components/leccion/PasoAPaso";
+import { usarMarco } from "@/components/leccion/MarcoCurso";
 import { conFoco } from "@/lib/foco";
 
 /**
- * La pantalla de lección entera: teoría, ejercicios y cierre.
+ * LA PANTALLA DE LECCIÓN: EL PANEL DEL CURSO Y LA LECCIÓN POR PARTES.
  *
- * Las tres son la misma URL y cambian por estado, no por navegación: el
- * alumno entra en los ejercicios de la lección que está leyendo y sale
- * de vuelta a ella. Meterlas en rutas distintas obligaría a recargar el
- * lateral y a perder las respuestas al volver atrás.
+ * Tres columnas a partir de 1200px: la barra de iconos —que pone el
+ * layout—, el panel del curso a 330px y la lección en lo que queda. La
+ * lección ya no es una columna de texto de arriba abajo: se lee una
+ * parte cada vez, con un paso a paso encima que dice cuántas hay, cuál
+ * es esta y cuáles quedan. El vídeo es la primera parte cuando lo hay;
+ * los ejercicios vienen después de la última, detrás de «Evaluar».
  *
- * El índice del curso SÍ es una ruta —`/curso/[slug]`—: es otra pantalla,
- * se enlaza desde tres sitios y tiene que poder abrirse sola.
+ * LAS TRES —teoría, ejercicios y cierre— SIGUEN SIENDO LA MISMA URL y
+ * cambian por estado, no por navegación: el alumno entra en los
+ * ejercicios de la lección que está leyendo y sale de vuelta a ella.
+ *
+ * POR DEBAJO DE 1200px el panel se esconde y se abre como un cajón
+ * desde la barra; por debajo de 900px la barra es la navegación de
+ * abajo, el paso a paso se pliega a «Paso 2 de 6» y la salida, el
+ * idioma y el nombre de la lección van en una fila arriba.
  */
 export default function VistaLeccion({
   cursoSlug,
+  cursoTitulo,
   cursoCompletadas,
   cursoTotal,
   etiquetaModulo,
-  tituloModulo,
+  moduloId,
+  modulos,
+  ejerciciosPorLeccion,
   leccion,
-  contenidoHtml,
-  titulos,
+  partes,
   hermanas,
   ejercicios,
   completada,
@@ -45,13 +55,18 @@ export default function VistaLeccion({
   foco = null,
 }: {
   cursoSlug: string;
+  cursoTitulo: string;
   cursoCompletadas: number;
   cursoTotal: number;
   etiquetaModulo: string;
-  tituloModulo: string;
+  moduloId: string;
+  /** El curso entero, para el panel. */
+  modulos: ModuloIndice[];
+  /** Ejercicios hechos y totales por lección, solo del módulo actual. */
+  ejerciciosPorLeccion: Record<string, EjerciciosDeLeccion>;
   leccion: { id: string; titulo: string; videoIncrustado: string | null };
-  contenidoHtml: string;
-  titulos: TituloLeccion[];
+  /** El texto de la lección, ya partido por sus títulos. */
+  partes: ParteLeccion[];
   hermanas: LeccionIndice[];
   ejercicios: EjercicioVista[];
   completada: boolean;
@@ -66,166 +81,262 @@ export default function VistaLeccion({
    */
   foco?: string | null;
 }) {
-  const hayTeoria = contenidoHtml.trim() !== "";
+  const { t: todos } = usarIdioma();
+  const t = todos.curso;
+  const { panelAbierto, abrirPanel, cerrarPanel } = usarMarco();
+
+  const hayTeoria = partes.length > 0;
   const hayEjercicios = ejercicios.length > 0;
   const hayVideo = leccion.videoIncrustado !== null;
 
   // ---------------------------------------------------------------
-  // QUÉ CUENTA COMO "LECCIÓN VACÍA"
+  // LAS PARTES
   //
-  // El HTML no es lo único que se enseña. 158 lecciones son SOLO un
-  // vídeo —su `post_content` viene vacío de LearnDash— y mirar únicamente
-  // el HTML las declaraba vacías: al alumno le salía "esta lección
-  // todavía no tiene contenido, puedes seguir con la siguiente" justo
-  // encima del vídeo que tenía que ver.
-  //
-  // El audio no necesita su propia condición: los 98 son iframes de
-  // Podbean dentro del HTML, así que ya cuentan como teoría —
-  // `tieneContenido` da por bueno un iframe aunque no lleve texto.
+  // El vídeo va primero, como una parte más: de las 160 lecciones con
+  // vídeo, 158 no traen texto, así que para ellas es la única. Después,
+  // el texto partido por sus títulos —ver `partesDeLeccion`—. La parte
+  // de antes del primer título no tiene nombre propio y toma el de la
+  // lección.
   // ---------------------------------------------------------------
-  const hayAlgoQueEnsenar = hayTeoria || hayVideo || hayEjercicios;
+  const pasos: Paso[] = useMemo(
+    () => [
+      ...(hayVideo ? [{ id: "video", titulo: t.parteVideo }] : []),
+      ...partes.map((p) => ({ id: p.id, titulo: p.titulo ?? t.parteIntro })),
+    ],
+    [hayVideo, partes, t.parteVideo, t.parteIntro]
+  );
 
+  const hayAlgoQueEnsenar = pasos.length > 0 || hayEjercicios;
+
+  const [paso, setPaso] = useState(0);
   // Una lección de solo ejercicios no tiene teoría que enseñar: se entra
-  // directamente al flujo en vez de a una pantalla en blanco con un
-  // botón de "Empezar".
-  const [enEjercicios, setEnEjercicios] = useState(!hayTeoria && hayEjercicios);
-  const t = usarIdioma().t.curso;
-  const [panel, setPanel] = useState(false);
+  // directamente al flujo en vez de a una pantalla en blanco.
+  const [enEjercicios, setEnEjercicios] = useState(pasos.length === 0 && hayEjercicios);
+  const [estadoEjercicios, setEstadoEjercicios] = useState<EstadoEjerciciosActual | null>(null);
 
+  const ultimoPaso = pasos.length - 1;
+  const enElUltimo = paso >= ultimoPaso;
   const posicion = hermanas.findIndex((h) => h.id === leccion.id);
-  const hechasModulo = hermanas.filter((h) => h.completada).length;
 
-  const columnas = enEjercicios
-    ? "min-[1100px]:grid-cols-[72px_minmax(0,1fr)]"
-    : titulos.length > 0
-    ? "min-[1100px]:grid-cols-[300px_minmax(0,1fr)_220px]"
-    : "min-[1100px]:grid-cols-[300px_minmax(0,1fr)]";
+  function irA(i: number) {
+    setPaso(Math.max(0, Math.min(ultimoPaso, i)));
+    window.scrollTo({ top: 0 });
+  }
+
+  function abrirEjercicios() {
+    setEnEjercicios(true);
+    window.scrollTo({ top: 0 });
+  }
+
+  function volverALaTeoria() {
+    setEnEjercicios(false);
+    setEstadoEjercicios(null);
+    window.scrollTo({ top: 0 });
+  }
+
+  // Escape cierra el cajón del panel.
+  useEffect(() => {
+    if (!panelAbierto) return;
+    function alPulsar(evento: KeyboardEvent) {
+      if (evento.key === "Escape") cerrarPanel();
+    }
+    document.addEventListener("keydown", alPulsar);
+    return () => document.removeEventListener("keydown", alPulsar);
+  }, [panelAbierto, cerrarPanel]);
+
+  const parteActual = pasos[paso];
+  const contenidoActual = parteActual?.id === "video" ? null : partes.find((p) => p.id === parteActual?.id);
+
+  const instruccion = enEjercicios
+    ? hayTeoria || hayVideo
+      ? t.instruccionEjercicios(ejercicios.length)
+      : t.instruccionSoloEjercicios(ejercicios.length)
+    : pasos.length <= 1
+      ? t.instruccionUnaParte(ejercicios.length)
+      : hayEjercicios
+        ? t.instruccionPartes(ejercicios.length)
+        : t.instruccionSinEjercicios;
+
+  const hrefCurso = conFoco(`/curso/${cursoSlug}`, foco);
+
+  const panel = (
+    <PanelCurso
+      cursoTitulo={cursoTitulo}
+      cursoCompletadas={cursoCompletadas}
+      cursoTotal={cursoTotal}
+      modulos={modulos}
+      moduloActualId={moduloId}
+      leccionActualId={leccion.id}
+      ejercicios={ejerciciosPorLeccion}
+      ejerciciosActual={enEjercicios ? estadoEjercicios : null}
+      enEjercicios={enEjercicios}
+      alAbrirEjercicios={hayEjercicios ? abrirEjercicios : null}
+      cursoSlug={cursoSlug}
+      foco={foco}
+      abiertoComoCajon={panelAbierto}
+      alElegir={cerrarPanel}
+    />
+  );
 
   return (
-    // La columna de altura completa la pone ahora el layout del curso,
-    // que es quien tiene la cabecera. Aquí basta con ocupar lo que sobra:
-    // es lo que deja la barra de acciones pegada al fondo de la ventana
-    // cuando la lección es corta.
-    <div className="flex flex-1 flex-col bg-marca-niebla">
-      {/* LA BARRA DE LA LECCIÓN, EN MÓVIL. Ya no es una cabecera: la
-          cabecera —con el logotipo, la navegación y el curso— la pone el
-          layout, y esto es lo que solo sabe la lección: en cuál del
-          módulo estás y cómo abrir la lista de hermanas.
-
-          No es `sticky`. Antes lo era porque formaba parte de la
-          cabecera; ahora encima hay dos filas pegajosas y una tercera se
-          comería un tercio de una pantalla de 375px. La orientación
-          constante en móvil la da la barra de navegación de abajo. */}
-      <div className="border-b border-marca-borde bg-white px-3.5 py-2.5 min-[1100px]:hidden">
-        <div className="flex items-center gap-3">
-          {/* VOLVER A LA TEORÍA, la contrapartida en móvil de la flecha
-              del carril lateral, que por debajo de 1100px no existe.
-              Aquí y no en la salida del visor porque son dos destinos
-              distintos: aquélla saca del curso, ésta devuelve al texto
-              de esta misma lección.
-
-              Solo si hay teoría: en una lección que es solo ejercicios
-              se entra directamente al flujo y no hay nada a lo que
-              volver. */}
-          {enEjercicios && hayTeoria && (
-            <button
-              type="button"
-              onClick={() => {
-                setEnEjercicios(false);
-                window.scrollTo({ top: 0 });
-              }}
-              aria-label={t.volverALaTeoria}
-              className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] border border-marca-borde bg-marca-niebla text-[14px] leading-none text-marca-tinta transition-colors hover:bg-marca-nieblaOscura"
-            >
-              ←
-            </button>
-          )}
-
-          <div className="min-w-0 flex-1">
-            {enEjercicios ? (
-              <TiraProgreso texto={t.ejercicios} hechos={hechasModulo} total={hermanas.length} />
-            ) : (
-              <TiraProgreso
-                texto={t.leccionDeTotal(posicion + 1, hermanas.length)}
-                hechos={hechasModulo}
-                total={hermanas.length}
-              />
-            )}
-          </div>
+    <div className="flex flex-1 items-stretch bg-marca-niebla">
+      {/* ------------------------------ EL PANEL ------------------------------
+          A partir de 1200px, una columna fija de la altura de la ventana
+          con su propio scroll. Por debajo, un cajón que abre la barra
+          —o el rótulo de la lección, en móvil— y que tapa la pantalla. */}
+      {panelAbierto && (
+        <button
+          type="button"
+          aria-label={t.cerrarElPanel}
+          onClick={cerrarPanel}
+          className="fixed inset-0 z-40 bg-[rgba(18,33,26,.42)] min-[1200px]:hidden"
+        />
+      )}
+      <aside
+        aria-label={todos.navegacion.miCurso}
+        className={`shrink-0 border-r border-marca-borde bg-white min-[1200px]:sticky min-[1200px]:top-0 min-[1200px]:h-dvh min-[1200px]:w-[330px] ${
+          panelAbierto
+            ? "aparece fixed inset-y-0 left-0 z-50 w-[min(330px,100%)] shadow-[0_18px_44px_-16px_rgba(18,33,26,0.35)] min-[1200px]:inset-auto min-[1200px]:z-auto min-[1200px]:shadow-none"
+            : "hidden min-[1200px]:block"
+        }`}
+      >
+        {panelAbierto && (
           <button
             type="button"
-            onClick={() => setPanel((v) => !v)}
-            className="shrink-0 rounded-full border border-marca-borde bg-marca-niebla px-3.5 py-[7px] text-[12.5px] font-semibold text-marca-tinta transition-colors hover:bg-marca-nieblaOscura"
+            onClick={cerrarPanel}
+            aria-label={t.cerrarElPanel}
+            className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-marca-gris transition-colors hover:bg-marca-nieblaOscura hover:text-marca-tinta min-[1200px]:hidden"
           >
-            {panel ? t.cerrar : t.lecciones}
+            <IconoCerrar className="h-4 w-4" />
           </button>
-        </div>
-      </div>
+        )}
+        {panel}
+      </aside>
 
-      <div className={`grid flex-1 grid-cols-1 ${columnas}`}>
-        <LateralLecciones
-          lecciones={hermanas}
-          actualId={leccion.id}
-          cursoSlug={cursoSlug}
-          etiquetaModulo={etiquetaModulo}
-          tituloModulo={tituloModulo}
-          cursoCompletadas={cursoCompletadas}
-          cursoTotal={cursoTotal}
-          replegado={enEjercicios}
-          alVolver={() => setEnEjercicios(false)}
-          foco={foco}
-        />
-
-        {enEjercicios ? (
-          <main className="flex flex-col bg-marca-niebla">
-            <FlujoEjercicios
-              ejercicios={ejercicios}
-              registrarIntentos={registrarIntentos}
-              profesor={profesor}
-              leccionId={leccion.id}
-              cursoSlug={cursoSlug}
-              siguienteId={siguienteId}
-              foco={foco}
-              alSalir={() => {
-                setEnEjercicios(false);
-                window.scrollTo({ top: 0 });
+      {/* ----------------------------- LA LECCIÓN ----------------------------- */}
+      <main className="relative flex min-w-0 flex-1 flex-col">
+        {/* LA ESQUINA, EN ESCRITORIO: el curso, su progreso y el idioma.
+            Discretos: es lo que la cabecera decía arriba y aquí no hay
+            cabecera. */}
+        <div className="absolute right-6 top-5 hidden items-center gap-3.5 min-[900px]:flex min-[1200px]:right-10">
+          <Link
+            href={hrefCurso}
+            className="max-w-[260px] truncate text-[12.5px] text-marca-gris transition-colors hover:text-marca-tinta"
+            title={cursoTitulo}
+          >
+            {cursoTitulo}
+          </Link>
+          <div
+            className="h-1 w-[72px] overflow-hidden rounded-[3px] bg-marca-pista"
+            role="progressbar"
+            aria-valuenow={cursoTotal > 0 ? Math.round((cursoCompletadas / cursoTotal) * 100) : 0}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={todos.navegacion.progresoEnCurso(cursoTitulo, cursoCompletadas, cursoTotal)}
+          >
+            <div
+              className="h-full rounded-[3px] bg-marca-verde"
+              style={{
+                width: `${cursoTotal > 0 ? Math.round((cursoCompletadas / cursoTotal) * 100) : 0}%`,
               }}
             />
-          </main>
-        ) : (
-          <>
-            <main className="flex min-w-0 flex-col bg-marca-niebla">
-              {/* `columna-leccion` es la rejilla de tres calles: el texto
-                  en la del medio a 680px y el vídeo rompiendo a lo ancho.
-                  Ver `globals.css`. */}
-              <div className="columna-leccion flex-1 px-4 pb-6 pt-7 min-[1100px]:px-14 min-[1100px]:pb-6 min-[1100px]:pt-10">
-                {/* AQUÍ HABÍA UN AVISO DE «estás viendo el curso como
-                    equipo», y se ha ido a la cabecera. No por sitio:
-                    porque era el ÚNICO de la aplicación. El equipo sabía
-                    que estaba revisando dentro de una lección —la
-                    pantalla donde menos falta hace, porque acaba de
-                    entrar desde la ficha— y no lo sabía en el temario, ni
-                    en «Para ti», ni en «Mi progreso», que son las tres
-                    donde sí se olvida.
+          </div>
+          <span className="text-[12px] font-semibold text-marca-gris tabular-nums">
+            {cursoTotal > 0 ? Math.round((cursoCompletadas / cursoTotal) * 100) : 0}%
+          </span>
+          <BotonIdioma className="ml-1.5" />
+        </div>
 
-                    Ahora lo dice la tira de `components/Cabecera.tsx`,
-                    que sale en todas y además nombra al alumno y ofrece
-                    la salida. Ver `TiraRevision`. */}
+        {/* LA FILA DE MÓVIL: la salida, dónde estás —que abre el panel— y
+            el idioma. Lo que en escritorio está repartido entre la X, la
+            esquina y el panel. */}
+        <div className="flex items-center gap-2.5 px-3.5 pt-3 min-[900px]:hidden">
+          <Link
+            href={hrefCurso}
+            aria-label={t.volverAlCurso}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-marca-borde bg-white text-marca-tinta transition-colors hover:bg-marca-niebla"
+          >
+            <IconoCerrar className="h-4 w-4" />
+          </Link>
+          <button
+            type="button"
+            onClick={abrirPanel}
+            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[11.5px] font-semibold uppercase leading-none tracking-[0.08em] text-marca-grisSuave transition-colors hover:text-marca-tinta"
+          >
+            <span className="truncate">{t.leccionDeTotal(posicion + 1, hermanas.length)}</span>
+            <IconoChevron className="h-3.5 w-3.5 shrink-0" />
+          </button>
+          <BotonIdioma />
+        </div>
 
-                <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-                  {t.leccionDeTotal(posicion + 1, hermanas.length)}
-                </p>
+        <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col px-4 pb-8 pt-5 min-[900px]:px-8 min-[900px]:pb-10 min-[900px]:pt-[76px]">
+          {/* ------------------------------ CABECERA ------------------------------ */}
+          <header className="relative text-center">
+            <Link
+              href={hrefCurso}
+              aria-label={t.volverAlCurso}
+              className="absolute left-0 top-1 hidden h-10 w-10 place-items-center rounded-full border border-marca-borde bg-white text-marca-tinta transition-colors hover:bg-marca-niebla min-[900px]:grid"
+            >
+              <IconoCerrar className="h-4 w-4" />
+            </Link>
 
-                <h1 className="mt-2.5 text-pretty font-display text-[24px] font-bold leading-[1.18] text-marca-tinta min-[1100px]:text-[33px]">
-                  {leccion.titulo}
-                </h1>
+            <p className="hidden text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave min-[900px]:block">
+              {etiquetaModulo} · {t.leccionDeTotal(posicion + 1, hermanas.length)}
+            </p>
+            <h1 className="mx-auto max-w-[600px] text-balance font-display text-[24px] font-bold leading-[1.16] tracking-[-0.01em] text-marca-tinta min-[900px]:mt-3 min-[900px]:text-[30px] min-[900px]:leading-[1.15]">
+              {leccion.titulo}
+            </h1>
+            {hayAlgoQueEnsenar && (
+              <p className="mx-auto mt-2.5 max-w-[520px] text-pretty text-[14.5px] leading-[1.5] text-marca-gris min-[900px]:mt-3 min-[900px]:text-[15px]">
+                {instruccion}
+              </p>
+            )}
+          </header>
 
-                {/* `ancho` lo saca de la calle del texto: 960px en vez de
-                    680. El `aspect-video` va en el contenedor y no en el
-                    iframe, que trae su propia altura por defecto y ganaba:
-                    salía una banda de 150px. */}
-                {leccion.videoIncrustado && (
-                  <div className="ancho relative mt-6 aspect-video overflow-hidden rounded-[14px] border border-marca-bordeSuave bg-marca-pista">
+          {/* ----------------------------- PASO A PASO ----------------------------
+              Solo con dos partes o más: con una no hay por dónde ir. */}
+          {pasos.length >= 2 && (
+            <div className="mt-6 min-[900px]:mt-9">
+              <PasoAPaso pasos={pasos} activo={paso} todoHecho={enEjercicios} alElegir={irA} />
+            </div>
+          )}
+
+          {/* ------------------------------ CONTENIDO ------------------------------ */}
+          {enEjercicios ? (
+            <div className="mt-5 min-[900px]:mt-7">
+              <FlujoEjercicios
+                ejercicios={ejercicios}
+                registrarIntentos={registrarIntentos}
+                profesor={profesor}
+                leccionId={leccion.id}
+                cursoSlug={cursoSlug}
+                siguienteId={siguienteId}
+                foco={foco}
+                alSalir={volverALaTeoria}
+                alEstado={setEstadoEjercicios}
+              />
+            </div>
+          ) : parteActual ? (
+            <>
+              <section
+                key={parteActual.id}
+                aria-label={parteActual.titulo}
+                className="aparece mt-5 rounded-[16px] border border-marca-borde bg-white px-5 py-6 min-[900px]:mt-7 min-[900px]:px-11 min-[900px]:py-8"
+              >
+                {pasos.length >= 2 && (
+                  <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-verde">
+                    {t.parteDe(paso + 1, pasos.length)}
+                  </p>
+                )}
+                {/* La introducción no repite el título: ya está encima. */}
+                {(parteActual.id === "video" || contenidoActual?.titulo) && (
+                  <h2 className="mt-2 text-pretty font-display text-[21px] font-bold leading-[1.25] text-marca-tinta min-[900px]:text-[24px]">
+                    {parteActual.titulo}
+                  </h2>
+                )}
+
+                {parteActual.id === "video" && leccion.videoIncrustado && (
+                  <div className="relative mt-5 aspect-video overflow-hidden rounded-[12px] border border-marca-bordeSuave bg-marca-pista">
                     <iframe
                       src={leccion.videoIncrustado}
                       title={leccion.titulo}
@@ -237,187 +348,162 @@ export default function VistaLeccion({
                   </div>
                 )}
 
-                {hayTeoria && (
+                {contenidoActual && (
                   <div
-                    className="leccion mt-7 min-[1100px]:mt-[30px]"
-                    dangerouslySetInnerHTML={{ __html: contenidoHtml }}
+                    className={
+                      pasos.length >= 2 || contenidoActual.titulo ? "leccion mt-4 min-[900px]:mt-5" : "leccion"
+                    }
+                    dangerouslySetInnerHTML={{ __html: contenidoActual.html }}
                   />
                 )}
+              </section>
 
-                {/* La franja de los ejercicios. Es el mismo banner que el
-                    del curso en el inicio o el de la práctica, en su
-                    variante compacta: aquí vive dentro de la columna de
-                    la lección, así que no lleva cifra al lado. */}
-                {hayEjercicios && (
-                  <div className="mt-9 min-[1100px]:mt-[38px]">
-                    <Banner
-                      size="md"
-                      eyebrow={t.ejercicios}
-                      title={
-                        ejercicios.length === 1
-                          ? t.unEjercicioParaFijar
-                          : t.variosEjerciciosParaFijar(ejercicios.length)
-                      }
-                      subtitle={t.deUnoEnUno}
-                      action={{
-                        label: t.empezar,
-                        srSuffix: t.losEjerciciosDeEstaLeccion,
-                        onClick: () => {
-                          setEnEjercicios(true);
-                          window.scrollTo({ top: 0 });
-                        },
-                      }}
-                    />
-                  </div>
-                )}
+              {/* ------------------------------- BOTONES -------------------------------
+                  Anterior a la izquierda, el principal a lo ancho. En la
+                  primera parte, «Anterior» lleva a la lección de antes; en
+                  la última, el principal es «Evaluar» si hay ejercicios y
+                  «Marcar como completada» si no. */}
+              <div className="mt-4 flex items-center gap-3 min-[900px]:mt-5 min-[900px]:gap-3.5">
+                <BotonAnterior
+                  texto={paso > 0 ? t.parteAnterior : t.anterior}
+                  alPulsar={paso > 0 ? () => irA(paso - 1) : null}
+                  href={paso === 0 && anteriorId ? conFoco(`/curso/${cursoSlug}/${anteriorId}`, foco) : null}
+                />
 
-                {!hayAlgoQueEnsenar && (
-                  <p className="mt-7 text-[16px] leading-[1.6] text-marca-gris">
-                    {t.leccionSinContenido}
-                  </p>
-                )}
-              </div>
-
-              {/* ------------------------ BARRA DE ACCIONES -----------------------
-                  UN SOLO BOTÓN DE AVANZAR, y es el de marcar. Antes había
-                  dos que hacían lo mismo: el verde y una flecha "Siguiente
-                  →" al lado. Con dos caminos al mismo sitio, el alumno
-                  elige el que no deja constancia de que ha hecho la
-                  lección, que es justo el que no queremos que elija.
-                  Para volver atrás sí hace falta la flecha: no hay otra. */}
-              {/* SE APOYA SOBRE LA NAVEGACIÓN, NO DEBAJO. `bottom-0`
-                  ancla esta barra al borde de la ventana, que en móvil
-                  es justo donde está la barra de secciones: el botón
-                  principal de la lección quedaba tapado por ella y la
-                  única salida al inicio, inalcanzable. `--nav-inferior`
-                  vale 78px cuando esa navegación existe y 0 cuando no
-                  —ver `globals.css`—, así que esto sirve igual en
-                  escritorio, donde no hay nada debajo. */}
-              <div
-                data-barra-inferior
-                className="sticky bottom-[var(--nav-inferior)] border-t border-marca-borde bg-white/[0.94] backdrop-blur-md"
-              >
-                <div className="mx-auto w-full max-w-[calc(680px+7rem)] px-3.5 pb-4 pt-3 min-[1100px]:px-14 min-[1100px]:py-3.5">
-                  <div className="flex items-center gap-3 min-[1100px]:gap-4">
-                    <FlechaLeccion
-                      href={anteriorId ? conFoco(`/curso/${cursoSlug}/${anteriorId}`, foco) : null}
-                      etiqueta={t.anterior}
-                    />
-
-                    <BotonCompletar
-                      leccionId={leccion.id}
-                      cursoSlug={cursoSlug}
-                      siguienteId={siguienteId}
-                      foco={foco}
-                      className="flex-1 rounded-full btn-verde px-6 py-[13px] text-center text-[15px] font-semibold min-[1100px]:py-3.5 min-[1100px]:text-[15.5px]"
-                    >
-                      <span className="min-[1100px]:hidden">
-                        {completada ? t.completarCortoHecha : t.completarCorto}
-                      </span>
-                      <span className="hidden min-[1100px]:inline">
-                        {completada
-                          ? t.completarLargoHecha
-                          : esUltimaDelModulo
-                            ? t.completarModulo
-                            : t.completarLargo}
-                      </span>
-                    </BotonCompletar>
-                  </div>
-
-                </div>
-              </div>
-            </main>
-
-            {titulos.length > 0 && <IndiceLeccion key={leccion.id} titulos={titulos} />}
-          </>
-        )}
-      </div>
-
-      {/* --------------------------- PANEL DE MÓVIL --------------------------- */}
-      {panel && (
-        <div className="fixed inset-0 z-40 flex flex-col min-[1100px]:hidden">
-          <button
-            type="button"
-            aria-label={t.cerrarElPanel}
-            onClick={() => setPanel(false)}
-            className="flex-1 bg-[rgba(18,33,26,.42)]"
-          />
-          <div className="flex max-h-[620px] flex-col rounded-t-[20px] bg-white">
-            <div className="border-b border-marca-nieblaOscura px-[18px] pb-3.5 pt-[18px]">
-              <span aria-hidden className="mx-auto mb-3.5 block h-1 w-9 rounded-full bg-marca-bordeSuave" />
-              <p className="text-[11px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-                {etiquetaModulo}
-              </p>
-              <h2 className="mt-2 text-pretty font-display text-[16px] font-bold leading-[1.3] text-marca-tinta">
-                {tituloModulo}
-              </h2>
-              <div className="mt-3 flex items-center gap-2.5">
-                <div className="h-[5px] flex-1 overflow-hidden rounded-[3px] bg-marca-pista">
-                  <div
-                    className="h-full rounded-[3px] bg-marca-verde"
-                    style={{
-                      width: `${
-                        hermanas.length > 0 ? Math.round((hechasModulo / hermanas.length) * 100) : 0
-                      }%`,
-                    }}
-                  />
-                </div>
-                <span className="shrink-0 text-[12.5px] font-medium text-marca-gris tabular-nums">
-                  {t.contador(hechasModulo, hermanas.length)}
-                </span>
-              </div>
-            </div>
-
-            <ol className="flex-1 overflow-y-auto px-3 py-3">
-              {hermanas.map((h) => (
-                <li key={h.id}>
-                  <ItemLeccion
-                    leccion={h}
-                    actual={h.id === leccion.id}
+                {!enElUltimo ? (
+                  <button
+                    type="button"
+                    onClick={() => irA(paso + 1)}
+                    className="btn-verde flex-1 rounded-full px-6 py-[14px] text-center text-[15px] font-semibold min-[900px]:py-[15px] min-[900px]:text-[15.5px]"
+                  >
+                    {t.siguiente}
+                  </button>
+                ) : hayEjercicios ? (
+                  <button
+                    type="button"
+                    onClick={abrirEjercicios}
+                    className="btn-verde flex-1 rounded-full px-6 py-[14px] text-center text-[15px] font-semibold min-[900px]:py-[15px] min-[900px]:text-[15.5px]"
+                  >
+                    {t.evaluar}
+                  </button>
+                ) : (
+                  <BotonCompletar
+                    leccionId={leccion.id}
                     cursoSlug={cursoSlug}
+                    siguienteId={siguienteId}
                     foco={foco}
-                    compacto
-                    alElegir={() => setPanel(false)}
-                  />
-                </li>
-              ))}
-            </ol>
-
-            <div className="border-t border-marca-nieblaOscura px-[18px] pb-5 pt-3.5">
-              <Link
-                href={conFoco(`/curso/${cursoSlug}`, foco)}
-                className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-marca-borde bg-marca-niebla px-3 py-[13px] text-[14px] font-semibold text-marca-tinta"
-              >
-                {t.verElCursoCompleto}
-                <span aria-hidden className="text-marca-grisSuave">
-                  →
-                </span>
-              </Link>
-            </div>
-          </div>
+                    className="btn-verde flex-1 rounded-full px-6 py-[14px] text-center text-[15px] font-semibold min-[900px]:py-[15px] min-[900px]:text-[15.5px]"
+                  >
+                    <span className="min-[900px]:hidden">
+                      {completada ? t.completarCortoHecha : t.completarCorto}
+                    </span>
+                    <span className="hidden min-[900px]:inline">
+                      {completada
+                        ? t.completarLargoHecha
+                        : esUltimaDelModulo
+                          ? t.completarModulo
+                          : t.completarLargo}
+                    </span>
+                  </BotonCompletar>
+                )}
+              </div>
+            </>
+          ) : (
+            // Ni teoría, ni vídeo, ni ejercicios: se dice y se deja seguir.
+            <>
+              <section className="mt-5 rounded-[16px] border border-marca-borde bg-white px-5 py-6 min-[900px]:mt-7 min-[900px]:px-11 min-[900px]:py-8">
+                <p className="text-[16px] leading-[1.6] text-marca-gris">{t.leccionSinContenido}</p>
+              </section>
+              <div className="mt-4 flex items-center gap-3 min-[900px]:mt-5">
+                <BotonAnterior
+                  texto={t.anterior}
+                  alPulsar={null}
+                  href={anteriorId ? conFoco(`/curso/${cursoSlug}/${anteriorId}`, foco) : null}
+                />
+                <BotonCompletar
+                  leccionId={leccion.id}
+                  cursoSlug={cursoSlug}
+                  siguienteId={siguienteId}
+                  foco={foco}
+                  className="btn-verde flex-1 rounded-full px-6 py-[14px] text-center text-[15px] font-semibold min-[900px]:py-[15px] min-[900px]:text-[15.5px]"
+                >
+                  {completada ? t.completarCortoHecha : t.completarCorto}
+                </BotonCompletar>
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </main>
     </div>
   );
 }
 
 /**
- * Volver a la lección anterior. En la primera del curso no hay destino y
- * queda el hueco: quitarla movería el botón principal de sitio al pasar
- * de la primera a la segunda lección.
+ * El botón secundario, a la izquierda del principal: vuelve a la parte
+ * anterior, o a la lección anterior desde la primera parte. Sin destino
+ * —la primera lección del curso— se conserva el hueco: quitarlo movería
+ * el botón principal de sitio al pasar de una parte a la siguiente.
  */
-function FlechaLeccion({ href, etiqueta }: { href: string | null; etiqueta: string }) {
+function BotonAnterior({
+  texto,
+  alPulsar,
+  href,
+}: {
+  texto: string;
+  alPulsar: (() => void) | null;
+  href: string | null;
+}) {
   const clase =
-    "grid h-11 w-11 shrink-0 place-items-center rounded-full border border-marca-borde text-[15px] leading-none text-marca-tinta transition-colors hover:bg-marca-niebla min-[1100px]:h-auto min-[1100px]:w-auto min-[1100px]:px-[18px] min-[1100px]:py-[11px] min-[1100px]:text-[14.5px] min-[1100px]:font-medium";
+    "grid h-12 w-12 shrink-0 place-items-center rounded-full border border-marca-borde bg-white text-marca-tinta transition-colors hover:bg-marca-niebla min-[900px]:h-auto min-[900px]:w-auto min-[900px]:px-[22px] min-[900px]:py-[13px] min-[900px]:text-[14.5px] min-[900px]:font-medium";
 
-  if (!href) {
-    return <span aria-hidden className={`${clase} pointer-events-none opacity-0`} />;
+  const dentro = (
+    <>
+      <span className="min-[900px]:hidden">
+        <IconoFlecha className="h-4 w-4" />
+      </span>
+      <span className="hidden min-[900px]:inline">{texto}</span>
+    </>
+  );
+
+  if (alPulsar) {
+    return (
+      <button type="button" onClick={alPulsar} className={clase}>
+        {dentro}
+      </button>
+    );
   }
 
+  if (href) {
+    return (
+      <Link href={href} className={clase}>
+        {dentro}
+      </Link>
+    );
+  }
+
+  return <span aria-hidden className={`${clase} pointer-events-none opacity-0`} />;
+}
+
+function IconoCerrar({ className }: { className: string }) {
   return (
-    <Link href={href} className={clase}>
-      <span className="min-[1100px]:hidden">←</span>
-      <span className="hidden min-[1100px]:inline">{etiqueta}</span>
-    </Link>
+    <svg aria-hidden viewBox="0 0 16 16" className={className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <path d="m4 4 8 8M12 4l-8 8" />
+    </svg>
+  );
+}
+
+function IconoChevron({ className }: { className: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" className={className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m4 6 4 4 4-4" />
+    </svg>
+  );
+}
+
+function IconoFlecha({ className }: { className: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" className={className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 8H3m4.5-4.5L3 8l4.5 4.5" />
+    </svg>
   );
 }

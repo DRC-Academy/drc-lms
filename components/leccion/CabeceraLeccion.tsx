@@ -17,12 +17,10 @@ import Link from "next/link";
  * Ahora la cabecera es UNA, `components/Cabecera.tsx`, y el contexto del
  * curso se le pasa en la prop `contexto`: se añade a la navegación en
  * vez de sustituirla. De este archivo solo sobreviven las dos piezas que
- * no eran cabecera:
- *
- *   - `CabeceraCargando`, el hueco del `Suspense` mientras el layout lee
- *     el nombre y el progreso del curso.
- *   - `TiraProgreso`, la barra fina del módulo que la lección pinta en
- *     su propia fila de móvil.
+ * no eran cabecera: `CabeceraCargando`, el hueco del `Suspense` mientras
+ * el layout lee el nombre y el progreso del curso. (La tira de progreso
+ * de móvil que vivía aquí se fue con el rediseño de la lección: la
+ * orientación la da ahora el panel del curso y el paso a paso.)
  */
 
 /**
@@ -71,29 +69,5 @@ export function CabeceraCargando() {
 
       <span className="sr-only">{usarIdioma().t.curso.cargandoElCurso}</span>
     </header>
-  );
-}
-
-/**
- * La tira de progreso del módulo, en móvil.
- *
- * Es la respuesta de orientación cuando no hay lateral, y cambia de
- * contenido según se esté leyendo la teoría o respondiendo ejercicios.
- * La pinta `VistaLeccion` en su propia fila: es lo único que sabe la
- * lección y no el curso.
- */
-export function TiraProgreso({ texto, hechos, total }: { texto: string; hechos: number; total: number }) {
-  const porcentaje = total > 0 ? Math.round((hechos / total) * 100) : 0;
-
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className="shrink-0 text-[11.5px] font-semibold text-marca-gris tabular-nums">{texto}</span>
-      <div className="h-1 flex-1 overflow-hidden rounded-[3px] bg-marca-pista">
-        <div
-          className="h-full rounded-[3px] bg-marca-verde transition-[width] duration-300"
-          style={{ width: `${porcentaje}%` }}
-        />
-      </div>
-    </div>
   );
 }

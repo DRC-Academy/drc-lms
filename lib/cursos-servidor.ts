@@ -318,6 +318,12 @@ export type LeccionIndice = {
   titulo: string;
   /** Lección sintética del importador: solo ejercicios, sin teoría. */
   soloEjercicios: boolean;
+  /**
+   * Lleva vídeo. El panel del curso etiqueta cada lección —vídeo, teoría
+   * o práctica— y esta es la única de las tres que no se deduce de lo
+   * que ya se traía.
+   */
+  conVideo: boolean;
   completada: boolean;
   /** false solo si su módulo todavía no se ha abierto Y no está hecha. */
   disponible: boolean;
@@ -404,7 +410,7 @@ export async function arbolDelCurso(
 
   const idsModulo = listaModulos.map((m) => m.id);
 
-  const [lecciones, soloEjercicios, progreso] = await Promise.all([
+  const [lecciones, soloEjercicios, conVideo, progreso] = await Promise.all([
     cliente
       .from("lecciones")
       .select("id, titulo, orden, modulo_id")
@@ -418,6 +424,13 @@ export async function arbolDelCurso(
       .eq("contenido", "")
       .is("video_url", null)
       .returns<{ id: string }[]>(),
+    // Las que llevan vídeo, por el mismo camino: solo ids.
+    cliente
+      .from("lecciones")
+      .select("id")
+      .in("modulo_id", idsModulo)
+      .not("video_url", "is", null)
+      .returns<{ id: string }[]>(),
     cliente
       .from("progreso_lecciones")
       .select("leccion_id, completada_en")
@@ -428,6 +441,7 @@ export async function arbolDelCurso(
   if (!registrar("No se pudieron leer las lecciones", lecciones.error)) return vacio;
 
   const sinTeoria = new Set((soloEjercicios.data ?? []).map((l) => l.id));
+  const videos = new Set((conVideo.data ?? []).map((l) => l.id));
   const hechas = new Set((progreso.data ?? []).map((p) => p.leccion_id));
 
   const porModulo = new Map<string, FilaLeccion[]>();
@@ -466,6 +480,7 @@ export async function arbolDelCurso(
         id: leccion.id,
         titulo: leccion.titulo,
         soloEjercicios: sinTeoria.has(leccion.id),
+        conVideo: videos.has(leccion.id),
         completada,
         disponible: suya.abierto,
       };
@@ -656,7 +671,7 @@ export async function leccionParaVer(
 ): Promise<LeccionCompleta | null> {
   const cliente = baseLms();
 
-  const [conModulo, ordenCurso, hechas, soloEjercicios, ejercicios] = await Promise.all([
+  const [conModulo, ordenCurso, hechas, soloEjercicios, conVideo, ejercicios] = await Promise.all([
     cliente
       .from("lecciones")
       .select(
@@ -682,6 +697,12 @@ export async function leccionParaVer(
       .is("video_url", null)
       .returns<{ id: string }[]>(),
     cliente
+      .from("lecciones")
+      .select("id, modulos!inner(curso_id)")
+      .eq("modulos.curso_id", curso.id)
+      .not("video_url", "is", null)
+      .returns<{ id: string }[]>(),
+    cliente
       .from("ejercicios_leccion")
       .select("id, tipo, enunciado, opciones, correcta, explicacion, orden")
       .eq("leccion_id", leccionId)
@@ -704,6 +725,7 @@ export async function leccionParaVer(
   if (!modulo || modulo.curso_id !== curso.id) return null;
 
   const sinTeoria = new Set((soloEjercicios.data ?? []).map((l) => l.id));
+  const videos = new Set((conVideo.data ?? []).map((l) => l.id));
 
   const ordenadas = ordenCurso.slice().sort((a, b) => {
     const dm = (a.modulos?.orden ?? 0) - (b.modulos?.orden ?? 0);
@@ -734,6 +756,7 @@ export async function leccionParaVer(
         id: l.id,
         titulo: l.titulo,
         soloEjercicios: sinTeoria.has(l.id),
+        conVideo: videos.has(l.id),
         completada,
         disponible: aperturaDeLeccion(visibleAfter, fechaInicio, completada, ahora).abierto,
       };
@@ -762,6 +785,62 @@ export async function leccionParaVer(
     cursoCompletadas: ordenadas.filter((l) => hechas.has(l.id)).length,
     cursoTotal: ordenadas.length,
   };
+}
+
+// ---------------------------------------------------------------
+// LOS EJERCICIOS DE UN MÓDULO, CONTADOS POR LECCIÓN
+//
+// El panel del curso pone al lado de cada lección cuántos ejercicios
+// tiene y cuántos ha respondido ya el alumno. Solo para las lecciones
+// del módulo abierto: contarlos para las 191 del curso sería traer mil
+// filas por cada lección que se abre, para pintar nueve.
+//
+// «Hecho» es haber respondido al menos una vez, acertando o no: el
+// curso guarda intentos, no notas, y lo que aquí se cuenta es por dónde
+// va el alumno, no cómo le ha ido.
+// ---------------------------------------------------------------
+
+export type EjerciciosDeLeccion = { total: number; hechos: number };
+
+export async function ejerciciosPorLeccion(
+  alumnoId: string,
+  leccionIds: string[]
+): Promise<Record<string, EjerciciosDeLeccion>> {
+  if (leccionIds.length === 0) return {};
+  const cliente = baseLms();
+
+  const [ejercicios, intentos] = await Promise.all([
+    cliente
+      .from("ejercicios_leccion")
+      .select("id, leccion_id")
+      .in("leccion_id", leccionIds)
+      .returns<{ id: string; leccion_id: string }[]>(),
+    // Sin alumno —el equipo repasando contenido— no hay intentos que
+    // contar, y se ahorra el viaje.
+    alumnoId
+      ? cliente
+          .from("intentos_ejercicio")
+          .select("ejercicio_id, ejercicios_leccion!inner(leccion_id)")
+          .eq("alumno_id", alumnoId)
+          .in("ejercicios_leccion.leccion_id", leccionIds)
+          .returns<{ ejercicio_id: string }[]>()
+      : Promise.resolve({ data: [] as { ejercicio_id: string }[], error: null }),
+  ]);
+
+  registrar("No se pudieron contar los ejercicios del módulo", ejercicios.error);
+  registrar("No se pudieron leer los intentos del módulo", intentos.error);
+
+  const respondidos = new Set((intentos.data ?? []).map((i) => i.ejercicio_id));
+  const salida: Record<string, EjerciciosDeLeccion> = {};
+
+  for (const ejercicio of ejercicios.data ?? []) {
+    const cuenta = salida[ejercicio.leccion_id] ?? { total: 0, hechos: 0 };
+    salida[ejercicio.leccion_id] = cuenta;
+    cuenta.total++;
+    if (respondidos.has(ejercicio.id)) cuenta.hechos++;
+  }
+
+  return salida;
 }
 
 /**

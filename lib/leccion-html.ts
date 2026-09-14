@@ -82,10 +82,23 @@ const MARCAS_QUE_ENSENAN = new Set([
 export function quitarEmojis(html: string): string {
   return html
     .replace(EMOJI, (encontrado) => (MARCAS_QUE_ENSENAN.has(encontrado) ? encontrado : ""))
-    .replace(/>[ \t]+/g, ">")
-    .replace(/[ \t]+</g, "<")
+    .replace(ESPACIO_TRAS_BLOQUE, "$1")
+    .replace(ESPACIO_ANTE_CIERRE, "$1")
     .replace(/[ \t]{2,}/g, " ");
 }
+
+// ---------------------------------------------------------------
+// SOLO EN LOS BORDES DE UN BLOQUE
+//
+// Esto recogía el espacio pegado a CUALQUIER etiqueta, y en línea eso
+// se come el que separa las palabras: "why <strong>skimming</strong>
+// and" salía "why<strong>skimming</strong>and". Un emoji al principio
+// de un párrafo o de un ítem deja el espacio al abrir la etiqueta de
+// bloque, y ahí es donde hay que recogerlo; entre un <b> y la palabra
+// de al lado el espacio es texto.
+// ---------------------------------------------------------------
+const ESPACIO_TRAS_BLOQUE = /(<(?:p|li|h[1-6]|div|td|th|ul|ol|blockquote|section|article|br)\b[^>]*>)[ \t]+/gi;
+const ESPACIO_ANTE_CIERRE = /[ \t]+(<\/(?:p|li|h[1-6]|div|td|th|ul|ol|blockquote|section|article)>)/gi;
 
 /**
  * Lo mismo, pero para un título: aquí SÍ se van también ✅ ❌ 🚫.
@@ -130,6 +143,40 @@ function limpiarTexto(texto: string, conservarMarcas: boolean): string {
   return limpio === "" ? texto.trim() : limpio;
 }
 
+// ---------------------------------------------------------------
+// LOS PÁRRAFOS QUE WORDPRESS PONÍA AL PINTAR
+//
+// El `post_content` de LearnDash no lleva <p>: separa los párrafos con
+// una línea en blanco y era WordPress, al servir la página, quien los
+// envolvía (`wpautop`). Migrado tal cual, un párrafo tras otro se
+// pintaba como un solo bloque de texto corrido: "This is useful for:
+// Identifying the main idea. Understanding the structure." sin un
+// solo salto.
+//
+// Esto hace la parte de `wpautop` que hace falta y ninguna más: cada
+// trozo entre líneas en blanco que no contenga ya una etiqueta de
+// bloque se envuelve en <p>, y los saltos sueltos dentro pasan a <br>.
+// Un trozo con un bloque dentro —una lista, un título— se deja como
+// está: envolverlo metería el bloque dentro de un párrafo.
+// ---------------------------------------------------------------
+const CON_BLOQUE =
+  /<(?:p|div|ul|ol|li|h[1-6]|table|tbody|thead|tr|td|th|blockquote|pre|hr|iframe|figure|section|article|img|video|audio)\b/i;
+
+export function autoparrafos(html: string): string {
+  return html
+    .replace(/\r\n?/g, "\n")
+    .split(/\n[ \t]*\n/)
+    .map((trozo) => {
+      const recortado = trozo.trim();
+      // Vacío, o solo el &nbsp; con el que el editor separaba bloques.
+      if (recortado === "" || /^(?:&nbsp;|\s)+$/.test(recortado)) return "";
+      if (CON_BLOQUE.test(recortado)) return recortado;
+      return `<p>${recortado.replace(/\n/g, "<br>")}</p>`;
+    })
+    .filter((trozo) => trozo !== "")
+    .join("\n");
+}
+
 export type TituloLeccion = { id: string; texto: string };
 
 /** El texto de un título, sin etiquetas ni entidades. */
@@ -161,7 +208,7 @@ export function prepararLeccion(htmlOriginal: string): {
   html: string;
   titulos: TituloLeccion[];
 } {
-  const limpio = quitarEmojis(htmlOriginal);
+  const limpio = autoparrafos(quitarEmojis(htmlOriginal));
   const titulos: TituloLeccion[] = [];
 
   let n = 0;
@@ -182,4 +229,90 @@ export function prepararLeccion(htmlOriginal: string): {
   );
 
   return { html, titulos: titulos.length >= 2 ? titulos : [] };
+}
+
+// ---------------------------------------------------------------
+// LA LECCIÓN, EN PARTES
+//
+// La pantalla ya no enseña el HTML de arriba abajo: lo trocea por sus
+// títulos y enseña una parte cada vez, con un paso a paso encima. El
+// corte se hace aquí, en el servidor, sobre el HTML que ya lleva las
+// anclas de `prepararLeccion`: cada `<h2-4 id="tN">` abre una parte y
+// se lleva lo que hay hasta el siguiente título.
+//
+// EL TÍTULO SALE DEL HTML DE LA PARTE. Lo pinta la vista como cabecera
+// del contenedor, en la tipografía de la aplicación, así que dejarlo
+// dentro lo repetiría dos veces seguidas.
+//
+// LO QUE VA ANTES DEL PRIMER TÍTULO es una parte sin título propio —la
+// vista le pone el de la lección— siempre que tenga algo que leer: en
+// el material migrado suele ser un párrafo de objetivo. Y una lección
+// sin ningún título es una sola parte, que es lo que era antes.
+// ---------------------------------------------------------------
+
+export type ParteLeccion = {
+  id: string;
+  /** null en la parte de antes del primer título: la vista pone el de la lección. */
+  titulo: string | null;
+  html: string;
+};
+
+/** Si un trozo de HTML tiene algo que enseñar: texto, una imagen o un reproductor. */
+function tieneAlgo(html: string): boolean {
+  if (/<(img|iframe|video|audio|table)\b/i.test(html)) return true;
+  return soloTexto(html) !== "";
+}
+
+/**
+ * Solo letras y cifras ASCII, en minúsculas: para comparar títulos sin
+ * que la puntuación ni los acentos decidan. Sin el flag `u` —ver la
+ * nota de `EMOJI`—: se descomponen los acentos y se tira lo que no sea
+ * a-z ni 0-9, que en un material en inglés es lo que hay.
+ */
+function esqueleto(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+export function partesDeLeccion(htmlPreparado: string, tituloLeccion = ""): ParteLeccion[] {
+  const patron = /<(h[2-4])\b[^>]*\bid="(t\d+)"[^>]*>([\s\S]*?)<\/\1\s*>/gi;
+  const partes: ParteLeccion[] = [];
+  const tituloBase = esqueleto(tituloLeccion);
+
+  let ultimoFin = 0;
+  let pendiente: { id: string; titulo: string } | null = null;
+
+  // EL TÍTULO QUE REPITE EL DE LA LECCIÓN NO ES UNA PARTE CON NOMBRE. El
+  // material migrado suele abrir con un <h3> que dice lo mismo que el
+  // título de la lección, y debajo el párrafo de objetivo: esa parte es
+  // la introducción, y ponerle el título otra vez debajo del título es
+  // decirlo dos veces seguidas.
+  const cerrar = (hasta: number) => {
+    const html = htmlPreparado.slice(ultimoFin, hasta);
+    if (pendiente) {
+      const propio = esqueleto(pendiente.titulo);
+      const repite =
+        tituloBase !== "" &&
+        propio.length >= 12 &&
+        (propio === tituloBase || tituloBase.endsWith(propio) || propio.endsWith(tituloBase));
+      partes.push({ id: pendiente.id, titulo: repite ? null : pendiente.titulo, html });
+    } else if (tieneAlgo(html)) {
+      partes.push({ id: "intro", titulo: null, html });
+    }
+  };
+
+  let encontrado: RegExpExecArray | null;
+  while ((encontrado = patron.exec(htmlPreparado)) !== null) {
+    cerrar(encontrado.index);
+    pendiente = { id: encontrado[2], titulo: soloTexto(encontrado[3]) };
+    ultimoFin = encontrado.index + encontrado[0].length;
+  }
+  cerrar(htmlPreparado.length);
+
+  // Una parte sin nada debajo —dos títulos seguidos, o el título de la
+  // lección y directamente el primer apartado— no orienta: se va, y su
+  // título no cuenta como paso.
+  return partes.filter((p) => tieneAlgo(p.html));
 }

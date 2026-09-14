@@ -110,6 +110,53 @@ export type TextosCurso = {
   completarLargo: string;
   completarLargoHecha: string;
   completarModulo: string;
+
+  // --- la lección por partes ---
+  //
+  // La pantalla de lección enseña una parte cada vez, con un paso a
+  // paso encima y el panel del curso al lado. Estas son sus palabras.
+  /** El botón de cerrar la lección, que devuelve al temario. */
+  volverAlCurso: string;
+  /** Debajo del título, lo que hay que hacer en esta pantalla. */
+  instruccionPartes: (ejercicios: number) => string;
+  instruccionSinEjercicios: string;
+  /** Con una sola parte no hay Siguiente que pulsar. */
+  instruccionUnaParte: (ejercicios: number) => string;
+  instruccionEjercicios: (ejercicios: number) => string;
+  instruccionSoloEjercicios: (ejercicios: number) => string;
+  /** El rótulo del paso a paso: "Parte 2 de 6". */
+  parteDe: (n: number, total: number) => string;
+  /** El indicador compacto de móvil: "Paso 2 de 6". */
+  pasoDe: (n: number, total: number) => string;
+  /** Las partes que no salen de un título del texto: el vídeo y lo de antes del primer título. */
+  parteVideo: string;
+  parteIntro: string;
+  irALaParte: (titulo: string) => string;
+  siguiente: string;
+  siguienteParte: string;
+  parteAnterior: string;
+  /** El botón del último paso cuando hay ejercicios detrás. */
+  evaluar: string;
+  /** El paso a paso entero en verde: la teoría está leída. */
+  teoriaTerminada: string;
+
+  // --- el panel del curso ---
+  tuProgresoActual: string;
+  teFaltanLecciones: (n: number) => string;
+  moduloTerminado: string;
+  /** Las etiquetas de cada lección en el panel. */
+  etiquetaVideo: string;
+  etiquetaTeoria: string;
+  etiquetaPractica: string;
+  /** "4/6 ejercicios", al pie de una lección del panel. */
+  ejerciciosHechos: (hechos: number, total: number) => string;
+  visto: string;
+  /** El módulo que todavía no se ha abierto, en el panel. */
+  abreEn: (dias: number) => string;
+  abrirElPanel: string;
+  /** "Ejercicio 3", en la lista del panel. */
+  ejercicioNumero: (n: number) => string;
+  moduloNumeroCorto: (numero: number) => string;
 };
 
 const ES: TextosCurso = {
@@ -190,6 +237,51 @@ const ES: TextosCurso = {
   completarLargo: "Marcar como completada y continuar",
   completarLargoHecha: "Continuar",
   completarModulo: "Marcar el módulo como completado",
+
+  volverAlCurso: "Volver al curso",
+  instruccionPartes: (ejercicios) =>
+    ejercicios === 1
+      ? "Lee cada parte y pulsa Siguiente. Al terminar la última, Evaluar abre el ejercicio de la lección."
+      : `Lee cada parte y pulsa Siguiente. Al terminar la última, Evaluar abre los ${ejercicios} ejercicios de la lección.`,
+  instruccionSinEjercicios: "Lee cada parte y pulsa Siguiente. Al terminar la última, marca la lección como completada.",
+  instruccionUnaParte: (ejercicios) =>
+    ejercicios === 0
+      ? "Cuando termines, marca la lección como completada."
+      : ejercicios === 1
+        ? "Cuando termines, Evaluar abre el ejercicio de la lección."
+        : `Cuando termines, Evaluar abre los ${ejercicios} ejercicios de la lección.`,
+  instruccionEjercicios: (ejercicios) =>
+    ejercicios === 1
+      ? "Teoría terminada. Ahora, el ejercicio de la lección: se corrige al momento."
+      : `Teoría terminada. Ahora, los ${ejercicios} ejercicios de la lección, de uno en uno: se corrigen al momento.`,
+  instruccionSoloEjercicios: (ejercicios) =>
+    ejercicios === 1
+      ? "Esta lección no tiene teoría: es un ejercicio sobre lo visto en el módulo."
+      : `Esta lección no tiene teoría: son ${ejercicios} ejercicios sobre lo visto en el módulo.`,
+  parteDe: (n, total) => `Parte ${n} de ${total}`,
+  pasoDe: (n, total) => `Paso ${n} de ${total}`,
+  parteVideo: "Vídeo",
+  parteIntro: "Introducción",
+  irALaParte: (titulo) => `Ir a la parte: ${titulo}`,
+  siguiente: "Siguiente",
+  siguienteParte: "Siguiente parte",
+  parteAnterior: "Parte anterior",
+  evaluar: "Evaluar",
+  teoriaTerminada: "Teoría terminada",
+
+  tuProgresoActual: "Tu progreso actual",
+  teFaltanLecciones: (n) =>
+    n === 1 ? "Te falta 1 lección para finalizar el módulo." : `Te faltan ${n} lecciones para finalizar el módulo.`,
+  moduloTerminado: "Módulo terminado.",
+  etiquetaVideo: "Vídeo",
+  etiquetaTeoria: "Teoría",
+  etiquetaPractica: "Práctica",
+  ejerciciosHechos: (hechos, total) => `${hechos}/${total} ejercicios`,
+  visto: "Completada",
+  abreEn: (dias) => (dias === 1 ? "Se abre mañana" : `Se abre en ${dias} días`),
+  abrirElPanel: "Abrir el panel del curso",
+  ejercicioNumero: (n) => `Ejercicio ${n}`,
+  moduloNumeroCorto: (numero) => `Módulo ${numero}`,
 };
 
 const EN: TextosCurso = {
@@ -272,6 +364,51 @@ const EN: TextosCurso = {
   completarLargo: "Mark as done and carry on",
   completarLargoHecha: "Carry on",
   completarModulo: "Mark the module as done",
+
+  volverAlCurso: "Back to the course",
+  instruccionPartes: (ejercicios) =>
+    ejercicios === 1
+      ? "Read each part and press Next. After the last one, Assess opens the lesson's exercise."
+      : `Read each part and press Next. After the last one, Assess opens the lesson's ${ejercicios} exercises.`,
+  instruccionSinEjercicios: "Read each part and press Next. After the last one, mark the lesson as done.",
+  instruccionUnaParte: (ejercicios) =>
+    ejercicios === 0
+      ? "When you're done, mark the lesson as done."
+      : ejercicios === 1
+        ? "When you're done, Assess opens the lesson's exercise."
+        : `When you're done, Assess opens the lesson's ${ejercicios} exercises.`,
+  instruccionEjercicios: (ejercicios) =>
+    ejercicios === 1
+      ? "Theory done. Now the lesson's exercise: it's marked as you go."
+      : `Theory done. Now the lesson's ${ejercicios} exercises, one at a time: they're marked as you go.`,
+  instruccionSoloEjercicios: (ejercicios) =>
+    ejercicios === 1
+      ? "This lesson has no theory: it's one exercise on what the module covered."
+      : `This lesson has no theory: it's ${ejercicios} exercises on what the module covered.`,
+  parteDe: (n, total) => `Part ${n} of ${total}`,
+  pasoDe: (n, total) => `Step ${n} of ${total}`,
+  parteVideo: "Video",
+  parteIntro: "Introduction",
+  irALaParte: (titulo) => `Go to part: ${titulo}`,
+  siguiente: "Next",
+  siguienteParte: "Next part",
+  parteAnterior: "Previous part",
+  evaluar: "Assess",
+  teoriaTerminada: "Theory done",
+
+  tuProgresoActual: "Your progress so far",
+  teFaltanLecciones: (n) =>
+    n === 1 ? "1 lesson to go to finish the module." : `${n} lessons to go to finish the module.`,
+  moduloTerminado: "Module done.",
+  etiquetaVideo: "Video",
+  etiquetaTeoria: "Theory",
+  etiquetaPractica: "Practice",
+  ejerciciosHechos: (hechos, total) => `${hechos}/${total} exercises`,
+  visto: "Done",
+  abreEn: (dias) => (dias === 1 ? "Opens tomorrow" : `Opens in ${dias} days`),
+  abrirElPanel: "Open the course panel",
+  ejercicioNumero: (n) => `Exercise ${n}`,
+  moduloNumeroCorto: (numero) => `Module ${numero}`,
 };
 
 export const CURSO: Record<Idioma, TextosCurso> = { en: EN, es: ES };

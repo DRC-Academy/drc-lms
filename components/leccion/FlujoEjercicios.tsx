@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { conFoco } from "@/lib/foco";
 import { desdeCurso } from "@/lib/ejercicio-unificado";
 import type { EjercicioVista } from "@/lib/ejercicios";
 import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
+import type { EstadoEjerciciosActual } from "@/components/leccion/PanelCurso";
 import BotonCompletar from "@/components/leccion/BotonCompletar";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 
@@ -49,6 +50,7 @@ export default function FlujoEjercicios({
   cursoSlug,
   siguienteId,
   alSalir,
+  alEstado,
   foco = null,
 }: {
   ejercicios: EjercicioVista[];
@@ -65,16 +67,59 @@ export default function FlujoEjercicios({
    * texto que los ejercicios acompañan, que es otro sitio y otra cosa.
    */
   alSalir: () => void;
+  /**
+   * Por dónde van los ejercicios, para el panel del curso: por cuál se
+   * va y cuáles llevan respuesta. Se reconstruye de los sucesos del
+   * visor, que es el único que lo sabe.
+   */
+  alEstado?: (estado: EstadoEjerciciosActual) => void;
   /** Contexto de revisión. Ver `lib/foco.ts`. */
   foco?: string | null;
 }) {
   const { t: todos } = usarIdioma();
   const unificados = useMemo(() => ejercicios.map(desdeCurso), [ejercicios]);
 
+  const [estado, setEstado] = useState<EstadoEjerciciosActual>(() => ({
+    indice: 0,
+    respondidos: ejercicios.map(() => false),
+    acertados: ejercicios.map(() => false),
+  }));
+
+  function avisar(nuevo: EstadoEjerciciosActual) {
+    setEstado(nuevo);
+    alEstado?.(nuevo);
+  }
+
+  // El panel del curso quiere saber por dónde va desde el primer
+  // ejercicio, antes de que pase nada.
+  useEffect(() => {
+    alEstado?.(estado);
+    // Solo al montar: después lo cuentan los sucesos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function alSuceso(suceso: SucesoVisor) {
     // El curso solo guarda intentos. Ni avance ni producción: la lección
     // no lleva un "iba por la mitad", y su cierre es marcarla completada.
-    if (suceso.tipo === "intento") registrarIntento(suceso.ejercicio.id, suceso.correcto);
+    if (suceso.tipo === "intento") {
+      registrarIntento(suceso.ejercicio.id, suceso.correcto);
+      const i = unificados.findIndex((e) => e.id === suceso.ejercicio.id);
+      if (i >= 0) {
+        avisar({
+          ...estado,
+          respondidos: estado.respondidos.map((v, j) => (j === i ? true : v)),
+          acertados: estado.acertados.map((v, j) => (j === i ? suceso.correcto : v)),
+        });
+      }
+    } else if (suceso.tipo === "avance" || suceso.tipo === "salto") {
+      avisar({ ...estado, indice: suceso.indice });
+    } else if (suceso.tipo === "reinicio") {
+      avisar({
+        indice: 0,
+        respondidos: ejercicios.map(() => false),
+        acertados: ejercicios.map(() => false),
+      });
+    }
   }
 
   return (
@@ -90,8 +135,9 @@ export default function FlujoEjercicios({
       volver={{ seccion: todos.navegacion.miCurso, href: conFoco(`/curso/${cursoSlug}`, foco) }}
       alSuceso={alSuceso}
       guardarIntentos={registrarIntentos}
+      embebido
       cierre={({ aciertos, total, repetir, verEjercicio, acertado, t }) => (
-        <div className="mx-auto w-full max-w-[calc(600px+7rem)] px-4 py-10 min-[1100px]:px-14 min-[1100px]:py-14">
+        <div className="w-full">
           <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
             {t.ejerciciosTerminados}
           </p>

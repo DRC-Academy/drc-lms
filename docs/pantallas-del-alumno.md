@@ -205,7 +205,7 @@ sobrevive en el nombre accesible de la barra: «Progreso en {curso}:
 
 ### Cabecera en carga
 
-`components/leccion/CabeceraLeccion.tsx:38` — mismo alto y mismo logotipo, con
+`components/leccion/CabeceraLeccion.tsx` — mismo alto y mismo logotipo, con
 barras grises donde irán el título y el progreso.
 Para lector de pantalla: «Cargando el curso…»
 
@@ -673,58 +673,108 @@ se le devuelve al temario **sin aviso** (`app/curso/[slug]/[leccion]/page.tsx:80
 
 `components/leccion/VistaLeccion.tsx`
 
-Tres columnas en escritorio: lateral de lecciones (300px) · texto (680px) ·
-índice de la lección (220px). En móvil, una sola columna con una barra propia
-arriba y el lateral en un panel.
+**Sin la cabecera de la aplicación.** Dentro de una lección el marco cambia
+—lo decide `components/leccion/MarcoCurso.tsx` desde el layout del curso—:
+
+- **Escritorio (≥ 900px):** barra de iconos a la izquierda (80px) · panel del
+  curso (330px, a partir de 1200px) · la lección en lo que queda.
+- **Tablet (900–1199px):** el panel se esconde y se abre como cajón desde el
+  icono «Lecciones» de la barra.
+- **Móvil (< 900px):** la barra pasa abajo, con cinco pestañas —las cuatro
+  secciones y **Perfil**—; arriba, una fila con la X, «Lección {n} de {total}»
+  (que abre el panel) y el idioma.
 
 ### 7.1 Carga
 
-`app/curso/[slug]/[leccion]/loading.tsx`. Esqueleto gris con las medidas
-exactas de la lección: lateral, kicker, título en dos líneas, párrafos y la
-barra de acciones ya dibujada. Sin animación de pulso.
-Para lector de pantalla: «Cargando la lección…»
+`app/curso/[slug]/[leccion]/loading.tsx`. Esqueleto gris con las medidas del
+panel y de la columna: título centrado, paso a paso, contenedor y botones. Sin
+animación de pulso. Para lector de pantalla: «Cargando la lección…»
 
-### 7.2 Teoría
+### 7.2 La barra de iconos (`BarraLateral.tsx`)
 
-> LECCIÓN {n} DE {total}
+Símbolo de DRC arriba (lleva al inicio); Inicio · Mi curso · Para ti · Mi
+progreso, solo icono con el nombre al pasar por encima; «Mi curso» con fondo
+verde suave. Al pie: **Ayuda** (abre el chat de FAQ) y el **avatar**, que abre
+el perfil: nombre, ES/EN y **Salir** (`MenuPerfil.tsx`).
+
+En revisión, la tira «Revisando la ficha de…» va encima de todo.
+
+### 7.3 El panel del curso (`PanelCurso.tsx`)
+
+> **Mi curso**
+> {curso} · {completadas} de {total} lecciones
 >
-> **{título de la lección}**
+> ┌ SEMANA 1 · MÓDULO 1 — {título}                    ✓ ┐   ← hecho
+> ┌ SEMANA 3 · MÓDULO 12 — {título}                   ▲ ┐   ← el actual, abierto
+> │  Tu progreso actual                    ( 33% )      │
+> │  Lecciones  ▓▓▓░░░ 3/9 · Ejercicios ▓░░░░ 11/38     │
+> │  Te faltan 6 lecciones para finalizar el módulo.    │
+> │  Lecciones  3 de 9                               ▲  │
+> │   ✓ {título}            Completada       TEORÍA     │
+> │   ● {título}            1/6 ejercicios   TEORÍA     │   ← la actual, en verde
+> │   ○ {título}            0/12 ejercicios  PRÁCTICA   │
+> │  Ejercicios  11 de 38                            ▼  │
+> └────────────────────────────────────────────────────┘
+> ┌ MÓDULO 13 — {título}              Se abre en 5 días ┐   ← por abrir, apagado
 >
-> *(vídeo de YouTube incrustado, si lo hay — `title` = el título de la lección)*
+> [ Ver el curso completo → ]
+
+- Un acordeón por módulo, todos los del curso (`arbolDelCurso`), con el actual
+  abierto y la lección actual centrada en la columna. Los demás se abren al
+  pulsar y enseñan sus lecciones.
+- La etiqueta de cada lección: **Vídeo** (lleva vídeo), **Práctica** (solo
+  ejercicios) o **Teoría**.
+- Los ejercicios se cuentan solo en el módulo actual (`ejerciciosPorLeccion`):
+  «hecho» es haber respondido al menos una vez.
+- **Ejercicios** abre la lista de lecciones del módulo con ejercicios; la
+  actual, mientras se hacen, se despliega en «Ejercicio 1 · 2 · 3…» con por cuál
+  va y cuáles llevan respuesta. Antes de empezarlos, pulsarla los abre.
+- Un módulo por abrir se lee apagado con «Se abre en {n} días» y sus lecciones
+  no son enlace.
+
+### 7.4 La lección, por partes
+
+> [X]        SEMANA 3 · MÓDULO 12 · LECCIÓN 4 DE 9
+>            **{título de la lección}**
+>            Lee cada parte y pulsa Siguiente. Al terminar la última, Evaluar
+>            abre los 6 ejercicios de la lección.
 >
-> *(el HTML de la lección)*
-
-### 7.3 Lección vacía
-
-Cuando no hay ni teoría, ni vídeo, ni ejercicios:
-
-> Esta lección todavía no tiene contenido. Puedes seguir con la siguiente.
-
-### 7.4 Aviso al equipo
-
-Solo con rol `admin`, arriba del todo:
-
-> ● **Estás viendo el curso como equipo.** Nada de lo que marques aquí guarda
-> progreso.
-
-### 7.5 Franja de ejercicios
-
-Al final de la teoría, si la lección tiene ejercicios:
-
-> · EJERCICIOS
+>   (✓)───(✓)───(●4)───( 5 )───( 6 )        ← el paso a paso
+>              Letter prompt
 >
-> **{n} ejercicios para fijar lo de arriba**
-> *(con uno solo: «Un ejercicio para fijar lo de arriba»)*
+> ┌──────────────────────────────────────────────────┐
+> │ PARTE 4 DE 6                                     │
+> │ **Letter structure guidelines**                  │
+> │ {el HTML de esa parte}                           │
+> └──────────────────────────────────────────────────┘
 >
-> De uno en uno. Se corrigen al momento.
->
-> [ **Empezar** ]
+> [ Parte anterior ]  [ ········· Siguiente ········· ]
 
-Nombre accesible: «Empezar los ejercicios de esta lección».
+- El texto se trocea por sus títulos en el servidor (`partesDeLeccion`): cada
+  `<h2-4>` abre una parte. Lo de antes del primer título —o un título que
+  repite el de la lección— es la **Introducción** y no repite el título. El
+  vídeo, si lo hay, es la primera parte. Con una sola parte no hay paso a paso.
+- El HTML migrado no traía `<p>` —WordPress los ponía al pintar—: se
+  reconstruyen (`autoparrafos`). Las listas llevan guion o numeral en verde; un
+  párrafo en cursiva se pinta como ejemplo, sobre niebla.
+- Los nodos leídos son pulsables; el siguiente al actual también. En móvil el
+  paso a paso es «Paso 4 de 6 · {título}» con una barra.
+- **Botones:** «Parte anterior» (en la primera, «← Anterior» lleva a la lección
+  anterior) y **Siguiente**. En la última parte: **Evaluar** si hay ejercicios, o
+  el botón de completar de siempre (7.6) si no.
 
-### 7.6 Barra de acciones (pegada abajo)
+### 7.5 Los ejercicios
 
-Flecha de volver + un solo botón verde:
+Al pulsar Evaluar el paso a paso queda todo en verde («Teoría terminada») y el
+visor (§8) se pinta **dentro del mismo contenedor**, con sus botones debajo. La
+salida del visor no se pinta: la X de la lección ya lleva al curso. Al acabar,
+el cierre de siempre —resultado, lista de ejercicios, «Marcar como completada y
+continuar», «Repetir», «Volver a la teoría»— dentro del contenedor.
+
+Una lección **solo de ejercicios** entra directamente aquí, con la instrucción
+«Esta lección no tiene teoría: son {n} ejercicios sobre lo visto en el módulo».
+
+### 7.6 Completar
 
 | Situación | Móvil | Escritorio |
 |---|---|---|
@@ -732,49 +782,20 @@ Flecha de volver + un solo botón verde:
 | Sin completar, última del módulo | Completada y continuar | Marcar el módulo como completado |
 | Ya completada | Continuar | Continuar |
 
-Flecha: `←` en móvil, **← Anterior** en escritorio. En la primera lección del
-curso el hueco se conserva vacío para que el botón no salte de sitio.
+### 7.7 Lección vacía
 
-### 7.7 Lateral de lecciones (escritorio)
+Sin teoría, ni vídeo, ni ejercicios:
 
-> {Semana 3 · Módulo 12}
-> **{título del módulo}**
-> `▓▓▓░░`  4 de 9
->
-> ○ {título de la lección}
-> ● {título de la lección}   ← la actual, con acento verde
-> ✓ {título de la lección}
->   · ejercicios              ← solo en las lecciones de solo ejercicios
->
-> [ Ver el curso completo → ]
-> {completadas} de {total} lecciones del curso
+> Esta lección todavía no tiene contenido. Puedes seguir con la siguiente.
 
-Durante los ejercicios el lateral se repliega a un carril de 72px: solo los
-puntos, una barra vertical con «{hechas}/{total}» y un botón `←` con nombre
-accesible «Volver a la lección».
+con el botón de completar debajo.
 
-### 7.8 Panel de lecciones (móvil)
+### 7.8 La esquina (escritorio)
 
-Barra propia de la lección, encima del contenido:
-
-> Lección {n} de {total}  `▓▓▓░░`        [ Lecciones ]
-
-Durante los ejercicios, el rótulo de la izquierda pasa a **Ejercicios** y el
-botón a **Cerrar**. Al abrirlo sube una hoja con la misma cabecera de módulo, la
-lista completa y, al pie, **Ver el curso completo →**.
-El fondo oscuro tiene por nombre «Cerrar el panel de lecciones».
-
-### 7.9 Índice de la lección (columna derecha)
-
-Solo si la lección tiene **dos títulos o más**.
-
-> **EN ESTA LECCIÓN**
-> {título 1}
-> {título 2}   ← resaltado según se baja
-> …
+Arriba a la derecha del área, discretos: el título del curso (enlaza al
+temario), su barra y «{porcentaje}%», y el conmutador ES/EN.
 
 ---
-
 # 8 · Los ejercicios de la lección
 
 `components/ejercicios/VisorEjercicios.tsx` — el **mismo visor** que el bloque

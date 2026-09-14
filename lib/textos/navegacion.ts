@@ -37,6 +37,12 @@ export type TextosNavegacion = {
   /** El `aria-label` de las dos barras, la de arriba y la de móvil. */
   secciones: string;
 
+  // --- la barra de iconos de la lección ---
+  /** El icono de la ayuda y el del perfil, que en la barra solo llevan icono. */
+  ayuda: string;
+  perfil: string;
+  cerrarElMenu: string;
+
   // --- identidad ---
   salir: string;
   practicandoComo: (nombre: string) => string;
@@ -64,6 +70,10 @@ const ES: TextosNavegacion = {
   miProgreso: "Mi progreso",
   secciones: "Secciones",
 
+  ayuda: "Ayuda",
+  perfil: "Perfil",
+  cerrarElMenu: "Cerrar el menú",
+
   salir: "Salir",
   practicandoComo: (nombre) => `Practicando como ${nombre}`,
   fichaEnRevision: (nombre) => `Ficha de ${nombre}, en revisión`,
@@ -86,6 +96,10 @@ const EN: TextosNavegacion = {
   paraTi: "For you",
   miProgreso: "My progress",
   secciones: "Sections",
+
+  ayuda: "Help",
+  perfil: "Profile",
+  cerrarElMenu: "Close the menu",
 
   salir: "Log out",
   practicandoComo: (nombre) => `Practising as ${nombre}`,

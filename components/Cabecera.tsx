@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import ChatAyuda from "@/components/ChatAyuda";
@@ -5,8 +6,9 @@ import { conFoco } from "@/lib/foco";
 import { textosActuales } from "@/lib/idioma-servidor";
 import BotonIdioma from "@/components/BotonIdioma";
 import type { TextosNavegacion } from "@/lib/textos/navegacion";
+import { Icono, type EnlaceSeccion, type SeccionActiva } from "@/components/IconoSeccion";
 
-export type SeccionActiva = "inicio" | "curso" | "practica" | "progreso";
+export type { SeccionActiva, EnlaceSeccion } from "@/components/IconoSeccion";
 
 // ---------------------------------------------------------------
 // EL LOGOTIPO
@@ -89,6 +91,42 @@ export type ContextoCurso = {
   total: number;
 };
 
+/**
+ * Las cuatro secciones del alumno, como enlaces.
+ *
+ * Los calcula la cabecera desde siempre; ahora también los pide la barra
+ * de iconos de la lección, que es la misma navegación con otra forma.
+ * Una sola lista para las dos, y así no pueden decir cosas distintas.
+ */
+export function enlacesDeSecciones({
+  alumnoId,
+  cursoSlug,
+  foco,
+  t,
+}: {
+  alumnoId?: string | null;
+  cursoSlug?: string | null;
+  foco?: string | null;
+  t: TextosNavegacion;
+}): EnlaceSeccion[] {
+  if (alumnoId == null) return [];
+
+  return [
+    { clave: "inicio" as const, texto: t.inicio, href: `/alumno/${alumnoId}` },
+    ...(cursoSlug
+      ? [{ clave: "curso" as const, texto: t.miCurso, href: `/curso/${cursoSlug}` }]
+      : []),
+    { clave: "practica" as const, texto: t.paraTi, href: "/practica" },
+    // NOMBRE PROVISIONAL. "Mi ficha" quedó descartado —suena a
+    // expediente administrativo y el contenido es justo lo
+    // contrario— y el definitivo está sin decidir. Se cambia en
+    // esta línea, con un límite medido: a 320px cada celda de la
+    // barra inferior mide 77,5px, así que la etiqueta no pasa de
+    // unos 12 caracteres a 12px sin tocar a la de al lado.
+    { clave: "progreso" as const, texto: t.miProgreso, href: "/progreso" },
+  ].map((enlace) => ({ ...enlace, href: conFoco(enlace.href, foco ?? null) }));
+}
+
 export default function Cabecera({
   nombre,
   alumnoId,
@@ -124,24 +162,7 @@ export default function Cabecera({
   revisando?: boolean;
 }) {
   const t = textosActuales().navegacion;
-
-  const enlaces =
-    alumnoId != null
-      ? [
-          { clave: "inicio" as const, texto: t.inicio, href: `/alumno/${alumnoId}` },
-          ...(cursoSlug
-            ? [{ clave: "curso" as const, texto: t.miCurso, href: `/curso/${cursoSlug}` }]
-            : []),
-          { clave: "practica" as const, texto: t.paraTi, href: "/practica" },
-          // NOMBRE PROVISIONAL. "Mi ficha" quedó descartado —suena a
-          // expediente administrativo y el contenido es justo lo
-          // contrario— y el definitivo está sin decidir. Se cambia en
-          // esta línea, con un límite medido: a 320px cada celda de la
-          // barra inferior mide 77,5px, así que la etiqueta no pasa de
-          // unos 12 caracteres a 12px sin tocar a la de al lado.
-          { clave: "progreso" as const, texto: t.miProgreso, href: "/progreso" },
-        ].map((enlace) => ({ ...enlace, href: conFoco(enlace.href, foco) }))
-      : [];
+  const enlaces = enlacesDeSecciones({ alumnoId, cursoSlug, foco, t });
 
   const inicial = nombre?.trim()[0]?.toUpperCase() ?? "";
 
@@ -353,7 +374,7 @@ export default function Cabecera({
  * suave. Es la misma pareja de tonos que ya usaba el aviso de la
  * lección, que es lo que esto sustituye.
  */
-function TiraRevision({ nombre, t }: { nombre?: string; t: TextosNavegacion }) {
+export function TiraRevision({ nombre, t }: { nombre?: string; t: TextosNavegacion }) {
   const quien = nombre?.trim();
 
   return (
@@ -451,25 +472,34 @@ function BarraCurso({
  *
  * Los iconos son SVG a mano, de un solo trazo y sin librería: son cuatro.
  */
-function NavegacionInferior({
+export function NavegacionInferior({
   enlaces,
   seccion,
   secciones,
+  extra,
 }: {
-  enlaces: { clave: SeccionActiva; texto: string; href: string }[];
+  enlaces: EnlaceSeccion[];
   seccion?: SeccionActiva;
   secciones: string;
+  /**
+   * Una quinta celda, después de las secciones. La usa la lección, que
+   * en móvil no tiene cabecera y necesita un sitio para el perfil —el
+   * nombre, el idioma y la salida—. Es un nodo y no un enlace porque
+   * abre algo en la misma pantalla en vez de llevar a otra.
+   */
+  extra?: ReactNode;
 }) {
   // Dónde cae la sección actual dentro de la fila. -1 cuando no hay
   // ninguna marcada, y entonces no se pinta la marca.
   const indice = enlaces.findIndex((enlace) => enlace.clave === seccion);
+  const celdas = enlaces.length + (extra ? 1 : 0);
 
   return (
     <nav
       aria-label={secciones}
       data-nav-inferior
       className="fixed inset-x-0 bottom-0 z-40 grid border-t border-marca-borde bg-white/[0.96] px-1 pb-3.5 pt-2 backdrop-blur-md min-[900px]:hidden"
-      style={{ gridTemplateColumns: `repeat(${enlaces.length}, minmax(0, 1fr))` }}
+      style={{ gridTemplateColumns: `repeat(${celdas}, minmax(0, 1fr))` }}
     >
       {/* ---------------------------------------------------------------
           LA MARCA QUE SE DESLIZA
@@ -497,7 +527,7 @@ function NavegacionInferior({
           aria-hidden
           className="pointer-events-none absolute left-0 top-0 h-[3px] rounded-b-full bg-marca-verde transition-transform duration-[220ms] ease-[var(--ease-salida)]"
           style={{
-            width: `${100 / enlaces.length}%`,
+            width: `${100 / celdas}%`,
             transform: `translateX(${indice * 100}%)`,
           }}
         />
@@ -531,48 +561,8 @@ function NavegacionInferior({
           </Link>
         );
       })}
+      {extra}
     </nav>
   );
 }
 
-function Icono({ seccion, activo }: { seccion: SeccionActiva; activo: boolean }) {
-  // Relleno verde cuando es la sección actual; contorno gris cuando no.
-  const trazo = activo ? "#1E9E3A" : "#B7C4BC";
-  const relleno = activo ? "#1E9E3A" : "none";
-
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 18 18"
-      className="h-[18px] w-[18px]"
-      fill="none"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {seccion === "inicio" && (
-        <path d="M2.5 7.2 9 2.2l6.5 5v7.3a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V7.2Z" stroke={trazo} fill={relleno} />
-      )}
-      {seccion === "curso" && (
-        <path d="M2.5 3.6h4.2c1.3 0 2.3 1 2.3 2.2v8.6c0-1-.9-1.8-2-1.8H2.5V3.6Zm13 0h-4.2c-1.3 0-2.3 1-2.3 2.2v8.6c0-1 .9-1.8 2-1.8h4.5V3.6Z" stroke={trazo} fill={relleno} />
-      )}
-      {seccion === "practica" && (
-        <>
-          <circle cx="9" cy="9" r="6.5" stroke={trazo} fill={relleno} />
-          <path d="M9 5.6v3.6l2.3 1.4" stroke={activo ? "#FFFFFF" : trazo} />
-        </>
-      )}
-      {/* Progreso: tres barras que suben. Es la escalera de la pantalla
-          reducida a lo que se distingue en 18 píxeles. Con trazo grueso y
-          sin relleno, porque tres rectángulos rellenos a este tamaño se
-          leen como un bloque macizo y no como una progresión. */}
-      {seccion === "progreso" && (
-        <>
-          <path d="M3.4 14.6v-3.1" stroke={trazo} strokeWidth="2.2" />
-          <path d="M9 14.6V7.8" stroke={trazo} strokeWidth="2.2" />
-          <path d="M14.6 14.6V4.3" stroke={trazo} strokeWidth="2.2" />
-        </>
-      )}
-    </svg>
-  );
-}

@@ -2,11 +2,18 @@ import { Suspense } from "react";
 import { focoActual, sesionActual } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { cursoPorSlug, progresoDelCurso } from "@/lib/cursos-servidor";
-import Cabecera from "@/components/Cabecera";
+import { textosActuales } from "@/lib/idioma-servidor";
+import { conFoco } from "@/lib/foco";
+import Cabecera, { NavegacionInferior, TiraRevision, enlacesDeSecciones } from "@/components/Cabecera";
+import ChatAyuda from "@/components/ChatAyuda";
 import { CabeceraCargando } from "@/components/leccion/CabeceraLeccion";
+import MarcoCurso from "@/components/leccion/MarcoCurso";
+import BarraLateral, { BarraLateralCargando } from "@/components/leccion/BarraLateral";
+import MenuPerfil from "@/components/leccion/MenuPerfil";
 
 /**
- * El marco del curso: la cabecera, y debajo lo que toque.
+ * El marco del curso: la cabecera en el temario, la barra de iconos en
+ * la lección, y debajo lo que toque.
  *
  * POR QUÉ ES UN LAYOUT Y NO PARTE DE CADA PÁGINA
  *
@@ -18,9 +25,14 @@ import { CabeceraCargando } from "@/components/leccion/CabeceraLeccion";
  *
  * Un layout no se vuelve a montar mientras no cambie su segmento. Como
  * este cuelga de `[slug]`, al saltar de lección a lección —y al ir al
- * temario y volver— la cabecera NO se re-renderiza: se queda quieta y
- * solo cambia lo de dentro. No es que el esqueleto la imite mejor; es que
- * ya no hay nada que imitar.
+ * temario y volver— el marco NO se re-renderiza: se queda quieto y solo
+ * cambia lo de dentro.
+ *
+ * DOS MARCOS, UNO POR PANTALLA. El temario lleva la cabecera de siempre;
+ * la lección, una barra de iconos a la izquierda y ninguna barra arriba.
+ * Los dos se renderizan aquí y `MarcoCurso` —cliente— enseña el que
+ * toca mirando qué segmento hay debajo. Así la barra de la lección
+ * tampoco parpadea al cambiar de lección: es del layout, no de la página.
  *
  * POR QUÉ NO ES `async`
  *
@@ -44,28 +56,39 @@ export default function LayoutCurso({
 }) {
   return (
     // La columna de altura completa vive aquí y no en cada página: es lo
-    // que deja la barra de acciones de la lección pegada al fondo de la
-    // ventana cuando el contenido es corto.
+    // que hace que la barra de iconos y el panel de la lección midan lo
+    // que mide la ventana.
     <div className="flex min-h-dvh flex-col">
-      <Suspense fallback={<CabeceraCargando />}>
-        <CabeceraDelCurso slug={params.slug} />
+      <Suspense
+        fallback={
+          <MarcoCurso cabecera={<CabeceraCargando />} barra={<BarraLateralCargando />} navegacionMovil={null}>
+            {children}
+          </MarcoCurso>
+        }
+      >
+        <MarcoDelCurso slug={params.slug}>{children}</MarcoDelCurso>
       </Suspense>
-      {children}
     </div>
   );
 }
 
 /**
- * La cabecera con sus datos.
+ * Los dos marcos con sus datos.
  *
  * No hace de guard: quien decide si este alumno puede ver este curso es
  * la página, que es la que redirige. Aquí solo se pinta un título y un
  * contador, y si la sesión no da para eso se pinta la versión de carga y
  * ya está —la página habrá redirigido antes de que nada de esto importe—.
  */
-async function CabeceraDelCurso({ slug }: { slug: string }) {
+async function MarcoDelCurso({ slug, children }: { slug: string; children: React.ReactNode }) {
   const sesion = await sesionActual();
-  if (!sesion) return <CabeceraCargando />;
+  if (!sesion) {
+    return (
+      <MarcoCurso cabecera={<CabeceraCargando />} barra={<BarraLateralCargando />} navegacionMovil={null}>
+        {children}
+      </MarcoCurso>
+    );
+  }
 
   // De quién habla la pantalla. Para el alumno es él; para el equipo que
   // llegó desde una ficha, el alumno revisado; y para el equipo que abrió
@@ -81,30 +104,71 @@ async function CabeceraDelCurso({ slug }: { slug: string }) {
     alumnoId ? obtenerPerfil(alumnoId) : Promise.resolve(null),
   ]);
 
-  if (!curso) return <CabeceraCargando />;
+  if (!curso) {
+    return (
+      <MarcoCurso cabecera={<CabeceraCargando />} barra={<BarraLateralCargando />} navegacionMovil={null}>
+        {children}
+      </MarcoCurso>
+    );
+  }
 
   const { completadas, total } = await progresoDelCurso(alumnoId, curso.id);
   const nombre = perfil?.nombre.trim() ?? "";
+  const t = textosActuales().navegacion;
 
-  // LA MISMA `Cabecera` QUE EL RESTO DE LAS PANTALLAS DEL ALUMNO, con el
-  // curso añadido. Antes aquí vivía una cabecera distinta y esa era la
-  // causa del fallo: al entrar en el curso desaparecían Inicio, Mi curso
-  // y Práctica, y no había forma de salir salvo el botón del navegador.
-  //
-  // `seccion="curso"` marca la pestaña activa, y `cursoSlug` es lo que
-  // hace que el enlace "Mi curso" exista: aquí siempre lo hay, porque
-  // estamos dentro de uno.
+  // Vacío solo para el equipo revisando contenido sin ficha: ahí no hay
+  // secciones que ofrecer porque no hay alumno del que hablar.
+  const enlaces = enlacesDeSecciones({
+    alumnoId: alumnoId || null,
+    cursoSlug: curso.slug,
+    foco: paraEnlaces,
+    t,
+  });
+
   return (
-    <Cabecera
-      nombre={nombre || undefined}
-      // Vacío solo para el equipo revisando contenido sin ficha: ahí no
-      // hay secciones que ofrecer porque no hay alumno del que hablar.
-      alumnoId={alumnoId || null}
-      cursoSlug={curso.slug}
-      seccion="curso"
-      contexto={{ titulo: curso.titulo, completadas, total }}
-      foco={paraEnlaces}
-      revisando={revisando}
-    />
+    <MarcoCurso
+      // LA MISMA `Cabecera` QUE EL RESTO DE LAS PANTALLAS DEL ALUMNO, con
+      // el curso añadido: `seccion="curso"` marca la pestaña activa, y
+      // `cursoSlug` es lo que hace que el enlace "Mi curso" exista.
+      cabecera={
+        <Cabecera
+          nombre={nombre || undefined}
+          alumnoId={alumnoId || null}
+          cursoSlug={curso.slug}
+          seccion="curso"
+          contexto={{ titulo: curso.titulo, completadas, total }}
+          foco={paraEnlaces}
+          revisando={revisando}
+        />
+      }
+      barra={
+        <BarraLateral
+          enlaces={enlaces}
+          nombre={nombre}
+          inicioHref={alumnoId ? conFoco(`/alumno/${alumnoId}`, paraEnlaces) : "/"}
+        />
+      }
+      tiraRevision={revisando ? <TiraRevision nombre={nombre || undefined} t={t} /> : null}
+      navegacionMovil={
+        enlaces.length > 0 ? (
+          <>
+            {/* La navegación de abajo con una quinta pestaña, el perfil:
+                en la lección no hay cabecera y el nombre, el idioma y la
+                salida tienen que caber en algún sitio. */}
+            <NavegacionInferior
+              enlaces={enlaces}
+              seccion="curso"
+              secciones={t.secciones}
+              extra={<MenuPerfil nombre={nombre} variante="movil" />}
+            />
+            {/* La ayuda flota solo en móvil: en escritorio la abre el
+                icono de la barra. */}
+            <ChatAyuda nombre={nombre} botonFlotante="movil" />
+          </>
+        ) : null
+      }
+    >
+      {children}
+    </MarcoCurso>
   );
 }
