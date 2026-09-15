@@ -4,6 +4,7 @@ import { etiquetaPosicion, type Temario } from "@/lib/temario";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import Banner from "@/components/Banner";
 import { conFoco } from "@/lib/foco";
+import { textoDeEspera } from "@/lib/drip";
 
 /**
  * La franja del plan, arriba del temario.
@@ -39,20 +40,39 @@ export default function PanelPlan({
   foco?: string | null;
 }) {
   const { curso: t, banners: tb } = usarIdioma().t;
-  const { actual, meses } = temario;
+  const { actual, meses, espera } = temario;
+
+  // ---------------------------------------------------------------
+  // SIN ACTUAL HAY DOS ESTADOS, NO UNO
+  //
+  // Esto decía «Has terminado el curso» siempre que no había módulo
+  // actual, y desde que el actual se elige solo entre los abiertos eso
+  // le pasaba también al alumno que ha hecho todo lo que tiene abierto y
+  // espera al siguiente: le mandaban aquí desde el inicio —«Ver mi
+  // curso»— y aquí leía que había terminado en el mes 2.
+  //
+  // Lo separa el recuento, igual que en el banner del inicio, y se dice
+  // con las MISMAS tres frases que allí: «Estás al día», «Has hecho todo
+  // lo que tienes abierto» y cuándo se abre lo siguiente. Sin botón,
+  // porque no hay lección a la que ir; la fecha es la respuesta.
+  // ---------------------------------------------------------------
+  const terminado = temario.totalLecciones > 0 && temario.completadas >= temario.totalLecciones;
+  const esperando = actual === null && !terminado && temario.totalLecciones > 0;
 
   const titulo = actual
     ? etiquetaPosicion(actual, tb)
-    : temario.totalLecciones > 0
-      ? t.hasTerminadoElCurso
-      : t.todaviaSinContenido;
+    : esperando
+      ? tb.todoLoAbierto
+      : temario.totalLecciones > 0
+        ? t.hasTerminadoElCurso
+        : t.todaviaSinContenido;
 
   // Sin margen arriba: desde que la pantalla no tiene cabecera propia,
   // esta franja es lo primero que hay bajo la barra de navegación.
   return (
     <div>
       <Banner
-        eyebrow={t.tuPlanDeMeses(meses.length)}
+        eyebrow={esperando ? tb.estasAlDia : t.tuPlanDeMeses(meses.length)}
         title={titulo}
         subtitle={actual?.titulo}
         action={
@@ -67,7 +87,9 @@ export default function PanelPlan({
         secondaryText={
           actual
             ? t.leccionesEnEsteModulo(actual.completadas, actual.totalLecciones)
-            : undefined
+            : esperando && espera
+              ? textoDeEspera(espera.diasParaAbrir, espera.abreEl, tb)
+              : undefined
         }
       />
     </div>

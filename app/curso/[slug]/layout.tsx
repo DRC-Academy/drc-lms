@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import { focoActual, sesionActual } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
-import { cursoPorSlug, progresoDelCurso } from "@/lib/cursos-servidor";
+import { cursoPorSlug, estadoDelCurso, fechaDelDrip } from "@/lib/cursos-servidor";
+import { rutaDeMiCurso } from "@/lib/cursos";
 import { textosActuales } from "@/lib/idioma-servidor";
 import { conFoco } from "@/lib/foco";
 import Cabecera, { NavegacionInferior, TiraRevision, enlacesDeSecciones } from "@/components/Cabecera";
@@ -44,8 +45,8 @@ import MenuPerfil from "@/components/leccion/MenuPerfil";
  * cuando pueda.
  *
  * Y las consultas no se duplican: `cursoPorSlug`, `obtenerPerfil` y las
- * dos de progreso van por `cache()`, así que layout y página se reparten
- * los mismos viajes.
+ * tres lecturas del curso —módulos, lecciones y progreso— van por
+ * `cache()`, así que layout y página se reparten los mismos viajes.
  */
 export default function LayoutCurso({
   children,
@@ -112,7 +113,21 @@ async function MarcoDelCurso({ slug, children }: { slug: string; children: React
     );
   }
 
-  const { completadas, total } = await progresoDelCurso(alumnoId, curso.id);
+  // DÓNDE VA EL ALUMNO EN ESTE CURSO, que es lo que la pestaña «Mi curso»
+  // necesita ahora: ya no lleva al temario sino a la lección que toca,
+  // y dentro del curso la resuelve contra EL CURSO DE LA URL, no contra
+  // el principal del inicio. Un alumno con dos cursos que entró en el
+  // segundo tiene que poder seguir en el segundo.
+  //
+  // El drip se aplica igual que en las páginas: si apuntara a una
+  // lección de un módulo cerrado, la pestaña llevaría a una pantalla
+  // que rechaza al alumno. Y no cuesta viajes de más: las tres lecturas
+  // van por `cache()` y la página que cuelga de aquí las pide también.
+  const estado = await estadoDelCurso(
+    alumnoId,
+    curso,
+    await fechaDelDrip(alumnoId, curso.id, perfil?.fechaInicio)
+  );
   const nombre = perfil?.nombre.trim() ?? "";
   const t = textosActuales().navegacion;
 
@@ -120,7 +135,7 @@ async function MarcoDelCurso({ slug, children }: { slug: string; children: React
   // secciones que ofrecer porque no hay alumno del que hablar.
   const enlaces = enlacesDeSecciones({
     alumnoId: alumnoId || null,
-    cursoSlug: curso.slug,
+    miCurso: rutaDeMiCurso(estado),
     foco: paraEnlaces,
     t,
   });
@@ -129,14 +144,19 @@ async function MarcoDelCurso({ slug, children }: { slug: string; children: React
     <MarcoCurso
       // LA MISMA `Cabecera` QUE EL RESTO DE LAS PANTALLAS DEL ALUMNO, con
       // el curso añadido: `seccion="curso"` marca la pestaña activa, y
-      // `cursoSlug` es lo que hace que el enlace "Mi curso" exista.
+      // `miCurso` es lo que hace que el enlace "Mi curso" exista.
       cabecera={
         <Cabecera
           nombre={nombre || undefined}
           alumnoId={alumnoId || null}
-          cursoSlug={curso.slug}
+          miCurso={rutaDeMiCurso(estado)}
           seccion="curso"
-          contexto={{ titulo: curso.titulo, completadas, total }}
+          contexto={{
+            slug: curso.slug,
+            titulo: curso.titulo,
+            completadas: estado.completadas,
+            total: estado.total,
+          }}
           foco={paraEnlaces}
           revisando={revisando}
         />

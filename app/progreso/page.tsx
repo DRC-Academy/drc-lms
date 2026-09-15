@@ -9,7 +9,9 @@ import {
 } from "@/lib/estimacion";
 import { objetivoDelAlumno } from "@/lib/objetivo-servidor";
 import { exigirFoco } from "@/lib/sesion-servidor";
-import { cursosAsignados } from "@/lib/cursos-servidor";
+import { cursosDelInicio } from "@/lib/cursos-servidor";
+import { rutaDeMiCurso } from "@/lib/cursos";
+import { comoFecha } from "@/lib/fechas";
 import { textosActuales } from "@/lib/idioma-servidor";
 import Cabecera from "@/components/Cabecera";
 import Ficha from "@/components/progreso/Ficha";
@@ -69,10 +71,23 @@ export default async function PaginaProgreso() {
   // porque en la de Gestión no se puede escribir. Sin reescritura, o
   // si Gestión ha rehecho la ficha desde que se hizo, vuelve el
   // original: peor redactado, pero cierto. Ver `lib/objetivo-servidor.ts`.
-  const [cursos, objetivo] = await Promise.all([
-    perfil ? cursosAsignados(perfil.plan, nivelDelAlumno(alumnoId, perfil), alumnoId) : Promise.resolve([]),
+  //
+  // Los cursos, con su estado y no solo su fila: la cabecera necesita a
+  // qué lección lleva «Mi curso», y ese es el mismo cálculo del inicio
+  // (`cursosDelInicio`), para que la pestaña apunte al mismo sitio en
+  // todas las pantallas.
+  const [estadosCurso, objetivo] = await Promise.all([
+    perfil
+      ? cursosDelInicio(
+          alumnoId,
+          perfil.plan,
+          nivelDelAlumno(alumnoId, perfil),
+          comoFecha(perfil.fechaInicio)
+        )
+      : Promise.resolve([]),
     objetivoDelAlumno(alumnoId, perfil?.objetivoPerfil ?? null),
   ]);
+  const principal = estadosCurso[0];
 
   // EL NIVEL, CON LA PRIORIDAD DE GESTIÓN. La columna `nivel` de la
   // vista es lo que tecleó quien dio de alta al alumno, que allí es la
@@ -102,7 +117,7 @@ export default async function PaginaProgreso() {
       <Cabecera
         nombre={perfil?.nombre.trim() || undefined}
         alumnoId={alumnoId}
-        cursoSlug={cursos[0]?.slug ?? null}
+        miCurso={principal ? rutaDeMiCurso(principal) : null}
         seccion="progreso"
         foco={paraEnlaces}
         revisando={revisando}

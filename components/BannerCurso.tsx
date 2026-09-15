@@ -3,6 +3,7 @@ import Link from "next/link";
 import { conFoco } from "@/lib/foco";
 import { textoDeEspera } from "@/lib/drip";
 import type { EstadoCurso } from "@/lib/cursos-servidor";
+import { rutaDeMiCurso } from "@/lib/cursos";
 import { partirModulo } from "@/lib/modulo";
 import { etiquetaPosicion, ubicarModulo } from "@/lib/temario";
 import Banner from "@/components/Banner";
@@ -81,10 +82,11 @@ export default function BannerCurso({
   const terminado = total > 0 && completadas >= total;
   const esperando = siguiente === null && !terminado;
 
-  const destino = conFoco(
-    siguiente ? `/curso/${curso.slug}/${siguiente.id}` : `/curso/${curso.slug}`,
-    foco
-  );
+  // EL MISMO DESTINO QUE LA PESTAÑA «MI CURSO». La regla —la lección
+  // abierta que toca, o el temario cuando no hay ninguna— está en
+  // `rutaDeMiCurso`, y el botón y la pestaña la leen de allí: dos
+  // puertas a la misma pantalla no pueden llevar a sitios distintos.
+  const destino = conFoco(rutaDeMiCurso(principal), foco);
 
   const etiqueta = terminado
     ? t.cursoCompletado

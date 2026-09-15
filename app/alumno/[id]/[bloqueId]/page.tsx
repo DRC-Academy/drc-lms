@@ -5,7 +5,9 @@ import { getBloque } from "@/lib/data";
 import { textosActuales } from "@/lib/idioma-servidor";
 import { obtenerAlumno } from "@/lib/gestion";
 import { buscarBloqueGenerado } from "@/lib/progreso-servidor";
-import { cursosAsignados } from "@/lib/cursos-servidor";
+import { cursosDelInicio } from "@/lib/cursos-servidor";
+import { rutaDeMiCurso } from "@/lib/cursos";
+import { comoFecha } from "@/lib/fechas";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
 import Cabecera from "@/components/Cabecera";
 import Practica from "@/components/Practica";
@@ -44,11 +46,19 @@ export default async function PaginaBloque({
   const nombre = datos.perfil?.nombre ?? "";
 
   // El curso principal, solo para que la cabecera pueda pintar "Mi curso".
-  // Son 7 filas y evita que la navegación cambie de forma entre pantallas.
-  const cursos = datos.perfil
-    ? await cursosAsignados(datos.perfil.plan, nivelDelAlumno(params.id, datos.perfil), params.id)
-    : [];
-  const cursoSlug = cursos[0]?.slug ?? null;
+  // Con su estado y no solo su fila: la pestaña lleva a la lección que
+  // toca, y cuál es la decide el mismo cálculo que en el inicio.
+  const principal = datos.perfil
+    ? (
+        await cursosDelInicio(
+          params.id,
+          datos.perfil.plan,
+          nivelDelAlumno(params.id, datos.perfil),
+          comoFecha(datos.perfil.fechaInicio)
+        )
+      )[0]
+    : undefined;
+  const miCurso = principal ? rutaDeMiCurso(principal) : null;
 
   if (!bloque) {
     return (
@@ -56,7 +66,7 @@ export default async function PaginaBloque({
         <Cabecera
           nombre={nombre}
           alumnoId={params.id}
-          cursoSlug={cursoSlug}
+          miCurso={miCurso}
           seccion="practica"
           foco={foco}
           revisando={revisando}
@@ -102,7 +112,7 @@ export default async function PaginaBloque({
       <Cabecera
         nombre={nombre}
         alumnoId={params.id}
-        cursoSlug={cursoSlug}
+        miCurso={miCurso}
         seccion="practica"
         foco={foco}
         revisando={revisando}

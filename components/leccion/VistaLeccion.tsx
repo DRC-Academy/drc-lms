@@ -13,6 +13,8 @@ import PanelCurso, { type EstadoEjerciciosActual } from "@/components/leccion/Pa
 import PasoAPaso, { type Paso } from "@/components/leccion/PasoAPaso";
 import { usarMarco } from "@/components/leccion/MarcoCurso";
 import { conFoco } from "@/lib/foco";
+import { partirModulo } from "@/lib/modulo";
+import { ubicarModulo } from "@/lib/temario";
 
 /**
  * LA PANTALLA DE LECCIÓN: EL PANEL DEL CURSO Y LA LECCIÓN POR PARTES.
@@ -36,6 +38,7 @@ import { conFoco } from "@/lib/foco";
 export default function VistaLeccion({
   cursoSlug,
   cursoTitulo,
+  hrefMiCurso,
   cursoCompletadas,
   cursoTotal,
   etiquetaModulo,
@@ -56,6 +59,13 @@ export default function VistaLeccion({
 }: {
   cursoSlug: string;
   cursoTitulo: string;
+  /**
+   * A dónde lleva «Mi curso» —la lección que toca, o el temario—, ya con
+   * el foco. Es el destino de la salida de los ejercicios, que se llama
+   * igual que la pestaña; el resto de salidas de esta pantalla van al
+   * temario y lo dicen.
+   */
+  hrefMiCurso: string;
   cursoCompletadas: number;
   cursoTotal: number;
   etiquetaModulo: string;
@@ -157,13 +167,33 @@ export default function VistaLeccion({
         ? t.instruccionPartes(ejercicios.length)
         : t.instruccionSinEjercicios;
 
+  // ---------------------------------------------------------------
+  // EL TEMARIO, DESDE AQUÍ
+  //
+  // La pestaña «Mi curso» ya no lleva al temario sino a la lección, así
+  // que el temario tiene que seguir teniendo una puerta desde la lección
+  // y esa puerta tiene que decir lo que hay detrás. Lo que el temario da
+  // y el panel de al lado no: los seis meses como plan, la fecha en la
+  // que se abre cada uno y el diploma. De ahí el rótulo —«Ver el plan de
+  // 6 meses»—, que de paso recuerda cuánto dura el curso.
+  //
+  // Los meses se cuentan sobre los módulos que ya vienen para el panel,
+  // con la misma regla que usa el temario para agruparlos: es el mismo
+  // número que titula allí la franja del plan.
+  // ---------------------------------------------------------------
   const hrefCurso = conFoco(`/curso/${cursoSlug}`, foco);
+  const meses = modulos.reduce(
+    (tope, modulo, i) => Math.max(tope, ubicarModulo(partirModulo(modulo.titulo, i)).mes),
+    0
+  );
+  const rotuloTemario = t.verElPlanDeMeses(meses);
 
   const panel = (
     <PanelCurso
       cursoTitulo={cursoTitulo}
       cursoCompletadas={cursoCompletadas}
       cursoTotal={cursoTotal}
+      rotuloTemario={rotuloTemario}
       modulos={modulos}
       moduloActualId={moduloId}
       leccionActualId={leccion.id}
@@ -253,7 +283,7 @@ export default function VistaLeccion({
         <div className="flex items-center gap-2.5 px-3.5 pt-3 min-[900px]:hidden">
           <Link
             href={hrefCurso}
-            aria-label={t.volverAlCurso}
+            aria-label={rotuloTemario}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-marca-borde bg-white text-marca-tinta transition-colors hover:bg-marca-niebla"
           >
             <IconoCerrar className="h-4 w-4" />
@@ -274,7 +304,7 @@ export default function VistaLeccion({
           <header className="relative text-center">
             <Link
               href={hrefCurso}
-              aria-label={t.volverAlCurso}
+              aria-label={rotuloTemario}
               className="absolute left-0 top-1 hidden h-10 w-10 place-items-center rounded-full border border-marca-borde bg-white text-marca-tinta transition-colors hover:bg-marca-niebla min-[900px]:grid"
             >
               <IconoCerrar className="h-4 w-4" />
@@ -310,6 +340,7 @@ export default function VistaLeccion({
                 profesor={profesor}
                 leccionId={leccion.id}
                 cursoSlug={cursoSlug}
+                hrefMiCurso={hrefMiCurso}
                 siguienteId={siguienteId}
                 foco={foco}
                 alSalir={volverALaTeoria}

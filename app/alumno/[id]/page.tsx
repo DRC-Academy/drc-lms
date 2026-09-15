@@ -13,6 +13,7 @@ import {
   leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
+import { rutaDeMiCurso } from "@/lib/cursos";
 import { comoFecha } from "@/lib/fechas";
 import { calcularDiploma } from "@/lib/diploma";
 import Cabecera from "@/components/Cabecera";
@@ -198,7 +199,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
         // El de la ficha, no el de la sesión: es lo que le da navegación
         // al equipo sin sacarlo del alumno que está revisando.
         alumnoId={params.id}
-        cursoSlug={estadosCurso[0]?.curso.slug ?? null}
+        miCurso={principal ? rutaDeMiCurso(principal) : null}
         seccion="inicio"
         foco={foco}
         revisando={revisando}

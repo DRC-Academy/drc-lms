@@ -186,6 +186,15 @@ Barra pegajosa arriba en todas las pantallas del alumno.
 - Logotipo (alt: `DRC Academy`), lleva al inicio.
 - Navegación de secciones: **Inicio** · **Mi curso** · **Para ti**
   - «Mi curso» solo aparece si el alumno tiene curso asignado.
+  - **«Mi curso» lleva a la lección, no al temario:** la primera pendiente a la
+    que puede entrar, que es el mismo destino que el botón «Continuar» del
+    inicio (`rutaDeMiCurso`, `lib/cursos.ts`). Quien nunca entró aterriza en la
+    lección 1. Sin lección a la que ir —ha hecho todo lo abierto y espera al
+    módulo siguiente, o terminó el curso— lleva al temario, que es donde se
+    dice cuándo se abre lo siguiente o qué repasar. Nunca a una lección
+    cerrada: `siguiente` solo puede ser una abierta.
+  - Con dos cursos, el de actividad más reciente (el mismo que manda en el
+    banner del inicio); dentro de `/curso/…`, el curso de la URL.
   - En escritorio va junto al logotipo; en móvil baja a una barra fija abajo con
     los mismos tres rótulos y un icono cada uno.
 - **Salir** (botón de texto) y el nombre del alumno con su inicial en un círculo.
@@ -546,10 +555,14 @@ franja que el resto.
 >
 > [ **Continuar** ]   {completadas} de {total} lecciones en este módulo
 
-Titular en los otros dos casos:
+Los otros tres casos, sin botón:
 
-- Curso terminado: **Has terminado el curso** (sin botón)
-- Curso sin contenido: **Todavía sin contenido** (sin botón)
+- Ha hecho todo lo abierto y espera al módulo siguiente: eyebrow **Estás al
+  día**, titular **Has hecho todo lo que tienes abierto**, debajo «Se abre el
+  26 de sept.» (las mismas tres frases que el banner del inicio; `Temario.espera`).
+  Antes aquí decía «Has terminado el curso» a quien iba por el mes 2.
+- Curso terminado: **Has terminado el curso**
+- Curso sin contenido: **Todavía sin contenido**
 
 **La franja no tiene columna derecha.** La tuvo, y era el problema de esta
 pantalla: una rejilla con una casilla por lección —191 cuadritos blancos sobre
@@ -704,6 +717,8 @@ En revisión, la tira «Revisando la ficha de…» va encima de todo.
 > **Mi curso**
 > {curso} · {completadas} de {total} lecciones
 >
+> [ Ver el plan de 6 meses → ]
+>
 > ┌ SEMANA 1 · MÓDULO 1 — {título}                    ✓ ┐   ← hecho
 > ┌ SEMANA 3 · MÓDULO 12 — {título}                   ▲ ┐   ← el actual, abierto
 > │  Tu progreso actual                    ( 33% )      │
@@ -716,8 +731,6 @@ En revisión, la tira «Revisando la ficha de…» va encima de todo.
 > │  Ejercicios  11 de 38                            ▼  │
 > └────────────────────────────────────────────────────┘
 > ┌ MÓDULO 13 — {título}              Se abre en 5 días ┐   ← por abrir, apagado
->
-> [ Ver el curso completo → ]
 
 - Un acordeón por módulo, todos los del curso (`arbolDelCurso`), con el actual
   abierto y la lección actual centrada en la columna. Los demás se abren al
@@ -731,6 +744,12 @@ En revisión, la tira «Revisando la ficha de…» va encima de todo.
   va y cuáles llevan respuesta. Antes de empezarlos, pulsarla los abre.
 - Un módulo por abrir se lee apagado con «Se abre en {n} días» y sus lecciones
   no son enlace.
+- **«Ver el plan de 6 meses →»** va arriba, antes de la lista, y es la puerta
+  al temario desde la lección: los seis meses, la fecha en la que se abre cada
+  uno y el diploma. Estaba al final, después de los 48 módulos, como «Ver el
+  curso completo», y era la única puerta que quedaba desde que la pestaña «Mi
+  curso» lleva a la lección. Solo una vez: no se repite abajo. La X que cierra
+  la lección va al mismo sitio y lleva el mismo rótulo para lector de pantalla.
 
 ### 7.4 La lección, por partes
 

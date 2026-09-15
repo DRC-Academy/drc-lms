@@ -132,3 +132,43 @@ export function claveCoincide(
   }
   return curso.tipo === "examen" && curso.examen === clave.examen;
 }
+
+// ---------------------------------------------------------------
+// A DÓNDE LLEVA «MI CURSO»
+//
+// A LA LECCIÓN, NO AL TEMARIO. La pestaña abría el índice del curso, y
+// el índice es una decisión más entre el alumno y lo que venía a hacer.
+// Ahora lleva a la primera lección pendiente a la que puede entrar, que
+// es lo mismo a lo que lleva el botón «Continuar» del inicio: las dos
+// puertas salen de aquí y por eso no pueden discrepar.
+//
+// «LA ÚLTIMA LECCIÓN» NO EXISTE COMO DATO. No se guarda por dónde entró
+// el alumno; lo único que hay es `completada_en`. Así que «donde lo
+// dejó» es la primera que le falta, y si saltó alguna, esa.
+//
+// DOS ESTADOS SIN LECCIÓN, Y LOS DOS VAN AL TEMARIO:
+//
+//   · HA HECHO TODO LO ABIERTO y espera al módulo siguiente. Aquí no
+//     hay lección que dar: `siguiente` solo puede apuntar a una abierta
+//     —pasa por `aperturaDeLeccion`— y por eso es null. Mandarlo a una
+//     bloqueada es el fallo que ya se arregló en el inicio y que esta
+//     puerta no repite. El temario es el único sitio que le dice cuándo
+//     se abre lo siguiente.
+//   · HA TERMINADO EL CURSO. Elegir qué repasar es justo lo que el
+//     temario permite y una lección suelta no.
+//
+// El que nunca entró no es un caso: su primera pendiente abierta es la
+// lección 1, y la regla lo lleva allí sin saber que es nuevo.
+//
+// Recibe el estado del curso —el mismo `EstadoCurso` del inicio— y
+// devuelve la ruta SIN el foco de revisión: eso lo añade quien pinta el
+// enlace, como con todos los demás.
+// ---------------------------------------------------------------
+
+export function rutaDeMiCurso(estado: {
+  curso: { slug: string };
+  siguiente: { id: string } | null;
+}): string {
+  const temario = `/curso/${estado.curso.slug}`;
+  return estado.siguiente ? `${temario}/${estado.siguiente.id}` : temario;
+}

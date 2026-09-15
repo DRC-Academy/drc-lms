@@ -2,11 +2,9 @@ import { nivelDelAlumno } from "@/lib/estimacion";
 import { notFound, redirect } from "next/navigation";
 import { focoActual } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
-import { arbolDelCurso, cursoPorSlug, cursosAsignados } from "@/lib/cursos-servidor";
-import { sinDripEn } from "@/lib/accesos-manuales";
+import { arbolDelCurso, cursoPorSlug, cursosAsignados, fechaDelDrip } from "@/lib/cursos-servidor";
 import { construirTemario } from "@/lib/temario";
 import { textosActuales } from "@/lib/idioma-servidor";
-import { comoFecha } from "@/lib/fechas";
 import { calcularDiploma } from "@/lib/diploma";
 import Temario from "@/components/curso/Temario";
 import BannerDiploma from "@/components/BannerDiploma";
@@ -74,9 +72,7 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
   // Sin alumno no hay fecha y se ve el curso entero. Y un alumno al que
   // le hayan abierto este curso entero llega aquí por el mismo camino:
   // `null` como fecha es lo que `lib/drip.ts` entiende por "sin espera".
-  const fechaDrip = (await sinDripEn(alumnoId, curso.id))
-    ? null
-    : comoFecha(perfil?.fechaInicio);
+  const fechaDrip = await fechaDelDrip(alumnoId, curso.id, perfil?.fechaInicio);
 
   const arbol = await arbolDelCurso(alumnoId, curso, fechaDrip);
   const temario = construirTemario(arbol, textosActuales().curso);

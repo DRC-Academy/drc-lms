@@ -2,16 +2,16 @@ import { nivelDelAlumno } from "@/lib/estimacion";
 import { notFound, redirect } from "next/navigation";
 import { focoActual } from "@/lib/sesion-servidor";
 import { conFoco } from "@/lib/foco";
+import { rutaDeMiCurso } from "@/lib/cursos";
 import { obtenerPerfil } from "@/lib/gestion";
 import {
   arbolDelCurso,
   cursoPorSlug,
   cursosAsignados,
   ejerciciosPorLeccion,
+  fechaDelDrip,
   leccionParaVer,
 } from "@/lib/cursos-servidor";
-import { sinDripEn } from "@/lib/accesos-manuales";
-import { comoFecha } from "@/lib/fechas";
 import { sanearHtml, tieneContenido } from "@/lib/sanear-html";
 import { partesDeLeccion, prepararLeccion } from "@/lib/leccion-html";
 import { etiquetaModulo, partirModulo } from "@/lib/modulo";
@@ -60,8 +60,7 @@ export default async function PaginaLeccion({
   // consigue pasando `null` como fecha de inicio, que es lo que
   // `lib/drip.ts` ya entiende como "abierto desde el principio": ni una
   // línea de las reglas de apertura cambia por esto.
-  const abiertoEntero = await sinDripEn(alumnoId, curso.id);
-  const fechaDrip = abiertoEntero ? null : comoFecha(perfil?.fechaInicio);
+  const fechaDrip = await fechaDelDrip(alumnoId, curso.id, perfil?.fechaInicio);
 
   // SE PIDE LA LECCIÓN ANTES DE SABER SI ES SUYA, y es deliberado. El
   // guard sigue decidiendo igual y unas líneas más abajo: lo único que
@@ -142,10 +141,20 @@ export default async function PaginaLeccion({
   const moduloActual =
     arbol.modulos.find((m) => m.lecciones.some((l) => l.id === leccion.id))?.id ?? "";
 
+  // A dónde lleva «Mi curso» desde aquí: la misma regla que la pestaña,
+  // resuelta con el árbol que ya se ha leído. Lo usa la salida de los
+  // ejercicios, que se llama igual que la pestaña y tiene que ir al
+  // mismo sitio.
+  const hrefMiCurso = conFoco(
+    rutaDeMiCurso({ curso, siguiente: arbol.leccionActual ? { id: arbol.leccionActual } : null }),
+    paraEnlaces
+  );
+
   return (
     <VistaLeccion
       cursoSlug={curso.slug}
       cursoTitulo={curso.titulo}
+      hrefMiCurso={hrefMiCurso}
       cursoCompletadas={cursoCompletadas}
       cursoTotal={cursoTotal}
       etiquetaModulo={etiquetaModulo(partido, textosActuales().curso)}

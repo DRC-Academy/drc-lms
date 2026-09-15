@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { conFoco } from "@/lib/foco";
 import { desdeCurso } from "@/lib/ejercicio-unificado";
 import type { EjercicioVista } from "@/lib/ejercicios";
 import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
@@ -48,6 +47,7 @@ export default function FlujoEjercicios({
   profesor,
   leccionId,
   cursoSlug,
+  hrefMiCurso,
   siguienteId,
   alSalir,
   alEstado,
@@ -60,6 +60,8 @@ export default function FlujoEjercicios({
   profesor: string;
   leccionId: string;
   cursoSlug: string;
+  /** A dónde lleva la pestaña «Mi curso», ya con el foco. Es la salida del visor. */
+  hrefMiCurso: string;
   siguienteId: string | null;
   /**
    * Vuelve a la TEORÍA de esta lección. No es la salida de la pantalla
@@ -125,14 +127,16 @@ export default function FlujoEjercicios({
   return (
     <VisorEjercicios
       ejercicios={unificados}
-      // AL CURSO, no a la lección. El alumno entra en los ejercicios
+      // A «MI CURSO», no a la lección. El alumno entra en los ejercicios
       // desde la lección, pero la lección es una pantalla de paso: la
       // sección de la que ha salido —y la que la navegación nombra— es
       // el curso. Para volver al texto de esta lección están la flecha
       // del carril lateral y la de la barra de móvil.
-      // Se nombra con el mismo texto que usa la cabecera, para que la
-      // salida diga el destino tal y como el alumno lo va a ver al llegar.
-      volver={{ seccion: todos.navegacion.miCurso, href: conFoco(`/curso/${cursoSlug}`, foco) }}
+      // Se nombra con el mismo texto que usa la cabecera Y LLEVA AL MISMO
+      // SITIO QUE LA PESTAÑA: la lección que toca, o el temario cuando no
+      // hay ninguna. Una salida que se llama como la pestaña y aterriza
+      // en otra pantalla es exactamente lo que confunde.
+      volver={{ seccion: todos.navegacion.miCurso, href: hrefMiCurso }}
       alSuceso={alSuceso}
       guardarIntentos={registrarIntentos}
       embebido

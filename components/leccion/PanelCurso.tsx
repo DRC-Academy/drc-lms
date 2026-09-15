@@ -37,11 +37,20 @@ export type EstadoEjerciciosActual = {
  * lista se mueve dentro y el texto se queda quieto, que es lo que
  * arregló el lateral anterior y no se vuelve atrás. Al entrar, la
  * lección actual se centra en esa columna.
+ *
+ * EL TEMARIO SE ENLAZA ARRIBA, ANTES DE LA LISTA. Estaba abajo, como
+ * «Ver el curso completo», después de los 48 módulos: había que pasar
+ * el curso entero para encontrarlo, y con la pestaña «Mi curso» llevando
+ * ya a la lección, este panel es la única puerta al temario que queda a
+ * la vista. Arriba se ve sin scroll, también en el cajón de móvil. Y
+ * solo una vez: un mismo destino dos veces a 48 módulos de distancia es
+ * lo que hace que ninguno de los dos se reconozca.
  */
 export default function PanelCurso({
   cursoTitulo,
   cursoCompletadas,
   cursoTotal,
+  rotuloTemario,
   modulos,
   moduloActualId,
   leccionActualId,
@@ -57,6 +66,8 @@ export default function PanelCurso({
   cursoTitulo: string;
   cursoCompletadas: number;
   cursoTotal: number;
+  /** «Ver el plan de 6 meses»: lo calcula la vista, que sabe cuántos son. */
+  rotuloTemario: string;
   modulos: ModuloIndice[];
   moduloActualId: string;
   leccionActualId: string;
@@ -115,7 +126,21 @@ export default function PanelCurso({
         {cursoTitulo} · {t.leccionesDelCurso(cursoCompletadas, cursoTotal)}
       </p>
 
-      <ol className="mt-[22px] flex flex-col gap-2">
+      {/* La puerta al temario: los seis meses, con sus fechas y el
+          diploma. Ver la cabecera del archivo para por qué va aquí y
+          no al final. */}
+      <Link
+        href={conFoco(`/curso/${cursoSlug}`, foco)}
+        onClick={alElegir}
+        className="mt-4 flex w-full items-center justify-between gap-2 rounded-[10px] border border-marca-borde bg-marca-niebla px-3 py-[11px] text-[13.5px] font-semibold text-marca-tinta transition-colors hover:bg-marca-nieblaOscura"
+      >
+        {rotuloTemario}
+        <span aria-hidden className="text-marca-grisSuave">
+          →
+        </span>
+      </Link>
+
+      <ol className="mt-4 flex flex-col gap-2">
         {modulos.map((modulo, i) => {
           const partido = partirModulo(modulo.titulo, i);
           const esActual = modulo.id === moduloActualId;
@@ -249,17 +274,6 @@ export default function PanelCurso({
           );
         })}
       </ol>
-
-      <Link
-        href={conFoco(`/curso/${cursoSlug}`, foco)}
-        onClick={alElegir}
-        className="mt-4 flex w-full items-center justify-between gap-2 rounded-[10px] border border-marca-borde bg-marca-niebla px-3 py-[11px] text-[13.5px] font-semibold text-marca-tinta transition-colors hover:bg-marca-nieblaOscura"
-      >
-        {t.verElCursoCompleto}
-        <span aria-hidden className="text-marca-grisSuave">
-          →
-        </span>
-      </Link>
     </div>
   );
 }

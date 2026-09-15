@@ -101,7 +101,14 @@ export type TextosCurso = {
   cerrarElPanel: string;
   enEstaLeccion: string;
   volverALaLeccion: string;
-  verElCursoCompleto: string;
+  /**
+   * La puerta al temario desde la lección: «Ver el plan de 6 meses». Se
+   * nombra por lo que hay detrás —el plan, con sus fechas— y de paso
+   * recuerda cuánto dura el curso, que es parte de lo que sostiene la
+   * suscripción. Con cero meses —un curso sin módulos— cae a un rótulo
+   * sin número. También es el `aria-label` de la X que cierra la lección.
+   */
+  verElPlanDeMeses: (meses: number) => string;
   leccionesDelCurso: (hechas: number, total: number) => string;
 
   // --- los botones de completar ---
@@ -115,8 +122,6 @@ export type TextosCurso = {
   //
   // La pantalla de lección enseña una parte cada vez, con un paso a
   // paso encima y el panel del curso al lado. Estas son sus palabras.
-  /** El botón de cerrar la lección, que devuelve al temario. */
-  volverAlCurso: string;
   /** Debajo del título, lo que hay que hacer en esta pantalla. */
   instruccionPartes: (ejercicios: number) => string;
   instruccionSinEjercicios: string;
@@ -228,7 +233,8 @@ const ES: TextosCurso = {
   cerrarElPanel: "Cerrar el panel de lecciones",
   enEstaLeccion: "En esta lección",
   volverALaLeccion: "Volver a la lección",
-  verElCursoCompleto: "Ver el curso completo",
+  verElPlanDeMeses: (meses) =>
+    meses > 0 ? `Ver el plan de ${meses} ${meses === 1 ? "mes" : "meses"}` : "Ver el curso completo",
   leccionesDelCurso: (hechas, total) =>
     `${hechas} de ${total} ${total === 1 ? "lección" : "lecciones"} del curso`,
 
@@ -238,7 +244,6 @@ const ES: TextosCurso = {
   completarLargoHecha: "Continuar",
   completarModulo: "Marcar el módulo como completado",
 
-  volverAlCurso: "Volver al curso",
   instruccionPartes: (ejercicios) =>
     ejercicios === 1
       ? "Lee cada parte y pulsa Siguiente. Al terminar la última, Evaluar abre el ejercicio de la lección."
@@ -353,7 +358,8 @@ const EN: TextosCurso = {
   cerrarElPanel: "Close the lesson panel",
   enEstaLeccion: "In this lesson",
   volverALaLeccion: "Back to the lesson",
-  verElCursoCompleto: "See the whole course",
+  verElPlanDeMeses: (meses) =>
+    meses > 0 ? `See the ${meses}-month plan` : "See the whole course",
   leccionesDelCurso: (hechas, total) =>
     `${hechas} of ${total} ${total === 1 ? "lesson" : "lessons"} in the course`,
 
@@ -365,7 +371,6 @@ const EN: TextosCurso = {
   completarLargoHecha: "Carry on",
   completarModulo: "Mark the module as done",
 
-  volverAlCurso: "Back to the course",
   instruccionPartes: (ejercicios) =>
     ejercicios === 1
       ? "Read each part and press Next. After the last one, Assess opens the lesson's exercise."

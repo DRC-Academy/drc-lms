@@ -101,7 +101,12 @@ export type Temario = {
   totalLecciones: number;
   completadas: number;
   porcentaje: number;
-  /** Dónde va el alumno ahora, o null si el curso está terminado o vacío. */
+  /**
+   * Dónde va el alumno ahora, o null si no hay lección abierta a la que
+   * ir. Null NO significa que haya terminado: también es null cuando ha
+   * hecho todo lo abierto y espera al módulo siguiente. Ese segundo
+   * caso lo dice `espera`.
+   */
   actual: {
     mes: number;
     semana: number;
@@ -111,6 +116,17 @@ export type Temario = {
     totalLecciones: number;
     destino: string | null;
   } | null;
+  /**
+   * Cuándo se abre lo siguiente, SOLO cuando el alumno ha hecho todo lo
+   * que tiene abierto y le queda curso por delante. Null en cualquier
+   * otro caso: con lección abierta, con el curso terminado o vacío.
+   *
+   * Es el mismo par que `EstadoCurso.diasParaAbrir` / `abreEl` en el
+   * inicio, y sale del mismo módulo: el primero cerrado al que le
+   * queden lecciones. La franja del plan lo necesita para no decirle
+   * «Has terminado el curso» a quien va por el mes 2.
+   */
+  espera: { diasParaAbrir: number; abreEl: string | null } | null;
 };
 
 /**
@@ -274,6 +290,25 @@ export function construirTemario(arbol: ArbolCurso, t: TextosCurso): Temario {
 
   const actual = modulos.find((m) => m.esActual) ?? null;
 
+  // ---------------------------------------------------------------
+  // SIN ACTUAL HAY DOS ESTADOS, NO UNO
+  //
+  // Desde que el actual se elige solo entre los abiertos, «no hay
+  // actual» pasa también cuando el alumno ha hecho todo lo que el drip
+  // le tiene abierto y espera al módulo siguiente. Lo separa del curso
+  // terminado el recuento, que no depende del drip: si quedan lecciones,
+  // está esperando, y lo que le interesa es cuándo se abre la primera
+  // que le falta.
+  //
+  // «El primero cerrado al que le queden lecciones» y no «el primero
+  // cerrado»: un módulo cerrado con todo hecho —progreso migrado— no es
+  // una espera de nada. Mismo criterio que `estadoDelCurso`.
+  // ---------------------------------------------------------------
+  const esperando = actual === null && arbol.completadas < arbol.total;
+  const proximo = esperando
+    ? (modulos.find((m) => !m.disponible && m.completadas < m.totalLecciones) ?? null)
+    : null;
+
   return {
     meses,
     totalLecciones: arbol.total,
@@ -290,5 +325,9 @@ export function construirTemario(arbol: ArbolCurso, t: TextosCurso): Temario {
           destino: actual.destino,
         }
       : null,
+    espera:
+      proximo && proximo.diasParaAbrir !== null
+        ? { diasParaAbrir: proximo.diasParaAbrir, abreEl: proximo.abreEl }
+        : null,
   };
 }

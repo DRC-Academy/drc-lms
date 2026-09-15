@@ -17,7 +17,9 @@ import {
   leerProgresoAlumno,
   leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
-import { cursosAsignados } from "@/lib/cursos-servidor";
+import { cursosDelInicio } from "@/lib/cursos-servidor";
+import { rutaDeMiCurso } from "@/lib/cursos";
+import { comoFecha } from "@/lib/fechas";
 import Cabecera from "@/components/Cabecera";
 import PanelPractica from "@/components/PanelPractica";
 
@@ -98,15 +100,28 @@ export default async function PaginaPractica() {
   );
 
   // Solo para que la cabecera pueda pintar "Mi curso" sin cambiar de
-  // forma entre pantallas.
-  const cursos = perfil ? await cursosAsignados(perfil.plan, nivelDelAlumno(alumnoId, perfil), alumnoId) : [];
+  // forma entre pantallas. EL MISMO CURSO Y LA MISMA LECCIÓN QUE EN EL
+  // INICIO: antes esto miraba `cursosAsignados()[0]` —el orden del plan—
+  // mientras el inicio ponía primero el de actividad más reciente, y un
+  // alumno con dos cursos veía la pestaña apuntar a uno u otro según la
+  // pantalla. `cursosDelInicio` es lo que decide allí, y decide aquí.
+  const principal = perfil
+    ? (
+        await cursosDelInicio(
+          alumnoId,
+          perfil.plan,
+          nivelDelAlumno(alumnoId, perfil),
+          comoFecha(perfil.fechaInicio)
+        )
+      )[0]
+    : undefined;
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
       <Cabecera
         nombre={perfil?.nombre.trim() || undefined}
         alumnoId={alumnoId}
-        cursoSlug={cursos[0]?.slug ?? null}
+        miCurso={principal ? rutaDeMiCurso(principal) : null}
         seccion="practica"
         foco={paraEnlaces}
         revisando={revisando}

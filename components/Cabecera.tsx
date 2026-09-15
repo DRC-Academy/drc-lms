@@ -86,6 +86,8 @@ const LOGO = { ancho: 121, alto: 32 };
  * no: se añade a esta, que es la única.
  */
 export type ContextoCurso = {
+  /** Del que sale el enlace del título, que sí lleva al temario. */
+  slug: string;
   titulo: string;
   completadas: number;
   total: number;
@@ -97,15 +99,23 @@ export type ContextoCurso = {
  * Los calcula la cabecera desde siempre; ahora también los pide la barra
  * de iconos de la lección, que es la misma navegación con otra forma.
  * Una sola lista para las dos, y así no pueden decir cosas distintas.
+ *
+ * «MI CURSO» RECIBE SU DESTINO HECHO, no el slug. Ya no lleva al temario
+ * sino a la lección por la que va el alumno —o al temario cuando no hay
+ * lección a la que ir—, y esa decisión vive en `rutaDeMiCurso`
+ * (`lib/cursos.ts`), que es la misma que usa el botón del inicio. Aquí
+ * solo se pinta lo que llega: si la cabecera calculara la ruta, habría
+ * dos sitios decidiendo a dónde va el alumno.
  */
 export function enlacesDeSecciones({
   alumnoId,
-  cursoSlug,
+  miCurso,
   foco,
   t,
 }: {
   alumnoId?: string | null;
-  cursoSlug?: string | null;
+  /** La ruta de la pestaña, sin foco. Sin ella, la pestaña no se pinta. */
+  miCurso?: string | null;
   foco?: string | null;
   t: TextosNavegacion;
 }): EnlaceSeccion[] {
@@ -113,9 +123,7 @@ export function enlacesDeSecciones({
 
   return [
     { clave: "inicio" as const, texto: t.inicio, href: `/alumno/${alumnoId}` },
-    ...(cursoSlug
-      ? [{ clave: "curso" as const, texto: t.miCurso, href: `/curso/${cursoSlug}` }]
-      : []),
+    ...(miCurso ? [{ clave: "curso" as const, texto: t.miCurso, href: miCurso }] : []),
     { clave: "practica" as const, texto: t.paraTi, href: "/practica" },
     // NOMBRE PROVISIONAL. "Mi ficha" quedó descartado —suena a
     // expediente administrativo y el contenido es justo lo
@@ -130,7 +138,7 @@ export function enlacesDeSecciones({
 export default function Cabecera({
   nombre,
   alumnoId,
-  cursoSlug,
+  miCurso,
   seccion,
   contexto,
   foco = null,
@@ -144,8 +152,11 @@ export default function Cabecera({
    * entonces no hay secciones que ofrecer.
    */
   alumnoId?: string | null;
-  /** El curso que abre "Mi curso". Sin él, el enlace no se pinta. */
-  cursoSlug?: string | null;
+  /**
+   * A dónde lleva "Mi curso": `rutaDeMiCurso` del curso principal del
+   * alumno. Sin ella, el enlace no se pinta.
+   */
+  miCurso?: string | null;
   seccion?: SeccionActiva;
   /**
    * Nombre y progreso del curso, solo dentro de él. Se AÑADE a la
@@ -162,13 +173,15 @@ export default function Cabecera({
   revisando?: boolean;
 }) {
   const t = textosActuales().navegacion;
-  const enlaces = enlacesDeSecciones({ alumnoId, cursoSlug, foco, t });
+  const enlaces = enlacesDeSecciones({ alumnoId, miCurso, foco, t });
 
   const inicial = nombre?.trim()[0]?.toUpperCase() ?? "";
 
-  // Dentro del curso, el título y la barra enlazan al temario. Se calcula
-  // una vez: lo pintan la fila de escritorio y la de móvil.
-  const hrefCurso = cursoSlug ? conFoco(`/curso/${cursoSlug}`, foco) : "#";
+  // Dentro del curso, el título y la barra enlazan AL TEMARIO, aunque la
+  // pestaña ya no: el título nombra el curso entero y el temario es
+  // donde está entero. Se calcula una vez: lo pintan la fila de
+  // escritorio y la de móvil.
+  const hrefCurso = contexto ? conFoco(`/curso/${contexto.slug}`, foco) : "#";
 
   return (
     <>
