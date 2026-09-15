@@ -48,8 +48,21 @@ import { CABECERA_URL } from "@/lib/foco";
  *   · `/api/avisos-apertura` — el cron. Vercel lo llama sin cookie y
  *     con `Authorization: Bearer CRON_SECRET`, que es lo que comprueba
  *     la propia ruta antes de hacer nada.
+ *
+ *   · `/api/externo` — lo que consulta DRC Gestión de servidor a
+ *     servidor, sin alumno delante. Lo autoriza el secreto compartido
+ *     de la cabecera `x-gestion-secret`, que comprueba cada ruta antes
+ *     de leer nada (`lib/secreto-externo.ts`). Detrás de la cookie,
+ *     Gestión recibiría un 401 en cada llamada.
  */
-const PUBLICAS = ["/acceso", "/entrar", "/avisos", "/api/avisos", "/api/avisos-apertura"];
+const PUBLICAS = [
+  "/acceso",
+  "/entrar",
+  "/avisos",
+  "/api/avisos",
+  "/api/avisos-apertura",
+  "/api/externo",
+];
 
 function esPublica(ruta: string): boolean {
   return PUBLICAS.some((publica) => ruta === publica || ruta.startsWith(`${publica}/`));

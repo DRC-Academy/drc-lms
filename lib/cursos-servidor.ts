@@ -21,7 +21,7 @@ import { aperturaDeLeccion, calcularApertura } from "@/lib/drip";
 import { baseLms } from "@/lib/supabase-lms";
 import { comoFecha } from "@/lib/fechas";
 import { cursosDelPlan } from "@/lib/cursos";
-import { excepcionesDelAlumno, sinDripEn } from "@/lib/accesos-manuales";
+import { excepcionesDelAlumno, sinDripEn, type ExcepcionAcceso } from "@/lib/accesos-manuales";
 
 export type CursoFila = {
   id: string;
@@ -117,10 +117,27 @@ export async function cursosAsignados(
    */
   alumnoId = ""
 ): Promise<CursoFila[]> {
+  return (await cursosYExcepciones(plan, nivel, alumnoId)).cursos;
+}
+
+/**
+ * Lo mismo, sin tirar las excepciones que ya se han leído para decidir.
+ *
+ * `cursosDelInicio` las necesita después —para saber a qué curso se le
+ * abre el drip— y las volvía a pedir con `sinDripEn`. En un render no
+ * costaba nada: `excepcionesDelAlumno` va por `cache()` y era el mismo
+ * viaje. PERO `cache()` SOLO DEDUPLICA DENTRO DE UN RENDER: en una
+ * route handler —`/api/externo/diploma`— la segunda llamada es una
+ * segunda consulta, y encima en una ola propia. Devolverlas de aquí es
+ * lo que deja el mismo código en tres olas en los dos sitios.
+ */
+async function cursosYExcepciones(
+  plan: string,
+  nivel: string,
+  alumnoId: string
+): Promise<{ cursos: CursoFila[]; excepciones: Map<string, ExcepcionAcceso> }> {
   // Las dos a la vez: las excepciones solo dependen del alumno, así que
-  // no tienen por qué esperar a la lista de cursos. Y como
-  // `excepcionesDelAlumno` va por `cache()`, si algo más de esta misma
-  // petición ya la pidió, esto no cuesta ningún viaje.
+  // no tienen por qué esperar a la lista de cursos.
   const [respuesta, excepciones] = await Promise.all([
     baseLms()
       .from("cursos")
@@ -132,14 +149,14 @@ export async function cursosAsignados(
   ]);
 
   const { data, error } = respuesta;
-  if (!registrar("No se pudieron leer los cursos", error)) return [];
+  if (!registrar("No se pudieron leer los cursos", error)) return { cursos: [], excepciones };
 
   const disponibles = data ?? [];
 
   // Lo que da el plan. La regla entera vive en `lib/cursos.ts` y aquí no
   // se decide nada: un plan de examen devuelve el curso del examen y
   // nada más.
-  const salida: CursoFila[] = [...cursosDelPlan(plan, nivel, disponibles)];
+  const cursos: CursoFila[] = [...cursosDelPlan(plan, nivel, disponibles)];
 
   // Y detrás los concedidos a mano, que por definición no están en las
   // claves del plan. Van al final a propósito: delante quedan los del
@@ -147,11 +164,11 @@ export async function cursosAsignados(
   // el banner cuando todavía no hay actividad de la que fiarse.
   for (const curso of disponibles) {
     if (!excepciones.has(curso.id)) continue;
-    if (salida.some((c) => c.id === curso.id)) continue;
-    salida.push(curso);
+    if (cursos.some((c) => c.id === curso.id)) continue;
+    cursos.push(curso);
   }
 
-  return salida;
+  return { cursos, excepciones };
 }
 
 // ---------------------------------------------------------------
@@ -904,18 +921,20 @@ export async function cursosDelInicio(
    * entero se le pasa `null`, que es lo que `lib/drip.ts` entiende por
    * "sin espera".
    *
-   * Preguntar las excepciones por curso no cuesta viajes:
-   * `excepcionesDelAlumno` va por `cache()` y esta misma petición ya la
-   * ha pedido en `cursosAsignados`.
+   * Las excepciones que lo deciden son las mismas que ya se leyeron
+   * para saber qué cursos tiene: ver `cursosYExcepciones` para por qué
+   * no se vuelven a pedir.
    */
   fechaInicio: Date | null = null
 ): Promise<EstadoCurso[]> {
-  const cursos = await cursosAsignados(plan, nivel, alumnoId);
+  const { cursos, excepciones } = await cursosYExcepciones(plan, nivel, alumnoId);
   if (cursos.length === 0) return [];
 
+  // Mismo criterio que `sinDripEn`: la excepción viva de este curso, si
+  // la hay, con el drip levantado.
   const estados = await Promise.all(
-    cursos.map(async (curso) =>
-      estadoDelCurso(alumnoId, curso, (await sinDripEn(alumnoId, curso.id)) ? null : fechaInicio)
+    cursos.map((curso) =>
+      estadoDelCurso(alumnoId, curso, excepciones.get(curso.id)?.sinDrip === true ? null : fechaInicio)
     )
   );
 
