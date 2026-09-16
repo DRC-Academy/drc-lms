@@ -2,6 +2,8 @@ import type { ClaseDelRecorrido } from "@/lib/gestion";
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { Estimacion } from "@/lib/estimacion";
 import BannerAmpliar from "@/components/BannerAmpliar";
+import BannerDiplomaFicha, { CSS_DIPLOMA } from "@/components/progreso/BannerDiplomaFicha";
+import type { EstadoDiploma } from "@/lib/diploma";
 import { formatearFechaLarga } from "@/lib/perfil";
 import { ESCALERA_MCER, esHito, proximoHito, type NivelMcer } from "@/lib/recorrido";
 import { enViñetas, soloParaElAlumno, textoParaElAlumno } from "@/lib/texto-alumno";
@@ -34,6 +36,17 @@ import { enViñetas, soloParaElAlumno, textoParaElAlumno } from "@/lib/texto-alu
 // bloque de esta pantalla que allí se ve distinto. El resto sigue siendo
 // copia literal.
 //
+// EL BANNER DEL DIPLOMA SÍ SE REPLICA. Va entre la caja "Tu nivel" y lo
+// que sigue, como allí, y vive en `components/progreso/BannerDiplomaFicha.tsx`
+// con su CSS (`CSS_DIPLOMA`), que se concatena AL FINAL de esta hoja
+// para que su padding gane al de `.pg-card` también en móvil. Dos
+// salvedades, las dos a propósito: allí el dato llega del LMS por HTTP y
+// hay hueco reservado, esqueleto y cierre animado; aquí el dato es
+// nuestro y viene en el mismo render, así que la tarjeta o está o no
+// está. Y el botón de quien no ha empezado allí abre el LMS en pestaña
+// nueva ("Ir a la plataforma"); aquí el alumno ya está en el LMS y el
+// botón lleva a la lección que toca, en la misma pestaña.
+//
 // LO OTRO QUE NO SE REPLICA es el marco: allí la página trae su propia
 // cabecera con el logotipo y el rótulo "Informe de progreso", porque es
 // una pantalla suelta que se abre desde un enlace. Aquí es una sección
@@ -56,6 +69,8 @@ export default function Ficha({
   urlAmpliar,
   nivelFiable,
   preparaExamen,
+  diploma,
+  hrefCurso,
 }: {
   nombre: string;
   nivel: NivelMcer | null;
@@ -81,6 +96,10 @@ export default function Ficha({
   focoRecomendado: string | null;
   clases: ClaseDelRecorrido[];
   urlAmpliar: string;
+  /** El estado del diploma del curso principal. Con "sin-curso" no se pinta nada. */
+  diploma: EstadoDiploma;
+  /** A dónde lleva "Empezar mi curso": la misma ruta que la pestaña «Mi curso», con el foco. */
+  hrefCurso: string;
 }) {
   const t = textosActuales().progreso;
   const primerNombre = nombre.trim().split(/\s+/)[0] || nombre;
@@ -179,6 +198,8 @@ export default function Ficha({
             </div>
           </div>
         </section>
+
+        <BannerDiplomaFicha diploma={diploma} hrefCurso={hrefCurso} />
 
         {objetivoVisible && (
           <section className="pg-card pg-goal pg-rise" style={{ animationDelay: "120ms" }}>
@@ -384,7 +405,9 @@ function Tarjeta(clase: ClaseDelRecorrido) {
 }
 
 function EstilosFicha() {
-  return <style dangerouslySetInnerHTML={{ __html: CSS_FICHA }} />;
+  // El CSS del diploma va detrás de todo, incluida la media query de
+  // móvil: así el padding propio de esa tarjeta gana al de `.pg-card`.
+  return <style dangerouslySetInnerHTML={{ __html: CSS_FICHA + CSS_DIPLOMA }} />;
 }
 
 // ---------------------------------------------------------------

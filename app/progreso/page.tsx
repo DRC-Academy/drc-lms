@@ -11,6 +11,8 @@ import { objetivoDelAlumno } from "@/lib/objetivo-servidor";
 import { exigirFoco } from "@/lib/sesion-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
 import { rutaDeMiCurso } from "@/lib/cursos";
+import { calcularDiploma } from "@/lib/diploma";
+import { conFoco } from "@/lib/foco";
 import { comoFecha } from "@/lib/fechas";
 import { textosActuales } from "@/lib/idioma-servidor";
 import Cabecera from "@/components/Cabecera";
@@ -167,6 +169,17 @@ export default async function PaginaProgreso() {
         focoRecomendado={perfil?.focoRecomendado ?? null}
         clases={recorrido.clases}
         urlAmpliar={URL_AMPLIAR}
+        // EL DIPLOMA, CON EL MISMO CÁLCULO QUE `/api/externo/diploma`: el
+        // curso principal manda y `calcularDiploma` dice cuánto falta. Es
+        // lo que Gestión pinta en su ficha pidiéndonoslo por HTTP; aquí
+        // sale del mismo render. Sin curso principal, "sin-curso", y la
+        // tarjeta no se pinta.
+        diploma={calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0)}
+        // A dónde lleva "Empezar mi curso": el mismo destino que la
+        // pestaña «Mi curso» de la cabecera, con el foco de revisión. Sin
+        // curso no hay botón —el estado es "sin-curso"—, así que el "/"
+        // es solo para que la prop no sea opcional.
+        hrefCurso={principal ? conFoco(rutaDeMiCurso(principal), paraEnlaces) : "/"}
       />
     </div>
   );

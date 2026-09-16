@@ -67,6 +67,15 @@ export type TextosBanners = {
   faltanParaDiploma: (restantes: number, total: number) => string;
   /** El recuento junto al carril: es la escala de la barra. */
   progresoDiploma: (hechas: number, total: number) => string;
+  // El banner del diploma de la ficha de progreso (components/progreso/BannerDiplomaFicha),
+  // que es el mismo que el de Gestión: un rótulo por estado, la frase de quien no ha
+  // empezado y su botón, y la frase de quien ya lo tiene.
+  tuCaminoAlDiploma: string;
+  tuCursoTeEspera: string;
+  comienzaElCamino: string;
+  /** El botón de quien no ha empezado: lleva a la lección que toca, aquí mismo. */
+  empezarMiCurso: string;
+  todasLasLecciones: string;
 
   // --- ampliar el plan ---
   llegaMasPreparado: string;
@@ -137,6 +146,11 @@ const ES: TextosBanners = {
   faltanParaDiploma: (restantes, total) =>
     `Te ${restantes === 1 ? "falta" : "faltan"} ${restantes} de ${total} lecciones para tu diploma`,
   progresoDiploma: (hechas, total) => `${hechas} de ${total}`,
+  tuCaminoAlDiploma: "Tu camino al diploma",
+  tuCursoTeEspera: "Tu curso te espera",
+  comienzaElCamino: "Comienza ahora el camino hacia tu diploma.",
+  empezarMiCurso: "Empezar mi curso →",
+  todasLasLecciones: "Todas las lecciones completadas.",
 
   llegaMasPreparado: "Llega más preparado",
   vasAlMaximo: "Vas al máximo de horas",
@@ -193,6 +207,11 @@ const EN: TextosBanners = {
   faltanParaDiploma: (restantes, total) =>
     `${restantes} of ${total} ${restantes === 1 ? "lesson" : "lessons"} to go for your diploma`,
   progresoDiploma: (hechas, total) => `${hechas} of ${total}`,
+  tuCaminoAlDiploma: "Your path to the diploma",
+  tuCursoTeEspera: "Your course is waiting",
+  comienzaElCamino: "Start the path to your diploma now.",
+  empezarMiCurso: "Start my course →",
+  todasLasLecciones: "All lessons completed.",
 
   llegaMasPreparado: "Arrive better prepared",
   vasAlMaximo: "You're on the maximum hours",
