@@ -7,39 +7,45 @@ import { enMeses, opcionesDeHoras, type Estimacion } from "@/lib/estimacion";
 // Lo que le costaría al alumno llegar a su meta con su plan de hoy y
 // con los dos siguientes, para que vea qué se ahorra pagando más.
 //
-// ⚠ ESTE ES EL PRIMER BLOQUE QUE YA NO ES RÉPLICA DE GESTIÓN. La ficha
-// de `components/progreso/Ficha.tsx` se copia de allí bloque a bloque
-// —lo dice su cabecera— y este banner salió de ella para rediseñarse:
-// fondo claro en vez del verde oscuro, otro copy y el ahorro de meses
-// como pieza principal. Mientras el rediseño no baje también a Gestión,
-// un alumno que abra el enlace de su profesor verá el banner viejo y en
-// el LMS el nuevo. Es a propósito y queda avisado; no es una deriva.
+// ⚠ ES LA COPIA VISUAL de `components/BannerAmpliar.tsx` de DRC Gestión:
+// mismo markup, mismas clases `pg-pace` / `pg-bars` / `pg-cta` y el mismo
+// CSS, copiado literal del bloque "Banner de ampliacion de plan" de su
+// `PROGRESO_CSS`. Tuvo un diseño propio (fondo claro, filas apiladas y
+// el ahorro como pieza principal), y Gestión lo tomó y lo rehizo en tres
+// tarjetas verticales; desde el 16/09/2026 esta pantalla vuelve a ser
+// calco de la de allí. Si allí cambia un píxel, aquí cambia el mismo.
 //
-// EL CÁLCULO NO SE TOCA. Todo lo que se pinta sale ya hecho de
-// `lib/estimacion.ts`, que es el port literal del de Gestión: aquí no se
-// suma, no se redondea y no se decide ninguna cifra. Si un número no
-// cuadrara con el de Gestión, el fallo estaría allí y no en esta
-// pantalla.
+// LO QUE NO SE COPIA, a propósito:
 //
-// POR QUÉ ES UN COMPONENTE SUELTO Y NO UNA SECCIÓN DE LA FICHA. Va a
-// vivir en dos sitios —"Mi progreso" y la ficha del alumno— y el CSS de
-// la ficha es una copia congelada que no puede crecer con estilos que
-// allí no existen. Con su propio `<style>` dentro, esto se enchufa donde
-// haga falta sin que la pantalla de destino traiga nada.
+//   · EL CÁLCULO. Todo lo que se pinta sale ya hecho de `lib/estimacion.ts`,
+//     que es el port literal del de Gestión: aquí no se suma, no se
+//     redondea y no se decide ninguna cifra.
+//   · LOS TEXTOS. Salen de `textosActuales().banners`, en los dos idiomas,
+//     y son los de esta pantalla (aquí "Estarías listo en", allí "Llegarías
+//     en"; aquí la pregunta nombra el examen de quien lo prepara). Lo
+//     visual es lo que se calca, no el copy.
+//   · LA VARIANTE SIN CIFRAS (`preparaExamen`), que Gestión no tiene: a
+//     quien prepara el examen de su propio nivel no se le puede prometer
+//     ninguna fecha, así que sus tarjetas comparan HORAS y no meses. Va
+//     con el mismo dibujo: la etiqueta amarilla lleva las horas extra y
+//     la cifra grande, las horas del plan.
+//   · EL BOTÓN abre WooCommerce en pestaña nueva: el LMS es otra web, y
+//     al volver el alumno tiene que encontrarse donde estaba.
+//
+// POR QUÉ ES UN COMPONENTE SUELTO Y NO UNA SECCIÓN DE LA FICHA. Lleva
+// su propio `<style>` con TODO lo que necesita (variables incluidas), así
+// se enchufa en cualquier pantalla sin que la de destino traiga nada.
 // ---------------------------------------------------------------
 
 export default function BannerAmpliar({
   estimacion,
   urlAmpliar,
-  retardoMs = 0,
   horasSemanales = null,
   preparaExamen = false,
 }: {
   estimacion: Estimacion | null;
   /** A dónde lleva el botón. Provisional hasta que haya pop-up de planes. */
   urlAmpliar: string;
-  /** Retardo de la entrada, para encajar en una pila escalonada. */
-  retardoMs?: number;
   /**
    * Sin estimación porque el alumno prepara el examen de su propio
    * nivel. Enseña la variante sin cifras. Ver `preparaSuPropioExamen`.
@@ -52,6 +58,7 @@ export default function BannerAmpliar({
   horasSemanales?: number | null;
 }) {
   const t = textosActuales().banners;
+
   // ---------------------------------------------------------------
   // LA VARIANTE SIN CIFRAS
   //
@@ -66,105 +73,60 @@ export default function BannerAmpliar({
   // que es verdad sin medir: con más horas a la semana llegas al mismo
   // examen con más práctica encima.
   //
-  // Sale antes que todo lo demás porque no comparte casi nada con el
-  // banner de siempre: mismo envoltorio, mismo botón, ni una cifra.
+  // SIN ESCALERA NO SE OFRECE NADA. `opcionesDeHoras` devuelve null
+  // cuando el alumno ya está en el plan más alto: cambia el titular y
+  // desaparece el botón, igual que hace el banner de estimación cuando
+  // `mereceLaPena` es falso.
+  //
+  // LAS TARJETAS MIDEN HORAS Y NO MESES, y por eso la barra significa lo
+  // contrario que en el otro banner: allí la más corta es la mejor
+  // porque son meses; aquí la más larga, porque son horas de clase.
+  // Cada una va rotulada con sus horas y con cuántas suma.
   // ---------------------------------------------------------------
   if (!estimacion) {
     if (!preparaExamen) return null;
 
     const opciones = opcionesDeHoras(horasSemanales, t);
+    const mejor = opciones ? opciones[opciones.length - 1] : null;
 
     return (
-      <section
-        className="amp amp-rise"
-        style={retardoMs ? { animationDelay: `${retardoMs}ms` } : undefined}
-      >
+      <section className="pg-card pg-pace">
         <EstilosBanner />
+        <h2 className="pg-pace-title">{opciones ? t.llegaMasPreparado : t.vasAlMaximo}</h2>
+        <p className="pg-pace-lede">{opciones ? t.examenMasHoras : t.examenAlMaximo}</p>
 
-        {/* ---------------------------------------------------------------
-            SIN ESCALERA NO SE OFRECE NADA
-
-            `opcionesDeHoras` devuelve null cuando el alumno ya está en el
-            plan más alto —5h, el techo del sistema—, y son 5 alumnos.
-            Con la primera versión de este banner esos cinco leían «con
-            más horas a la semana…» y un botón de «Amplía tu plan» que no
-            les podía dar nada: se les ofrecía algo que no existe.
-
-            Así que sin escalera cambia el titular y desaparece el botón,
-            exactamente igual que hace el banner de estimación cuando
-            `mereceLaPena` es falso. Un alumno que ya está arriba del todo
-            merece que se lo digan, no que se le venda. */}
-        <h2 className="amp-title">{opciones ? t.llegaMasPreparado : t.vasAlMaximo}</h2>
-        <p className="amp-sub">
-          {opciones
-            ? t.examenMasHoras
-            : t.examenAlMaximo}
-        </p>
-
-        {/* ---------------------------------------------------------------
-            LAS MISMAS BARRAS, MIDIENDO OTRA COSA
-
-            El banner de estimación compara MESES —cuánto tardarías con
-            cada plan— y aquí eso no existe: sin meta por encima no hay
-            horas que faltan, así que no hay meses que contar. Pero la
-            escalera de planes sí existe, y cuántas horas da cada uno es
-            un hecho que no hay que estimar.
-
-            Así que se comparan HORAS. Es lo que de verdad cambia al
-            ampliar, y es lo único que se puede poner aquí sin inventar
-            una cifra —que era la condición para que este banner
-            existiera—.
-
-            LA BARRA SIGNIFICA LO CONTRARIO QUE EN EL OTRO, y por eso
-            cada una va rotulada con sus horas y con cuántas suma: allí
-            la más corta es la mejor porque son meses, aquí la más larga
-            porque son horas de clase. Ver la nota de `opcionesDeHoras`.
-            --------------------------------------------------------------- */}
         {opciones && (
-          <ol className="amp-planes">
-            {opciones.map((opcion) => (
-              <li
-                key={opcion.horasSemanales}
-                className={`amp-plan${opcion.esSuPlan ? " es-suyo" : ""}`}
-              >
-                <p className="amp-horas">
-                  {t.horasALaSemana(opcion.horasSemanales)}
-                  {opcion.esSuPlan && <span className="amp-chip">{t.tuPlan}</span>}
-                </p>
-
-                {opcion.horasExtra > 0 && (
-                  <p className="amp-ahorro">
-                    {t.horasExtraCadaSemana(opcion.horasExtra)}
-                  </p>
-                )}
-
-                <div className="amp-medida">
-                  <div className="amp-track">
-                    <div
-                      className="amp-fill"
-                      style={{ width: `${opcion.porcentajeBarra}%` }}
-                      aria-hidden
-                    />
+          <ol className="pg-bars">
+            {opciones.map((opcion) => {
+              const esMejor = !opcion.esSuPlan && mejor?.horasSemanales === opcion.horasSemanales;
+              return (
+                <li
+                  key={opcion.horasSemanales}
+                  className={`pg-bar-row${opcion.esSuPlan ? " is-current" : ""}${esMejor ? " is-best" : ""}`}
+                >
+                  <div className="pg-bar-head">
+                    <span className="pg-bar-plan">{t.horasALaSemana(opcion.horasSemanales)}</span>
+                    {opcion.esSuPlan && <span className="pg-chip">{t.tuPlan}</span>}
+                    {esMejor && <span className="pg-badge-best">{t.recomendado}</span>}
                   </div>
-                  <span className="amp-meses">{opcion.horasSemanales} h</span>
-                </div>
-              </li>
-            ))}
+                  <div className="pg-save-slot">
+                    {opcion.horasExtra > 0 && (
+                      <span className="pg-save">{t.horasExtraCadaSemana(opcion.horasExtra)}</span>
+                    )}
+                  </div>
+                  <span className="pg-bar-months">{opcion.horasSemanales} h</span>
+                  <div className="pg-track">
+                    <div className="pg-fill" style={{ width: `${opcion.porcentajeBarra}%` }} aria-hidden />
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         )}
 
-        {/* El mismo botón, con el mismo rótulo y abriendo igual que el
-            del banner de siempre: para el alumno es la misma acción, y
-            dos nombres para una sola cosa es lo que hace dudar de si
-            llevan al mismo sitio. */}
         {opciones && (
-          <div className="amp-pie">
-            <a className="amp-cta" href={urlAmpliar} target="_blank" rel="noopener noreferrer">
-              {t.ampliaTuPlan}
-              <span className="amp-flecha" aria-hidden>
-                →
-              </span>
-            </a>
+          <div className="pg-cta-block">
+            <Cta href={urlAmpliar} texto={t.ampliaTuPlan} />
           </div>
         )}
       </section>
@@ -179,37 +141,32 @@ export default function BannerAmpliar({
   // al mismo número y ampliar no adelanta nada. Titular "puedes llegar
   // antes" con un ahorro de cero meses es la clase de promesa que se
   // desmiente en la propia pantalla, tres centímetros más abajo.
+  //
+  // El distintivo "Recomendado" va en el plan de más horas (el último de
+  // la lista, como en Gestión), y solo cuando hay algo que recomendar.
   // ---------------------------------------------------------------
   const ahorroMaximo = Math.max(0, ...estimacion.opciones.map((o) => o.mesesAhorrados));
   const mereceLaPena = estimacion.hayAmpliacion && ahorroMaximo > 0;
   const esPreparacion = estimacion.tipo === "preparar-examen";
+  const mejor = mereceLaPena ? estimacion.opciones[estimacion.opciones.length - 1] : null;
 
   return (
-    <section
-      className="amp amp-rise"
-      style={retardoMs ? { animationDelay: `${retardoMs}ms` } : undefined}
-    >
+    <section className="pg-card pg-pace">
       <EstilosBanner />
 
-      {/* ---------------------------------------------------------------
-          DOS PREGUNTAS, EL MISMO BANNER
-
-          El cálculo, los planes, las barras y las fechas son idénticos
-          en los dos casos; lo único que cambia es de qué va. A quien
-          sube de nivel se le habla de su objetivo; a quien prepara el
-          examen de su propio nivel, de llegar preparado — que es la
-          pregunta que sí se hizo al comprar «B2 Exámenes».
-
-          Decirle a este segundo «tu objetivo» sería volver a hablarle
-          del peldaño siguiente, que es justo lo que no quiere. */}
-      <h2 className="amp-title">
+      {/* DOS PREGUNTAS, EL MISMO BANNER. A quien sube de nivel se le habla
+          de su objetivo; a quien prepara el examen de su propio nivel, de
+          llegar preparado — que es la pregunta que sí se hizo al comprar
+          «B2 Exámenes». Decirle a este segundo «tu objetivo» sería volver
+          a hablarle del peldaño siguiente, que es justo lo que no quiere. */}
+      <h2 className="pg-pace-title">
         {mereceLaPena
           ? esPreparacion
             ? t.puedesLlegarAntesPreparado
             : t.puedesLlegarAntes
           : t.vasAlMejorRitmo}
       </h2>
-      <p className="amp-sub">
+      <p className="pg-pace-lede">
         {esPreparacion
           ? mereceLaPena
             ? t.cuantoTardariasExamen
@@ -219,284 +176,225 @@ export default function BannerAmpliar({
             : t.loQueTardariasObjetivo}
       </p>
 
-      <ol className="amp-planes">
-        {estimacion.opciones.map((opcion) => (
-          <li key={opcion.horasSemanales} className={`amp-plan${opcion.esSuPlan ? " es-suyo" : ""}`}>
-            <p className="amp-horas">
-              {t.horasALaSemana(opcion.horasSemanales)}
-              {opcion.esSuPlan && <span className="amp-chip">{t.tuPlan}</span>}
-            </p>
-
-            {/* EL AHORRO, LO MÁS GRANDE DEL BANNER. Es lo único que
-                justifica pagar más, y antes iba en una pastilla de 11px
-                al lado de la fecha: se leía después que todo lo demás,
-                cuando es lo que hay que leer primero. */}
-            {opcion.mesesAhorrados > 0 && (
-              <p className="amp-ahorro">{t.mesesAntes(opcion.mesesAhorrados)}</p>
-            )}
-
-            <div className="amp-medida">
-              <div className="amp-track">
-                <div
-                  className="amp-fill"
-                  style={{ width: `${opcion.porcentajeBarra}%` }}
-                  aria-hidden
-                />
+      <ol className="pg-bars">
+        {estimacion.opciones.map((opcion) => {
+          const esMejor = !opcion.esSuPlan && mejor?.horasSemanales === opcion.horasSemanales;
+          return (
+            <li
+              key={opcion.horasSemanales}
+              className={`pg-bar-row${opcion.esSuPlan ? " is-current" : ""}${esMejor ? " is-best" : ""}`}
+            >
+              {/* Cada tarjeta, de arriba abajo: plan (+ "Tu plan" o "Recomendado")
+                  · hueco del ahorro · meses en grande · barra · fecha. En
+                  escritorio las tres van en columnas y comparten las filas de la
+                  rejilla (subgrid), así el hueco del ahorro de la primera —que no
+                  lo tiene— mide lo mismo que la etiqueta amarilla de las otras y
+                  las barras arrancan a la misma altura. En móvil se apilan en
+                  versión compacta: los meses suben a la línea del plan y la
+                  barra ocupa todo el ancho. */}
+              <div className="pg-bar-head">
+                <span className="pg-bar-plan">{t.horasALaSemana(opcion.horasSemanales)}</span>
+                {opcion.esSuPlan && <span className="pg-chip">{t.tuPlan}</span>}
+                {esMejor && <span className="pg-badge-best">{t.recomendado}</span>}
               </div>
-              <span className="amp-meses">{t.enMeses(opcion.meses)}</span>
-            </div>
 
-            <p className="amp-fecha">
-              {esPreparacion ? t.estariasListoEn : t.llegariasEn} {opcion.llegada}
-            </p>
-          </li>
-        ))}
+              {/* El hueco existe SIEMPRE, con etiqueta o vacío: es lo que mantiene
+                  las tres tarjetas cuadradas entre sí. */}
+              <div className="pg-save-slot">
+                {!opcion.esSuPlan && opcion.mesesAhorrados > 0 && (
+                  <span className="pg-save">{t.mesesAntes(opcion.mesesAhorrados)}</span>
+                )}
+              </div>
+
+              <span className="pg-bar-months">{enMeses(opcion.meses, t)}</span>
+
+              <div className="pg-track">
+                <div className="pg-fill" style={{ width: `${opcion.porcentajeBarra}%` }} aria-hidden />
+              </div>
+
+              <p className="pg-bar-date">
+                {esPreparacion ? t.estariasListoEn : t.llegariasEn} {opcion.llegada}
+              </p>
+            </li>
+          );
+        })}
       </ol>
 
-      {/* EL BOTÓN, CENTRADO Y SOLO. Aquí había además una frase a su
-          derecha que repetía en pequeño el ahorro que ahora se lee arriba
-          en grande, y debajo el aviso de que la estimación es
-          orientativa. Las dos se han quitado: juntas convertían el cierre
-          del banner en un párrafo. */}
       {mereceLaPena && (
-        <div className="amp-pie">
-          <a className="amp-cta" href={urlAmpliar} target="_blank" rel="noopener noreferrer">
-            {t.ampliaTuPlan}
-            <span className="amp-flecha" aria-hidden>
-              →
-            </span>
-          </a>
+        <div className="pg-cta-block">
+          <Cta href={urlAmpliar} texto={t.ampliaTuPlan} />
         </div>
       )}
     </section>
   );
 }
 
+/** El botón. En pestaña nueva: WooCommerce es otra web y el alumno vuelve aquí. */
+function Cta({ href, texto }: { href: string; texto: string }) {
+  return (
+    <a className="pg-cta" href={href} target="_blank" rel="noopener noreferrer">
+      {texto}
+      <span className="pg-cta-arrow" aria-hidden>→</span>
+    </a>
+  );
+}
+
 /**
- * Los estilos, en un `<style>` dentro del propio componente.
- *
- * Mismo patrón que la ficha de progreso: el LMS va todo por Tailwind y
- * el namespace `amp-` no toca nada. Con esto el banner se puede llevar a
- * cualquier pantalla sin que la de destino tenga que traer estilos.
- *
- * LAS BARRAS SON CSS Y NADA MÁS: un `div` de fondo y otro con el ancho
- * que le pasa la estimación. Ni librería de gráficos ni JavaScript.
+ * Los estilos, en un `<style>` dentro del propio componente. El LMS va
+ * todo por Tailwind y el namespace `pg-` no toca nada suyo.
  */
 function EstilosBanner() {
   return <style dangerouslySetInnerHTML={{ __html: CSS_BANNER }} />;
 }
 
 // ---------------------------------------------------------------
-// LA PALETA
-//
-// FUERA EL VERDE OSCURO. El banner era una tarjeta #103A1E con el texto
-// en blancos translúcidos —del 45% al 82%— y ahí dentro no cabía
-// jerarquía: todo pesaba parecido, y el ahorro, que es el mensaje,
-// pesaba menos que el titular. Sobre claro, el contraste se puede gastar
-// donde importa.
-//
-// Y EL AMARILLO SE RESERVA PARA EL AHORRO. Antes lo llevaban el epígrafe
-// "TU RITMO", la pastilla del ahorro y el botón, así que ninguno de los
-// tres destacaba sobre los otros dos. Ahora el acento es de una sola
-// cosa, y el botón se va al verde de marca, que además es el color de
-// las acciones en todo el LMS.
+// COPIA LITERAL del bloque "Banner de ampliacion de plan" del
+// `PROGRESO_CSS` de Gestión (components/ProgresoFicha.tsx), más sus
+// reglas de móvil y de movimiento reducido. Lo único añadido va al
+// principio: las variables de color y la base de tarjeta (`.pg-card`)
+// que allí vienen de `.pg-page`, para que el banner se vea igual aunque
+// se pinte fuera de la ficha.
 // ---------------------------------------------------------------
 const CSS_BANNER = `
-.amp {
-  --amp-verde: #1E9E3A;
-  --amp-verde-osc: #14722A;
-  --amp-amarillo: #FFC400;
-  --amp-tinta: #12211A;
-  --amp-niebla: #F4F7F4;
-  --amp-gris: #5D6660;
-  --amp-tenue: #858D87;
+.pg-pace {
+  --pg-green: #1E9E3A;
+  --pg-green-dark: #14722A;
+  --pg-yellow: #FFC400;
+  --pg-surface: #FFFFFF;
+  --pg-ink: #191A17;
+  --pg-muted: #63675F;
+  --pg-faint: #8D9188;
+  --pg-line: #E4E5DE;
 
-  background: #FFFFFF;
-  border: 1.5px solid #BFE3C9;
-  border-radius: 18px;
-  padding: 26px 24px 24px;
-  box-shadow: 0 10px 30px rgba(30, 158, 58, 0.10);
-  color: var(--amp-tinta);
+  background: var(--pg-surface); border: 1px solid var(--pg-line); border-radius: 18px;
+  color: var(--pg-ink);
   font-family: 'Radio Canada', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
 
-.amp-rise { animation: amp-rise 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) backwards; }
-@keyframes amp-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-
-.amp-title {
-  margin: 0;
-  font-size: clamp(23px, 5.6vw, 31px);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.14;
-  text-wrap: balance;
+/* ── Banner de ampliacion de plan ───────────────────────────────────────── */
+/*
+   TARJETA BLANCA, plana y sin animaciones. Antes era un bloque verde oscuro con
+   barras en degradado que crecian al entrar; ahora el unico elemento que salta
+   es la etiqueta amarilla del ahorro, que es lo que se quiere que mire el alumno.
+   Las tres filas comparten el mismo ancho de barra a proposito: si cada una
+   empezara en un sitio distinto, la comparacion visual mentiria.
+*/
+/* Luminoso y plano: sin sombra en la tarjeta, borde casi imperceptible, aire
+   entre elementos. Dos tamaños de texto en todo el banner (20 px el título, 15 px
+   el resto, 13 px lo secundario): el contraste lo pone el peso, no el tamaño. */
+.pg-pace { padding: 28px 26px 26px; box-shadow: none; border-color: #ECEDE8; }
+.pg-pace-title {
+  font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
+  line-height: 1.25; margin: 0 0 6px; color: var(--pg-ink); text-wrap: balance;
 }
-.amp-sub {
-  margin: 10px 0 0;
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--amp-gris);
-  /* 60ch, no 42: la pregunta mide 59 caracteres y con el tope corto se
-     partía en dos líneas en escritorio con la mitad de la caja vacía. */
-  max-width: 60ch;
-  text-wrap: pretty;
-}
-
-/* --- Los tres escenarios -----------------------------------------------
-   Apilados también en escritorio: son una comparación de longitudes, y
-   en columna las barras comparten origen, que es lo que deja ver de un
-   vistazo cuál es más corta. En rejilla habría que medirlas de tres en
-   tres.                                                                */
-.amp-planes {
-  list-style: none;
-  margin: 22px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.amp-plan {
-  background: #F2F9F4;
-  border-radius: 14px;
-  padding: 15px 16px 14px;
-}
-/* El plan de hoy es la referencia contra la que se comparan los otros,
-   no una opción que vender: en neutro, y sin ahorro que enseñar. */
-.amp-plan.es-suyo { background: var(--amp-niebla); }
-
-.amp-horas {
-  margin: 0;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--amp-gris);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.amp-chip {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: #E1E8E3;
-  color: #4A554D;
-  padding: 3px 8px;
-  border-radius: 999px;
+.pg-pace-lede {
+  font-size: 15px; font-weight: 400; line-height: 1.55; color: var(--pg-muted);
+  margin: 0 0 22px; max-width: 52ch;
 }
 
-/* --- El ahorro ---------------------------------------------------------
-   Lo más grande del banner y lo único en amarillo. Bloque relleno y no
-   texto suelto: sobre el verde clarito de la fila, el relleno es lo que
-   le da el salto de contraste que pide ser lo primero que se lee.      */
-.amp-ahorro {
+/* Cada plan, en su propia tarjeta. Tres pesos:
+   · el actual: gris apagado, sin borde — el punto de partida;
+   · los superiores: blanco con borde suave — "vivos" al lado del primero;
+   · el de más horas: verde clarísimo y borde verde algo más marcado.
+
+   ESCRITORIO Y TABLET: tres columnas. Las tarjetas comparten las CINCO filas de
+   la rejilla madre (subgrid: plan · hueco del ahorro · meses · barra · fecha),
+   así todas miden lo mismo, el hueco vacío de la primera es tan alto como la
+   etiqueta amarilla de las otras, y las tres barras arrancan a la misma altura
+   y miden el mismo ancho. La comparación no puede mentir. */
+.pg-bars {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: auto; gap: 12px;
+}
+.pg-bar-row {
+  display: grid; grid-row: span 5; grid-template-rows: subgrid; row-gap: 0; min-width: 0;
+  background: #FFFFFF; border: 1px solid #E0ECE2; border-radius: 14px; padding: 16px 16px 14px;
+}
+.pg-bar-row.is-current { background: #F2F3F0; border-color: transparent; }
+.pg-bar-row.is-best { background: #F1FAF3; border-color: #9BD6A8; position: relative; }
+
+.pg-bar-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; align-self: start; }
+.pg-bar-plan { font-size: 15px; font-weight: 700; color: var(--pg-ink); }
+.pg-bar-row.is-current .pg-bar-plan { color: var(--pg-muted); }
+.pg-chip {
+  font-size: 13px; font-weight: 400; color: var(--pg-faint); white-space: nowrap;
+}
+/* Distintivo del plan de más horas: chico, verde de marca, montado sobre el
+   borde superior de la tarjeta, a la derecha. Así no ocupa sitio en la línea
+   del plan (en una columna de 200 px no cabían los dos) y en 360 px nunca se
+   monta sobre "4 h a la semana". Secundario a propósito: la etiqueta amarilla
+   es la que tiene que llamar la atención. */
+.pg-badge-best {
+  position: absolute; top: -10px; right: 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.02em; line-height: 1;
+  background: var(--pg-green); color: #fff; padding: 5px 9px; border-radius: 999px; white-space: nowrap;
+}
+/* El hueco del ahorro existe en las tres tarjetas (vacío en la del plan actual):
+   es lo que las mantiene cuadradas entre sí. */
+.pg-save-slot { margin-top: 10px; min-height: 32px; display: flex; align-items: flex-start; }
+/* El ahorro: lo más visible de la tarjeta. Es lo que se quiere que mire el alumno. */
+.pg-save {
   display: inline-block;
-  margin: 9px 0 0;
-  background: var(--amp-amarillo);
-  color: var(--amp-tinta);
-  border-radius: 10px;
-  padding: 5px 11px 6px;
-  /* ---------------------------------------------------------------
-     SEGUNDO, NO PRIMERO.
-
-     Estuvo en clamp(24px, 6.4vw, 29px) y eso no era «lo más
-     importante»: era MÁS que el titular. A 375px el titular mide 23px
-     y el badge medía 24, y como crecía más rápido —6,4vw contra los
-     5,6vw del titular— la desproporción se agravaba cuanto más
-     estrecha la pantalla. El banner se leía empezando por el ahorro y
-     el titular quedaba de pie de foto.
-
-     Ahora va siempre por debajo del titular y siempre por encima de
-     todo lo demás, que es el sitio que le tocaba desde el principio:
-
-       375px   titular 23 · badge 19   (0,83)
-       1024px  titular 31 · badge 23   (0,74)
-
-     Sigue siendo lo segundo que capta el ojo sin discusión: la
-     siguiente pieza del banner —los meses— mide 18px, y el resto va
-     por debajo de 17.
-     --------------------------------------------------------------- */
-  font-size: clamp(19px, 4.6vw, 23px);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
+  font-size: 15px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap;
+  background: var(--pg-yellow); color: var(--pg-ink);
+  padding: 6px 13px; border-radius: 999px;
 }
 
-/* --- La barra y los meses --------------------------------------------- */
-.amp-medida { display: flex; align-items: center; gap: 12px; margin-top: 11px; }
-.amp-track {
-  flex: 1;
-  min-width: 0;
-  height: 10px;
-  border-radius: 999px;
-  background: #DFE6E0;
-  overflow: hidden;
-}
-.amp-fill {
-  height: 100%;
-  border-radius: 999px;
-  min-width: 10px;
-  background: linear-gradient(90deg, var(--amp-verde) 0%, #37C457 100%);
-  animation: amp-fill-grow 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) 0.26s backwards;
-}
-@keyframes amp-fill-grow { from { width: 0; } }
-/* La barra del plan actual es la más larga —es la de más meses— y va en
-   gris: en verde como las otras, la más larga parecería la mejor. */
-.amp-plan.es-suyo .amp-fill { background: #C3CFC6; }
-
-.amp-meses {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+/* Los meses, en grande, encima de la barra; la barra ocupa el ancho de la
+   tarjeta, fina y con las puntas redondeadas. */
+.pg-bar-months {
+  display: block; margin-top: 12px;
+  font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; color: var(--pg-ink);
   white-space: nowrap;
 }
-.amp-fecha { margin: 8px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--amp-tenue); }
+.pg-bar-row.is-current .pg-bar-months { color: var(--pg-muted); }
+.pg-track { height: 6px; margin-top: 10px; border-radius: 999px; background: #E9EBE6; overflow: hidden; min-width: 0; align-self: center; }
+.pg-fill { height: 100%; border-radius: 999px; background: var(--pg-green); }
+/* El plan actual siempre esta lleno del todo, y en gris: es la referencia. */
+.pg-bar-row.is-current .pg-fill { background: #C4C6BF; }
+.pg-bar-date { margin: 10px 0 0; font-size: 13px; line-height: 1.4; color: var(--pg-faint); align-self: end; }
 
-/* --- El botón ---------------------------------------------------------- */
-.amp-pie { display: flex; justify-content: center; margin-top: 22px; }
-.amp-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  text-decoration: none;
-  background: var(--amp-verde);
-  color: #FFFFFF;
-  border-radius: 999px;
-  padding: 16px 36px;
-  font-size: 16.5px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  box-shadow: 0 8px 20px rgba(30, 158, 58, 0.26);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+/* Boton: pildora verde centrada, sin hover llamativo. Es lo unico que va debajo
+   de las filas: la nota que repetia el ahorro y el descargo se quitaron. */
+.pg-cta-block { margin-top: 22px; display: flex; justify-content: center; }
+.pg-cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  min-height: 44px; padding: 12px 28px; border-radius: 999px;
+  background: var(--pg-green); color: #fff; font-size: 15px; font-weight: 700;
+  text-decoration: none; box-shadow: 0 6px 16px rgba(30, 158, 58, 0.26);
 }
-.amp-cta:hover {
-  background: var(--amp-verde-osc);
-  transform: translateY(-1px);
-  box-shadow: 0 11px 26px rgba(30, 158, 58, 0.32);
-}
-.amp-cta:focus-visible { outline: 3px solid var(--amp-tinta); outline-offset: 3px; }
-.amp-flecha { transition: transform 0.18s ease; }
-.amp-cta:hover .amp-flecha { transform: translateX(3px); }
+.pg-cta:focus-visible { outline: 3px solid var(--pg-green-dark); outline-offset: 3px; }
 
-/* --- Móvil -------------------------------------------------------------
-   375px es el ancho de referencia. El ahorro y el titular ya se adaptan
-   con 'clamp', así que lo que cambia aquí es el respiro. El botón pasa a
-   ancho completo: centrado y a medias, a esta anchura, parece
-   descolocado.                                                          */
+/* ── Móvil ──────────────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
-  .amp { padding: 22px 18px 20px; border-radius: 16px; }
-  .amp-sub { font-size: 14.5px; }
-  .amp-planes { margin-top: 18px; }
-  .amp-plan { padding: 14px 14px 13px; }
-  .amp-medida { gap: 10px; }
-  .amp-meses { font-size: 17px; }
-  .amp-cta { width: 100%; padding: 15px 20px; }
+  .pg-pace { padding: 24px 18px 20px; border-radius: 16px; }
+  /* Tres columnas no entran: las tarjetas se apilan en versión compacta. Los
+     meses suben a la línea del plan (a la derecha), la etiqueta amarilla va
+     debajo solo donde existe (el hueco vacío no ocupa altura), la barra ocupa
+     todo el ancho y la fecha cierra. Con nowrap el número nunca se parte. */
+  /* 12 px de hueco entre filas: el distintivo asoma 10 px por encima de su tarjeta. */
+  .pg-bars { display: flex; flex-direction: column; gap: 12px; }
+  .pg-bar-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto;
+    grid-template-areas: "head months" "save save" "track track" "date date";
+    align-items: center; column-gap: 10px; padding: 11px 12px 10px; border-radius: 12px;
+  }
+  .pg-bar-head { grid-area: head; gap: 6px 8px; }
+  .pg-bar-months { grid-area: months; margin: 0; font-size: 17px; letter-spacing: -0.01em; }
+  .pg-save-slot { grid-area: save; margin: 0; min-height: 0; }
+  .pg-save-slot:empty { display: none; }
+  .pg-save { margin-top: 7px; font-size: 14px; padding: 4px 11px; }
+  .pg-track { grid-area: track; margin-top: 8px; }
+  .pg-bar-date { grid-area: date; margin-top: 6px; font-size: 12.5px; }
+  .pg-badge-best { padding: 4px 8px; }
+  /* Ancho completo solo en móvil: ahí es más cómodo de tocar. */
+  .pg-cta { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .amp-rise, .amp-fill { animation: none; }
-  .amp-cta, .amp-flecha { transition: none; }
+  .pg-fill { transition: none; }
+  .pg-cta, .pg-cta-arrow { transition: none; }
 }
 `;

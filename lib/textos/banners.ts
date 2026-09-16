@@ -90,6 +90,8 @@ export type TextosBanners = {
   cuantoTardariasObjetivo: string;
   loQueTardariasObjetivo: string;
   tuPlan: string;
+  /** El distintivo del plan de más horas, montado sobre su tarjeta. */
+  recomendado: string;
   ampliaTuPlan: string;
   estariasListoEn: string;
   llegariasEn: string;
@@ -167,6 +169,7 @@ const ES: TextosBanners = {
   cuantoTardariasObjetivo: "¿Cuánto tardarías en conseguir tu objetivo con otros planes?",
   loQueTardariasObjetivo: "Esto es lo que tardarías en conseguir tu objetivo al ritmo que llevas.",
   tuPlan: "Tu plan",
+  recomendado: "Recomendado",
   ampliaTuPlan: "Amplía tu plan",
   estariasListoEn: "Estarías listo en",
   llegariasEn: "Llegarías en",
@@ -228,6 +231,7 @@ const EN: TextosBanners = {
   cuantoTardariasObjetivo: "How long would it take to reach your goal on other plans?",
   loQueTardariasObjetivo: "This is how long it would take to reach your goal at your pace.",
   tuPlan: "Your plan",
+  recomendado: "Recommended",
   ampliaTuPlan: "Extend your plan",
   estariasListoEn: "You'd be ready in",
   llegariasEn: "You'd get there in",

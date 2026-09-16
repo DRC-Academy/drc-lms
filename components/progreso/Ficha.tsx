@@ -29,12 +29,17 @@ import { enViñetas, soloParaElAlumno, textoParaElAlumno } from "@/lib/texto-alu
 // componente igual que en Gestión: no toca `globals.css` ni afecta a
 // ninguna otra pantalla.
 //
-// LO QUE YA NO SE REPLICA: EL BANNER DE AMPLIACIÓN. Se rediseñó para el
-// LMS —fondo claro, otro copy y el ahorro de meses como pieza principal—
-// y vive fuera, en `components/BannerAmpliar.tsx`, con sus propios
-// estilos. Hasta que ese rediseño baje también a Gestión, es el único
-// bloque de esta pantalla que allí se ve distinto. El resto sigue siendo
-// copia literal.
+// EL BANNER DE AMPLIACIÓN vive fuera, en `components/BannerAmpliar.tsx`,
+// con sus propios estilos, y desde el 16/09/2026 vuelve a ser calco
+// visual del de Gestión (tres tarjetas verticales, distintivo
+// "Recomendado", botón centrado). Lo que conserva de aquí son sus textos
+// bilingües y la variante sin cifras de quien prepara su propio examen.
+//
+// SIN ENTRADILLA, como allí. La ficha tuvo arriba un rótulo ("Tu progreso
+// en inglés"), un titular con el nombre y una bajada; Gestión los quitó
+// en septiembre de 2026 —lo primero que ve el alumno es la escalera de
+// niveles— y el 16/09/2026 se quitaron también aquí. El `nombre` sigue
+// en la firma para no tocar a quien la monta.
 //
 // EL BANNER DEL DIPLOMA SÍ SE REPLICA. Va entre la caja "Tu nivel" y lo
 // que sigue, como allí, y vive en `components/progreso/BannerDiplomaFicha.tsx`
@@ -56,7 +61,6 @@ import { enViñetas, soloParaElAlumno, textoParaElAlumno } from "@/lib/texto-alu
 // ---------------------------------------------------------------
 
 export default function Ficha({
-  nombre,
   nivel,
   horasSemanales,
   clasesContadas,
@@ -72,6 +76,7 @@ export default function Ficha({
   diploma,
   hrefCurso,
 }: {
+  /** Ya no se muestra (la entradilla con el saludo se quitó). Sigue en la firma. */
   nombre: string;
   nivel: NivelMcer | null;
   /**
@@ -102,8 +107,6 @@ export default function Ficha({
   hrefCurso: string;
 }) {
   const t = textosActuales().progreso;
-  const primerNombre = nombre.trim().split(/\s+/)[0] || nombre;
-
   // Todo lo que sale de la ficha pasa por el cortafuegos: está escrita
   // para el profesor y, con el formulario a medias, la IA deja ahí notas
   // de trabajo que no puede leer un cliente. Ver `lib/texto-alumno.ts`.
@@ -119,15 +122,8 @@ export default function Ficha({
       <EstilosFicha />
 
       <main className="pg-main">
-        <section className="pg-intro pg-rise" style={{ animationDelay: "0ms" }}>
-          <p className="pg-eyebrow">{t.tuProgreso}</p>
-          <h1 className="pg-h1">{t.esteEsTuProgreso(primerNombre)}</h1>
-          <p className="pg-lede">
-            {t.resumenDeTuNivel}
-          </p>
-        </section>
-
-        <section className="pg-card pg-hero pg-rise" style={{ animationDelay: "60ms" }}>
+        {/* Sin encabezado: lo primero que ve el alumno es la escalera de niveles. */}
+        <section className="pg-card pg-hero pg-rise" style={{ animationDelay: "0ms" }}>
           {/* La bandera de meta solo cuando de verdad hay un peldaño al
               que subir. En la estimación de preparación la meta ES su
               propio nivel —está preparando su examen, no subiendo— y
@@ -201,13 +197,6 @@ export default function Ficha({
 
         <BannerDiplomaFicha diploma={diploma} hrefCurso={hrefCurso} />
 
-        {objetivoVisible && (
-          <section className="pg-card pg-goal pg-rise" style={{ animationDelay: "120ms" }}>
-            <p className="pg-kicker">{t.tuObjetivo}</p>
-            <blockquote className="pg-goal-text">{objetivoVisible}</blockquote>
-          </section>
-        )}
-
         {/* ---------------------------------------------------------------
             DOS BANNERS, Y NINGÚN ALUMNO SIN UNO
 
@@ -224,16 +213,24 @@ export default function Ficha({
             MÁS PREPARADO. Y eso se puede decir sin inventar una sola
             cifra, que es justo lo que la regla protegía. */}
         {estimacion ? (
-          <BannerAmpliar estimacion={estimacion} urlAmpliar={urlAmpliar} retardoMs={180} />
+          <BannerAmpliar estimacion={estimacion} urlAmpliar={urlAmpliar} />
         ) : preparaExamen ? (
           <BannerAmpliar
             estimacion={null}
             preparaExamen
             horasSemanales={horasSemanales}
             urlAmpliar={urlAmpliar}
-            retardoMs={180}
           />
         ) : null}
+
+        {/* La caja de objetivo va DEBAJO del banner (antes iba encima): así el
+            botón "Amplía tu plan" queda más arriba. Misma caja, mismo estilo. */}
+        {objetivoVisible && (
+          <section className="pg-card pg-goal pg-rise" style={{ animationDelay: "120ms" }}>
+            <p className="pg-kicker">{t.tuObjetivo}</p>
+            <blockquote className="pg-goal-text">{objetivoVisible}</blockquote>
+          </section>
+        )}
 
         {(fuertes.length > 0 || debiles.length > 0) && (
           <section className="pg-split pg-rise" style={{ animationDelay: "240ms" }}>
@@ -450,42 +447,13 @@ const CSS_FICHA = `
 }
 
 .pg-main {
-  max-width: 780px; margin: 0 auto; padding: 36px 20px 72px;
+  max-width: 780px; margin: 0 auto; padding: 28px 20px 72px;
   display: flex; flex-direction: column; gap: 18px;
 }
 
 /* ── Entrada escalonada ─────────────────────────────────────────────────── */
 .pg-rise { animation: pg-rise 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) backwards; }
 @keyframes pg-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-
-/* ── Cabecera de contenido ──────────────────────────────────────────────── */
-/* LA ENTRADILLA VA CENTRADA ENTERA, no solo el h1.
-   El rótulo, el titular y la bajada son un solo bloque de cabecera: se
-   leen en vertical y de un tirón. Centrar el titular y dejar los otros
-   dos pegados a la izquierda no se lee como una decisión, se lee como
-   que algo se ha descolocado. */
-.pg-intro { padding: 6px 2px 4px; text-align: center; }
-.pg-eyebrow {
-  font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--pg-green-dark); margin: 0 0 12px;
-}
-/* EN UNA SOLA LÍNEA, y lo que lo impedía era el tamaño y no el salto.
-   A 40px la frase mide unos 840px contra los 740 de la columna, así que
-   partía siempre; el text-wrap: balance solo decidía POR DÓNDE.
-
-   Con 31px cabe entera con holgura para un nombre normal. El balance
-   se queda de red: un nombre muy largo prefiere partirse en dos líneas
-   equilibradas antes que desbordar la tarjeta, que es lo que pasaría
-   con un nowrap. En móvil sigue partiendo, que es lo correcto: ahí no
-   cabe en una línea ni a 25px. */
-.pg-h1 {
-  font-size: clamp(25px, 5.4vw, 31px); font-weight: 700; letter-spacing: -0.03em;
-  line-height: 1.12; margin: 0; text-wrap: balance;
-}
-.pg-lede {
-  font-size: 15.5px; line-height: 1.6; color: var(--pg-muted);
-  margin: 12px auto 0; max-width: 46ch;
-}
 
 /* ── Tarjeta base ───────────────────────────────────────────────────────── */
 .pg-card {
@@ -621,7 +589,7 @@ const CSS_FICHA = `
 
 /* ── Móvil ──────────────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
-  .pg-main { padding: 26px 14px 56px; gap: 14px; }
+  .pg-main { padding: 20px 14px 56px; gap: 14px; }
   .pg-card { padding: 20px 18px; border-radius: 16px; }
   .pg-ladder { gap: 4px; }
   .pg-rung { padding: 10px 1px 9px; font-size: 12.5px; border-radius: 9px; }

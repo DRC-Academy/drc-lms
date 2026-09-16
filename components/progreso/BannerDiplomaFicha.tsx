@@ -10,7 +10,7 @@ import type { EstadoDiploma } from "@/lib/diploma";
 // aquí cambia lo mismo.
 //
 // Un banner compacto de tres renglones: un rótulo en verde arriba (el
-// mismo estilo del "TU PROGRESO" de la entradilla), la cifra de
+// estilo de los rótulos de la ficha, en verde oscuro), la cifra de
 // protagonista y el carril fino debajo. Tres estados:
 //
 //   · en curso  → "TU CAMINO AL DIPLOMA", las lecciones que faltan en
@@ -153,8 +153,8 @@ function Barra({
 // tres estados midan lo mismo (78 px de contenido) y se vean iguales
 // que allí.
 //
-// El rótulo copia el `.pg-eyebrow` de la entradilla ("TU PROGRESO":
-// 11,5 px, negrita, mayúsculas, espaciado, verde oscuro).
+// El rótulo: 11,5 px, negrita, mayúsculas, espaciado 0.14em, verde
+// oscuro. Los mismos números que el `.pg-diploma-titulo` de Gestión.
 // ---------------------------------------------------------------
 
 export const CSS_DIPLOMA = `
@@ -194,6 +194,15 @@ export const CSS_DIPLOMA = `
   font-size: 15px; line-height: 1.25; color: var(--pg-muted);
 }
 .pg-diploma-cuenta { flex-shrink: 0; white-space: nowrap; font-size: 12.5px; line-height: 1; color: var(--pg-faint); }
+/* Teléfonos estrechos (360 px): "176 lecciones para tu diploma · 15 de 191" no
+   entra en los 294 px de contenido y el texto se cortaba con puntos suspensivos.
+   Un cuerpo un punto menor lo hace caber; las alturas fijas no cambian. */
+@media (max-width: 380px) {
+  .pg-diploma-fila { gap: 10px; }
+  .pg-diploma-texto { gap: 6px; }
+  .pg-diploma-cifra { font-size: 23px; }
+  .pg-diploma-desc { font-size: 13.5px; }
+}
 
 /* Renglón 3: el carril. */
 .pg-diploma-barra { position: relative; height: 12px; border-radius: 6px; background: #E8EEE9; }
