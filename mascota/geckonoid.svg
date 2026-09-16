@@ -26,10 +26,6 @@
     <!-- pivote: 290 254 -->
     <path d="M 274 262 C 263.3 240.5 295.3 224.5 306 246 C 320 262 337 286 337 310 C 345 318 350 328 350 338 C 351 352 334 358 331 346 C 329 358 315 358 313 346 C 310 358 294 352 296 338 C 296 328 299 318 303 310 C 303 288 286 274 274 262 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
-  <g id="cabeza">
-    <!-- pivote: 220 200 -->
-    <path d="M 220 32 C 281 32 331 72 331 122 C 331 176 296 212 220 212 C 144 212 109 176 109 122 C 109 72 159 32 220 32 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-  </g>
   <g id="oreja_izq">
     <!-- pivote: 110 110 -->
     <circle cx="98" cy="110" r="26" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
@@ -37,6 +33,10 @@
   <g id="oreja_der">
     <!-- pivote: 330 110 -->
     <circle cx="342" cy="110" r="26" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="cabeza">
+    <!-- pivote: 220 200 -->
+    <path d="M 220 32 C 281 32 331 72 331 122 C 331 176 296 212 220 212 C 144 212 109 176 109 122 C 109 72 159 32 220 32 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="ojo_izq">
     <ellipse cx="160" cy="112" rx="24" ry="30" fill="#FFFFFF" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
@@ -60,5 +60,92 @@
   <g id="nariz">
     <circle cx="209" cy="155" r="4" fill="#1E5E2E"/>
     <circle cx="231" cy="155" r="4" fill="#1E5E2E"/>
+  </g>
+  <g id="ojos_felices" style="display:none">
+    <path d="M 138 124 C 142 98 178 98 182 124" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 258 124 C 262 98 298 98 302 124" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="ojos_guino" style="display:none">
+    <ellipse cx="160" cy="112" rx="24" ry="30" fill="#FFFFFF" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <ellipse cx="161" cy="115" rx="17" ry="22" fill="#1A1A1A"/>
+    <circle cx="154" cy="105" r="4" fill="#FFFFFF"/>
+    <path d="M 258 110 Q 280 130 302 110" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="ojos_tristes" style="display:none">
+    <ellipse cx="160" cy="112" rx="24" ry="30" fill="#FFFFFF" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <ellipse cx="161" cy="115" rx="17" ry="22" fill="#1A1A1A"/>
+    <circle cx="154" cy="105" r="4" fill="#FFFFFF"/>
+    <ellipse cx="280" cy="112" rx="24" ry="30" fill="#FFFFFF" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <ellipse cx="279" cy="115" rx="17" ry="22" fill="#1A1A1A"/>
+    <circle cx="274" cy="105" r="4" fill="#FFFFFF"/>
+    <path d="M 138 100 A 24 30 0 0 1 182 100 C 174 112 146 112 138 100 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 258 100 A 24 30 0 0 1 302 100 C 294 112 266 112 258 100 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="ojos_brillantes" style="display:none">
+    <ellipse cx="160" cy="112" rx="24" ry="30" fill="#FFFFFF" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <ellipse cx="161" cy="114" rx="20" ry="26" fill="#1A1A1A"/>
+    <circle cx="152" cy="103" r="5.5" fill="#FFFFFF"/>
+    <circle cx="169" cy="125" r="3" fill="#FFFFFF"/>
+    <ellipse cx="280" cy="112" rx="24" ry="30" fill="#FFFFFF" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <ellipse cx="279" cy="114" rx="20" ry="26" fill="#1A1A1A"/>
+    <circle cx="272" cy="103" r="5.5" fill="#FFFFFF"/>
+    <circle cx="289" cy="125" r="3" fill="#FFFFFF"/>
+  </g>
+  <g id="cejas_altas" style="display:none">
+    <path d="M 148 64 Q 168 40 190 60" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 250 60 Q 272 40 292 64" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="cejas_duda" style="display:none">
+    <path d="M 148 64 Q 168 40 190 60" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 256 75 Q 276 67 296 73" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="cejas_tristes" style="display:none">
+    <path d="M 144 74 Q 166 66 186 58" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 254 58 Q 274 66 296 74" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="boca_abierta" style="display:none">
+    <ellipse cx="220" cy="181" rx="32" ry="19" fill="#1A1A1A" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 203 197.1 A 32 19 0 0 0 237 197.1 C 234 184 206 184 203 197.1 Z" fill="#E0473F" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="boca_o" style="display:none">
+    <circle cx="220" cy="182" r="11" fill="#1A1A1A" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="boca_triste" style="display:none">
+    <path d="M 160 190 C 184 172 256 172 280 190" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="sonrisa_lateral" style="display:none">
+    <path d="M 150 176 C 184 200 258 198 298 162" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="anteojos" style="display:none">
+    <circle cx="160" cy="114" r="40" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="280" cy="114" r="40" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 200 110 Q 220 100 240 110" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 120 112 L 110 108" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 320 112 L 330 108" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="brazo_pulgar" style="display:none">
+    <!-- pivote: 290 254 · reemplaza a brazo_der -->
+    <path d="M 302.5 267 L 352.5 219 L 327.5 193 L 277.5 241 C 260.2 257.6 285.2 283.6 302.5 267 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <rect x="340" y="152" width="20" height="44" rx="10" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="348" cy="202" r="23" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="brazo_diploma" style="display:none">
+    <!-- pivote: 290 254 · reemplaza a brazo_der -->
+    <path d="M 302.5 267 L 352.5 219 L 327.5 193 L 277.5 241 C 260.2 257.6 285.2 283.6 302.5 267 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <rect x="334" y="188" width="100" height="28" rx="14" fill="#FFFFFF" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <rect x="396" y="184" width="16" height="36" rx="3" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="348" cy="202" r="23" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="signo_exclamacion" style="display:none">
+    <path d="M 408.8 24.1 L 399.8 70.1 C 397 84.5 375.4 80.3 378.2 65.9 L 387.2 19.9 C 390 5.5 411.6 9.7 408.8 24.1 Z" fill="#F58220" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="384" cy="94" r="11" fill="#F58220" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="gotita" style="display:none">
+    <path d="M 301 134 C 306 144 313 149 313 156 A 9 9 0 0 1 295 156 C 295 149 298 144 301 134 Z" fill="#6EC1E4" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="estrellas" style="display:none">
+    <path d="M 78 24 L 85.1 38.3 L 100.8 40.6 L 89.4 51.7 L 92.1 67.4 L 78 60 L 63.9 67.4 L 66.6 51.7 L 55.2 40.6 L 70.9 38.3 Z" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 362 24 L 369.1 38.3 L 384.8 40.6 L 373.4 51.7 L 376.1 67.4 L 362 60 L 347.9 67.4 L 350.6 51.7 L 339.2 40.6 L 354.9 38.3 Z" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 300 8 L 304.7 17.5 L 315.2 19.1 L 307.6 26.5 L 309.4 36.9 L 300 32 L 290.6 36.9 L 292.4 26.5 L 284.8 19.1 L 295.3 17.5 Z" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
 </svg>
