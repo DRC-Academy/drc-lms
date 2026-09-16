@@ -1,56 +1,64 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <g id="cola">
-    <!-- pivote: 272 411 -->
-    <path d="M 255 433 C 300 451 340 447 372 447 C 398 447 428 426 428 396 C 428 370 426 345 424 319 C 414 326 396 326 386 319 C 387 345 388 368 386 386 C 384 400 372 407 350 409 C 320 411 290 403 255 389 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="M 386 319 C 388 280 430 256 436 238 C 438 262 430 290 424 319 C 414 326 396 326 386 319 Z" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- pivote: 252 392 -->
+    <path d="M 245.7 416.6 C 251.6 416.7 269.6 418.2 281.1 417.3 C 292.6 416.3 304 414.3 314.6 410.9 C 325.2 407.4 335.6 402.7 344.9 396.7 C 354.2 390.6 362.2 384.4 370.3 374.5 L 349 353.2 C 341.7 359.8 335.3 362.8 328 365.9 C 320.7 369 313.2 370.8 305.3 371.9 C 297.5 372.9 289.3 373 280.8 372.2 C 272.3 371.5 258.7 368.2 254.3 367.4 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 370.3 374.5 C 378.4 364.5 387.2 351.3 393.3 336.9 C 399.3 322.5 404.5 296.1 406.8 287.9 C 409.3 276.2 391.8 272.4 389.2 284.1 C 386.3 291.1 378.4 314.6 371.7 326.1 C 365 337.6 356.2 346.5 349 353.2 Z" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="pie_izq">
-    <!-- pivote: 176 388 -->
-    <path d="M 203 388 C 203 373.1 190.9 361 176 361 C 161.1 361 149 373.1 149 388 C 150 414 148 440 146 467 C 144.6 460.1 134.6 462.1 136 469 C 133.2 462.6 124.2 466.6 127 473 C 122.7 467.5 113.7 474.5 118 480 C 114 486 117 499 130 499 L 196 499 C 206 499 210 491 209 482 C 208 474 206 469 203 467 C 203 440 202 414 203 388 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- pivote: 193 395 -->
+    <path d="M 175 378 C 175 402 177 426 175 448 C 169 447 164 448 160 449 C 144 446 138 463 152 466 C 138 468 139 488 164 485 C 178 487 196 487 208 484 C 222 482 226 462 218 454 C 216 451 213 449 211 448 C 213 426 211 402 211 378 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="pie_der">
-    <!-- pivote: 264 388 -->
-    <path d="M 237 388 C 237 373.1 249.1 361 264 361 C 278.9 361 291 373.1 291 388 C 290 414 292 440 294 467 C 295.4 460.1 305.4 462.1 304 469 C 306.8 462.6 315.8 466.6 313 473 C 317.3 467.5 326.3 474.5 322 480 C 326 486 323 499 310 499 L 244 499 C 234 499 230 491 231 482 C 232 474 234 469 237 467 C 237 440 238 414 237 388 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- pivote: 247 395 -->
+    <path d="M 265 378 C 265 402 263 426 265 448 C 271 447 276 448 280 449 C 296 446 302 463 288 466 C 302 468 301 488 276 485 C 262 487 244 487 232 484 C 218 482 214 462 222 454 C 224 451 227 449 229 448 C 227 426 229 402 229 378 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="cuerpo">
-    <path d="M 220 187 C 262 187 310 212 310 245 C 310 300 304 350 296 386 C 292 404 264 414 220 414 C 176 414 148 404 144 386 C 136 350 130 300 130 245 C 130 212 178 187 220 187 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 220 190 C 260 190 291 214 291 250 C 291 296 286 348 274 382 C 264 406 242 414 220 414 C 198 414 176 406 166 382 C 154 348 149 296 149 250 C 149 214 180 190 220 190 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="panza">
-    <path d="M 220 224 C 252 224 270 244 268 276 C 266 314 246 342 220 342 C 194 342 174 314 172 276 C 170 244 188 224 220 224 Z" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 220 222 C 246 222 266 236 266 262 L 266 292 C 266 318 246 330 220 330 C 194 330 174 318 174 292 L 174 262 C 174 236 194 222 220 222 Z" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="brazo_izq">
-    <!-- pivote: 140 258 -->
-    <path d="M 157.2 263.4 C 160.2 253.9 154.9 243.8 145.4 240.8 C 135.9 237.8 125.8 243.1 122.8 252.6 C 115 279 97 316 102 354 C 100 362 100 370 104 376 C 102 384.8 115 387.8 117 379 C 117 388 131 388 131 379 C 133 387.8 146 384.8 144 376 C 148 370 148 362 146 354 C 137 322 152 286 157.2 263.4 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- pivote: 150 254 -->
+    <path d="M 166 262 C 176.7 240.5 144.7 224.5 134 246 C 120 262 103 286 103 310 C 95 318 90 328 90 338 C 89 352 106 358 109 346 C 111 358 125 358 127 346 C 130 358 146 352 144 338 C 144 328 141 318 137 310 C 137 288 154 274 166 262 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="brazo_der">
-    <!-- pivote: 300 258 -->
-    <path d="M 282.8 263.4 C 279.8 253.9 285.1 243.8 294.6 240.8 C 304.1 237.8 314.2 243.1 317.2 252.6 C 325 279 343 316 338 354 C 340 362 340 370 336 376 C 338 384.8 325 387.8 323 379 C 323 388 309 388 309 379 C 307 387.8 294 384.8 296 376 C 292 370 292 362 294 354 C 303 322 288 286 282.8 263.4 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- pivote: 290 254 -->
+    <path d="M 274 262 C 263.3 240.5 295.3 224.5 306 246 C 320 262 337 286 337 310 C 345 318 350 328 350 338 C 351 352 334 358 331 346 C 329 358 315 358 313 346 C 310 358 294 352 296 338 C 296 328 299 318 303 310 C 303 288 286 274 274 262 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="cabeza">
     <!-- pivote: 220 200 -->
     <path d="M 220 32 C 281 32 331 72 331 122 C 331 176 296 212 220 212 C 144 212 109 176 109 122 C 109 72 159 32 220 32 Z" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="oreja_izq">
-    <!-- pivote: 118 100 -->
-    <circle cx="97" cy="100" r="27" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="97" cy="100" r="16" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- pivote: 110 110 -->
+    <circle cx="98" cy="110" r="26" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="oreja_der">
-    <!-- pivote: 322 100 -->
-    <circle cx="343" cy="100" r="27" fill="#3FA34D" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="343" cy="100" r="16" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- pivote: 330 110 -->
+    <circle cx="342" cy="110" r="26" fill="#F5C518" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="ojo_izq">
-    <ellipse cx="160" cy="110" rx="18" ry="23" fill="#FFFFFF" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-    <ellipse cx="161" cy="113" rx="12" ry="16" fill="#1A1A1A"/>
-    <circle cx="156.5" cy="106.5" r="3" fill="#FFFFFF"/>
+    <ellipse cx="160" cy="112" rx="24" ry="30" fill="#FFFFFF" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <ellipse cx="161" cy="115" rx="17" ry="22" fill="#1A1A1A"/>
+    <circle cx="154" cy="105" r="4" fill="#FFFFFF"/>
   </g>
   <g id="ojo_der">
-    <ellipse cx="280" cy="110" rx="18" ry="23" fill="#FFFFFF" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-    <ellipse cx="279" cy="113" rx="12" ry="16" fill="#1A1A1A"/>
-    <circle cx="274.5" cy="106.5" r="3" fill="#FFFFFF"/>
+    <ellipse cx="280" cy="112" rx="24" ry="30" fill="#FFFFFF" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <ellipse cx="279" cy="115" rx="17" ry="22" fill="#1A1A1A"/>
+    <circle cx="274" cy="105" r="4" fill="#FFFFFF"/>
+  </g>
+  <g id="ceja_izq">
+    <path d="M 144 70 Q 164 56 186 66" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="ceja_der">
+    <path d="M 254 66 Q 276 56 296 70" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <g id="boca">
-    <path d="M 145 164 C 175 190 265 190 295 164" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 140 170 C 172 198 268 198 300 170" fill="none" stroke="#1E5E2E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+  <g id="nariz">
+    <circle cx="209" cy="155" r="4" fill="#1E5E2E"/>
+    <circle cx="231" cy="155" r="4" fill="#1E5E2E"/>
   </g>
 </svg>
