@@ -446,8 +446,11 @@ const CSS_FICHA = `
   -webkit-font-smoothing: antialiased;
 }
 
+/* SOLO EN EL LMS: 880 px de columna y no los 780 de Gestión. Aquí la ficha va
+   debajo de una barra de navegación a todo el ancho y a 780 se veía fina y
+   apretada (las tres tarjetas del plan quedaban en 221 px). */
 .pg-main {
-  max-width: 780px; margin: 0 auto; padding: 28px 20px 72px;
+  max-width: 880px; margin: 0 auto; padding: 28px 20px 72px;
   display: flex; flex-direction: column; gap: 18px;
 }
 
