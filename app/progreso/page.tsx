@@ -23,12 +23,27 @@ export const dynamic = "force-dynamic";
 /**
  * A dónde lleva "Amplía tu plan". Configurable sin tocar código.
  *
+ * EL DESTINO DE VERDAD ES EL CAMBIO DE PLAN DE WOOCOMMERCE: la misma URL
+ * que el botón "Aumentar o Disminuir Plan" de la pestaña Suscripción de
+ * Mi cuenta (/producto/…/?switch-subscription=…&item=…&_wcsnonce=…). Esa
+ * URL lleva un nonce que solo WordPress puede generar para el usuario
+ * logueado, así que aquí no se construye ni se adivina: el botón apunta
+ * a Mi cuenta con el parámetro `drc-ampliar-plan`, y el snippet
+ * `wordpress/drc-ampliar-plan.php` la convierte en el switch al vuelo,
+ * en el servidor de WordPress. Sin ese snippet activo, la URL se queda
+ * en /mi-cuenta/ a secas.
+ *
+ * Es el mismo sitio al que lleva el botón de la ficha de DRC Gestión.
+ * Allí se resuelve por otro camino —un postMessage al iframe de Mi
+ * cuenta, porque la ficha vive embebida—; aquí el alumno está en otra
+ * web y no hay padre a quien pedírselo.
+ *
  * SIN `NEXT_PUBLIC_`, al revés que en Gestión, porque allí el banner es
  * un componente de cliente y aquí la pantalla entera se resuelve en el
  * servidor. Una URL no es un secreto, pero si no hace falta cruzar al
- * navegador, no cruza. El destino por defecto es el mismo que el de allí.
+ * navegador, no cruza.
  */
-const URL_AMPLIAR = process.env.URL_AMPLIAR_PLAN || "https://drcacademy.com/mi-cuenta";
+const URL_AMPLIAR = process.env.URL_AMPLIAR_PLAN || "https://drcacademy.com/mi-cuenta/?drc-ampliar-plan=1";
 
 /**
  * El progreso del alumno, como cuarta sección.
