@@ -4,6 +4,7 @@ Quita el fondo de las piezas de la mascota y las deja listas para Rive.
     npm run mascota:recortar            → todas las carpetas
     npm run mascota:recortar -- --solo cabeza brazo_izq
     npm run mascota:recortar -- --matting   (bordes más finos, más lento)
+    npm run mascota:recortar -- --solo-contacto   (solo rehacer contacto.png)
 
 Para cada JPG de rive/piezas/ y rive/expresiones/ guarda un PNG con canal
 alfa, mismo nombre y misma carpeta: quita el fondo con rembg (modelo
@@ -12,7 +13,7 @@ alrededor. Los JPG no se tocan. Al final rehace rive/contacto.png: todos
 los PNG sobre un fondo a cuadros, con su nombre debajo.
 
 Corre dentro del venv de mascota/.venv; lo crea y lo llena el lanzador
-(mascota/scripts/recortar.js), que es lo que llama el script npm.
+(mascota/scripts/py.js), que es lo que llama el script npm.
 """
 
 from __future__ import annotations
@@ -136,7 +137,14 @@ def main() -> int:
     parser.add_argument("--solo", nargs="*", default=None, help="nombres (sin extensión) a recortar; por defecto, todos")
     parser.add_argument("--matting", action="store_true", help="alpha matting: bordes más finos, más lento")
     parser.add_argument("--sin-contacto", action="store_true", help="no rehacer contacto.png")
+    parser.add_argument("--solo-contacto", action="store_true", help="solo rehacer contacto.png con los PNG que ya hay")
     args = parser.parse_args()
+
+    if args.solo_contacto:
+        pngs = [png for carpeta in CARPETAS for png in sorted((RIVE / carpeta).glob("*.png")) if not png.name.endswith(".orig.png")]
+        hoja_de_contacto(pngs, RIVE / "contacto.png")
+        print(f"contacto.png con {len(pngs)} piezas")
+        return 0
 
     jpgs = [jpg for carpeta in CARPETAS for jpg in sorted((RIVE / carpeta).glob("*.jpg"))]
     if args.solo is not None:
@@ -155,7 +163,8 @@ def main() -> int:
         print(f"  ✓ {jpg.parent.name}/{destino.name}  {png.width}×{png.height}")
 
     if not args.sin_contacto:
-        pngs = [png for carpeta in CARPETAS for png in sorted((RIVE / carpeta).glob("*.png"))]
+        # Sin los .orig.png: son copias de seguridad, no piezas.
+        pngs = [png for carpeta in CARPETAS for png in sorted((RIVE / carpeta).glob("*.png")) if not png.name.endswith(".orig.png")]
         hoja_de_contacto(pngs, RIVE / "contacto.png")
         print(f"\ncontacto.png con {len(pngs)} piezas")
 

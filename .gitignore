@@ -18,3 +18,7 @@ next-env.d.ts
 
 # El venv de Python de las piezas de la mascota (npm run mascota:recortar lo crea)
 mascota/.venv
+mascota/scripts/__pycache__
+# Copias de seguridad y vista previa de los scripts de la mascota: se rehacen
+mascota/rive/**/*.orig.png
+mascota/rive/ojos_vista.png

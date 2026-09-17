@@ -10,7 +10,9 @@
     "mascota:check": "node mascota/check.js",
     "mascota:previews": "node mascota/scripts/estados.js",
     "mascota:grilla": "node mascota/scripts/grilla.js",
-    "mascota:recortar": "node mascota/scripts/recortar.js"
+    "mascota:recortar": "node mascota/scripts/py.js recortar.py",
+    "mascota:igualar": "node mascota/scripts/py.js igualar_color.py",
+    "mascota:ojos": "node mascota/scripts/py.js ojos_maestro.py"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.0",
