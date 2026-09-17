@@ -15,3 +15,6 @@ next-env.d.ts
 # (*.dc.html y canvas.json) sí se versionan; el montaje se rehace.
 .design/**/banner-diploma.html
 .design/**/panel-admin.html
+
+# El venv de Python de las piezas de la mascota (npm run mascota:recortar lo crea)
+mascota/.venv
