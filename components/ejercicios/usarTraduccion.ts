@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Bloque } from "@/lib/data";
 import { idiomaDe, type IdiomaBloque, type TraduccionBloque } from "@/lib/traduccion-bloque";
 
@@ -56,24 +56,27 @@ export function usarTraduccion(
   const [pidiendo, setPidiendo] = useState(false);
   const [fallo, setFallo] = useState(false);
 
-  // Que ya se pidió para este bloque. En una ref y no en el estado
-  // porque no pinta nada: solo evita que el efecto vuelva a disparar.
-  const pedido = useRef(false);
-
   const haceFalta = idiomaPedido !== origen && traduccion === null;
 
+  // SE PIDE UNA VEZ POR CAMBIO DE IDIOMA, y lo garantizan las
+  // dependencias solas: mientras no llegue la traducción ni cambie el
+  // idioma no hay nada que vuelva a disparar esto. Volver al idioma del
+  // bloque y pulsar otra vez sí lo dispara, y eso es lo que convierte
+  // "volver y pulsar" en un reintento sin botón de reintentar aparte.
+  //
+  // Antes había además una ref `pedido` y `fallo` iba en la lista, y
+  // entre las dos «Traduciendo…» se quedaba encendido para siempre en
+  // dos casos: cuando la petición fallaba —`fallo` reejecutaba el
+  // efecto y su limpieza apagaba `vivo` antes del `finally`— y en
+  // desarrollo, donde StrictMode monta el efecto dos veces y la ref
+  // impedía la segunda petición mientras la primera ya estaba muerta.
   useEffect(() => {
-    // Al volver al idioma en el que está escrito el bloque se limpia la
-    // marca. Eso es lo que convierte "volver y pulsar otra vez" en un
-    // reintento, sin necesidad de un botón de reintentar aparte.
     if (idiomaPedido === origen) {
-      pedido.current = false;
-      if (fallo) setFallo(false);
+      setFallo(false);
       return;
     }
 
-    if (!haceFalta || pedido.current) return;
-    pedido.current = true;
+    if (!haceFalta) return;
 
     let vivo = true;
     setPidiendo(true);
@@ -105,7 +108,7 @@ export function usarTraduccion(
     return () => {
       vivo = false;
     };
-  }, [haceFalta, idiomaPedido, origen, bloque.id, alumnoId, fallo]);
+  }, [haceFalta, idiomaPedido, origen, bloque.id, alumnoId]);
 
   return { traduccion, pidiendo, fallo };
 }

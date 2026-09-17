@@ -96,17 +96,24 @@ export function usarGenerador({
   const etapaViva = useRef<EtapaGeneracion>("preparando");
 
   /**
-   * La lista del servidor manda. Lo generado ahora se antepone solo
-   * mientras el servidor no lo devuelva ya: en cuanto la pantalla se
-   * recarga, el duplicado desaparece solo.
+   * La lista del servidor manda. Lo generado ahora se añade al final
+   * solo mientras el servidor no lo devuelva ya: en cuanto la pantalla
+   * se recarga, el duplicado desaparece solo.
+   *
+   * EN ORDEN CRONOLÓGICO, del más antiguo al más reciente. El servidor
+   * los da al revés —es el orden que quieren la ficha y la rejilla— y
+   * aquí se les da la vuelta porque la ruta es un camino en el tiempo:
+   * la parada de la última clase es la última, y lo que se genera ahora
+   * mismo es lo más nuevo de todo.
    */
   const generados = useMemo(() => {
     const yaEstan = new Set(generadosIniciales.map((b) => b.id));
-    return [...generadosNuevos.filter((b) => !yaEstan.has(b.id)), ...generadosIniciales];
+    return [...generadosIniciales].reverse().concat(generadosNuevos.filter((b) => !yaEstan.has(b.id)));
   }, [generadosNuevos, generadosIniciales]);
 
-  // Los generados van primero: son la novedad de la semana.
-  const todos = useMemo(() => [...generados, ...bloques], [generados, bloques]);
+  // El catálogo va primero: es material de partida, sin clase detrás, y
+  // en un camino que va del pasado al presente es lo más antiguo.
+  const todos = useMemo(() => [...bloques, ...generados], [generados, bloques]);
   const idsGenerados = useMemo(() => generados.map((b) => b.id), [generados]);
 
   // ---------------------------------------------------------------

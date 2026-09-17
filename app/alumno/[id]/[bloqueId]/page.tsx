@@ -9,8 +9,13 @@ import { cursosDelInicio } from "@/lib/cursos-servidor";
 import { rutaDeMiCurso } from "@/lib/cursos";
 import { comoFecha } from "@/lib/fechas";
 import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
-import Cabecera from "@/components/Cabecera";
-import Practica from "@/components/Practica";
+import { conFoco } from "@/lib/foco";
+import Cabecera, { NavegacionInferior, TiraRevision, enlacesDeSecciones } from "@/components/Cabecera";
+import ChatAyuda from "@/components/ChatAyuda";
+import { MarcoBarra } from "@/components/leccion/MarcoCurso";
+import BarraLateral from "@/components/leccion/BarraLateral";
+import MenuPerfil from "@/components/leccion/MenuPerfil";
+import VistaBloque from "@/components/practica/VistaBloque";
 
 // Mismo motivo que la ficha: el alumno se resuelve contra Gestión.
 export const dynamic = "force-dynamic";
@@ -99,30 +104,51 @@ export default async function PaginaBloque({
     );
   }
 
-  // La columna de altura completa, igual que en el layout del curso: es
-  // lo que deja la barra de acciones pegada al fondo de la ventana
-  // cuando el ejercicio es corto.
-  //
-  // Y la cabecera va CON NAVEGACIÓN. Antes era `<Cabecera nombre={...} />`
-  // a secas —sin `alumnoId` ni `seccion`—, así que dentro de un bloque
-  // desaparecían Inicio, Mi curso y Práctica: el mismo agujero que había
-  // en el curso, en la única pantalla que se había quedado sin arreglar.
+  // EL MISMO MARCO QUE LA LECCIÓN DEL CURSO: la barra de iconos a la
+  // izquierda en escritorio, la navegación de abajo con el perfil en
+  // móvil, y ninguna cabecera arriba. Es lo que `app/curso/[slug]`
+  // monta desde su layout; aquí no hay layout con segmentos que mirar,
+  // así que se monta directamente con `MarcoBarra`, que es la misma
+  // pieza. Los enlaces son los de la cabecera de siempre, calculados por
+  // la misma función.
+  const t = textosActuales();
+  const enlaces = enlacesDeSecciones({ alumnoId: params.id, miCurso, foco, t: t.navegacion });
+
   return (
+    // La columna de altura completa, igual que en el layout del curso: es
+    // lo que hace que la barra y el panel midan lo que mide la ventana.
     <div className="flex min-h-dvh flex-col">
-      <Cabecera
-        nombre={nombre}
-        alumnoId={params.id}
-        miCurso={miCurso}
-        seccion="practica"
-        foco={foco}
-        revisando={revisando}
-      />
-      <Practica
-        bloque={bloque}
-        alumnoId={params.id}
-        profesor={datos.perfil?.profesor ?? ""}
-        foco={foco}
-      />
+      <MarcoBarra
+        clave={params.bloqueId}
+        barra={
+          <BarraLateral
+            enlaces={enlaces}
+            nombre={nombre}
+            inicioHref={conFoco(`/alumno/${params.id}`, foco)}
+            seccion="practica"
+            panel={{ rotulo: t.ejercicios.tuPractica, aria: t.ejercicios.abrirElPanel }}
+          />
+        }
+        tiraRevision={revisando ? <TiraRevision nombre={nombre || undefined} t={t.navegacion} /> : null}
+        navegacionMovil={
+          <>
+            <NavegacionInferior
+              enlaces={enlaces}
+              seccion="practica"
+              secciones={t.navegacion.secciones}
+              extra={<MenuPerfil nombre={nombre} variante="movil" />}
+            />
+            <ChatAyuda nombre={nombre} botonFlotante="movil" />
+          </>
+        }
+      >
+        <VistaBloque
+          bloque={bloque}
+          alumnoId={params.id}
+          profesor={datos.perfil?.profesor ?? ""}
+          foco={foco}
+        />
+      </MarcoBarra>
     </div>
   );
 }

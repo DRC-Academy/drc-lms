@@ -22,6 +22,7 @@ import type { EtapaGeneracion } from "@/lib/generacion";
 import { recogerParadaCerrada } from "@/lib/cierre-ruta";
 import { usarTraduccion } from "@/components/ejercicios/usarTraduccion";
 import { conTraduccion } from "@/lib/traduccion-bloque";
+import { formatearFecha } from "@/lib/perfil";
 import type { Bloque } from "@/lib/data";
 import AvanceGeneracion from "@/components/AvanceGeneracion";
 
@@ -170,9 +171,9 @@ export default function Ruta({
   generacion: Generacion;
 }) {
   const { ruta: t, practica: tp } = usarIdioma().t;
-  // Los dos grupos del plegado. Empiezan cerrados: el alumno viene a
+  // El grupo de atrás, plegado. Empieza cerrado: el alumno viene a
   // seguir, no a leer su historial.
-  const [plegado, setPlegado] = useState<Plegado>({ atras: false, delante: false });
+  const [plegado, setPlegado] = useState<Plegado>({ atras: false });
   // Qué parada tiene la tarjeta. Null es «la que toca».
   const [elegida, setElegida] = useState<string | null>(null);
   // Si la parada disponible se ha ido de la pantalla, y por qué lado.
@@ -218,6 +219,11 @@ export default function Ruta({
 
   const actual = visibles.find((p) => p.tipo === "actual") ?? null;
   const cierre = visibles.find((p) => p.tipo === "generacion") ?? null;
+
+  // DÓNDE ESTÁ EL PRESENTE: en la parada de la última clase mientras no
+  // esté hecha, y si ya lo está, en la próxima clase —la parada de
+  // generación—. «Estás aquí» cuelga de esa y nunca de una de atrás.
+  const claveAqui = actual?.clave ?? cierre?.clave ?? null;
 
   // Quién se lleva la tarjeta por defecto: lo que tiene a medias; si no
   // hay nada a medias, la parada que ya se puede preparar.
@@ -281,9 +287,14 @@ export default function Ruta({
   // Mientras se cierra una parada, el camino se pinta como estaba ANTES
   // —el tramo recién andado todavía en piedras— y encima se le colorea.
   // Sin esto no habría nada que ver: llegaría ya verde del servidor.
+  //
+  // El corte retrocede hasta la parada que se cierra, no un paso fijo:
+  // si la que se cierra era la de la última clase y la próxima aún no se
+  // abre, el corte ya está sobre ella y no hay tramo que colorear.
   const indiceCerrando =
     cerrando === null ? -1 : visibles.findIndex((p) => p.clave === cerrando);
-  const corteVisual = indiceCerrando === -1 ? corte : Math.max(0, corte - 1);
+  const corteVisual = indiceCerrando === -1 ? corte : Math.min(corte, indiceCerrando);
+  const hayTramoQueColorear = indiceCerrando !== -1 && indiceCerrando < corte;
   const { puntos, recorrido, pendiente } = geometriaRuta(visibles.length, corteVisual);
 
   // Al volver de cerrar un bloque no hay entrada escalonada: el alumno
@@ -305,10 +316,7 @@ export default function Ruta({
 
   const alPulsar = (parada: Parada) => {
     if (parada.tipo === "resumen") {
-      const cual = parada.futuro ? "delante" : "atras";
-      sinSalto(parada.clave, () =>
-        setPlegado((previo) => ({ ...previo, [cual]: !previo[cual] }))
-      );
+      sinSalto(parada.clave, () => setPlegado((previo) => ({ atras: !previo.atras })));
       return;
     }
     sinSalto(parada.clave, () => setElegida(parada.clave));
@@ -321,7 +329,6 @@ export default function Ruta({
       profesor={profesor}
       generacion={generacion}
       hechas={hechas}
-      numeroActual={actual?.numero ?? null}
     />
   );
 
@@ -385,7 +392,7 @@ export default function Ruta({
                 <path d={recorrido} stroke="#1E9E3A" strokeWidth="6" strokeLinecap="round" />
               )}
               {/* El tramo que acaba de andarse, coloreándose. */}
-              {indiceCerrando !== -1 && (
+              {hayTramoQueColorear && (
                 <path
                   className="ruta-colorea"
                   d={tramoRuta(visibles.length, indiceCerrando)}
@@ -403,6 +410,7 @@ export default function Ruta({
                 punto={puntos[i]}
                 arriba={i % 2 === 1}
                 grande={parada.clave === claveTarjeta}
+                aqui={parada.clave === claveAqui}
                 retraso={animarEntrada ? Math.min(i, 9) * 70 : null}
                 cerrando={parada.clave === cerrando}
                 ascendiendo={indiceCerrando !== -1 && parada.tipo === "actual"}
@@ -420,20 +428,22 @@ export default function Ruta({
               de ahí al siguiente, estirándose con lo que ocupe la fila. */}
           <div
             className={`relative min-[900px]:hidden ${
-              visibles[0]?.tipo === "actual" ? "mt-[104px]" : "mt-10"
+              visibles[0]?.clave === claveAqui ? "mt-[104px]" : "mt-10"
             }`}
           >
             {visibles.map((parada, i) => {
               const banda = bandas[i];
               const esActiva = parada.tipo === "actual";
+              const esAqui = parada.clave === claveAqui;
               const esUltima = i === visibles.length - 1;
               const suya = parada.clave === claveTarjeta;
               const seCierra = parada.clave === cerrando;
-              // El tramo que sale de la parada que se cierra se pinta
-              // todavía en piedras: encima se le colorea el verde.
-              const andado =
-                !seCierra &&
-                (parada.tipo === "hecha" || (parada.tipo === "resumen" && !parada.futuro));
+              // Todo lo que queda por detrás del presente está andado,
+              // también las paradas sin hacer: el camino es el tiempo, no
+              // la cuenta de lo hecho. El tramo que sale de la parada
+              // que se cierra se pinta todavía en piedras: encima se le
+              // colorea el verde.
+              const andado = i < corteVisual;
               const retraso = animarEntrada ? Math.min(i, 9) * 70 : null;
               const d = esUltima ? "" : curvaMovil(banda, bandas[i + 1], suya);
 
@@ -445,7 +455,7 @@ export default function Ruta({
                   }}
                   className="relative"
                   style={{
-                    minHeight: suya ? undefined : esUltima ? 62 : esActiva ? 132 : 96,
+                    minHeight: suya ? undefined : esUltima ? 62 : esAqui ? 132 : 96,
                   }}
                 >
                   <svg
@@ -477,7 +487,7 @@ export default function Ruta({
                         vectorEffect="non-scaling-stroke"
                       />
                       {/* Y el que acaba de andarse, coloreándose. */}
-                      {seCierra && !esUltima && (
+                      {seCierra && !esUltima && hayTramoQueColorear && (
                         <path
                           className="ruta-colorea"
                           d={d}
@@ -495,7 +505,7 @@ export default function Ruta({
                     className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
                     style={{ left: PCT_BANDA[banda], top: 0 }}
                   >
-                    {esActiva && (
+                    {esAqui && (
                       <span
                         className={`absolute bottom-full left-1/2 mb-3 -translate-x-1/2 ${
                           retraso === null ? "" : "ruta-brota"
@@ -560,23 +570,11 @@ export default function Ruta({
                           : "ml-[5%] mr-[28%] text-right"
                       }`}
                     >
-                      <p
-                        className={`-mt-3.5 text-[13.5px] font-semibold leading-[1.3] ${
-                          parada.futuro ? "text-marca-gris" : "text-marca-verdeOsc"
-                        }`}
-                      >
-                        {plegado[parada.futuro ? "delante" : "atras"]
-                          ? parada.futuro
-                            ? t.plegarLoQueViene
-                            : t.plegarLasHechas
-                          : parada.titulo}
+                      <p className="-mt-3.5 text-[13.5px] font-semibold leading-[1.3] text-marca-verdeOsc">
+                        {plegado.atras ? t.plegarLasDeAtras : parada.titulo}
                       </p>
                       <p className="mt-[3px] text-[12px] leading-[1.3] text-marca-grisTenue">
-                        {plegado[parada.futuro ? "delante" : "atras"]
-                          ? t.vuelvenAUnSoloPunto
-                          : parada.futuro
-                            ? t.teEsperanAqui
-                            : t.tocalasParaVerlas}
+                        {plegado.atras ? t.vuelvenAUnSoloPunto : t.tocalasParaVerlas}
                       </p>
                     </div>
                   )}
@@ -733,17 +731,9 @@ function DiscoMovil({ parada, cerrando }: { parada: Parada; cerrando?: boolean }
   if (parada.tipo === "resumen") {
     return (
       <span
-        className={`${base} h-[46px] w-[46px] bg-white ${
-          parada.futuro
-            ? "border-2 border-dashed border-marca-rutaTrazo shadow-[0_4px_0_#DFEBE4]"
-            : "border-2 border-marca-verde shadow-[0_4px_0_#CFE8D8]"
-        }`}
+        className={`${base} h-[46px] w-[46px] border-2 border-marca-verde bg-white shadow-[0_4px_0_#CFE8D8]`}
       >
-        <span
-          className={`font-display text-[14px] font-extrabold leading-none tabular-nums ${
-            parada.futuro ? "text-marca-grisSuave" : "text-marca-verdeOsc"
-          }`}
-        >
+        <span className="font-display text-[14px] font-extrabold leading-none tabular-nums text-marca-verdeOsc">
           +{parada.agrupadas}
         </span>
       </span>
@@ -797,6 +787,7 @@ function Nodo({
   punto,
   arriba,
   grande,
+  aqui,
   retraso,
   cerrando,
   ascendiendo,
@@ -810,6 +801,8 @@ function Nodo({
   arriba: boolean;
   /** Es la parada que se lleva la tarjeta. */
   grande: boolean;
+  /** Es el presente: lleva la chapa de «Estás aquí». */
+  aqui: boolean;
   /** Cuándo entra al cargar, o null si no hay entrada que animar. */
   retraso: number | null;
   /** Acaba de cerrarse: se llena y se traza la marca. */
@@ -826,12 +819,16 @@ function Nodo({
 
   return (
     <>
-      {esActiva && (
+      {aqui && (
         <span
           className={retraso === null ? "absolute z-20" : "ruta-brota absolute z-20"}
           style={{
             left: `${punto.x}%`,
-            top: `calc(${punto.y}% - 66px)`,
+            // Sobre el disco grande de la actual cuando lleva la tarjeta;
+            // si no la lleva y va por la banda alta, su rótulo está
+            // encima del disco y la chapa sube por encima del rótulo. En
+            // la banda baja el rótulo va debajo y la chapa se pega al disco.
+            top: `calc(${punto.y}% - ${grande ? 66 : arriba ? 88 : 44}px)`,
             transform: "translate(-50%, -100%)",
             animationDelay: retraso === null ? undefined : `${retraso + 320}ms`,
           }}
@@ -942,17 +939,9 @@ function DiscoEscritorio({
   if (parada.tipo === "resumen") {
     return (
       <span
-        className={`${base} h-[54px] w-[54px] bg-white ${
-          parada.futuro
-            ? "border-2 border-dashed border-marca-rutaTrazo shadow-[0_4px_0_#DFEBE4]"
-            : "border-2 border-marca-verde shadow-[0_4px_0_#CFE8D8]"
-        }`}
+        className={`${base} h-[54px] w-[54px] border-2 border-marca-verde bg-white shadow-[0_4px_0_#CFE8D8]`}
       >
-        <span
-          className={`font-display text-[15px] font-extrabold leading-none tabular-nums ${
-            parada.futuro ? "text-marca-grisSuave" : "text-marca-verdeOsc"
-          }`}
-        >
+        <span className="font-display text-[15px] font-extrabold leading-none tabular-nums text-marca-verdeOsc">
           +{parada.agrupadas}
         </span>
       </span>
@@ -1065,20 +1054,40 @@ function BloqueDeTarjeta({
   return <>{children(mostrado)}</>;
 }
 
+/**
+ * DE QUÉ CLASE VIENE EL BLOQUE, debajo del título de la tarjeta.
+ *
+ * Es contexto, no titular: la descripción de lo que se va a practicar
+ * sigue siendo lo principal y va después. Sale del dato —`claseOrigen`,
+ * estampado al generar— y no del texto del bloque, que es lo que hacía
+ * que cinco paradas dijeran «en tu última clase» a la vez: el texto
+ * generado caduca con la siguiente clase; la fecha y el nombre, no.
+ *
+ * Sin `claseOrigen` —catálogo, banco, bloques sin clase analizada— no
+ * se pinta nada: mejor callar que atribuir a una clase que no fue.
+ */
+function Atribucion({ bloque }: { bloque: Bloque }) {
+  const { ruta: t, practica: tp } = usarIdioma().t;
+  if (!bloque.claseOrigen) return null;
+  return (
+    <p className="mt-2 text-[12.5px] leading-[1.45] text-marca-grisSuave min-[900px]:text-[13px]">
+      {t.generadaDeClase(formatearFecha(bloque.claseOrigen.fecha, tp.fechaCorta), bloque.claseOrigen.profesor)}
+    </p>
+  );
+}
+
 function Tarjeta({
   parada,
   alumnoId,
   profesor,
   generacion,
   hechas,
-  numeroActual,
 }: {
   parada: Parada | null;
   alumnoId: string;
   profesor: string;
   generacion: Generacion;
   hechas: number;
-  numeroActual: number | null;
 }) {
   const { ruta: t, practica: tp } = usarIdioma().t;
   const caja =
@@ -1107,6 +1116,7 @@ function Tarjeta({
                 <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[32px]">
                   {mostrado.titulo}
                 </h2>
+                <Atribucion bloque={mostrado} />
 
                 <p className="mt-2.5 max-w-[56ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">
                   {mostrado.intro}
@@ -1148,6 +1158,7 @@ function Tarjeta({
           {(mostrado) => (
             <>
               <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[30px]">{mostrado.titulo}</h2>
+              <Atribucion bloque={mostrado} />
               <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">{mostrado.intro}</p>
             </>
           )}
@@ -1165,26 +1176,34 @@ function Tarjeta({
     );
   }
 
-  // ---------------------------- UNA PENDIENTE ----------------------------
+  // ---------------------------- UNA SIN HACER ----------------------------
+  // Anterior a la de hoy y sin cerrar. Es suya y se abre desde aquí; lo
+  // que no hace es competir con la actual: sin sombra, sin amarillo y
+  // con el botón en línea, como el de repetir una hecha.
   if (parada && parada.tipo === "pendiente" && parada.bloque) {
     return (
       <article className={`${caja} border-marca-rutaTarjeta`}>
         <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-gris min-[900px]:text-[11px]">
-          {t.paradaTeEsperaAqui(parada.numero)}
+          {t.paradaSinHacer(parada.numero)}
         </p>
         <BloqueDeTarjeta bloque={parada.bloque} alumnoId={alumnoId}>
           {(mostrado) => (
             <>
               <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tintaCuerpo min-[900px]:text-[30px]">{mostrado.titulo}</h2>
+              <Atribucion bloque={mostrado} />
               <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">{mostrado.intro}</p>
             </>
           )}
         </BloqueDeTarjeta>
-        <Aviso>
-          {numeroActual !== null
-            ? t.llegasAlCerrar(numeroActual)
-            : t.llegasSiguiendo}
-        </Aviso>
+        <Link
+          href={`/alumno/${alumnoId}/${parada.bloque.id}`}
+          className="mt-4 flex min-h-[48px] w-full items-center justify-center rounded-full btn-verde-linea bg-white px-7 text-[15.5px] font-bold min-[900px]:w-auto"
+        >
+          {t.hacerla}
+        </Link>
+        <p className="mt-2.5 text-center text-[12.5px] leading-[1.4] text-marca-grisSuave min-[900px]:text-left">
+          {t.sigueAhi}
+        </p>
       </article>
     );
   }

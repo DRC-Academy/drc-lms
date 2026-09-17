@@ -38,12 +38,16 @@ export type AvanceBloques = Record<string, RegistroAvance>;
 export type TipoParada =
   /** Cerrada con un intento completo. Es rastro. */
   | "hecha"
-  /** La primera sin cerrar: donde está el alumno ahora. */
+  /** La de la última clase, sin cerrar: el presente. */
   | "actual"
+  /**
+   * Anterior a la actual y sin hacer. Es suya y se puede abrir cuando
+   * quiera, pero queda detrás: no compite con la de hoy.
+   */
   | "pendiente"
   /** La que cierra el camino: el bloque que sale de la próxima clase. */
   | "generacion"
-  /** Las hechas de más, agrupadas en un solo punto al principio. */
+  /** Las de atrás de más, agrupadas en un solo punto al principio. */
   | "resumen";
 
 /**
@@ -68,30 +72,19 @@ export type Parada = {
   porcentaje: number | null;
   /** Solo en el resumen: cuántas agrupa. */
   agrupadas: number;
-  /** Solo en el resumen: si lo que agrupa está por delante, no detrás. */
-  futuro: boolean;
   /** Solo en la de generación: si ya se puede preparar. */
   abierta: boolean;
 };
 
 /**
- * Cuántas paradas hechas se dejan a la vista antes de agruparlas.
+ * Cuántas paradas de atrás se dejan a la vista antes de agruparlas.
  *
  * Dos son suficientes para que la línea verde signifique algo y para que
  * el camino no se convierta en un historial: para eso está el
  * desplegable. Sin este tope, un alumno de seis meses abre «Para ti» y
  * se encuentra treinta puntos.
  */
-export const HECHAS_A_LA_VISTA = 2;
-
-/**
- * Y cuántas pendientes se dejan por delante antes de agruparlas.
- *
- * Tres bastan para ver que el camino sigue. Sin este tope, un alumno con
- * quince bloques por delante recibe un mapa que no cabe en tres
- * pantallas y en el que todo lo que queda pesa lo mismo.
- */
-export const PENDIENTES_A_LA_VISTA = 3;
+export const ATRAS_A_LA_VISTA = 2;
 
 export function estaCerrado(progreso: ProgresoBloques, bloque: Bloque): boolean {
   return (progreso[bloque.id]?.total ?? 0) > 0;
@@ -111,12 +104,26 @@ export function estaDominado(progreso: ProgresoBloques, bloque: Bloque): boolean
 /**
  * Las paradas del camino, en orden y TODAS.
  *
- * Aquí ya no se agrupa nada: la numeración tiene que ser la de verdad
- * —«vas por la 14 de 20», no «por la 3 de 7»— y para eso hay que contar
- * el camino entero. El plegado es cosa de la pantalla, y vive en
- * `plegarRuta`, porque el alumno lo abre y lo cierra.
+ * EL ORDEN ES EL TIEMPO. Los bloques llegan del más antiguo al más
+ * reciente —el catálogo primero, que no sale de ninguna clase, y después
+ * los generados por fecha de generación— y el camino se pinta en ese
+ * orden: la parada 1 es la más vieja y la última antes de la generación
+ * es la de la última clase. Así «vas por la 14 de 20» cuenta de verdad.
  *
- * @param bloques Todos los del alumno, generados primero.
+ * LA ACTUAL ES SIEMPRE LA MÁS RECIENTE, la de la última clase, mientras
+ * no esté hecha. «Estás aquí» es el presente: no vuelve atrás porque el
+ * alumno se saltara una. Si la última ya está hecha, no hay actual y el
+ * presente es la parada de generación —la próxima clase—, que es lo que
+ * la pantalla enseña entonces.
+ *
+ * Las anteriores sin hacer no desaparecen: quedan detrás como
+ * `pendiente`, abribles, sin competir con la de hoy.
+ *
+ * Aquí ya no se agrupa nada: la numeración tiene que ser la de verdad y
+ * para eso hay que contar el camino entero. El plegado es cosa de la
+ * pantalla, y vive en `plegarRuta`, porque el alumno lo abre y lo cierra.
+ *
+ * @param bloques Todos los del alumno, DEL MÁS ANTIGUO AL MÁS RECIENTE.
  * @param generacion En qué estado va la parada que cierra el camino.
  */
 export function construirRuta(
@@ -126,19 +133,19 @@ export function construirRuta(
   /** Los títulos de parada se redactan aquí, así que el idioma entra aquí. */
   t: TextosRuta
 ): Parada[] {
-  const indiceActual = bloques.findIndex((bloque) => !estaCerrado(progreso, bloque));
+  const ultimo = bloques.length - 1;
+  const hayActual = ultimo >= 0 && !estaCerrado(progreso, bloques[ultimo]);
 
   const paradas: Parada[] = bloques.map((bloque, i) => {
     const cerrado = estaCerrado(progreso, bloque);
     return {
       clave: bloque.id,
-      tipo: cerrado ? "hecha" : i === indiceActual ? "actual" : "pendiente",
+      tipo: cerrado ? "hecha" : hayActual && i === ultimo ? "actual" : "pendiente",
       numero: i + 1,
       titulo: bloque.titulo,
       bloque,
       porcentaje: cerrado ? porcentajeDe(progreso, bloque) : null,
       agrupadas: 0,
-      futuro: false,
       abierta: false,
     };
   });
@@ -154,7 +161,6 @@ export function construirRuta(
       bloque: null,
       porcentaje: null,
       agrupadas: 0,
-      futuro: false,
       abierta: generacion === "abierta",
     });
   }
@@ -165,68 +171,59 @@ export function construirRuta(
 // ---------------------------------------------------------------
 // EL PLEGADO
 //
-// El camino nunca dibuja más de NUEVE nodos:
+// El camino nunca dibuja más de CINCO nodos:
 //
-//   grupo · 2 hechas · disponible · 3 pendientes · grupo · candado
+//   grupo · 2 de atrás · actual · candado
 //
-// Con siete paradas no se pliega nada y salen las siete. Con veinte
-// salen nueve. Con doscientas, nueve.
+// Con cuatro paradas no se pliega nada y salen las cuatro. Con veinte
+// salen cinco. Con doscientas, cinco.
+//
+// Ya no hay grupo «por delante»: por delante de la actual solo está la
+// próxima clase. Todo lo demás —hecho o sin hacer— es pasado y va detrás.
 //
 // LO AGRUPADO SIGUE ESTANDO EN EL CAMINO. No es un «ver más» al pie ni
 // una paginación: es un nodo, y al tocarlo el camino crece ahí mismo.
 // Por eso plegar no rompe la sensación de recorrido, que es lo único
 // que esta pantalla ha venido a construir.
 //
-// NUNCA SE PLIEGAN la parada disponible ni el candado: una es adónde
-// vas y el otro es la promesa de que la ruta crece.
+// NUNCA SE PLIEGAN la parada actual ni el candado: una es donde estás y
+// el otro es la promesa de que la ruta crece.
 // ---------------------------------------------------------------
 
-export type Plegado = { atras: boolean; delante: boolean };
+export type Plegado = { atras: boolean };
 
-function grupo(agrupadas: number, futuro: boolean, t: TextosRuta): Parada {
+function grupo(agrupadas: number, t: TextosRuta): Parada {
   return {
-    clave: futuro ? "grupo-delante" : "grupo-atras",
+    clave: "grupo-atras",
     tipo: "resumen",
     numero: null,
-    titulo: futuro ? t.paradasMas(agrupadas) : t.paradasHechas(agrupadas),
+    titulo: t.paradasAtras(agrupadas),
     bloque: null,
     porcentaje: null,
     agrupadas,
-    futuro,
     abierta: false,
   };
 }
 
-/** Las paradas que se pintan, con sus dos nodos de grupo si hacen falta. */
+/** Las paradas que se pintan, con su nodo de grupo si hace falta. */
 export function plegarRuta(paradas: Parada[], abierto: Plegado, t: TextosRuta): Parada[] {
-  const hechas = paradas.filter((p) => p.tipo === "hecha");
+  const atras = paradas.filter((p) => p.tipo === "hecha" || p.tipo === "pendiente");
   const actual = paradas.find((p) => p.tipo === "actual") ?? null;
-  const pendientes = paradas.filter((p) => p.tipo === "pendiente");
   const cierre = paradas.filter((p) => p.tipo === "generacion");
 
-  const sobranAtras = Math.max(0, hechas.length - HECHAS_A_LA_VISTA);
-  const sobranDelante = Math.max(0, pendientes.length - PENDIENTES_A_LA_VISTA);
+  const sobran = Math.max(0, atras.length - ATRAS_A_LA_VISTA);
 
   const visibles: Parada[] = [];
 
-  if (sobranAtras > 0) {
-    visibles.push(grupo(sobranAtras, false, t));
-    if (abierto.atras) visibles.push(...hechas.slice(0, sobranAtras));
-    visibles.push(...hechas.slice(sobranAtras));
+  if (sobran > 0) {
+    visibles.push(grupo(sobran, t));
+    if (abierto.atras) visibles.push(...atras.slice(0, sobran));
+    visibles.push(...atras.slice(sobran));
   } else {
-    visibles.push(...hechas);
+    visibles.push(...atras);
   }
 
   if (actual) visibles.push(actual);
-
-  if (sobranDelante > 0) {
-    visibles.push(...pendientes.slice(0, PENDIENTES_A_LA_VISTA));
-    visibles.push(grupo(sobranDelante, true, t));
-    if (abierto.delante) visibles.push(...pendientes.slice(PENDIENTES_A_LA_VISTA));
-  } else {
-    visibles.push(...pendientes);
-  }
-
   visibles.push(...cierre);
   return visibles;
 }

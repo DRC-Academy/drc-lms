@@ -325,6 +325,13 @@ export function validarBloque(valor: unknown): Bloque | null {
   // abrir el bloque.
   const idioma = valor.idioma === "en" || valor.idioma === "es" ? valor.idioma : undefined;
 
+  // Y LA CLASE DE ORIGEN, por lo mismo: se estampa al generar y tiene
+  // que sobrevivir a la relectura, o cada parada volvería a no saber de
+  // qué clase viene. Una fecha que no sea un día ISO se descarta entera:
+  // mejor una parada sin atribución que una con una fecha que no se
+  // puede formatear.
+  const claseOrigen = validarClaseOrigen(valor.claseOrigen);
+
   return {
     id,
     titulo,
@@ -334,5 +341,15 @@ export function validarBloque(valor: unknown): Bloque | null {
     minutos,
     ejercicios,
     ...(idioma ? { idioma } : {}),
+    ...(claseOrigen ? { claseOrigen } : {}),
   };
+}
+
+/** `{ fecha: "2026-09-20", profesor: "Laura" }`, o null si no tiene esa forma. */
+function validarClaseOrigen(valor: unknown): Bloque["claseOrigen"] | null {
+  if (!esRegistro(valor)) return null;
+  const fecha = typeof valor.fecha === "string" ? valor.fecha.trim() : "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return null;
+  const profesor = typeof valor.profesor === "string" ? valor.profesor.trim() : "";
+  return { fecha, profesor };
 }

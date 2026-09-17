@@ -66,11 +66,9 @@ export type TextosRuta = {
   alDia: string;
   estasAqui: string;
 
-  // --- los grupos plegados ---
-  plegarLoQueViene: string;
-  plegarLasHechas: string;
+  // --- el grupo plegado de atrás ---
+  plegarLasDeAtras: string;
   vuelvenAUnSoloPunto: string;
-  teEsperanAqui: string;
   tocalasParaVerlas: string;
 
   // --- el rótulo de cada parada ---
@@ -87,7 +85,7 @@ export type TextosRuta = {
   paradaEstasAqui: (numero: number | null) => string;
   paradaHecha: (numero: number | null) => string;
   paradaAciertos: (porcentaje: number) => string;
-  paradaTeEsperaAqui: (numero: number | null) => string;
+  paradaSinHacer: (numero: number | null) => string;
   paradaListaParaAbrirN: (numero: number | null) => string;
   paradaAunNoEsta: (numero: number | null) => string;
   ejerciciosCuenta: (n: number) => string;
@@ -108,8 +106,7 @@ export type TextosRuta = {
   // la ruta y llegan al componente ya hechos. Por eso están aquí y no se
   // componen arriba.
   listaParaAbrir: string;
-  paradasMas: (n: number) => string;
-  paradasHechas: (n: number) => string;
+  paradasAtras: (n: number) => string;
 
   // --- la cabecera de la ruta ---
   tuRutaParadas: (n: number) => string;
@@ -126,8 +123,15 @@ export type TextosRuta = {
   seguirLaRuta: string;
   volverAHacerla: string;
   noCambiaLoHecho: string;
-  llegasAlCerrar: (numero: number | null) => string;
-  llegasSiguiendo: string;
+  hacerla: string;
+  sigueAhi: string;
+  /**
+   * DE QUÉ CLASE VIENE LA PARADA. Va debajo del título, como contexto:
+   * es lo que hace que cinco paradas no digan «en tu última clase»
+   * cuando solo una puede serlo. La fecha llega ya formateada; sin
+   * profesor en la ficha se dice solo la fecha.
+   */
+  generadaDeClase: (fecha: string, profesor: string) => string;
 
   // --- la parada de hoy ---
   tuUltimaClaseCon: (profesor: string) => string;
@@ -174,17 +178,15 @@ const ES: TextosRuta = {
   alDia: "al día",
   estasAqui: "Estás aquí",
 
-  plegarLoQueViene: "Plegar lo que viene",
-  plegarLasHechas: "Plegar las hechas",
+  plegarLasDeAtras: "Plegar las de atrás",
   vuelvenAUnSoloPunto: "Vuelven a un solo punto",
-  teEsperanAqui: "Te esperan aquí",
   tocalasParaVerlas: "Tócalas para verlas en el camino",
 
   paradaConArea: (numero, area) => `Parada ${numero} · ${AREA_ES[area] ?? area}`,
   paradaEstasAqui: (numero) => `Parada ${numero} · estás aquí`,
   paradaHecha: (numero) => `Parada ${numero} · hecha`,
   paradaAciertos: (porcentaje) => ` · ${porcentaje}% de aciertos`,
-  paradaTeEsperaAqui: (numero) => `Parada ${numero} · te espera aquí`,
+  paradaSinHacer: (numero) => `Parada ${numero} · sin hacer`,
   paradaListaParaAbrirN: (numero) => `Parada ${numero} · lista para abrir`,
   paradaAunNoEsta: (numero) => `Parada ${numero} · aún no está`,
   ejerciciosCuenta: (n) => `${n} ${n === 1 ? "ejercicio" : "ejercicios"}`,
@@ -192,8 +194,7 @@ const ES: TextosRuta = {
   area: (valor) => AREA_ES[valor] ?? valor,
 
   listaParaAbrir: "Lista para abrir",
-  paradasMas: (n) => `${n} ${n === 1 ? "parada más" : "paradas más"}`,
-  paradasHechas: (n) => `${n} ${n === 1 ? "parada hecha" : "paradas hechas"}`,
+  paradasAtras: (n) => `${n} ${n === 1 ? "parada atrás" : "paradas atrás"}`,
 
   tuRutaParadas: (n) => `Tu ruta · ${n} ${n === 1 ? "parada" : "paradas"}`,
   tuRutaSinParadas: "Tu ruta · aún sin paradas",
@@ -208,8 +209,12 @@ const ES: TextosRuta = {
   seguirLaRuta: "Seguir la ruta",
   volverAHacerla: "Volver a hacerla",
   noCambiaLoHecho: "No cambia lo que ya tienes hecho.",
-  llegasAlCerrar: (numero) => `Llegas a ella en cuanto cierres la parada ${numero}.`,
-  llegasSiguiendo: "Llegas a ella cuando sigas la ruta.",
+  hacerla: "Hacerla",
+  sigueAhi: "Sigue ahí para cuando quieras. No cambia la parada de hoy.",
+  generadaDeClase: (fecha, profesor) =>
+    profesor
+      ? `Generada a partir de tu clase del ${fecha} con ${profesor}.`
+      : `Generada a partir de tu clase del ${fecha}.`,
 
   tuUltimaClaseCon: (profesor) => `Tu última clase con ${profesor} ya está aquí`,
   tuUltimaClase: "Tu última clase ya está aquí",
@@ -258,17 +263,15 @@ const EN: TextosRuta = {
   alDia: "up to date",
   estasAqui: "You're here",
 
-  plegarLoQueViene: "Fold what's coming",
-  plegarLasHechas: "Fold the ones you've done",
+  plegarLasDeAtras: "Fold the earlier ones",
   vuelvenAUnSoloPunto: "They go back to one point",
-  teEsperanAqui: "They're waiting here",
   tocalasParaVerlas: "Tap them to see them on the path",
 
   paradaConArea: (numero, area) => `Stop ${numero} · ${AREA_EN[area] ?? area}`,
   paradaEstasAqui: (numero) => `Stop ${numero} · you're here`,
   paradaHecha: (numero) => `Stop ${numero} · done`,
   paradaAciertos: (porcentaje) => ` · ${porcentaje}% right`,
-  paradaTeEsperaAqui: (numero) => `Stop ${numero} · waiting for you`,
+  paradaSinHacer: (numero) => `Stop ${numero} · not done yet`,
   paradaListaParaAbrirN: (numero) => `Stop ${numero} · ready to open`,
   paradaAunNoEsta: (numero) => `Stop ${numero} · not there yet`,
   ejerciciosCuenta: (n) => `${n} ${n === 1 ? "exercise" : "exercises"}`,
@@ -276,8 +279,7 @@ const EN: TextosRuta = {
   area: (valor) => AREA_EN[valor] ?? valor,
 
   listaParaAbrir: "Ready to open",
-  paradasMas: (n) => `${n} more ${n === 1 ? "stop" : "stops"}`,
-  paradasHechas: (n) => `${n} ${n === 1 ? "stop" : "stops"} done`,
+  paradasAtras: (n) => `${n} earlier ${n === 1 ? "stop" : "stops"}`,
 
   tuRutaParadas: (n) => `Your path · ${n} ${n === 1 ? "stop" : "stops"}`,
   tuRutaSinParadas: "Your path · no stops yet",
@@ -292,8 +294,10 @@ const EN: TextosRuta = {
   seguirLaRuta: "Carry on along the path",
   volverAHacerla: "Do it again",
   noCambiaLoHecho: "It doesn't change what you've already done.",
-  llegasAlCerrar: (numero) => `You get there once you close stop ${numero}.`,
-  llegasSiguiendo: "You get there by carrying on along the path.",
+  hacerla: "Do it",
+  sigueAhi: "It stays here for whenever you like. It doesn't change today's stop.",
+  generadaDeClase: (fecha, profesor) =>
+    profesor ? `Built from your class on ${fecha} with ${profesor}.` : `Built from your class on ${fecha}.`,
 
   tuUltimaClaseCon: (profesor) => `Your last class with ${profesor} is here`,
   tuUltimaClase: "Your last class is here",

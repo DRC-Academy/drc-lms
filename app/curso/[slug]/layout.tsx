@@ -166,6 +166,8 @@ async function MarcoDelCurso({ slug, children }: { slug: string; children: React
           enlaces={enlaces}
           nombre={nombre}
           inicioHref={alumnoId ? conFoco(`/alumno/${alumnoId}`, paraEnlaces) : "/"}
+          seccion="curso"
+          panel={{ rotulo: textosActuales().curso.lecciones, aria: textosActuales().curso.abrirElPanel }}
         />
       }
       tiraRevision={revisando ? <TiraRevision nombre={nombre || undefined} t={t} /> : null}

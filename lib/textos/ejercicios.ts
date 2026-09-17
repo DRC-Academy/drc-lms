@@ -7,12 +7,10 @@
 // explicación— viene del bloque y no pasa por aquí.
 //
 // POR QUÉ UN ARCHIVO Y NO UN DICCIONARIO DE VERDAD. No hay i18n en el
-// proyecto y esto no lo trae: son sesenta y pico cadenas de cuatro
-// archivos, y montar `next-intl` para ellas obligaría a mover el resto
-// de la aplicación detrás. La aplicación se queda en español a
-// propósito —es útil que lo esté—, así que el bilingüismo es de la
-// pantalla de ejercicios y de nadie más. El día que eso cambie, esto es
-// lo que se sustituye, y hasta entonces no arrastra a nada.
+// proyecto y esto no lo trae: son unas decenas de cadenas por área
+// —esta es la de ejercicios; las demás están al lado, en `lib/textos/`—
+// y montar `next-intl` para ellas obligaría a mover la aplicación
+// entera detrás. El día que eso cambie, esto es lo que se sustituye.
 //
 // POR QUÉ HAY FUNCIONES Y NO SOLO CADENAS. Porque la mitad de los
 // textos llevan un número dentro y el número cambia la gramática:
@@ -25,8 +23,8 @@
 // bloque ya lo tiene en cuenta —no marca 'the team have finished' como
 // fallo—. Aquí se traduce en 'Recognise' y no 'Recognize'.
 //
-// Módulo puro: solo compone cadenas. El idioma en curso lo lleva
-// `components/ejercicios/usarIdioma.ts`, que es quien toca el navegador.
+// Módulo puro: solo compone cadenas. El idioma en curso lo sirve
+// `components/ProveedorIdioma.tsx`, que es quien lee la cookie.
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
@@ -51,6 +49,11 @@ export function enLetras(idioma: Idioma, n: number): string {
   return NUMEROS[idioma][n] ?? String(n);
 }
 
+/** "tres" → "Tres": para empezar una frase con el número. */
+function conMayuscula(palabra: string): string {
+  return palabra.charAt(0).toUpperCase() + palabra.slice(1);
+}
+
 /** "a, b y c" / "a, b and c" */
 function enumerar(idioma: Idioma, partes: string[]): string {
   if (partes.length <= 1) return partes[0] ?? "";
@@ -63,10 +66,7 @@ function enumerar(idioma: Idioma, partes: string[]): string {
 // ---------------------------------------------------------------
 
 export type TextosEjercicios = {
-  // --- el botón que cambia de idioma ---
-  /** Nombra el idioma AL QUE LLEVA, no el que se está leyendo. */
-  otroIdioma: string;
-  otroIdiomaAria: string;
+  // --- la traducción del contenido del bloque ---
   /** Mientras el contenido del bloque viene de camino. */
   traduciendo: string;
   traduccionFallida: string;
@@ -114,15 +114,24 @@ export type TextosEjercicios = {
   unEjemploValido: string;
   avisoProfesor: string;
 
-  // --- el lateral de fases (solo la práctica generada) ---
+  // --- el panel y el paso a paso del bloque (solo la práctica generada) ---
   tuPractica: string;
-  hechosDeTotal: (hechos: number, total: number) => string;
   avisoProfesorLateral: (profesor: string) => string;
+  /** «Fase 1 de 3»: la fila de móvil y el paso a paso plegado. */
+  faseDeTotal: (n: number, total: number) => string;
+  /** «10 ejercicios · 10 min»: la etiqueta sobre el título del bloque. */
+  ejerciciosYMinutos: (n: number, minutos: number) => string;
+  irALaFase: (nombre: string) => string;
+  teFaltanEjercicios: (n: number) => string;
+  verMisBloques: string;
+  abrirElPanel: string;
+  cerrarElPanel: string;
 
   // --- el cierre de la práctica generada ---
-  notaClaseOrigen: (profesor: string, fecha: string) => string;
+  bloqueTerminado: string;
   cierrePractica: (porcentaje: number) => string;
   volverAMisBloques: string;
+  repetirElBloque: string;
 
   // --- el cierre de la lección del curso ---
   ejerciciosTerminados: string;
@@ -144,8 +153,6 @@ export type TextosEjercicios = {
 // ---------------------------------------------------------------
 
 const ES: TextosEjercicios = {
-  otroIdioma: "English",
-  otroIdiomaAria: "See this screen in English",
   traduciendo: "Traduciendo…",
   // Dice qué se puede hacer, no qué ha fallado: al alumno le da igual
   // de quién fue la culpa y no puede arreglar nada más que esto.
@@ -168,7 +175,7 @@ const ES: TextosEjercicios = {
   verPista: "Ver pista",
   huecoAria: (n) => `Hueco ${n}`,
   ayudaHuecos: (n) =>
-    `Escribe y sal del hueco para corregirlo. ${enLetras("es", n)} ${n === 1 ? "hueco" : "huecos"}.`,
+    `Escribe y sal del hueco para corregirlo. ${conMayuscula(enLetras("es", n))} ${n === 1 ? "hueco" : "huecos"}.`,
 
   comprobar: "Comprobar",
   esperaEscritura: "Escribe tu versión",
@@ -196,10 +203,17 @@ const ES: TextosEjercicios = {
   avisoProfesor: "Tu profesor verá esta respuesta antes de la próxima clase.",
 
   tuPractica: "Tu práctica",
-  hechosDeTotal: (hechos, total) => `${hechos} de ${total}`,
   avisoProfesorLateral: (profesor) => `${profesor} verá tu respuesta antes de la clase.`,
+  faseDeTotal: (n, total) => `Fase ${n} de ${total}`,
+  ejerciciosYMinutos: (n, minutos) => `${n} ${n === 1 ? "ejercicio" : "ejercicios"} · ${minutos} min`,
+  irALaFase: (nombre) => `Fase: ${nombre}`,
+  teFaltanEjercicios: (n) =>
+    n === 1 ? "Te falta 1 ejercicio para terminar el bloque." : `Te faltan ${n} ejercicios para terminar el bloque.`,
+  verMisBloques: "Ver todos mis bloques",
+  abrirElPanel: "Abrir el panel de la práctica",
+  cerrarElPanel: "Cerrar el panel de la práctica",
 
-  notaClaseOrigen: (profesor, fecha) => `Lo viste con ${profesor} el ${fecha}.`,
+  bloqueTerminado: "Bloque terminado",
   cierrePractica: (porcentaje) =>
     porcentaje === 100
       ? "Bloque impecable. Esto ya lo tienes dominado."
@@ -209,6 +223,7 @@ const ES: TextosEjercicios = {
           ? "Buen avance. Lo que se resistió hoy vuelve la semana que viene."
           : "Bloque exigente. Repítelo en un par de días y verás el salto.",
   volverAMisBloques: "Volver a mis bloques",
+  repetirElBloque: "Repetir el bloque",
 
   ejerciciosTerminados: "Ejercicios terminados",
   resultadoLeccion: (aciertos, total) =>
@@ -250,8 +265,6 @@ const ES: TextosEjercicios = {
 // ---------------------------------------------------------------
 
 const EN: TextosEjercicios = {
-  otroIdioma: "Español",
-  otroIdiomaAria: "Ver esta pantalla en español",
   traduciendo: "Translating…",
   traduccionFallida: "The exercises are still in Spanish. Tap again to try once more.",
 
@@ -272,7 +285,7 @@ const EN: TextosEjercicios = {
   verPista: "Show hint",
   huecoAria: (n) => `Gap ${n}`,
   ayudaHuecos: (n) =>
-    `Write in the gap and click outside it to check. ${enLetras("en", n)} ${
+    `Write in the gap and click outside it to check. ${conMayuscula(enLetras("en", n))} ${
       n === 1 ? "gap" : "gaps"
     }.`,
 
@@ -302,10 +315,17 @@ const EN: TextosEjercicios = {
   avisoProfesor: "Your teacher will read this before your next class.",
 
   tuPractica: "Your practice",
-  hechosDeTotal: (hechos, total) => `${hechos} of ${total}`,
   avisoProfesorLateral: (profesor) => `${profesor} will read your answer before your class.`,
+  faseDeTotal: (n, total) => `Phase ${n} of ${total}`,
+  ejerciciosYMinutos: (n, minutos) => `${n} ${n === 1 ? "exercise" : "exercises"} · ${minutos} min`,
+  irALaFase: (nombre) => `Phase: ${nombre}`,
+  teFaltanEjercicios: (n) =>
+    n === 1 ? "1 exercise to go to finish the block." : `${n} exercises to go to finish the block.`,
+  verMisBloques: "See all my blocks",
+  abrirElPanel: "Open the practice panel",
+  cerrarElPanel: "Close the practice panel",
 
-  notaClaseOrigen: (profesor, fecha) => `You saw this with ${profesor} on ${fecha}.`,
+  bloqueTerminado: "Block finished",
   cierrePractica: (porcentaje) =>
     porcentaje === 100
       ? "Perfect block. You have this one."
@@ -315,6 +335,7 @@ const EN: TextosEjercicios = {
           ? "Good progress. What was hard today comes back next week."
           : "A tough block. Do it again in a couple of days and you will see the jump.",
   volverAMisBloques: "Back to my blocks",
+  repetirElBloque: "Do the block again",
 
   ejerciciosTerminados: "Exercises finished",
   resultadoLeccion: (aciertos, total) =>

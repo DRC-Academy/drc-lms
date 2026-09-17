@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { desdeCurso } from "@/lib/ejercicio-unificado";
 import type { EjercicioVista } from "@/lib/ejercicios";
 import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
+import CierreEjercicios from "@/components/ejercicios/CierreEjercicios";
 import type { EstadoEjerciciosActual } from "@/components/leccion/PanelCurso";
 import BotonCompletar from "@/components/leccion/BotonCompletar";
-import { usarIdioma } from "@/components/ProveedorIdioma";
 
 /**
  * Los ejercicios de la lección.
@@ -47,7 +47,6 @@ export default function FlujoEjercicios({
   profesor,
   leccionId,
   cursoSlug,
-  hrefMiCurso,
   siguienteId,
   alSalir,
   alEstado,
@@ -60,8 +59,6 @@ export default function FlujoEjercicios({
   profesor: string;
   leccionId: string;
   cursoSlug: string;
-  /** A dónde lleva la pestaña «Mi curso», ya con el foco. Es la salida del visor. */
-  hrefMiCurso: string;
   siguienteId: string | null;
   /**
    * Vuelve a la TEORÍA de esta lección. No es la salida de la pantalla
@@ -71,145 +68,68 @@ export default function FlujoEjercicios({
   alSalir: () => void;
   /**
    * Por dónde van los ejercicios, para el panel del curso: por cuál se
-   * va y cuáles llevan respuesta. Se reconstruye de los sucesos del
-   * visor, que es el único que lo sabe.
+   * va y cuáles llevan respuesta. Lo emite el visor tal cual.
    */
   alEstado?: (estado: EstadoEjerciciosActual) => void;
   /** Contexto de revisión. Ver `lib/foco.ts`. */
   foco?: string | null;
 }) {
-  const { t: todos } = usarIdioma();
   const unificados = useMemo(() => ejercicios.map(desdeCurso), [ejercicios]);
-
-  const [estado, setEstado] = useState<EstadoEjerciciosActual>(() => ({
-    indice: 0,
-    respondidos: ejercicios.map(() => false),
-    acertados: ejercicios.map(() => false),
-  }));
-
-  function avisar(nuevo: EstadoEjerciciosActual) {
-    setEstado(nuevo);
-    alEstado?.(nuevo);
-  }
-
-  // El panel del curso quiere saber por dónde va desde el primer
-  // ejercicio, antes de que pase nada.
-  useEffect(() => {
-    alEstado?.(estado);
-    // Solo al montar: después lo cuentan los sucesos.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   function alSuceso(suceso: SucesoVisor) {
     // El curso solo guarda intentos. Ni avance ni producción: la lección
     // no lleva un "iba por la mitad", y su cierre es marcarla completada.
-    if (suceso.tipo === "intento") {
-      registrarIntento(suceso.ejercicio.id, suceso.correcto);
-      const i = unificados.findIndex((e) => e.id === suceso.ejercicio.id);
-      if (i >= 0) {
-        avisar({
-          ...estado,
-          respondidos: estado.respondidos.map((v, j) => (j === i ? true : v)),
-          acertados: estado.acertados.map((v, j) => (j === i ? suceso.correcto : v)),
-        });
-      }
-    } else if (suceso.tipo === "avance" || suceso.tipo === "salto") {
-      avisar({ ...estado, indice: suceso.indice });
-    } else if (suceso.tipo === "reinicio") {
-      avisar({
-        indice: 0,
-        respondidos: ejercicios.map(() => false),
-        acertados: ejercicios.map(() => false),
-      });
-    }
+    if (suceso.tipo === "intento") registrarIntento(suceso.ejercicio.id, suceso.correcto);
   }
 
   return (
     <VisorEjercicios
       ejercicios={unificados}
-      // A «MI CURSO», no a la lección. El alumno entra en los ejercicios
-      // desde la lección, pero la lección es una pantalla de paso: la
-      // sección de la que ha salido —y la que la navegación nombra— es
-      // el curso. Para volver al texto de esta lección están la flecha
-      // del carril lateral y la de la barra de móvil.
-      // Se nombra con el mismo texto que usa la cabecera Y LLEVA AL MISMO
-      // SITIO QUE LA PESTAÑA: la lección que toca, o el temario cuando no
-      // hay ninguna. Una salida que se llama como la pestaña y aterriza
-      // en otra pantalla es exactamente lo que confunde.
-      volver={{ seccion: todos.navegacion.miCurso, href: hrefMiCurso }}
       alSuceso={alSuceso}
+      alEstado={alEstado}
       guardarIntentos={registrarIntentos}
-      embebido
       cierre={({ aciertos, total, repetir, verEjercicio, acertado, t }) => (
-        <div className="w-full">
-          <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-            {t.ejerciciosTerminados}
-          </p>
-          <h2 className="mt-3 text-pretty font-display text-[25px] font-bold leading-[1.15] text-marca-tinta min-[1100px]:text-[34px]">
-            {/* El diseño decía "Los cinco, correctos", pero cinco es la
-                media y no la regla: hay lecciones de uno y de quince. */}
-            {t.resultadoLeccion(aciertos, total)}
-          </h2>
-          <p className="mt-3 text-pretty text-[16px] leading-[1.6] text-marca-gris min-[1100px]:text-[17px]">
-            {t.cierreLeccion(aciertos, total, profesor)}
-          </p>
-
-          <ol className="mt-7 overflow-hidden rounded-[16px] border border-marca-borde bg-white">
-            {unificados.map((ej, i) => (
-              <li
-                key={ej.id}
-                className="flex items-center gap-3 border-b border-marca-nieblaOscura px-[18px] py-3.5 last:border-b-0"
+        <CierreEjercicios
+          etiqueta={t.ejerciciosTerminados}
+          // El diseño decía "Los cinco, correctos", pero cinco es la
+          // media y no la regla: hay lecciones de uno y de quince.
+          titulo={t.resultadoLeccion(aciertos, total)}
+          texto={t.cierreLeccion(aciertos, total, profesor)}
+          ejercicios={unificados}
+          acertado={acertado}
+          verEjercicio={verEjercicio}
+          t={t}
+          acciones={
+            <>
+              <BotonCompletar
+                leccionId={leccionId}
+                cursoSlug={cursoSlug}
+                siguienteId={siguienteId}
+                foco={foco}
+                className="w-full rounded-full btn-verde px-8 py-[15px] text-[16px] font-semibold min-[900px]:order-2 min-[900px]:w-auto"
               >
-                <span
-                  aria-hidden
-                  className={`grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full text-[11px] font-semibold leading-none text-white ${
-                    acertado(i) ? "bg-marca-verde" : "bg-marca-calido"
-                  }`}
-                >
-                  {acertado(i) ? "✓" : "—"}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[15px] text-marca-tintaCuerpo">
-                  {ej.enunciado.replace(/\{\{\d+\}\}/g, "___").split("\n")[0]}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => verEjercicio(i)}
-                  className="shrink-0 text-[13.5px] font-semibold text-marca-verdeOsc transition-colors hover:text-marca-tinta"
-                >
-                  {t.ver}
-                </button>
-              </li>
-            ))}
-          </ol>
+                {t.completarYSeguir}
+              </BotonCompletar>
 
-          <div className="mt-7 flex flex-col gap-3.5 min-[1100px]:flex-row">
-            <BotonCompletar
-              leccionId={leccionId}
-              cursoSlug={cursoSlug}
-              siguienteId={siguienteId}
-              foco={foco}
-              className="w-full rounded-full btn-verde px-8 py-[15px] text-[16px] font-semibold min-[1100px]:order-2 min-[1100px]:w-auto"
-            >
-              {t.completarYSeguir}
-            </BotonCompletar>
-
+              <button
+                type="button"
+                onClick={repetir}
+                className="w-full rounded-full btn-verde-linea px-8 py-[13.5px] text-[16px] font-semibold min-[900px]:order-1 min-[900px]:w-auto"
+              >
+                {t.repetirLosEjercicios}
+              </button>
+            </>
+          }
+          pie={
             <button
               type="button"
-              onClick={repetir}
-              className="w-full rounded-full btn-verde-linea px-8 py-[13.5px] text-[16px] font-semibold min-[1100px]:order-1 min-[1100px]:w-auto"
+              onClick={alSalir}
+              className="mt-5 text-[14px] text-marca-grisSuave transition-colors hover:text-marca-tinta"
             >
-              {t.repetirLosEjercicios}
+              {t.volverALaTeoria}
             </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={alSalir}
-            className="mt-5 text-[14px] text-marca-grisSuave transition-colors hover:text-marca-tinta"
-          >
-            {t.volverALaTeoria}
-          </button>
-        </div>
+          }
+        />
       )}
     />
   );

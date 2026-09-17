@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { EjerciciosDeLeccion, LeccionIndice, ModuloIndice } from "@/lib/cursos-servidor";
 import type { ParteLeccion } from "@/lib/leccion-html";
 import type { EjercicioVista } from "@/lib/ejercicios";
 import { usarIdioma } from "@/components/ProveedorIdioma";
-import BotonIdioma from "@/components/BotonIdioma";
 import FlujoEjercicios from "@/components/leccion/FlujoEjercicios";
 import BotonCompletar from "@/components/leccion/BotonCompletar";
 import PanelCurso, { type EstadoEjerciciosActual } from "@/components/leccion/PanelCurso";
 import PasoAPaso, { type Paso } from "@/components/leccion/PasoAPaso";
+import PantallaConPanel, { IconoFlecha } from "@/components/leccion/PantallaConPanel";
 import { usarMarco } from "@/components/leccion/MarcoCurso";
 import { conFoco } from "@/lib/foco";
 import { partirModulo } from "@/lib/modulo";
@@ -34,11 +34,15 @@ import { ubicarModulo } from "@/lib/temario";
  * desde la barra; por debajo de 900px la barra es la navegación de
  * abajo, el paso a paso se pliega a «Paso 2 de 6» y la salida, el
  * idioma y el nombre de la lección van en una fila arriba.
+ *
+ * EL MARCO —panel, esquina, fila de móvil y cabecera— NO ES DE AQUÍ: es
+ * `PantallaConPanel`, y lo comparte con el bloque de práctica de «Para
+ * ti». Esta vista pone lo que es de la lección: qué hay en el panel, el
+ * paso a paso de las partes, y el texto o los ejercicios.
  */
 export default function VistaLeccion({
   cursoSlug,
   cursoTitulo,
-  hrefMiCurso,
   cursoCompletadas,
   cursoTotal,
   etiquetaModulo,
@@ -59,13 +63,6 @@ export default function VistaLeccion({
 }: {
   cursoSlug: string;
   cursoTitulo: string;
-  /**
-   * A dónde lleva «Mi curso» —la lección que toca, o el temario—, ya con
-   * el foco. Es el destino de la salida de los ejercicios, que se llama
-   * igual que la pestaña; el resto de salidas de esta pantalla van al
-   * temario y lo dicen.
-   */
-  hrefMiCurso: string;
   cursoCompletadas: number;
   cursoTotal: number;
   etiquetaModulo: string;
@@ -93,7 +90,7 @@ export default function VistaLeccion({
 }) {
   const { t: todos } = usarIdioma();
   const t = todos.curso;
-  const { panelAbierto, abrirPanel, cerrarPanel } = usarMarco();
+  const { panelAbierto, cerrarPanel } = usarMarco();
 
   const hayTeoria = partes.length > 0;
   const hayEjercicios = ejercicios.length > 0;
@@ -143,16 +140,6 @@ export default function VistaLeccion({
     setEstadoEjercicios(null);
     window.scrollTo({ top: 0 });
   }
-
-  // Escape cierra el cajón del panel.
-  useEffect(() => {
-    if (!panelAbierto) return;
-    function alPulsar(evento: KeyboardEvent) {
-      if (evento.key === "Escape") cerrarPanel();
-    }
-    document.addEventListener("keydown", alPulsar);
-    return () => document.removeEventListener("keydown", alPulsar);
-  }, [panelAbierto, cerrarPanel]);
 
   const parteActual = pasos[paso];
   const contenidoActual = parteActual?.id === "video" ? null : partes.find((p) => p.id === parteActual?.id);
@@ -208,47 +195,16 @@ export default function VistaLeccion({
     />
   );
 
-  return (
-    <div className="flex flex-1 items-stretch bg-marca-niebla">
-      {/* ------------------------------ EL PANEL ------------------------------
-          A partir de 1200px, una columna fija de la altura de la ventana
-          con su propio scroll. Por debajo, un cajón que abre la barra
-          —o el rótulo de la lección, en móvil— y que tapa la pantalla. */}
-      {panelAbierto && (
-        <button
-          type="button"
-          aria-label={t.cerrarElPanel}
-          onClick={cerrarPanel}
-          className="fixed inset-0 z-40 bg-[rgba(18,33,26,.42)] min-[1200px]:hidden"
-        />
-      )}
-      <aside
-        aria-label={todos.navegacion.miCurso}
-        className={`shrink-0 border-r border-marca-borde bg-white min-[1200px]:sticky min-[1200px]:top-0 min-[1200px]:h-dvh min-[1200px]:w-[330px] ${
-          panelAbierto
-            ? "aparece fixed inset-y-0 left-0 z-50 w-[min(330px,100%)] shadow-[0_18px_44px_-16px_rgba(18,33,26,0.35)] min-[1200px]:inset-auto min-[1200px]:z-auto min-[1200px]:shadow-none"
-            : "hidden min-[1200px]:block"
-        }`}
-      >
-        {panelAbierto && (
-          <button
-            type="button"
-            onClick={cerrarPanel}
-            aria-label={t.cerrarElPanel}
-            className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-marca-gris transition-colors hover:bg-marca-nieblaOscura hover:text-marca-tinta min-[1200px]:hidden"
-          >
-            <IconoCerrar className="h-4 w-4" />
-          </button>
-        )}
-        {panel}
-      </aside>
+  const porcentajeCurso = cursoTotal > 0 ? Math.round((cursoCompletadas / cursoTotal) * 100) : 0;
 
-      {/* ----------------------------- LA LECCIÓN ----------------------------- */}
-      <main className="relative flex min-w-0 flex-1 flex-col">
-        {/* LA ESQUINA, EN ESCRITORIO: el curso, su progreso y el idioma.
-            Discretos: es lo que la cabecera decía arriba y aquí no hay
-            cabecera. */}
-        <div className="absolute right-6 top-5 hidden items-center gap-3.5 min-[900px]:flex min-[1200px]:right-10">
+  return (
+    <PantallaConPanel
+      panel={panel}
+      panelAria={todos.navegacion.miCurso}
+      cerrarElPanel={t.cerrarElPanel}
+      // El curso y su progreso: lo que la cabecera decía arriba.
+      esquina={
+        <>
           <Link
             href={hrefCurso}
             className="max-w-[260px] truncate text-[12.5px] text-marca-gris transition-colors hover:text-marca-tinta"
@@ -259,78 +215,28 @@ export default function VistaLeccion({
           <div
             className="h-1 w-[72px] overflow-hidden rounded-[3px] bg-marca-pista"
             role="progressbar"
-            aria-valuenow={cursoTotal > 0 ? Math.round((cursoCompletadas / cursoTotal) * 100) : 0}
+            aria-valuenow={porcentajeCurso}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label={todos.navegacion.progresoEnCurso(cursoTitulo, cursoCompletadas, cursoTotal)}
           >
-            <div
-              className="h-full rounded-[3px] bg-marca-verde"
-              style={{
-                width: `${cursoTotal > 0 ? Math.round((cursoCompletadas / cursoTotal) * 100) : 0}%`,
-              }}
-            />
+            <div className="h-full rounded-[3px] bg-marca-verde" style={{ width: `${porcentajeCurso}%` }} />
           </div>
-          <span className="text-[12px] font-semibold text-marca-gris tabular-nums">
-            {cursoTotal > 0 ? Math.round((cursoCompletadas / cursoTotal) * 100) : 0}%
-          </span>
-          <BotonIdioma className="ml-1.5" />
-        </div>
-
-        {/* LA FILA DE MÓVIL: la salida, dónde estás —que abre el panel— y
-            el idioma. Lo que en escritorio está repartido entre la X, la
-            esquina y el panel. */}
-        <div className="flex items-center gap-2.5 px-3.5 pt-3 min-[900px]:hidden">
-          <Link
-            href={hrefCurso}
-            aria-label={rotuloTemario}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-marca-borde bg-white text-marca-tinta transition-colors hover:bg-marca-niebla"
-          >
-            <IconoCerrar className="h-4 w-4" />
-          </Link>
-          <button
-            type="button"
-            onClick={abrirPanel}
-            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[11.5px] font-semibold uppercase leading-none tracking-[0.08em] text-marca-grisSuave transition-colors hover:text-marca-tinta"
-          >
-            <span className="truncate">{t.leccionDeTotal(posicion + 1, hermanas.length)}</span>
-            <IconoChevron className="h-3.5 w-3.5 shrink-0" />
-          </button>
-          <BotonIdioma />
-        </div>
-
-        <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col px-4 pb-8 pt-5 min-[900px]:px-8 min-[900px]:pb-10 min-[900px]:pt-[76px]">
-          {/* ------------------------------ CABECERA ------------------------------ */}
-          <header className="relative text-center">
-            <Link
-              href={hrefCurso}
-              aria-label={rotuloTemario}
-              className="absolute left-0 top-1 hidden h-10 w-10 place-items-center rounded-full border border-marca-borde bg-white text-marca-tinta transition-colors hover:bg-marca-niebla min-[900px]:grid"
-            >
-              <IconoCerrar className="h-4 w-4" />
-            </Link>
-
-            <p className="hidden text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave min-[900px]:block">
-              {etiquetaModulo} · {t.leccionDeTotal(posicion + 1, hermanas.length)}
-            </p>
-            <h1 className="mx-auto max-w-[600px] text-balance font-display text-[24px] font-bold leading-[1.16] tracking-[-0.01em] text-marca-tinta min-[900px]:mt-3 min-[900px]:text-[30px] min-[900px]:leading-[1.15]">
-              {leccion.titulo}
-            </h1>
-            {hayAlgoQueEnsenar && (
-              <p className="mx-auto mt-2.5 max-w-[520px] text-pretty text-[14.5px] leading-[1.5] text-marca-gris min-[900px]:mt-3 min-[900px]:text-[15px]">
-                {instruccion}
-              </p>
-            )}
-          </header>
-
-          {/* ----------------------------- PASO A PASO ----------------------------
-              Solo con dos partes o más: con una no hay por dónde ir. */}
-          {pasos.length >= 2 && (
-            <div className="mt-6 min-[900px]:mt-9">
-              <PasoAPaso pasos={pasos} activo={paso} todoHecho={enEjercicios} alElegir={irA} />
-            </div>
-          )}
-
+          <span className="text-[12px] font-semibold text-marca-gris tabular-nums">{porcentajeCurso}%</span>
+        </>
+      }
+      salida={{ href: hrefCurso, aria: rotuloTemario }}
+      rotuloMovil={t.leccionDeTotal(posicion + 1, hermanas.length)}
+      etiqueta={`${etiquetaModulo} · ${t.leccionDeTotal(posicion + 1, hermanas.length)}`}
+      titulo={leccion.titulo}
+      instruccion={hayAlgoQueEnsenar ? instruccion : null}
+      // Solo con dos partes o más: con una no hay por dónde ir.
+      pasoAPaso={
+        pasos.length >= 2 ? (
+          <PasoAPaso pasos={pasos} activo={paso} todoHecho={enEjercicios} alElegir={irA} />
+        ) : null
+      }
+    >
           {/* ------------------------------ CONTENIDO ------------------------------ */}
           {enEjercicios ? (
             <div className="mt-5 min-[900px]:mt-7">
@@ -340,7 +246,6 @@ export default function VistaLeccion({
                 profesor={profesor}
                 leccionId={leccion.id}
                 cursoSlug={cursoSlug}
-                hrefMiCurso={hrefMiCurso}
                 siguienteId={siguienteId}
                 foco={foco}
                 alSalir={volverALaTeoria}
@@ -463,9 +368,7 @@ export default function VistaLeccion({
               </div>
             </>
           )}
-        </div>
-      </main>
-    </div>
+    </PantallaConPanel>
   );
 }
 
@@ -515,26 +418,3 @@ function BotonAnterior({
   return <span aria-hidden className={`${clase} pointer-events-none opacity-0`} />;
 }
 
-function IconoCerrar({ className }: { className: string }) {
-  return (
-    <svg aria-hidden viewBox="0 0 16 16" className={className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-      <path d="m4 4 8 8M12 4l-8 8" />
-    </svg>
-  );
-}
-
-function IconoChevron({ className }: { className: string }) {
-  return (
-    <svg aria-hidden viewBox="0 0 16 16" className={className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m4 6 4 4 4-4" />
-    </svg>
-  );
-}
-
-function IconoFlecha({ className }: { className: string }) {
-  return (
-    <svg aria-hidden viewBox="0 0 16 16" className={className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13 8H3m4.5-4.5L3 8l4.5 4.5" />
-    </svg>
-  );
-}

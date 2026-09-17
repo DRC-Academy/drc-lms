@@ -771,6 +771,14 @@ export async function POST(peticion: Request) {
   const idiomaBloque: IdiomaBloque = idiomaActual();
   traza("idioma", idiomaBloque);
 
+  // La clase que va a mandar en el bloque, para dejarla escrita en él.
+  // `fechaClase` llega de Gestión como día ISO; si un día llegara con
+  // otra forma, `validarBloque` la descartaría al releer, así que se
+  // recorta aquí a los diez caracteres del día.
+  const claseOrigen: Bloque["claseOrigen"] | null = ultimaClase
+    ? { fecha: ultimaClase.fechaClase.slice(0, 10), profesor: perfil?.profesor.trim() ?? "" }
+    : null;
+
   return flujoDeGeneracion(traza, async (emitir) => {
     if (clave) {
       const sistema = construirSistema(nivel, idiomaBloque);
@@ -806,9 +814,18 @@ export async function POST(peticion: Request) {
         // El bloque del banco no pasa por aquí y no lo lleva, que es
         // correcto: los seis del banco están en español, y en `Bloque`
         // la ausencia significa exactamente eso.
+        //
+        // Y LA CLASE DE LA QUE SALE, también estampada aquí: la fecha es
+        // la de la clase analizada que mandó en el prompt y el profesor,
+        // el de su ficha. Es lo que después permite que la parada diga
+        // «generada a partir de tu clase del 20 de septiembre con Laura»
+        // en vez de un «en tu última clase» que caduca con la siguiente.
+        // Sin clase analizada no se estampa nada: el bloque salió del
+        // perfil y del examen, y no hay clase que atribuirle.
         const bloque: Bloque = {
           ...conIdPropio(generado.bloque),
           idioma: idiomaBloque,
+          ...(claseOrigen ? { claseOrigen } : {}),
         };
         // Se guarda antes de responder, no en segundo plano: si la
         // escritura se quedara a medias, el alumno vería el bloque, lo

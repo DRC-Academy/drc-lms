@@ -120,8 +120,10 @@ export default function PanelPractica({
   );
 
   // Todo lo que ha cerrado alguna vez, lo más reciente primero: el
-  // camino es esta semana, la lista de abajo es todo.
-  const cerrados = todos.filter((bloque) => estaCerrado(progreso, bloque));
+  // camino es esta semana, la lista de abajo es todo. `todos` va del
+  // más antiguo al más reciente —es el orden del camino—, así que aquí
+  // se le da la vuelta.
+  const cerrados = [...todos].reverse().filter((bloque) => estaCerrado(progreso, bloque));
 
   const saludo =
     nombre.trim() !== "" ? t.paraNombre(nombre.trim().split(" ")[0]) : t.paraTi;

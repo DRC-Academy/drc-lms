@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Icono, type EnlaceSeccion } from "@/components/IconoSeccion";
+import { Icono, type EnlaceSeccion, type SeccionActiva } from "@/components/IconoSeccion";
 import { abrirAyuda } from "@/components/ChatAyuda";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import MenuPerfil, { Globo } from "@/components/leccion/MenuPerfil";
@@ -29,11 +29,21 @@ export default function BarraLateral({
   enlaces,
   nombre,
   inicioHref,
+  seccion = "curso",
+  panel,
 }: {
   enlaces: EnlaceSeccion[];
   nombre: string;
   /** A dónde lleva el símbolo: el inicio del alumno, como el logotipo de la cabecera. */
   inicioHref: string;
+  /** La sección en la que está la pantalla: el curso en la lección, «Para ti» en el bloque. */
+  seccion?: SeccionActiva;
+  /**
+   * El icono que abre el panel entre 900 y 1200px, con su nombre. Es
+   * el panel del curso en la lección y el de las fases en el bloque.
+   * Sin él no hay icono: es el caso de una pantalla sin panel.
+   */
+  panel?: { rotulo: string; aria: string } | null;
 }) {
   const { t } = usarIdioma();
   const { abrirPanel } = usarMarco();
@@ -55,7 +65,7 @@ export default function BarraLateral({
 
       <nav className="flex flex-col gap-1.5">
         {enlaces.map((enlace) => {
-          const activo = enlace.clave === "curso";
+          const activo = enlace.clave === seccion;
           return (
             <Link
               key={enlace.clave}
@@ -73,15 +83,17 @@ export default function BarraLateral({
         })}
 
         {/* El cajón del panel, solo donde el panel no está a la vista. */}
-        <button
-          type="button"
-          onClick={abrirPanel}
-          aria-label={t.curso.abrirElPanel}
-          className="group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors hover:bg-marca-niebla min-[1200px]:hidden"
-        >
-          <IconoLista />
-          <Globo>{t.curso.lecciones}</Globo>
-        </button>
+        {panel && (
+          <button
+            type="button"
+            onClick={abrirPanel}
+            aria-label={panel.aria}
+            className="group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors hover:bg-marca-niebla min-[1200px]:hidden"
+          >
+            <IconoLista />
+            <Globo>{panel.rotulo}</Globo>
+          </button>
+        )}
       </nav>
 
       <div className="mt-auto flex flex-col items-center gap-2.5">

@@ -62,16 +62,8 @@ export default function MarcoCurso({
   children: ReactNode;
 }) {
   const segmento = useSelectedLayoutSegment();
-  const enLeccion = segmento !== null;
 
-  const [panelAbierto, setPanelAbierto] = useState(false);
-
-  // Al cambiar de lección el panel se cierra: la elección ya se ha hecho.
-  useEffect(() => {
-    setPanelAbierto(false);
-  }, [segmento]);
-
-  if (!enLeccion) {
+  if (segmento === null) {
     return (
       <>
         {cabecera}
@@ -79,6 +71,45 @@ export default function MarcoCurso({
       </>
     );
   }
+
+  return (
+    <MarcoBarra barra={barra} tiraRevision={tiraRevision} navegacionMovil={navegacionMovil} clave={segmento}>
+      {children}
+    </MarcoBarra>
+  );
+}
+
+/**
+ * EL MARCO CON BARRA, suelto: la barra de iconos a la izquierda, la
+ * navegación de abajo en móvil, y entre las dos lo que se lee.
+ *
+ * Es el que `MarcoCurso` enseña dentro de una lección, y lo usa tal cual
+ * la página del bloque de práctica (`app/alumno/[id]/[bloqueId]`), que
+ * no cuelga de ningún layout con segmentos que mirar: allí se pinta
+ * directamente, con la misma barra y el mismo contexto del panel. Una
+ * sola pieza para las dos pantallas es lo que hace que un bloque se vea
+ * como una lección sin que nadie copie nada.
+ */
+export function MarcoBarra({
+  barra,
+  tiraRevision,
+  navegacionMovil,
+  clave,
+  children,
+}: {
+  barra: ReactNode;
+  tiraRevision?: ReactNode;
+  navegacionMovil: ReactNode;
+  /** Cambia con la pantalla —la lección, el bloque— y al cambiar cierra el panel. */
+  clave: string;
+  children: ReactNode;
+}) {
+  const [panelAbierto, setPanelAbierto] = useState(false);
+
+  // Al cambiar de lección el panel se cierra: la elección ya se ha hecho.
+  useEffect(() => {
+    setPanelAbierto(false);
+  }, [clave]);
 
   return (
     <ContextoMarco.Provider
