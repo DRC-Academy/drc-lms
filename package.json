@@ -12,10 +12,13 @@
     "mascota:grilla": "node mascota/scripts/grilla.js",
     "mascota:recortar": "node mascota/scripts/py.js recortar.py",
     "mascota:igualar": "node mascota/scripts/py.js igualar_color.py",
-    "mascota:ojos": "node mascota/scripts/py.js ojos_maestro.py"
+    "mascota:ojos": "node mascota/scripts/py.js ojos_maestro.py",
+    "mascota:layout": "node mascota/scripts/py.js layout.py",
+    "mascota:publicar": "node mascota/scripts/publicar.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.0",
+    "framer-motion": "^13.4.0",
     "next": "14.2.35",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -28,6 +31,7 @@
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.39",
+    "sharp": "^0.35.4",
     "tailwindcss": "^3.4.6",
     "typescript": "^5"
   }

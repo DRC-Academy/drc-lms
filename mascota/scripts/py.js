@@ -13,7 +13,7 @@ const path = require("path");
 const MASCOTA = path.join(__dirname, "..");
 const VENV = path.join(MASCOTA, ".venv");
 const PYTHON_VENV = path.join(VENV, process.platform === "win32" ? "Scripts" : "bin", process.platform === "win32" ? "python.exe" : "python");
-const PAQUETES = ["rembg[cpu]", "onnxruntime", "pillow", "numpy"];
+const PAQUETES = ["rembg[cpu]", "onnxruntime", "pillow", "numpy", "opencv-python-headless"];
 
 const [nombre, ...resto] = process.argv.slice(2);
 if (!nombre || !existsSync(path.join(__dirname, nombre))) {

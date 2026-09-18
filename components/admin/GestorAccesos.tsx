@@ -136,8 +136,18 @@ export default function GestorAccesos({
       {/* ------------------------------- MENÚ ------------------------------- */}
       {/* Pegado al borde derecho y centrado. La tarjeta le hace sitio
           con un `pr-12`, que empuja su flecha hacia dentro: así conviven
-          el enlace de toda la vida y este menú sin pisarse. */}
-      <div ref={cajaMenu} className="absolute right-2.5 top-1/2 z-10 -translate-y-1/2">
+          el enlace de toda la vida y este menú sin pisarse.
+
+          SUBE DE CAPA MIENTRAS ESTÁ ABIERTO. Cada fila tiene su propia
+          caja como esta, todas con el mismo z-index y cada una más
+          tarde en el DOM que la anterior: el desplegable, que cuelga
+          hacia la fila de abajo, quedaba por debajo del «···» de esa
+          fila. Con la abierta un peldaño por encima, el menú se pinta
+          entero y lo que se pulsa es lo que se ve. */}
+      <div
+        ref={cajaMenu}
+        className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${menu ? "z-20" : "z-10"}`}
+      >
         <button
           type="button"
           onClick={() => setMenu((v) => !v)}

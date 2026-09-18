@@ -155,9 +155,20 @@ export default function ListaPanel({
     // En móvil, sin caja: la tarjeta se la pone la lista de filas, para
     // que la barra de vuelta pueda ser `sticky` —dentro de un
     // `overflow-hidden` no se pegaría—.
+    //
+    // Y EN ESCRITORIO TAMPOCO HAY `overflow-hidden`. Lo hubo, para que
+    // el fondo de la cabecera y el hover de las filas respetaran las
+    // esquinas redondeadas, y recortaba el menú «···» de la última
+    // fila: el desplegable se abre por debajo de su fila, y en la
+    // última eso es fuera de la caja. Se abría —el botón cambiaba de
+    // estado— y no se veía ni se podía pulsar. Al buscar a alguien por
+    // nombre, la única fila que queda es la última, así que el menú no
+    // funcionaba justo para la persona que se acababa de buscar. Las
+    // esquinas las redondean ahora la cabecera y la última fila por su
+    // cuenta, un píxel menos que la caja para asentarse dentro del borde.
     <section
       id="alumnos"
-      className={`scroll-mt-6 lg:overflow-hidden lg:rounded-[16px] lg:border lg:border-marca-borde lg:bg-white ${
+      className={`scroll-mt-6 lg:rounded-[16px] lg:border lg:border-marca-borde lg:bg-white ${
         explicita ? "" : "hidden lg:block"
       }`}
     >
@@ -194,7 +205,7 @@ export default function ListaPanel({
           delante, y ponerlo junto a las métricas sugeriría que busca
           en todo. En móvil solo queda el buscador: lo demás lo dice la
           barra de arriba. */}
-      <div className="mt-3 flex flex-col gap-3 lg:mt-0 lg:flex-row lg:items-center lg:justify-between lg:border-b lg:border-marca-borde lg:bg-marca-casiBlanco lg:px-[18px] lg:py-4">
+      <div className="mt-3 flex flex-col gap-3 lg:mt-0 lg:flex-row lg:items-center lg:justify-between lg:rounded-t-[15px] lg:border-b lg:border-marca-borde lg:bg-marca-casiBlanco lg:px-[18px] lg:py-4">
         <div className="hidden min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1.5 lg:flex">
           <h2 className="font-display text-[19px] font-bold leading-none text-marca-tinta">{titulo}</h2>
           <span className="text-[13.5px] tabular-nums text-marca-gris">{cuenta}</span>
@@ -303,10 +314,15 @@ export default function ListaPanel({
 
             <ul>
               {alumnos.map((alumno) => (
-                <li key={alumno.alumnoId} className="relative border-b border-marca-nieblaOscura last:border-b-0">
+                <li
+                  key={alumno.alumnoId}
+                  className="group relative border-b border-marca-nieblaOscura last:border-b-0"
+                >
+                  {/* `group-last`: el hover de la última fila redondea sus
+                      esquinas de abajo, que ya no las recorta la caja. */}
                   <Link
                     href={`/alumno/${alumno.alumnoId}`}
-                    className={`grid items-center gap-x-3.5 py-2.5 pl-4 pr-3.5 transition-colors hover:bg-marca-niebla lg:pl-3.5 lg:pr-12 ${columnas}`}
+                    className={`grid items-center gap-x-3.5 py-2.5 pl-4 pr-3.5 transition-colors hover:bg-marca-niebla lg:pl-3.5 lg:pr-12 lg:group-last:rounded-b-[15px] ${columnas}`}
                   >
                     <span className="min-w-0">
                       {/* El nombre no se trunca en móvil: es el único

@@ -206,6 +206,10 @@ export const config = {
     //
     // `/lecciones/` NO se abre: esas son las imágenes de los ejercicios,
     // que son el material del curso y sí van detrás de la puerta.
-    "/((?!acceso(?:/|$)|entrar(?:/|$)|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo-drc\\.png|simbolo-drc\\.png).*)",
+    //
+    // `/mascota/` SÍ: son las piezas de Geckonoid, marca como el
+    // logotipo. Detrás de la puerta, cada pantalla con la mascota
+    // pasaba 23 imágenes por aquí para nada.
+    "/((?!acceso(?:/|$)|entrar(?:/|$)|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo-drc\\.png|simbolo-drc\\.png|mascota/).*)",
   ],
 };

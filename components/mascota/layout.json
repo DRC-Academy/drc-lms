@@ -1,0 +1,280 @@
+{
+  "lienzo": 1024,
+  "capas": [
+    "cola",
+    "pierna_izq",
+    "pierna_der",
+    "torso",
+    "brazo_izq",
+    "brazo_der",
+    "cabeza",
+    "ojos_normal",
+    "boca_sonrisa",
+    "ojos_feliz",
+    "ojos_guino",
+    "ojos_triste",
+    "ojos_brillante",
+    "boca_abierta",
+    "boca_o",
+    "boca_triste",
+    "brazo_pulgar",
+    "brazo_diploma",
+    "anteojos",
+    "estrellas",
+    "gotita",
+    "signo"
+  ],
+  "piezas": {
+    "cola": {
+      "x": 0.5727,
+      "y": 0.436,
+      "ancho": 0.3275,
+      "alto": 0.4598,
+      "pivote": {
+        "x": 0.15,
+        "y": 0.9,
+        "nombre": "base"
+      }
+    },
+    "pierna_izq": {
+      "x": 0.2625,
+      "y": 0.7353,
+      "ancho": 0.1258,
+      "alto": 0.2169,
+      "pivote": {
+        "x": 0.7,
+        "y": 0.05,
+        "nombre": "cadera"
+      }
+    },
+    "pierna_der": {
+      "x": 0.4751,
+      "y": 0.7353,
+      "ancho": 0.1193,
+      "alto": 0.2169,
+      "pivote": {
+        "x": 0.3,
+        "y": 0.05,
+        "nombre": "cadera"
+      }
+    },
+    "torso": {
+      "x": 0.2495,
+      "y": 0.3254,
+      "ancho": 0.3795,
+      "alto": 0.488,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.96,
+        "nombre": "cadera"
+      }
+    },
+    "brazo_izq": {
+      "x": 0.2018,
+      "y": 0.423,
+      "ancho": 0.1496,
+      "alto": 0.3253,
+      "pivote": {
+        "x": 0.8,
+        "y": 0.07,
+        "nombre": "hombro"
+      }
+    },
+    "brazo_der": {
+      "x": 0.5683,
+      "y": 0.423,
+      "ancho": 0.1496,
+      "alto": 0.3253,
+      "pivote": {
+        "x": 0.2,
+        "y": 0.07,
+        "nombre": "hombro"
+      }
+    },
+    "cabeza": {
+      "x": 0.1563,
+      "y": 0.0587,
+      "ancho": 0.5682,
+      "alto": 0.3947,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.94,
+        "nombre": "cuello"
+      }
+    },
+    "ojos_normal": {
+      "x": 0.206,
+      "y": 0.0519,
+      "ancho": 0.4579,
+      "alto": 0.2326,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.5,
+        "nombre": "centro"
+      }
+    },
+    "boca_sonrisa": {
+      "x": 0.2083,
+      "y": 0.1758,
+      "ancho": 0.4598,
+      "alto": 0.2559,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.5,
+        "nombre": "centro"
+      }
+    },
+    "ojos_feliz": {
+      "x": 0.206,
+      "y": 0.0516,
+      "ancho": 0.4579,
+      "alto": 0.2332,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.5,
+        "nombre": "centro"
+      },
+      "reemplaza": "ojos_normal"
+    },
+    "ojos_guino": {
+      "x": 0.206,
+      "y": 0.052,
+      "ancho": 0.4579,
+      "alto": 0.2324,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.5,
+        "nombre": "centro"
+      },
+      "reemplaza": "ojos_normal"
+    },
+    "ojos_triste": {
+      "x": 0.206,
+      "y": 0.0517,
+      "ancho": 0.4579,
+      "alto": 0.2329,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.5,
+        "nombre": "centro"
+      },
+      "reemplaza": "ojos_normal"
+    },
+    "ojos_brillante": {
+      "x": 0.206,
+      "y": 0.0519,
+      "ancho": 0.4579,
+      "alto": 0.2326,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.5,
+        "nombre": "centro"
+      },
+      "reemplaza": "ojos_normal"
+    },
+    "boca_abierta": {
+      "x": 0.2083,
+      "y": 0.1758,
+      "ancho": 0.4598,
+      "alto": 0.3158,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.3,
+        "nombre": "labio"
+      },
+      "reemplaza": "boca_sonrisa"
+    },
+    "boca_o": {
+      "x": 0.2083,
+      "y": 0.1758,
+      "ancho": 0.4598,
+      "alto": 0.3166,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.3,
+        "nombre": "labio"
+      },
+      "reemplaza": "boca_sonrisa"
+    },
+    "boca_triste": {
+      "x": 0.2083,
+      "y": 0.1758,
+      "ancho": 0.4598,
+      "alto": 0.3158,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.3,
+        "nombre": "labio"
+      },
+      "reemplaza": "boca_sonrisa"
+    },
+    "brazo_pulgar": {
+      "x": 0.5687,
+      "y": 0.2723,
+      "ancho": 0.2461,
+      "alto": 0.2017,
+      "pivote": {
+        "x": 0.12,
+        "y": 0.86,
+        "nombre": "hombro"
+      },
+      "reemplaza": "brazo_der"
+    },
+    "brazo_diploma": {
+      "x": 0.569,
+      "y": 0.2291,
+      "ancho": 0.2433,
+      "alto": 0.2407,
+      "pivote": {
+        "x": 0.12,
+        "y": 0.9,
+        "nombre": "hombro"
+      },
+      "reemplaza": "brazo_der"
+    },
+    "anteojos": {
+      "x": 0.1694,
+      "y": 0.0588,
+      "ancho": 0.5312,
+      "alto": 0.2188,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.5,
+        "nombre": "centro"
+      }
+    },
+    "estrellas": {
+      "x": 0.3267,
+      "y": -0.0075,
+      "ancho": 0.2273,
+      "alto": 0.1717,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.5,
+        "nombre": "centro"
+      }
+    },
+    "gotita": {
+      "x": 0.5968,
+      "y": 0.3245,
+      "ancho": 0.0426,
+      "alto": 0.0597,
+      "pivote": {
+        "x": 0.5,
+        "y": 0.0,
+        "nombre": "arriba"
+      }
+    },
+    "signo": {
+      "x": 0.7074,
+      "y": 0.1091,
+      "ancho": 0.0341,
+      "alto": 0.1201,
+      "pivote": {
+        "x": 0.5,
+        "y": 1.0,
+        "nombre": "abajo"
+      }
+    }
+  }
+}
