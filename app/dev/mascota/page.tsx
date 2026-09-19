@@ -10,7 +10,8 @@ import { useMascota } from "@/components/mascota/useMascota";
  * No es una pantalla del alumno, pero cuelga del mismo middleware, así
  * que hace falta sesión para verla. Se queda en el repo a propósito:
  * es donde se comprueba cada gesto nuevo sin tener que provocarlo en
- * el producto.
+ * el producto. El fondo oscuro es para ver los bordes y los huecos:
+ * sobre blanco un filete claro o un hueco mal cerrado no se notan.
  */
 
 const NOMBRES: Record<EstadoMascota, string> = {
@@ -29,6 +30,7 @@ export default function PaginaMascota() {
   const mascota = useMascota();
   const [size, setSize] = useState<(typeof TAMANOS)[number]>(240);
   const [volverAIdle, setVolverAIdle] = useState(true);
+  const [oscuro, setOscuro] = useState(false);
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[880px] flex-col items-center gap-8 px-4 py-10">
@@ -39,7 +41,8 @@ export default function PaginaMascota() {
         </p>
       </div>
 
-      <div className="rounded-[24px] border border-marca-borde bg-white p-6">
+      {/* Con aire a los lados: las manos de «éxito» sobresalen del lienzo. */}
+      <div className={`rounded-[24px] border border-marca-borde px-16 py-6 ${oscuro ? "bg-[#2b2f3a]" : "bg-white"}`}>
         <Geckonoid estado={mascota.estado} disparo={mascota.disparo} size={size} volverAIdle={volverAIdle} />
       </div>
 
@@ -62,7 +65,7 @@ export default function PaginaMascota() {
 
       <div className="flex flex-wrap items-center justify-center gap-4 text-[13.5px] text-marca-gris">
         <span className="inline-flex items-center gap-1.5">
-          Tamaño
+          Alto
           {TAMANOS.map((t) => (
             <button
               key={t}
@@ -79,6 +82,10 @@ export default function PaginaMascota() {
         <label className="inline-flex items-center gap-2">
           <input type="checkbox" checked={volverAIdle} onChange={(e) => setVolverAIdle(e.target.checked)} />
           Vuelve a idle a los 2,5 s
+        </label>
+        <label className="inline-flex items-center gap-2">
+          <input type="checkbox" checked={oscuro} onChange={(e) => setOscuro(e.target.checked)} />
+          Fondo oscuro
         </label>
       </div>
     </main>

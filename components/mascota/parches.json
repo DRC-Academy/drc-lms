@@ -1,0 +1,128 @@
+{
+  "lienzo": {
+    "ancho": 356,
+    "alto": 458,
+    "proporcion": 0.7773
+  },
+  "cola": {
+    "archivo": "cola.png",
+    "x": 0.5983,
+    "y": 0.4389,
+    "ancho": 0.368,
+    "alto": 0.4956,
+    "pivote": {
+      "x": 0.084,
+      "y": 0.7577
+    },
+    "pivote_lienzo": {
+      "x": 0.6292,
+      "y": 0.8144
+    }
+  },
+  "parches": [
+    {
+      "estado": "exito",
+      "archivo": "exito_1.png",
+      "x": -0.1489,
+      "y": -0.0087,
+      "ancho": 1.1292,
+      "alto": 0.821,
+      "etiqueta": "cara"
+    },
+    {
+      "estado": "duda",
+      "archivo": "duda_1.png",
+      "x": 0.1124,
+      "y": -0.0087,
+      "ancho": 0.7556,
+      "alto": 0.8297,
+      "etiqueta": "cara"
+    },
+    {
+      "estado": "animo",
+      "archivo": "animo_1.png",
+      "x": 0.1208,
+      "y": -0.0044,
+      "ancho": 0.2921,
+      "alto": 0.214,
+      "etiqueta": "cabeza"
+    },
+    {
+      "estado": "animo",
+      "archivo": "animo_2.png",
+      "x": 0.3764,
+      "y": -0.0066,
+      "ancho": 0.4073,
+      "alto": 0.3886,
+      "etiqueta": "cara"
+    },
+    {
+      "estado": "animo",
+      "archivo": "animo_3.png",
+      "x": -0.0309,
+      "y": 0.3122,
+      "ancho": 0.4326,
+      "alto": 0.4891,
+      "etiqueta": "brazo_izq"
+    },
+    {
+      "estado": "racha_perdida",
+      "archivo": "racha_perdida_1.png",
+      "x": 0.0674,
+      "y": -0.0066,
+      "ancho": 0.7107,
+      "alto": 0.5153,
+      "etiqueta": "cara"
+    },
+    {
+      "estado": "nivel_superado",
+      "archivo": "nivel_superado_1.png",
+      "x": -0.1601,
+      "y": -0.0087,
+      "ancho": 0.8764,
+      "alto": 0.8013,
+      "etiqueta": "cara"
+    },
+    {
+      "estado": "estudiando",
+      "archivo": "estudiando_1.png",
+      "x": 0.0562,
+      "y": 0.0393,
+      "ancho": 0.7163,
+      "alto": 0.2969,
+      "etiqueta": "cara"
+    },
+    {
+      "estado": "parpadeo",
+      "archivo": "parpadeo_1.png",
+      "x": 0.4522,
+      "y": 0.0524,
+      "ancho": 0.2809,
+      "alto": 0.2314,
+      "etiqueta": "cara"
+    },
+    {
+      "estado": "parpadeo",
+      "archivo": "parpadeo_2.png",
+      "x": 0.1039,
+      "y": 0.0546,
+      "ancho": 0.2837,
+      "alto": 0.2336,
+      "etiqueta": "cara"
+    }
+  ],
+  "huecos": {
+    "exito": "hueco_exito.png",
+    "duda": "hueco_duda.png",
+    "animo": "hueco_animo.png",
+    "racha_perdida": "hueco_racha_perdida.png",
+    "nivel_superado": "hueco_nivel_superado.png"
+  },
+  "restos": {
+    "exito": "resto_exito.png",
+    "duda": "resto_duda.png",
+    "animo": "resto_animo.png",
+    "racha_perdida": "resto_racha_perdida.png",
+    "nivel_superado": "resto_nivel_superado.png"
+  }
+}

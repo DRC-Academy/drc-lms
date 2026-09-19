@@ -14,7 +14,12 @@
     "mascota:igualar": "node mascota/scripts/py.js igualar_color.py",
     "mascota:ojos": "node mascota/scripts/py.js ojos_maestro.py",
     "mascota:layout": "node mascota/scripts/py.js layout.py",
-    "mascota:publicar": "node mascota/scripts/publicar.js"
+    "mascota:publicar": "node mascota/scripts/publicar.js",
+    "mascota:variantes": "node mascota/scripts/py.js variantes_check.py",
+    "mascota:base": "node mascota/scripts/py.js base.py",
+    "mascota:parches": "node mascota/scripts/py.js parches.py",
+    "mascota:optimizar": "node mascota/scripts/optimizar.js",
+    "mascota:rehacer": "npm run mascota:variantes && npm run mascota:base && npm run mascota:parches && npm run mascota:optimizar"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.0",

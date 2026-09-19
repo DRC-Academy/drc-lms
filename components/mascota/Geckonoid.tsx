@@ -1,15 +1,9 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
-import { AnimatePresence, motion, type TargetAndTransition, type Transition } from "framer-motion";
-import layoutJson from "@/components/mascota/layout.json";
-import {
-  CARA,
-  DURACION_ESTADO_MS,
-  OJOS_QUE_PARPADEAN,
-  type Adorno,
-  type EstadoMascota,
-} from "@/components/mascota/estados";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { AnimatePresence, motion, useAnimate, type AnimationOptions, type DOMKeyframesDefinition, type Transition } from "framer-motion";
+import parchesJson from "@/components/mascota/parches.json";
+import { DURACION_ESTADO_MS, type EstadoMascota } from "@/components/mascota/estados";
 
 export type { EstadoMascota } from "@/components/mascota/estados";
 export { ESTADOS_MASCOTA } from "@/components/mascota/estados";
@@ -19,43 +13,61 @@ export { ESTADOS_MASCOTA } from "@/components/mascota/estados";
  *
  *   <Geckonoid estado="idle" size={240} />
  *
- * Arma el personaje apilando las piezas PNG de public/mascota/ —los
- * renders recortados de mascota/rive/— en el sitio que dice
- * layout.json, y las mueve con Framer Motion. Cada pieza es una imagen
- * posicionada en absoluto dentro de un lienzo cuadrado de `size`
- * píxeles, con su `transform-origin` en el pivote de la pieza: el hombro
- * en los brazos, la cadera en las piernas, la base en la cola, el cuello
- * en la cabeza. Así una rotación gira desde donde giraría de verdad.
+ * La base es el render maestro sin fondo (public/mascota/cuerpo.png),
+ * y cada estado es un puñado de PARCHES: recortes de una variante del
+ * mismo render con el gesto cambiado, con el borde difuminado, que se
+ * ponen encima en el sitio que dice parches.json. Lo escribe
+ * mascota/scripts/parches.py; acá solo se apila y se mueve.
+ *
+ * LAS CAPAS, de atrás adelante:
+ *   cuerpo.png   la base. En los estados que quitan algo del maestro
+ *                —los brazos que cuelgan cuando suben— lleva un
+ *                mask-image (parches/hueco_<estado>.png).
+ *   resto        lo que el hueco quita, desvaneciéndose: mask-image no
+ *                se anima, y sin esto el brazo desaparecería de golpe.
+ *   cola.png     aparte, con transform-origin en su base, para oscilar.
+ *   parches      los del estado, con fundido de 200 ms al entrar y salir.
+ *   parpadeo     los parches de ojos cerrados, que se encienden y apagan.
  *
  * EL ESTADO ES DE FUERA Y EL TIEMPO ES DE AQUÍ. Quien usa el componente
- * dice qué ha pasado —`estado="exito"`— y el componente enseña la cara y
- * el gesto de eso durante DURACION_ESTADO_MS, y vuelve solo a idle. Para
- * lanzar dos veces el mismo estado seguido hay que cambiar `disparo`,
- * que es lo que hace `useMascota().dispara`.
+ * dice qué ha pasado —`estado="exito"`— y el componente lo enseña durante
+ * DURACION_ESTADO_MS y vuelve solo a idle. Para lanzar dos veces el
+ * mismo estado seguido hay que cambiar `disparo`, que es lo que hace
+ * `useMascota().dispara`.
  *
- * LAS CAPAS, de atrás adelante: cola, pierna izquierda, pierna derecha,
- * torso, brazo izquierdo, brazo derecho, cabeza, ojos, boca, adornos.
- * Izquierda y derecha son desde quien mira.
+ * EL TAMAÑO. `size` es el ALTO del lienzo en píxeles; el ancho sale de
+ * la proporción del maestro. Los parches de «éxito» y «nivel superado»
+ * —las manos en alto, el diploma— sobresalen del lienzo por los lados:
+ * el contenedor no debe recortar (overflow hidden).
  */
 
-type Pieza = {
-  x: number;
-  y: number;
-  ancho: number;
-  alto: number;
-  pivote: { x: number; y: number; nombre: string };
-  reemplaza?: string;
+type Caja = { x: number; y: number; ancho: number; alto: number };
+type Parche = Caja & { estado: string; archivo: string; etiqueta: string };
+
+const DATOS = parchesJson as {
+  lienzo: { ancho: number; alto: number; proporcion: number };
+  cola: Caja & { archivo: string; pivote: { x: number; y: number } };
+  parches: Parche[];
+  huecos: Record<string, string>;
+  restos: Record<string, string>;
 };
 
-const LAYOUT = layoutJson as { lienzo: number; capas: string[]; piezas: Record<string, Pieza> };
+const PARCHES_POR_ESTADO = DATOS.parches.reduce<Record<string, Parche[]>>((acc, p) => {
+  (acc[p.estado] ??= []).push(p);
+  return acc;
+}, {});
+const PARPADEO = PARCHES_POR_ESTADO.parpadeo ?? [];
 
-/** La ruta pública de una pieza. */
-const src = (nombre: string) => `/mascota/${nombre}.png`;
+const src = (archivo: string) => `/mascota/${archivo}`;
+const srcParche = (archivo: string) => `/mascota/parches/${archivo}`;
 
-const SUAVE: Transition = { duration: 0.15, ease: "easeOut" };
+const FUNDIDO: Transition = { duration: 0.2, ease: "easeOut" };
 const MUELLE: Transition = { type: "spring", stiffness: 220, damping: 16 };
-/** La respiración: torso y cabeza a la vez. */
 const RESPIRAR: Transition = { duration: 3, repeat: Infinity, ease: "easeInOut" };
+
+/** Dos cajas del lienzo que se pisan. */
+const sePisan = (a: Caja, b: Caja) =>
+  a.x < b.x + b.ancho && b.x < a.x + a.ancho && a.y < b.y + b.alto && b.y < a.y + a.alto;
 
 export default function Geckonoid({
   estado = "idle",
@@ -69,7 +81,7 @@ export default function Geckonoid({
   estado?: EstadoMascota;
   /** Cambia para relanzar el mismo estado. Lo lleva `useMascota`. */
   disparo?: number;
-  /** El lado del lienzo cuadrado, en píxeles. */
+  /** El alto del lienzo, en píxeles. */
   size?: number;
   /** Volver solo a idle a los 2,5 s. */
   volverAIdle?: boolean;
@@ -94,13 +106,17 @@ export default function Geckonoid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estado, disparo, volverAIdle]);
 
-  // El parpadeo: cada 3–5 segundos, y solo con los ojos abiertos.
-  const cara = CARA[vivo];
-  const parpadea = OJOS_QUE_PARPADEAN.includes(cara.ojos);
+  const parches = PARCHES_POR_ESTADO[vivo] ?? [];
+  const hueco = DATOS.huecos[vivo];
+  const resto = DATOS.restos[vivo];
+
+  // El parpadeo: cada 3–5 segundos, 150 ms, y solo si ningún parche del
+  // estado tapa los ojos (en «ánimo» ya hay un guiño puesto).
+  const puedeParpadear = useMemo(() => !parches.some((p) => PARPADEO.some((ojo) => sePisan(p, ojo))), [parches]);
   const [cerrando, setCerrando] = useState(false);
 
   useEffect(() => {
-    if (!parpadea) return;
+    if (!puedeParpadear) return;
     let reloj: ReturnType<typeof setTimeout>;
     let abrir: ReturnType<typeof setTimeout>;
     const programar = () => {
@@ -109,7 +125,7 @@ export default function Geckonoid({
         abrir = setTimeout(() => {
           setCerrando(false);
           programar();
-        }, 160);
+        }, 150);
       }, 3000 + Math.random() * 2000);
     };
     programar();
@@ -117,227 +133,154 @@ export default function Geckonoid({
       clearTimeout(reloj);
       clearTimeout(abrir);
     };
-  }, [parpadea]);
+  }, [puedeParpadear]);
 
-  // Las piezas que no están puestas se precargan igual: al cambiar de
-  // cara no hay que esperar a que llegue la imagen.
+  // Todo se precarga al montar: al cambiar de estado no hay que esperar
+  // a que llegue la imagen.
   useEffect(() => {
-    for (const nombre of LAYOUT.capas) {
+    const rutas = [
+      src("cuerpo.png"),
+      src(DATOS.cola.archivo),
+      ...DATOS.parches.map((p) => srcParche(p.archivo)),
+      ...Object.values(DATOS.huecos).map(srcParche),
+      ...Object.values(DATOS.restos).map(srcParche),
+    ];
+    for (const ruta of rutas) {
       const imagen = new Image();
-      imagen.src = src(nombre);
+      imagen.src = ruta;
     }
   }, []);
 
-  // Los desplazamientos en píxeles del guion —el salto de 30, la cabeza
-  // que baja 15— están pensados para 240px: se escalan con el tamaño.
+  const ancho = size * DATOS.lienzo.proporcion;
+  // Los desplazamientos en píxeles del guion —el salto de 30, la caída
+  // de 10— están pensados para 240 px de alto: se escalan con el tamaño.
   const u = size / 240;
 
   /**
-   * La caja de una pieza, en píxeles del lienzo. Con `dentroDe`, relativa
-   * a la caja de esa otra pieza: es como van los ojos, la boca y los
-   * adornos dentro del grupo de la cabeza, para moverse con ella.
+   * La caja de una pieza, en píxeles del lienzo. Sin `max-width`: el
+   * preflight de Tailwind pone `img { max-width: 100% }`, y el parche
+   * de «éxito» —las manos en alto— es más ancho que el lienzo: capado
+   * al 100 % salía achatado y corrido.
    */
-  const caja = (nombre: string, dentroDe?: string): CSSProperties & { originX: number; originY: number } => {
-    const p = LAYOUT.piezas[nombre];
-    const base = dentroDe ? LAYOUT.piezas[dentroDe] : { x: 0, y: 0 };
-    return {
-      position: "absolute",
-      left: (p.x - base.x) * size,
-      top: (p.y - base.y) * size,
-      width: p.ancho * size,
-      height: p.alto * size,
-      originX: p.pivote.x,
-      originY: p.pivote.y,
-    };
-  };
+  const caja = (c: Caja): CSSProperties => ({
+    position: "absolute",
+    left: c.x * ancho,
+    top: c.y * size,
+    width: c.ancho * ancho,
+    height: c.alto * size,
+    maxWidth: "none",
+  });
+
+  /** El cuerpo entero con una máscara encima (el hueco, o su resto). */
+  const mascara = (archivo: string): CSSProperties => ({
+    maskImage: `url(${srcParche(archivo)})`,
+    WebkitMaskImage: `url(${srcParche(archivo)})`,
+    maskSize: "100% 100%",
+    WebkitMaskSize: "100% 100%",
+    maskRepeat: "no-repeat",
+    WebkitMaskRepeat: "no-repeat",
+  });
 
   // ------------------------------ EL GUION ------------------------------
-  const esExito = vivo === "exito";
-  const esNivel = vivo === "nivel_superado";
-
-  const cuerpo: TargetAndTransition = {
-    y: esExito ? [0, -30 * u, 0] : 0,
-    transition: { y: esExito ? { duration: 0.6, times: [0, 0.4, 1], ease: ["easeOut", "easeIn"] } : SUAVE },
+  // Los movimientos de todo el personaje, desde los pies. Se lanzan a
+  // mano (useAnimate) y no con `animate`, porque un salto tiene que
+  // volver a saltar aunque el estado sea el mismo —dos aciertos
+  // seguidos— y `animate` no relanza un objetivo que no cambió.
+  const [cuerpo, animar] = useAnimate<HTMLDivElement>();
+  const quieto: [DOMKeyframesDefinition, AnimationOptions] = [{ y: 0, rotate: 0 }, { y: MUELLE, rotate: MUELLE }];
+  const rebote: [DOMKeyframesDefinition, AnimationOptions] = [
+    { y: [0, -10 * u, 0], rotate: 0 },
+    { y: { duration: 0.4, times: [0, 0.4, 1], ease: "easeOut" }, rotate: MUELLE },
+  ];
+  const GESTOS: Record<EstadoMascota, [DOMKeyframesDefinition, AnimationOptions]> = {
+    idle: quieto,
+    estudiando: quieto,
+    exito: [
+      { y: [0, -30 * u, 0, -8 * u, 0], rotate: 0 },
+      { y: { duration: 0.7, times: [0, 0.35, 0.65, 0.82, 1], ease: "easeOut" }, rotate: MUELLE },
+    ],
+    duda: [{ y: 0, rotate: 6 }, { y: MUELLE, rotate: MUELLE }],
+    animo: rebote,
+    racha_perdida: [{ y: 10 * u, rotate: -4 }, { y: MUELLE, rotate: MUELLE }],
+    nivel_superado: rebote,
   };
 
-  const cabeza: TargetAndTransition = {
-    scale: [1, 1.02, 1],
-    rotate: vivo === "duda" ? 8 : vivo === "racha_perdida" ? -6 : 0,
-    y: vivo === "racha_perdida" ? 15 * u : 0,
-    transition: { scale: RESPIRAR, rotate: MUELLE, y: MUELLE },
-  };
-
-  const torso: TargetAndTransition = { scale: [1, 1.02, 1], transition: { scale: RESPIRAR } };
-
-  const cola: TargetAndTransition = {
-    rotate: [-6, 6, -6],
-    transition: { rotate: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } },
-  };
-
-  // Los brazos suben al celebrar: el izquierdo gira en el sentido del
-  // reloj y el derecho al contrario, que es lo que separa las manos del
-  // cuerpo cuando el pivote está en el hombro.
-  const brazoIzq: TargetAndTransition = {
-    rotate: esExito ? 70 : esNivel ? 35 : 0,
-    transition: { rotate: MUELLE },
-  };
-  const brazoDer: TargetAndTransition = {
-    rotate: esExito ? -70 : 0,
-    transition: { rotate: MUELLE, opacity: SUAVE },
-  };
-
-  const ojos: TargetAndTransition = {
-    scaleY: cerrando ? 0.1 : 1,
-    transition: { scaleY: { duration: 0.075, ease: "easeInOut" }, opacity: SUAVE },
-  };
+  useEffect(() => {
+    const [objetivo, transicion] = GESTOS[vivo];
+    const controles = animar(cuerpo.current, objetivo, transicion);
+    return () => controles.stop();
+    // GESTOS se arma en cada render; lo que importa es el estado, el
+    // disparo y el tamaño.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vivo, disparo, u]);
 
   return (
     <div
       role="img"
       aria-label={`${etiqueta} · ${vivo}`}
       className={`relative select-none ${className}`}
-      style={{ width: size, height: size }}
+      style={{ width: ancho, height: size }}
     >
-      <motion.div className="absolute inset-0" animate={cuerpo}>
-        <Capa nombre="cola" caja={caja} animate={cola} />
-        <Capa nombre="pierna_izq" caja={caja} />
-        <Capa nombre="pierna_der" caja={caja} />
-        <Capa nombre="torso" caja={caja} animate={torso} />
-        <Capa nombre="brazo_izq" caja={caja} animate={brazoIzq} />
+      {/* La respiración va en un contenedor propio: si fuera con los
+          gestos, cada cambio de estado la reiniciaría a mitad de ciclo. */}
+      <motion.div className="absolute inset-0" style={{ originY: 1 }} animate={{ scale: [1, 1.015, 1] }} transition={RESPIRAR}>
+        <div ref={cuerpo} className="absolute inset-0" style={{ transformOrigin: "50% 100%" }}>
+          <img src={src("cuerpo.png")} alt="" draggable={false} className="absolute inset-0 h-full w-full" style={hueco ? mascara(hueco) : undefined} />
 
-        {/* EL BRAZO DERECHO SE SUSTITUYE ENTERO en «ánimo» y en «nivel
-            superado»: el pulgar y el diploma son otro render del brazo.
-            Entran girando desde abajo, desde el mismo hombro. */}
-        <AnimatePresence initial={false}>
+          {resto && (
+            <motion.img
+              key={`resto-${vivo}-${disparo}`}
+              src={src("cuerpo.png")}
+              alt=""
+              draggable={false}
+              className="absolute inset-0 h-full w-full"
+              style={mascara(resto)}
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 0 }}
+              transition={FUNDIDO}
+            />
+          )}
+
           <motion.img
-            key={cara.brazoDer}
-            src={src(cara.brazoDer)}
+            src={src(DATOS.cola.archivo)}
             alt=""
             draggable={false}
-            style={caja(cara.brazoDer)}
-            initial={cara.brazoDer === "brazo_der" ? { opacity: 0 } : { opacity: 0, rotate: 60 }}
-            animate={
-              cara.brazoDer === "brazo_der"
-                ? { opacity: 1, ...brazoDer }
-                : { opacity: 1, rotate: 0, transition: { rotate: MUELLE, opacity: SUAVE } }
-            }
-            exit={{ opacity: 0, transition: SUAVE }}
+            style={{ ...caja(DATOS.cola), originX: DATOS.cola.pivote.x, originY: DATOS.cola.pivote.y }}
+            animate={{ rotate: [-5, 5, -5] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
           />
-        </AnimatePresence>
 
-        {/* LA CABEZA ES UN GRUPO: la pieza, y dentro los ojos, la boca y
-            los adornos, colocados respecto a su caja. Así la inclinación
-            de «duda» y la caída de «racha perdida» se llevan la cara
-            entera, y las estrellas y el signo giran con ella. */}
-        <motion.div style={caja("cabeza")} animate={cabeza}>
-          <motion.img src={src("cabeza")} alt="" draggable={false} className="absolute inset-0 h-full w-full" />
-
-          {/* Los ojos y la boca cambian con la cara, con un fundido corto.
-              El parpadeo cierra los ojos en vertical desde su centro. */}
-          <AnimatePresence initial={false}>
-            <motion.img
-              key={cara.ojos}
-              src={src(cara.ojos)}
-              alt=""
-              draggable={false}
-              style={caja(cara.ojos, "cabeza")}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, ...ojos }}
-              exit={{ opacity: 0, transition: SUAVE }}
-            />
-          </AnimatePresence>
-          <AnimatePresence initial={false}>
-            <motion.img
-              key={cara.boca}
-              src={src(cara.boca)}
-              alt=""
-              draggable={false}
-              style={caja(cara.boca, "cabeza")}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1, transition: { opacity: SUAVE, scale: MUELLE } }}
-              exit={{ opacity: 0, transition: SUAVE }}
-            />
-          </AnimatePresence>
-
-          {/* Los adornos, cada uno con su entrada. */}
           <AnimatePresence>
-            {cara.adornos.map((adorno) => (
+            {parches.map((p) => (
               <motion.img
-                key={adorno}
-                src={src(adorno)}
+                key={p.archivo}
+                src={srcParche(p.archivo)}
                 alt=""
                 draggable={false}
-                style={caja(adorno, "cabeza")}
-                {...ADORNOS[adorno](u)}
+                style={caja(p)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={FUNDIDO}
               />
             ))}
           </AnimatePresence>
-        </motion.div>
+
+          {puedeParpadear &&
+            PARPADEO.map((ojo) => (
+              <motion.img
+                key={ojo.archivo}
+                src={srcParche(ojo.archivo)}
+                alt=""
+                draggable={false}
+                style={caja(ojo)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: cerrando ? 1 : 0 }}
+                transition={{ duration: 0.05 }}
+              />
+            ))}
+        </div>
       </motion.div>
     </div>
   );
 }
-
-/** Una pieza fija: siempre puesta, con su animación si la tiene. */
-function Capa({
-  nombre,
-  caja,
-  animate,
-}: {
-  nombre: string;
-  caja: (nombre: string) => CSSProperties & { originX: number; originY: number };
-  animate?: TargetAndTransition;
-}) {
-  return <motion.img src={src(nombre)} alt="" draggable={false} style={caja(nombre)} animate={animate} />;
-}
-
-/**
- * Cómo entra, cómo está y cómo se va cada adorno. Reciben `u` porque los
- * desplazamientos en píxeles se escalan con el tamaño de la mascota.
- */
-const ADORNOS: Record<
-  Adorno,
-  (u: number) => { initial: TargetAndTransition; animate: TargetAndTransition; exit: TargetAndTransition }
-> = {
-  // Los anteojos se ponen y ya está.
-  anteojos: () => ({
-    initial: { opacity: 0, y: -6 },
-    animate: { opacity: 1, y: 0, transition: SUAVE },
-    exit: { opacity: 0, transition: SUAVE },
-  }),
-  // Las estrellas aparecen creciendo y se quedan girando despacio.
-  estrellas: () => ({
-    initial: { opacity: 0, scale: 0 },
-    animate: {
-      opacity: 1,
-      scale: 1,
-      rotate: [0, 6, -6, 0],
-      transition: {
-        opacity: SUAVE,
-        scale: MUELLE,
-        rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-      },
-    },
-    exit: { opacity: 0, scale: 0, transition: SUAVE },
-  }),
-  // El signo rebota desde su base.
-  signo: () => ({
-    initial: { opacity: 0, scale: 0 },
-    animate: {
-      opacity: 1,
-      scale: [0, 1.25, 1],
-      transition: { opacity: SUAVE, scale: { duration: 0.45, times: [0, 0.6, 1], ease: "easeOut" } },
-    },
-    exit: { opacity: 0, scale: 0, transition: SUAVE },
-  }),
-  // La gotita cae desde el ojo y se desvanece, y vuelve a caer mientras dure la pena.
-  gotita: (u) => ({
-    initial: { opacity: 0, y: 0 },
-    animate: {
-      opacity: [0, 1, 1, 0],
-      y: [0, 2 * u, 26 * u, 40 * u],
-      transition: { duration: 1.4, times: [0, 0.15, 0.75, 1], repeat: Infinity, repeatDelay: 0.3, ease: "easeIn" },
-    },
-    exit: { opacity: 0, transition: SUAVE },
-  }),
-};
