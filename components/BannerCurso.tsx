@@ -7,6 +7,7 @@ import { rutaDeMiCurso } from "@/lib/cursos";
 import { partirModulo } from "@/lib/modulo";
 import { etiquetaPosicion, ubicarModulo } from "@/lib/temario";
 import Banner from "@/components/Banner";
+import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
 
 /**
  * La pieza principal del inicio.
@@ -33,7 +34,12 @@ import Banner from "@/components/Banner";
  * botón amarillo y ha vuelto, porque el verde no puede ser a la vez el
  * fondo y el color de «pulsa aquí».
  *
- * Se renderiza en el servidor: no tiene estado ni interacción.
+ * LA MASCOTA VA AQUÍ porque esta es la pieza principal del inicio y la
+ * primera que se ve: recibe al alumno en idle. Quien no tiene curso no
+ * ve esta franja, y a ese lo recibe en «Para ti» (ver `PanelPractica`).
+ *
+ * Se renderiza en el servidor: no tiene estado ni interacción; la
+ * mascota es una isla de cliente dentro.
  */
 export default function BannerCurso({
   estados,
@@ -141,6 +147,7 @@ export default function BannerCurso({
         title={titulo}
         subtitle={siguiente?.titulo}
         action={{ label: llamada, href: destino, srSuffix: siguiente?.titulo ?? titulo }}
+        ilustracion={<MascotaBienvenida />}
         // Dónde cae esta lección dentro del curso. Es lo único que
         // sobrevive de la columna de cifra, y sobrevive porque no lo dice
         // nadie más: el banner del diploma cuenta el curso entero, no en

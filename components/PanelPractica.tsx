@@ -8,6 +8,7 @@ import { usarGenerador } from "@/components/usarGenerador";
 import Ruta from "@/components/practica/Ruta";
 import Hechas from "@/components/practica/Hechas";
 import InvitacionPerfil, { LineaContexto } from "@/components/practica/InvitacionPerfil";
+import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
 
 export type { ProgresoBloques };
 
@@ -64,6 +65,7 @@ export default function PanelPractica({
   generadosIniciales,
   urlFormulario,
   avisoFormulario,
+  conMascota = false,
 }: {
   alumnoId: string;
   /** El nombre de pila, para el saludo. Vacío sin perfil. */
@@ -80,6 +82,12 @@ export default function PanelPractica({
   urlFormulario: string | null;
   /** Qué decirle cuando no hay enlace. */
   avisoFormulario: AvisoFormulario;
+  /**
+   * La mascota de bienvenida en el saludo. Solo para quien no tiene
+   * curso: al resto lo recibe en la franja del inicio, y una en cada
+   * pantalla sería insistir.
+   */
+  conMascota?: boolean;
 }) {
   const {
     estado,
@@ -139,24 +147,29 @@ export default function PanelPractica({
           Es el titular de la pantalla desde que se fue el encabezado de
           la página. Nombra al profesor lo antes posible: para el alumno,
           la persona con la que da clase es la mitad del producto. */}
-      <div>
-        <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-verdeOsc min-[900px]:text-[11.5px]">
-          {saludo} · {hoy}
-        </p>
-        <h1 className="mt-2.5 text-balance font-display text-[30px] font-extrabold leading-[1.03] tracking-[-0.03em] text-marca-tinta min-[900px]:mt-3 min-[900px]:text-[46px]">
-          {paradas.length > 0 ? t.tuRutaDeEstaSemana : t.aquiVaAEstarTuRuta}
-        </h1>
-        <p className="mt-2.5 max-w-[62ch] text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia min-[900px]:mt-3 min-[900px]:text-[17px]">
-          {profesor !== "" ? (
-            <>
-              {t.saleDeTusClasesCon(profesor)} {t.nadieMasTieneEstaRuta}
-            </>
-          ) : (
-            <>
-              {t.saleDeTusClases} {t.nadieMasTieneEstaRuta}
-            </>
-          )}
-        </p>
+      <div className="flex flex-col gap-4 min-[900px]:flex-row min-[900px]:items-end min-[900px]:gap-7">
+        {/* La mascota antes del texto: encima en móvil, a la izquierda
+            en escritorio, como en la franja del inicio. */}
+        {conMascota && <MascotaBienvenida className="shrink-0" />}
+        <div className="min-w-0 flex-1">
+          <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-verdeOsc min-[900px]:text-[11.5px]">
+            {saludo} · {hoy}
+          </p>
+          <h1 className="mt-2.5 text-balance font-display text-[30px] font-extrabold leading-[1.03] tracking-[-0.03em] text-marca-tinta min-[900px]:mt-3 min-[900px]:text-[46px]">
+            {paradas.length > 0 ? t.tuRutaDeEstaSemana : t.aquiVaAEstarTuRuta}
+          </h1>
+          <p className="mt-2.5 max-w-[62ch] text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia min-[900px]:mt-3 min-[900px]:text-[17px]">
+            {profesor !== "" ? (
+              <>
+                {t.saleDeTusClasesCon(profesor)} {t.nadieMasTieneEstaRuta}
+              </>
+            ) : (
+              <>
+                {t.saleDeTusClases} {t.nadieMasTieneEstaRuta}
+              </>
+            )}
+          </p>
+        </div>
       </div>
 
       {/* ================================ LA RUTA ================================

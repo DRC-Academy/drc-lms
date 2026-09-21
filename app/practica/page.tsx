@@ -148,6 +148,10 @@ export default async function PaginaPractica() {
             perfil?.profesor ?? "",
             perfil?.formTokenEnviadoEn ?? null
           )}
+          // Sin curso no hay franja en el inicio, que es donde la
+          // mascota recibe al alumno: aquí lo recibe entonces. Es la
+          // misma condición que decide esa franja (`cursosDelInicio`).
+          conMascota={!principal}
         />
       </main>
     </div>

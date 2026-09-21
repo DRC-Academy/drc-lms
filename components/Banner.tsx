@@ -31,6 +31,11 @@ import type { CSSProperties, ReactNode } from "react";
  * nombre accesible lleva de qué va ("Continuar Estilo indirecto"): una
  * pantalla con tres banners y tres botones que dicen "Continuar" no se
  * puede navegar con lector de pantalla. De eso se encarga `srSuffix`.
+ *
+ * LA ILUSTRACIÓN, si la hay, va a la izquierda del texto en escritorio,
+ * con los pies en la línea del botón, y encima del texto en móvil. Solo
+ * en `lg`: la del inicio lleva la mascota. Es un hueco, no una decisión
+ * de esta pieza: qué se pinta lo dice quien la monta.
  */
 
 export type BannerSize = "lg" | "md" | "bar";
@@ -58,6 +63,7 @@ export default function Banner({
   secondaryText,
   aside,
   asideWidth = "210px",
+  ilustracion,
   children,
 }: {
   size?: BannerSize;
@@ -80,6 +86,8 @@ export default function Banner({
    * meses, que a 210 no se distingue de una mancha.
    */
   asideWidth?: string;
+  /** A la izquierda del texto en escritorio, encima en móvil. Solo en `lg`. */
+  ilustracion?: ReactNode;
   /** Lo que va a ancho completo debajo de las dos columnas, si algo va. */
   children?: ReactNode;
 }) {
@@ -167,15 +175,19 @@ export default function Banner({
         }`}
         style={aside ? ({ "--banner-aside": asideWidth } as CSSProperties) : undefined}
       >
-        <div className="flex min-w-0 flex-col">
-          {contenido}
+        <div className="flex min-w-0 flex-col gap-4 min-[900px]:flex-row min-[900px]:items-end min-[900px]:gap-7">
+          {ilustracion && <div className="shrink-0">{ilustracion}</div>}
 
-          {(boton || secondaryText) && (
-            <div className="mt-6 min-[900px]:mt-auto min-[900px]:flex min-[900px]:items-center min-[900px]:gap-[18px] min-[900px]:pt-7">
-              {boton}
-              {secondaryText && <TextoApoyo enLinea>{secondaryText}</TextoApoyo>}
-            </div>
-          )}
+          <div className="flex min-w-0 flex-1 flex-col">
+            {contenido}
+
+            {(boton || secondaryText) && (
+              <div className="mt-6 min-[900px]:mt-auto min-[900px]:flex min-[900px]:items-center min-[900px]:gap-[18px] min-[900px]:pt-7">
+                {boton}
+                {secondaryText && <TextoApoyo enLinea>{secondaryText}</TextoApoyo>}
+              </div>
+            )}
+          </div>
         </div>
 
         {aside && (
