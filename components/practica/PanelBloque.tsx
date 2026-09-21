@@ -4,6 +4,8 @@ import Link from "next/link";
 import type { EjercicioUnificado, Fase } from "@/lib/ejercicio-unificado";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { Anillo, Barra, FilaSub, Marca } from "@/components/leccion/PiezasPanel";
+import Geckonoid from "@/components/mascota/Geckonoid";
+import type { MandoMascota } from "@/components/mascota/useMascota";
 
 /**
  * EL PANEL DEL BLOQUE, a la izquierda del ejercicio.
@@ -24,6 +26,13 @@ import { Anillo, Barra, FilaSub, Marca } from "@/components/leccion/PiezasPanel"
  * en el curso, donde saltar de lección a lección sí tiene sentido. La
  * única puerta es la de arriba, a «Para ti», donde el curso pone la del
  * temario.
+ *
+ * LA MASCOTA va en la cabecera de la tarjeta de progreso, al lado del
+ * título del bloque, y reacciona a cada respuesta —la pantalla del
+ * bloque le manda el estado—. Solo mientras hay ejercicio: en el
+ * cierre la pinta el cierre, más grande, y dos iguales en la misma
+ * pantalla sobran. Es lo único en que este panel se aparta del curso,
+ * que no la lleva porque la lección no celebra (ver lib/gamificacion).
  */
 
 const NUMERO_FASE: Record<Fase, number> = { reconocer: 1, transformar: 2, producir: 3 };
@@ -40,6 +49,7 @@ export default function PanelBloque({
   profesor,
   hrefParaTi,
   alElegir,
+  mascota,
 }: {
   titulo: string;
   /** «Gramática · B1»: de qué va y para qué nivel. */
@@ -56,6 +66,8 @@ export default function PanelBloque({
   hrefParaTi: string;
   /** Al pulsar la puerta: cierra el cajón en móvil. */
   alElegir?: () => void;
+  /** Qué hace la mascota. Sin esto no se pinta. */
+  mascota?: Pick<MandoMascota, "estado" | "disparo">;
 }) {
   const { t: todos } = usarIdioma();
   const t = todos.ejercicios;
@@ -94,13 +106,18 @@ export default function PanelBloque({
       {/* EL BLOQUE, como el módulo abierto del curso: el título, la
           tarjeta de progreso y las sublistas debajo. */}
       <div className="mt-4 rounded-[12px] border border-marca-borde bg-white">
-        <div className="px-4 pb-3 pt-3.5">
-          <span className="block text-[11px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-            {t.tuPractica}
-          </span>
-          <span className="mt-1.5 block text-pretty text-[14px] font-semibold leading-[1.3] text-marca-tinta">
-            {titulo}
-          </span>
+        <div className="flex items-end gap-3 px-4 pb-3 pt-3.5">
+          <div className="min-w-0 flex-1 self-center">
+            <span className="block text-[11px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
+              {t.tuPractica}
+            </span>
+            <span className="mt-1.5 block text-pretty text-[14px] font-semibold leading-[1.3] text-marca-tinta">
+              {titulo}
+            </span>
+          </div>
+          {mascota && !terminado && (
+            <Geckonoid estado={mascota.estado} disparo={mascota.disparo} size={88} etiqueta={null} className="shrink-0" />
+          )}
         </div>
 
         <div className="px-2.5 pb-2.5">

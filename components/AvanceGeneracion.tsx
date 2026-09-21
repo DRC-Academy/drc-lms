@@ -3,6 +3,7 @@
 import { textoDeEtapa, type EtapaGeneracion } from "@/lib/generacion";
 import type { FuentesDelBloque } from "@/lib/textos/practica";
 import { usarIdioma } from "@/components/ProveedorIdioma";
+import Geckonoid from "@/components/mascota/Geckonoid";
 
 /**
  * Lo que ve el alumno mientras se prepara su bloque.
@@ -25,6 +26,15 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
  *
  * Ya no recibe `modo`: había un juego de textos por cada uno de los tres
  * y ahora hay uno solo, porque el bloque es uno solo.
+ *
+ * LA MASCOTA, con los anteojos puestos, trabaja al lado de la barra
+ * mientras dura la espera. Es la primera pantalla del producto donde
+ * aparece, y está aquí porque es el único rato en que el alumno mira
+ * fijo sin nada que hacer: en «estudiando» no vuelve sola a idle, y se
+ * mueve lo justo —respira, la cola, un balanceo de vez en cuando— para
+ * que se vea que está en ello sin distraer de la etapa que dice el
+ * texto. Decorativa para el lector de pantalla: la etapa ya la anuncia
+ * el `aria-live`.
  */
 export default function AvanceGeneracion({
   etapa,
@@ -46,41 +56,45 @@ export default function AvanceGeneracion({
   const texto = textoDeEtapa(etapa, t);
 
   return (
-    <div className="aparece mt-4 rounded-[14px] border border-marca-borde bg-white px-5 py-5 lg:px-6">
-      <p className="text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-marca-verdeOsc">
-        {t.preparandoTuBloque}
-      </p>
-
-      <div className="mt-3 flex items-baseline justify-between gap-4">
-        {/* `aria-live` y no `role="status"` en el contenedor: así el lector
-            de pantalla anuncia el cambio de etapa sin repetir el resto. */}
-        <p aria-live="polite" className="font-display text-[17px] font-bold text-marca-tinta">
-          {texto}
+    <div className="aparece mt-4 flex items-end gap-4 rounded-[14px] border border-marca-borde bg-white px-5 py-5 lg:px-6">
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-marca-verdeOsc">
+          {t.preparandoTuBloque}
         </p>
-        <span aria-hidden className="shrink-0 text-[13px] tabular-nums text-marca-gris">
-          {progreso}%
-        </span>
-      </div>
 
-      <div
-        role="progressbar"
-        aria-valuenow={progreso}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={t.progresoPreparacion}
-        className="mt-3.5 h-2 w-full overflow-hidden rounded-full bg-marca-pista"
-      >
+        <div className="mt-3 flex items-baseline justify-between gap-4">
+          {/* `aria-live` y no `role="status"` en el contenedor: así el lector
+              de pantalla anuncia el cambio de etapa sin repetir el resto. */}
+          <p aria-live="polite" className="font-display text-[17px] font-bold text-marca-tinta">
+            {texto}
+          </p>
+          <span aria-hidden className="shrink-0 text-[13px] tabular-nums text-marca-gris">
+            {progreso}%
+          </span>
+        </div>
+
         <div
-          className="h-full rounded-full bg-marca-verde"
-          style={{ width: `${progreso}%`, transition: "width 0.4s cubic-bezier(0.4, 0, 0.2, 1)" }}
-        />
+          role="progressbar"
+          aria-valuenow={progreso}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={t.progresoPreparacion}
+          className="mt-3.5 h-2 w-full overflow-hidden rounded-full bg-marca-pista"
+        >
+          <div
+            className="h-full rounded-full bg-marca-verde"
+            style={{ width: `${progreso}%`, transition: "width 0.4s cubic-bezier(0.4, 0, 0.2, 1)" }}
+          />
+        </div>
+
+        <p className="mt-3 text-[14px] leading-[1.5] text-marca-gris">
+          {tardando
+            ? t.seHaceDeRogar
+            : t.preparadoConLoTuyo(fuentes ?? { clase: false, contexto: false })}
+        </p>
       </div>
 
-      <p className="mt-3 text-[14px] leading-[1.5] text-marca-gris">
-        {tardando
-          ? t.seHaceDeRogar
-          : t.preparadoConLoTuyo(fuentes ?? { clase: false, contexto: false })}
-      </p>
+      <Geckonoid estado="estudiando" volverAIdle={false} size={112} etiqueta={null} className="shrink-0" />
     </div>
   );
 }

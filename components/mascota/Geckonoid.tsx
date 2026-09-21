@@ -48,10 +48,13 @@ export { ESTADOS_MASCOTA } from "@/components/mascota/estados";
  *
  * EN IDLE, además de respirar, mover la cola y parpadear, cada 8–15 s
  * hace un micro-gesto —inclinar la cabeza, balancearse, parpadear dos
- * veces, agitar la cola—, nunca dos seguidos iguales. Con el ratón
- * encima se inclina hacia el cursor; al tocarla, si está en idle,
- * pone cara de duda. Con prefers-reduced-motion nada de esto se mueve:
- * los estados se enseñan solo con el fundido de los parches.
+ * veces, agitar la cola—, nunca dos seguidos iguales. En «estudiando»,
+ * que puede durar lo que dura una generación, también, pero solo los
+ * que no mueven la cabeza: los anteojos son un parche fuera de ella y
+ * se quedarían en el aire. Con el ratón encima se inclina hacia el
+ * cursor; al tocarla, si está en idle, pone cara de duda. Con
+ * prefers-reduced-motion nada de esto se mueve: los estados se enseñan
+ * solo con el fundido de los parches.
  *
  * EL TAMAÑO. `size` es el ALTO del lienzo en píxeles; el ancho sale de
  * la proporción del maestro. Los parches de «éxito» y «nivel superado»
@@ -105,6 +108,11 @@ const RETARDO_ADORNO_S = 0.22;
 /** Los micro-gestos de idle. */
 export type MicroGesto = "cabeza" | "balanceo" | "parpadeo_doble" | "cola";
 export const MICRO_GESTOS: readonly MicroGesto[] = ["cabeza", "balanceo", "parpadeo_doble", "cola"];
+/** En qué estados hay micro-gestos, y cuáles. */
+const MICRO_POR_ESTADO: Partial<Record<EstadoMascota, readonly MicroGesto[]>> = {
+  idle: MICRO_GESTOS,
+  estudiando: ["balanceo", "cola"],
+};
 
 const ESTRELLA = "M12 2l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8L12 17l-6.1 3.5 1.5-6.8L2.2 9l6.9-.7z";
 const GOTA = "M12 2C12 2 5 10.5 5 15a7 7 0 0 0 14 0c0-4.5-7-13-7-13z";
@@ -175,8 +183,8 @@ export default function Geckonoid({
   /** Avisa de cada micro-gesto, espontáneo o pedido. */
   onGesto?: (nombre: MicroGesto) => void;
   className?: string;
-  /** Para el lector de pantalla: qué es esto. */
-  etiqueta?: string;
+  /** Para el lector de pantalla: qué es esto. `null` si es decorativa y no hay que anunciarla. */
+  etiqueta?: string | null;
 }) {
   const reducido = useReducedMotion() ?? false;
 
@@ -405,14 +413,16 @@ export default function Geckonoid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vivo, vez, u, v, reducido]);
 
-  // Cada 8–15 s en idle, un micro-gesto al azar, nunca el mismo que el
-  // anterior. Al salir de idle se corta el que esté en marcha.
+  // Cada 8–15 s, un micro-gesto al azar de los que admite el estado,
+  // nunca el mismo que el anterior. Al cambiar de estado se corta el
+  // que esté en marcha.
+  const microPosibles = MICRO_POR_ESTADO[vivo];
   useEffect(() => {
-    if (vivo !== "idle" || reducido) return;
+    if (!microPosibles || reducido) return;
     let espera: ReturnType<typeof setTimeout>;
     const programar = () => {
       espera = setTimeout(() => {
-        const opciones = MICRO_GESTOS.filter((g) => g !== ultimoMicro.current);
+        const opciones = microPosibles.filter((g) => g !== ultimoMicro.current);
         lanzarMicro(opciones[Math.floor(Math.random() * opciones.length)]);
         programar();
       }, ms(8000 + Math.random() * 7000));
@@ -428,7 +438,7 @@ export default function Geckonoid({
 
   // Un micro-gesto pedido desde fuera (el banco de pruebas).
   useEffect(() => {
-    if (!gesto || vivo !== "idle" || reducido) return;
+    if (!gesto || !microPosibles?.includes(gesto.nombre) || reducido) return;
     lanzarMicro(gesto.nombre);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gesto?.n]);
@@ -479,8 +489,9 @@ export default function Geckonoid({
 
   return (
     <div
-      role="img"
-      aria-label={`${etiqueta} · ${vivo}`}
+      role={etiqueta === null ? undefined : "img"}
+      aria-hidden={etiqueta === null || undefined}
+      aria-label={etiqueta === null ? undefined : `${etiqueta} · ${vivo}`}
       className={`relative select-none ${className}`}
       style={{ width: ancho, height: size }}
       onPointerMove={seguirCursor}

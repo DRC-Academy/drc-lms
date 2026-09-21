@@ -16,7 +16,10 @@ import type { EstadoMascota } from "@/components/mascota/estados";
  * solo a idle a los 2,5 s; este hook no necesita enterarse, porque el
  * siguiente disparo trae un número nuevo.
  */
-export function useMascota(inicial: EstadoMascota = "idle") {
+/** Lo que devuelve `useMascota`: lo que se le pasa a quien pinta la mascota. */
+export type MandoMascota = { estado: EstadoMascota; disparo: number; dispara: (nuevo: EstadoMascota) => void };
+
+export function useMascota(inicial: EstadoMascota = "idle"): MandoMascota {
   const [estado, setEstado] = useState<EstadoMascota>(inicial);
   const [disparo, setDisparo] = useState(0);
 

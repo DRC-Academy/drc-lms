@@ -17,6 +17,10 @@ import type { TextosEjercicios } from "@/lib/textos/ejercicios";
  * Antes el bloque tenía su propio cierre —una tarjeta centrada con el
  * porcentaje en un círculo, en la paleta vieja— y era la última pieza
  * que se veía de otro producto.
+ *
+ * `adorno` es lo que va a la derecha del resultado, con los pies en la
+ * línea de la frase: la mascota, en el bloque. El curso no manda nada,
+ * porque la lección no celebra (ver lib/gamificacion).
  */
 export default function CierreEjercicios({
   etiqueta,
@@ -27,6 +31,7 @@ export default function CierreEjercicios({
   verEjercicio,
   acciones,
   pie,
+  adorno,
   t,
 }: {
   /** «Ejercicios terminados», «Bloque terminado». */
@@ -41,19 +46,26 @@ export default function CierreEjercicios({
   acciones: ReactNode;
   /** Un enlace de texto debajo de los botones, si hace falta. */
   pie?: ReactNode;
+  /** A la derecha del resultado: la mascota, en el bloque. */
+  adorno?: ReactNode;
   t: TextosEjercicios;
 }) {
   return (
     <div className="w-full">
-      <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
-        {etiqueta}
-      </p>
-      <h2 className="mt-3 text-pretty font-display text-[25px] font-bold leading-[1.15] text-marca-tinta min-[900px]:text-[34px]">
-        {titulo}
-      </h2>
-      <p className="mt-3 text-pretty text-[16px] leading-[1.6] text-marca-gris min-[900px]:text-[17px]">
-        {texto}
-      </p>
+      <div className="flex items-end gap-5">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11.5px] font-semibold uppercase leading-none tracking-[0.1em] text-marca-grisSuave">
+            {etiqueta}
+          </p>
+          <h2 className="mt-3 text-pretty font-display text-[25px] font-bold leading-[1.15] text-marca-tinta min-[900px]:text-[34px]">
+            {titulo}
+          </h2>
+          <p className="mt-3 text-pretty text-[16px] leading-[1.6] text-marca-gris min-[900px]:text-[17px]">
+            {texto}
+          </p>
+        </div>
+        {adorno && <div className="shrink-0">{adorno}</div>}
+      </div>
 
       <ol className="mt-7 overflow-hidden rounded-[16px] border border-marca-borde bg-white">
         {ejercicios.map((ej, i) => (
