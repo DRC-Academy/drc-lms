@@ -6,6 +6,9 @@ import Geckonoid, { type EstadoMascota } from "@/components/mascota/Geckonoid";
  * franja no se pinta, en la cabecera de «Para ti».
  *
  * Idle: respira, parpadea, hace sus micro-gestos y sigue el cursor.
+ * Con el curso terminado lleva el diploma en la mano
+ * (`nivel_superado`) y no lo suelta: al entrar da su salto con
+ * estrellas y se queda así, que es lo único que el producto celebra.
  *
  * 120 px en escritorio y 90 en móvil, CON UNA SOLA INSTANCIA. Geckonoid
  * mide en píxeles, no en CSS, así que el tamaño no puede cambiar con un

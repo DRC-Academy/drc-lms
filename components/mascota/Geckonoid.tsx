@@ -48,10 +48,11 @@ export { ESTADOS_MASCOTA } from "@/components/mascota/estados";
  *
  * EN IDLE, además de respirar, mover la cola y parpadear, cada 8–15 s
  * hace un micro-gesto —inclinar la cabeza, balancearse, parpadear dos
- * veces, agitar la cola—, nunca dos seguidos iguales. En «estudiando»,
- * que puede durar lo que dura una generación, también, pero solo los
- * que no mueven la cabeza: los anteojos son un parche fuera de ella y
- * se quedarían en el aire. Con el ratón encima se inclina hacia el
+ * veces, agitar la cola—, nunca dos seguidos iguales. En los estados
+ * que se sostienen —«estudiando» mientras dura una generación, «nivel
+ * superado» con el diploma— también, pero solo los que no mueven la
+ * cabeza: los anteojos y la cara del diploma son parches fuera de esa
+ * capa y se quedarían en el aire. Con el ratón encima se inclina hacia el
  * cursor; al tocarla, si está en idle, pone cara de duda. Con
  * prefers-reduced-motion nada de esto se mueve: los estados se enseñan
  * solo con el fundido de los parches.
@@ -108,10 +109,16 @@ const RETARDO_ADORNO_S = 0.22;
 /** Los micro-gestos de idle. */
 export type MicroGesto = "cabeza" | "balanceo" | "parpadeo_doble" | "cola";
 export const MICRO_GESTOS: readonly MicroGesto[] = ["cabeza", "balanceo", "parpadeo_doble", "cola"];
-/** En qué estados hay micro-gestos, y cuáles. */
+/**
+ * En qué estados hay micro-gestos, y cuáles. Los que se sostienen
+ * —«estudiando» durante una generación, «nivel superado» con el
+ * diploma en el inicio— llevan solo los que no mueven la cabeza: sus
+ * parches son de la cara y están fuera de esa capa.
+ */
 const MICRO_POR_ESTADO: Partial<Record<EstadoMascota, readonly MicroGesto[]>> = {
   idle: MICRO_GESTOS,
   estudiando: ["balanceo", "cola"],
+  nivel_superado: ["balanceo", "cola"],
 };
 
 const ESTRELLA = "M12 2l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8L12 17l-6.1 3.5 1.5-6.8L2.2 9l6.9-.7z";

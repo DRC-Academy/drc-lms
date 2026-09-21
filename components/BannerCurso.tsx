@@ -35,8 +35,12 @@ import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
  * fondo y el color de «pulsa aquí».
  *
  * LA MASCOTA VA AQUÍ porque esta es la pieza principal del inicio y la
- * primera que se ve: recibe al alumno en idle. Quien no tiene curso no
- * ve esta franja, y a ese lo recibe en «Para ti» (ver `PanelPractica`).
+ * primera que se ve: recibe al alumno en idle y, con el curso
+ * terminado, con el diploma en la mano. Es la «escena» de
+ * lib/gamificacion —lo único que celebra el producto— y por eso no es
+ * un gesto que pase: se queda mientras la franja diga «Curso
+ * completado». Quien no tiene curso no ve esta franja, y a ese lo
+ * recibe en «Para ti» (ver `PanelPractica`).
  *
  * Se renderiza en el servidor: no tiene estado ni interacción; la
  * mascota es una isla de cliente dentro.
@@ -147,7 +151,7 @@ export default function BannerCurso({
         title={titulo}
         subtitle={siguiente?.titulo}
         action={{ label: llamada, href: destino, srSuffix: siguiente?.titulo ?? titulo }}
-        ilustracion={<MascotaBienvenida />}
+        ilustracion={<MascotaBienvenida estado={terminado ? "nivel_superado" : "idle"} />}
         // Dónde cae esta lección dentro del curso. Es lo único que
         // sobrevive de la columna de cifra, y sobrevive porque no lo dice
         // nadie más: el banner del diploma cuenta el curso entero, no en
