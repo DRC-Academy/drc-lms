@@ -25,6 +25,7 @@ import { conTraduccion } from "@/lib/traduccion-bloque";
 import { formatearFecha } from "@/lib/perfil";
 import type { Bloque } from "@/lib/data";
 import AvanceGeneracion from "@/components/AvanceGeneracion";
+import MascotaRuta, { type PuntoRuta } from "@/components/practica/MascotaRuta";
 
 /**
  * EL CAMINO DE «PARA TI».
@@ -80,6 +81,18 @@ import AvanceGeneracion from "@/components/AvanceGeneracion";
  *
  *   · ABIERTA. El candado se abre, el nodo se enciende y aparece el
  *     único botón de verdad que hay aquí: preparar el bloque.
+ *
+ * ---------------------------------------------------------------
+ * LA MASCOTA VIVE EN EL CAMINO
+ *
+ * Geckonoid está de pie sobre la parada del presente —la de «Estás
+ * aquí»— y, cuando el presente cambia, la recorre andando hasta la
+ * nueva. Es `MascotaRuta`, una sola instancia para los dos mapas: aquí
+ * solo se le dice dónde está cada nodo (`posicionDe`, medido sobre el
+ * contenedor común) y se le hace sitio. En escritorio va ENCIMA del
+ * nodo, el único lugar sin trazo, y por eso la chapa y el rótulo de
+ * ese nodo suben por encima de su cabeza y el mapa gana margen arriba
+ * cuando ese nodo cae en la banda alta. En móvil va al lado.
  */
 
 export type Generacion = {
@@ -185,6 +198,10 @@ export default function Ruta({
   const nodoActual = useRef<HTMLSpanElement | null>(null);
   const filas = useRef<Record<string, HTMLDivElement | null>>({});
   const notaLeida = useRef(false);
+  // Para la mascota: el contenedor de los dos mapas, y el mapa de
+  // escritorio, que es una caja de proporción fija.
+  const contenedor = useRef<HTMLDivElement | null>(null);
+  const mapaEscritorio = useRef<HTMLDivElement | null>(null);
 
   // ---------------------------------------------------------------
   // EL CIERRE DE UNA PARADA
@@ -301,6 +318,51 @@ export default function Ruta({
   // ya conoce este mapa y lo que tiene que ver es lo que ha cambiado.
   const animarEntrada = cerrando === null;
 
+  // ---------------------------------------------------------------
+  // LA MASCOTA: dónde está cada nodo, en píxeles del contenedor.
+  //
+  // No se mide el nodo —al entrar lleva una animación de transform que
+  // lo corre— sino su sitio: en escritorio, el porcentaje del lienzo
+  // sobre la caja del mapa; en móvil, la banda sobre su fila. El mapa
+  // que no se ve mide cero y se descarta.
+  // ---------------------------------------------------------------
+  const indiceAqui = visibles.findIndex((p) => p.clave === claveAqui);
+  const posicionDe = (clave: string): PuntoRuta | null => {
+    const cont = contenedor.current;
+    const i = visibles.findIndex((p) => p.clave === clave);
+    if (!cont || i === -1) return null;
+    const c = cont.getBoundingClientRect();
+    const mapa = mapaEscritorio.current;
+    const m = mapa?.getBoundingClientRect();
+    if (m && m.width > 0) {
+      return {
+        x: m.left - c.left + (puntos[i].x / 100) * m.width,
+        y: m.top - c.top + (puntos[i].y / 100) * m.height,
+        r: radioDisco(visibles[i], visibles[i].clave === claveTarjeta, "escritorio"),
+        mapa: "escritorio",
+      };
+    }
+    const fila = filas.current[clave];
+    if (!fila) return null;
+    const f = fila.getBoundingClientRect();
+    return {
+      x: f.left - c.left + (parseFloat(PCT_BANDA[bandas[i]]) / 100) * f.width,
+      y: f.top - c.top,
+      r: radioDisco(visibles[i], visibles[i].clave === claveTarjeta, "movil"),
+      mapa: "movil",
+    };
+  };
+  // Cuando cambia esto, los nodos cambian de sitio y la mascota los sigue.
+  const versionMapa = [plegado.atras, claveTarjeta, visibles.length].join("|");
+  // Todo hecho: el presente es el candado y la mascota espera con el diploma.
+  const completa = actual === null && hechas > 0;
+  // Hasta que el nodo del presente haya entrado, la mascota no aparece.
+  const retrasoMascota = animarEntrada ? Math.min(Math.max(indiceAqui, 0), 9) * 70 + 520 : 0;
+  // En la banda alta, encima del nodo va la mascota y encima de ella la
+  // chapa: el mapa necesita más margen arriba para que el campo no las
+  // recorte.
+  const aquiEnBandaAlta = indiceAqui % 2 === 1;
+
   /** Al plegar o desplegar cambian de sitio muchas filas. Se mide el nodo
    *  tocado antes y después y se corrige el scroll: el mapa crece, pero
    *  lo que tenías bajo el dedo no se mueve. */
@@ -349,7 +411,7 @@ export default function Ruta({
           className="pointer-events-none absolute -bottom-36 -left-16 h-64 w-64 rounded-full bg-marca-rutaForma2"
         />
 
-        <div className="relative">
+        <div ref={contenedor} className="relative">
           <div className="flex items-baseline justify-between gap-4 px-4 min-[900px]:px-0">
             <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-verdeOsc min-[900px]:text-[11px]">
               {t.tuRutaParadas(total)}
@@ -362,7 +424,8 @@ export default function Ruta({
               por encima de su nodo y en la banda alta se saldría del
               campo —y el campo recorta—. */}
           <div
-            className="relative mt-11 hidden min-[900px]:block"
+            ref={mapaEscritorio}
+            className={`relative hidden min-[900px]:block ${aquiEnBandaAlta ? "mt-[104px]" : "mt-11"}`}
             style={{ aspectRatio: `${LIENZO.ancho} / ${LIENZO.alto}` }}
           >
             <svg
@@ -411,6 +474,7 @@ export default function Ruta({
                 arriba={i % 2 === 1}
                 grande={parada.clave === claveTarjeta}
                 aqui={parada.clave === claveAqui}
+                conMascota={parada.clave === claveAqui}
                 retraso={animarEntrada ? Math.min(i, 9) * 70 : null}
                 cerrando={parada.clave === cerrando}
                 ascendiendo={indiceCerrando !== -1 && parada.tipo === "actual"}
@@ -591,6 +655,19 @@ export default function Ruta({
               );
             })}
           </div>
+
+          <MascotaRuta
+            contenedor={contenedor}
+            posicionDe={posicionDe}
+            orden={visibles.map((p) => p.clave)}
+            claveAqui={claveAqui}
+            titulo={visibles[indiceAqui]?.titulo ?? ""}
+            alumnoId={alumnoId}
+            completa={completa}
+            version={versionMapa}
+            retrasoEntrada={retrasoMascota}
+            estasEn={t.estasEn}
+          />
 
           {/* La espera y el error de la generación, debajo de todo: son de
               la ruta entera, no de una fila. */}
@@ -789,6 +866,7 @@ function Nodo({
   arriba,
   grande,
   aqui,
+  conMascota,
   retraso,
   cerrando,
   ascendiendo,
@@ -804,6 +882,8 @@ function Nodo({
   grande: boolean;
   /** Es el presente: lleva la chapa de «Estás aquí». */
   aqui: boolean;
+  /** La mascota está de pie encima: la chapa y el rótulo suben por encima de su cabeza. */
+  conMascota: boolean;
   /** Cuándo entra al cargar, o null si no hay entrada que animar. */
   retraso: number | null;
   /** Acaba de cerrarse: se llena y se traza la marca. */
@@ -817,6 +897,19 @@ function Nodo({
   const t = usarIdioma().t.ruta;
   const esActiva = parada.tipo === "actual";
   const nudge = punto.x < 12 ? "-40%" : punto.x > 88 ? "-62%" : "-50%";
+  // Con la mascota encima, todo lo que iba sobre el disco va sobre su
+  // cabeza: los pies pisan el disco 12px y ella mide 96 (ver
+  // MascotaRuta), más 8 de aire.
+  const cabeza = conMascota ? radioDisco(parada, grande, "escritorio") + 92 : 0;
+  const alturaChapa = conMascota
+    ? arriba && !grande
+      ? cabeza + 44
+      : cabeza
+    : grande
+      ? 66
+      : arriba
+        ? 88
+        : 44;
 
   return (
     <>
@@ -829,7 +922,7 @@ function Nodo({
             // si no la lleva y va por la banda alta, su rótulo está
             // encima del disco y la chapa sube por encima del rótulo. En
             // la banda baja el rótulo va debajo y la chapa se pega al disco.
-            top: `calc(${punto.y}% - ${grande ? 66 : arriba ? 88 : 44}px)`,
+            top: `calc(${punto.y}% - ${alturaChapa}px)`,
             transform: "translate(-50%, -100%)",
             animationDelay: retraso === null ? undefined : `${retraso + 320}ms`,
           }}
@@ -868,7 +961,7 @@ function Nodo({
           }`}
           style={{
             left: `${punto.x}%`,
-            top: arriba ? `calc(${punto.y}% - 40px)` : `calc(${punto.y}% + 40px)`,
+            top: arriba ? `calc(${punto.y}% - ${conMascota ? cabeza - 2 : 40}px)` : `calc(${punto.y}% + 40px)`,
             transform: `translate(${nudge}, ${arriba ? "-100%" : "0"})`,
             animationDelay: retraso === null ? undefined : `${retraso + 110}ms`,
           }}
@@ -894,6 +987,22 @@ function etiquetaClase(parada: Parada): string {
     return parada.abierta ? "font-bold text-marca-verdeOsc" : "text-marca-grisSuave";
   }
   return "text-marca-gris";
+}
+
+/**
+ * El radio del disco de una parada, en píxeles: las mismas medidas que
+ * pintan `DiscoEscritorio` y `DiscoMovil`. La mascota se apoya en él y
+ * la chapa se aparta según él, así que si cambia una medida allí,
+ * cambia aquí.
+ */
+function radioDisco(parada: Parada, grande: boolean, mapa: "escritorio" | "movil"): number {
+  if (mapa === "movil") {
+    if (parada.tipo === "actual") return grande ? 45 : 38;
+    return grande ? 30 : 23;
+  }
+  if (parada.tipo === "actual") return grande ? 50 : 31;
+  if (parada.tipo === "generacion" && parada.abierta) return grande ? 43 : 27;
+  return 27;
 }
 
 function DiscoEscritorio({

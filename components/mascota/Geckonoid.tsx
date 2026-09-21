@@ -172,6 +172,7 @@ export default function Geckonoid({
   velocidad = 1,
   gesto,
   onGesto,
+  quieta = false,
   className = "",
   etiqueta = "Geckonoid",
 }: {
@@ -189,6 +190,13 @@ export default function Geckonoid({
   gesto?: { nombre: MicroGesto; n: number };
   /** Avisa de cada micro-gesto, espontáneo o pedido. */
   onGesto?: (nombre: MicroGesto) => void;
+  /**
+   * Enseña el estado sin su gesto ni sus adornos: la cara y la pose,
+   * pero ni salto ni estrellas. Para un estado que se sostiene y ya se
+   * celebró —el diploma en la ruta, la segunda vez que se entra—.
+   * Respirar, la cola y los micro-gestos siguen.
+   */
+  quieta?: boolean;
   className?: string;
   /** Para el lector de pantalla: qué es esto. `null` si es decorativa y no hay que anunciarla. */
   etiqueta?: string | null;
@@ -407,7 +415,7 @@ export default function Geckonoid({
     if (!el) return;
     microEnCurso.current?.stop();
     microEnCurso.current = null;
-    if (reducido) {
+    if (reducido || quieta) {
       animar(el, EN_REPOSO, { duration: 0 });
       if (cabeza.current) animar(cabeza.current, { rotate: 0 }, { duration: 0 });
       return;
@@ -418,7 +426,7 @@ export default function Geckonoid({
     // GESTOS se arma en cada render; lo que importa es el estado, la vez,
     // el tamaño y el ritmo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vivo, vez, u, v, reducido]);
+  }, [vivo, vez, u, v, reducido, quieta]);
 
   // Cada 8–15 s, un micro-gesto al azar de los que admite el estado,
   // nunca el mismo que el anterior. Al cambiar de estado se corta el
@@ -455,7 +463,7 @@ export default function Geckonoid({
   // servidor no pinte un azar distinto al del navegador.
   const [estrellas, setEstrellas] = useState<Estrella[]>([]);
   useEffect(() => {
-    if ((vivo !== "exito" && vivo !== "nivel_superado") || reducido) {
+    if ((vivo !== "exito" && vivo !== "nivel_superado") || reducido || quieta) {
       setEstrellas([]);
       return;
     }
@@ -474,7 +482,7 @@ export default function Geckonoid({
         };
       }),
     );
-  }, [vivo, vez, u, reducido]);
+  }, [vivo, vez, u, reducido, quieta]);
 
   // Con el ratón encima, se inclina hacia el cursor (5° como mucho).
   const inclinacion = useMotionValue(0);

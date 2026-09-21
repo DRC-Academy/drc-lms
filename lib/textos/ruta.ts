@@ -65,6 +65,8 @@ export type TextosRuta = {
   hechasCuenta: (n: number) => string;
   alDia: string;
   estasAqui: string;
+  /** El tooltip de la mascota sobre la parada: «Estás en: …». */
+  estasEn: (titulo: string) => string;
 
   // --- el grupo plegado de atrás ---
   plegarLasDeAtras: string;
@@ -176,6 +178,7 @@ const ES: TextosRuta = {
   hechasCuenta: (n) => `${n} ${n === 1 ? "hecha" : "hechas"}`,
   alDia: "al día",
   estasAqui: "Estás aquí",
+  estasEn: (titulo) => `Estás en: ${titulo}`,
 
   plegarLasDeAtras: "Plegar las de atrás",
   vuelvenAUnSoloPunto: "Vuelven a un solo punto",
@@ -257,6 +260,7 @@ const EN: TextosRuta = {
   hechasCuenta: (n) => `${n} done`,
   alDia: "up to date",
   estasAqui: "You're here",
+  estasEn: (titulo) => `You're at: ${titulo}`,
 
   plegarLasDeAtras: "Fold the earlier ones",
   vuelvenAUnSoloPunto: "They go back to one point",
