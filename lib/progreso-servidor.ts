@@ -143,9 +143,14 @@ export async function leerAvanceAlumno(
  * siempre coinciden —cada bloque sale de la última clase del momento—,
  * pero cuando no coinciden es la clase la que manda: la parada de la
  * clase más reciente es el presente aunque se generara antes que otra.
- * Sin clase —banco, bloques sin clase analizada— vale el día de
- * generación, que es lo único que tienen; y a igual día, la generación
- * desempata para que dos bloques de la misma clase no bailen.
+ * A igual día, la generación desempata para que dos bloques de la
+ * misma clase no bailen.
+ *
+ * SOLO LOS QUE TIENEN CLASE. Una parada es una clase con su profesor:
+ * un bloque sin `claseOrigen` —los del banco, los generados sin clase
+ * analizada antes de que el generador lo exigiera— no es una parada y
+ * no se devuelve. Sigue en la base y se abre por su enlace; lo que no
+ * hace es ocupar un sitio en el camino que no puede explicar.
  *
  * Se validan al leerlos, igual que se hacía al sacarlos de localStorage:
  * lo guardado pudo escribirse con otra versión del validador y un bloque
@@ -174,17 +179,13 @@ export async function leerBloquesGenerados(
 
   if (!registrar("No se pudo leer bloques_generados", error)) return [];
 
-  // El día que ordena cada uno: su clase, o su generación si no tiene.
-  // Los dos son días ISO, así que se comparan como texto.
+  // El día que ordena cada uno es el de su clase. Los dos son días ISO,
+  // así que se comparan como texto.
   const con: { bloque: Bloque; dia: string; generadoEn: string }[] = [];
   for (const fila of data ?? []) {
     const bloque = validarBloque(fila.contenido);
-    if (!bloque) continue;
-    con.push({
-      bloque,
-      dia: bloque.claseOrigen?.fecha ?? fila.generado_en.slice(0, 10),
-      generadoEn: fila.generado_en,
-    });
+    if (!bloque?.claseOrigen) continue;
+    con.push({ bloque, dia: bloque.claseOrigen.fecha, generadoEn: fila.generado_en });
   }
   con.sort((a, b) => b.dia.localeCompare(a.dia) || b.generadoEn.localeCompare(a.generadoEn));
   return con.map((c) => c.bloque);
@@ -205,10 +206,11 @@ export async function leerBloquesGenerados(
  * de lo que va la regla. Filtrar por `modo = 'practica'` le regalaría
  * una generación de más el día del despliegue, a él y a todos.
  *
- * Cuenta los dos orígenes, `ia` y `banco`: si la generación falló y se
- * sirvió un bloque del banco, el alumno tiene práctica delante igual.
- * Descontarlo solo cuando la IA acierta sería cargarle nuestra tasa de
- * fallo como si fuera suya.
+ * SOLO CUENTA `ia`. Un bloque del banco no lleva clase y por eso no es
+ * una parada: si además cerrara el candado, el alumno al que le falló
+ * la generación se quedaría sin parada nueva Y sin poder volver a
+ * pedirla hasta su próxima clase. Con el banco fuera de la cuenta, el
+ * candado sigue abierto y puede volver a darle.
  *
  * Lo que generó el equipo NO cuenta, y esto no es un detalle: sin el
  * filtro, alguien del equipo revisando una ficha le gastaría al alumno
@@ -223,6 +225,7 @@ export async function leerUltimaGeneracion(alumnoId: string): Promise<string | n
     .select("generado_en")
     .eq("alumno_id", alumnoId)
     .eq("generado_por_equipo", false)
+    .eq("origen", "ia")
     .order("generado_en", { ascending: false })
     .limit(1)
     .returns<{ generado_en: string }[]>();

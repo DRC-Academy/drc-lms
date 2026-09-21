@@ -1,8 +1,7 @@
 import { nivelDelAlumno } from "@/lib/estimacion";
 import { notFound } from "next/navigation";
-import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
-import { formatearFecha, nivelDeBloque } from "@/lib/perfil";
+import { formatearFecha } from "@/lib/perfil";
 import { calcularTarjeta } from "@/lib/modos";
 import { idiomaActual, textosActuales } from "@/lib/idioma-servidor";
 import { bloquesEnIdioma } from "@/lib/traducciones-servidor";
@@ -92,15 +91,6 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
         comoFecha(perfil.fechaInicio)
       )
     : [];
-
-  // Los bloques estáticos se filtran por nivel exacto. Un A2 no recibe
-  // material B1: su contenido sale del banco A2 al generar.
-  // El catálogo pasa por lo mismo que lo generado: sus nueve bloques
-  // también están escritos en español y también se pintan en las listas.
-  const bloques = await bloquesEnIdioma(
-    perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(nivelDelAlumno(params.id, perfil))) : [],
-    idiomaActual()
-  );
 
   // ---------------------------------------------------------------
   // EL DIPLOMA
@@ -307,7 +297,6 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
         <PanelAlumno
           alumnoId={params.id}
           tarjeta={tarjeta}
-          bloques={bloques}
           generadosIniciales={generados}
           idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}

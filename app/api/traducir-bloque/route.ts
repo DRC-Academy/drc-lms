@@ -42,7 +42,6 @@
 // ---------------------------------------------------------------
 
 import { NextResponse, type NextRequest } from "next/server";
-import { getBloque } from "@/lib/data";
 import { sesionActual } from "@/lib/sesion-servidor";
 import { buscarBloqueGenerado } from "@/lib/progreso-servidor";
 import { guardarTraduccion, leerTraduccion } from "@/lib/traducciones-servidor";
@@ -91,11 +90,10 @@ export async function POST(peticion: NextRequest) {
 
   if (!alumnoId) return NextResponse.json({ error: "Falta alumnoId" }, { status: 400 });
 
-  // El mismo par de sitios que `app/alumno/[id]/[bloqueId]`: el catálogo
-  // vive en el código y lo generado en la base. Y con el mismo guard,
-  // que es lo que impide pedir la traducción de un bloque ajeno.
-  const bloque =
-    getBloque(bloqueClave) ?? (await buscarBloqueGenerado(alumnoId, bloqueClave, esEquipo));
+  // El mismo sitio que `app/alumno/[id]/[bloqueId]` —todo bloque está en
+  // la base— y con el mismo guard, que es lo que impide pedir la
+  // traducción de un bloque ajeno.
+  const bloque = await buscarBloqueGenerado(alumnoId, bloqueClave, esEquipo);
 
   if (!bloque) return NextResponse.json({ error: "Bloque no encontrado" }, { status: 404 });
 

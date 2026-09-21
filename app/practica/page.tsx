@@ -1,7 +1,5 @@
 import { nivelDelAlumno } from "@/lib/estimacion";
-import { BLOQUES } from "@/lib/data";
 import { obtenerAlumno } from "@/lib/gestion";
-import { nivelDeBloque } from "@/lib/perfil";
 import {
   avisoFormulario,
   calcularTarjeta,
@@ -92,12 +90,6 @@ export default async function PaginaPractica() {
 
   const t = textosActuales().practica;
   const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion, t);
-  // El catálogo pasa por lo mismo que lo generado: sus nueve bloques
-  // también están escritos en español y también se pintan en las listas.
-  const bloques = await bloquesEnIdioma(
-    perfil ? BLOQUES.filter((b) => b.nivel === nivelDeBloque(nivelDelAlumno(alumnoId, perfil))) : [],
-    idiomaActual()
-  );
 
   // Solo para que la cabecera pueda pintar "Mi curso" sin cambiar de
   // forma entre pantallas. EL MISMO CURSO Y LA MISMA LECCIÓN QUE EN EL
@@ -148,7 +140,6 @@ export default async function PaginaPractica() {
           profesor={perfil?.profesor.trim() ?? ""}
           tarjeta={tarjeta}
           conContexto={tieneContexto(perfil)}
-          bloques={bloques}
           progreso={progreso}
           generadosIniciales={generados}
           urlFormulario={urlFormulario(process.env.URL_FORMULARIO_BASE, perfil?.formToken ?? null)}

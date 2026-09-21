@@ -739,8 +739,8 @@ export function nivelEsFiable(origen: OrigenNivel): boolean {
 // se usa hoy para tres cosas que sí le cambian el producto:
 //
 //   1. QUÉ CURSO VE.        `cursosAsignados(plan, nivel, alumnoId)`
-//   2. QUÉ EJERCICIOS RECIBE. `BLOQUES.filter(b => b.nivel === …)` en el
-//      inicio, y el banco de generación, que reparte por nivel exacto.
+//   2. QUÉ EJERCICIOS RECIBE. La calibración del generador y el banco de
+//      reserva, que reparten por nivel exacto.
 //   3. QUÉ ESTIMACIÓN LEE.   todo este módulo.
 //
 // O sea: demasiado poco fiable para enseñarlo, suficientemente fiable

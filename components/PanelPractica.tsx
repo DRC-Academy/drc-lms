@@ -60,7 +60,6 @@ export default function PanelPractica({
   profesor,
   tarjeta,
   conContexto,
-  bloques,
   progreso,
   generadosIniciales,
   urlFormulario,
@@ -75,7 +74,6 @@ export default function PanelPractica({
   tarjeta: TarjetaPractica | null;
   /** Si ya sabemos a qué se dedica: decide si se le invita a contarlo. */
   conContexto: boolean;
-  bloques: Bloque[];
   progreso: ProgresoBloques;
   generadosIniciales: Bloque[];
   /** Enlace al formulario de Gestión con el token del alumno, o null. */
@@ -95,7 +93,7 @@ export default function PanelPractica({
     generar,
     reintentar,
     zonaNuevos,
-  } = usarGenerador({ alumnoId, bloques, generadosIniciales });
+  } = usarGenerador({ alumnoId, generadosIniciales });
 
   const t = usarIdioma().t.ruta;
 
@@ -183,7 +181,7 @@ export default function PanelPractica({
             }}
           />
         ) : (
-          <RutaVacia generando={generando} profesor={profesor} />
+          <RutaVacia profesor={profesor} />
         )}
 
         {sinNadaQueOfrecer && (
@@ -203,17 +201,18 @@ export default function PanelPractica({
 }
 
 /**
- * La ruta de quien todavía no tiene ninguna parada.
+ * La ruta de quien todavía no tiene ninguna parada: sin clase analizada
+ * y sin bloques. Ya no existe el catálogo que rellenaba este hueco, así
+ * que es lo que ve todo alumno hasta que su profesor analiza la primera
+ * clase. Se pinta el camino VACÍO —la forma de lo que viene— para que
+ * «no tienes nada» se lea como «esto está por llenarse».
  *
- * Es lo que ven 86 de los 168 alumnos al entrar por primera vez, así que
- * no puede ser un hueco. Se pinta el camino VACÍO —la forma de lo que
- * viene— para que «no tienes nada» se lea como «esto está por llenarse».
- *
- * SIN BOTÓN, y es deliberado: aquí no hay clase que analizar todavía, y
- * la primera parada la abre el profesor. Ofrecerle algo que pulsar sería
- * la misma promesa vacía que el candado no hace.
+ * SIN BOTÓN, y es deliberado: sin clase no hay de dónde generar, y la
+ * primera parada la abre el profesor. Ofrecerle algo que pulsar sería
+ * la misma promesa vacía que el candado no hace. Por eso tampoco tiene
+ * estado «generando»: aquí no se puede estar generando nada.
  */
-function RutaVacia({ generando, profesor }: { generando: boolean; profesor: string }) {
+function RutaVacia({ profesor }: { profesor: string }) {
   const t = usarIdioma().t.ruta;
 
   return (
@@ -299,12 +298,12 @@ function RutaVacia({ generando, profesor }: { generando: boolean; profesor: stri
             />
           </div>
           <div className="min-w-0 flex-1 pb-2">
-            <Primera generando={generando} profesor={profesor} />
+            <Primera profesor={profesor} />
           </div>
         </div>
 
         <div className="mt-4 hidden min-[900px]:mt-1.5 min-[900px]:block">
-          <Primera generando={generando} profesor={profesor} />
+          <Primera profesor={profesor} />
         </div>
       </div>
     </section>
@@ -312,7 +311,7 @@ function RutaVacia({ generando, profesor }: { generando: boolean; profesor: stri
 }
 
 /** La caja blanca de la primera parada, la que todavía no existe. */
-function Primera({ generando, profesor }: { generando: boolean; profesor: string }) {
+function Primera({ profesor }: { profesor: string }) {
   const t = usarIdioma().t.ruta;
 
   return (
@@ -321,14 +320,10 @@ function Primera({ generando, profesor }: { generando: boolean; profesor: string
         {t.paradaNumeroTitulo(1, "").replace(/:s*$/, "")}
       </p>
       <h2 className="mt-3 text-balance font-display text-[23px] font-extrabold leading-[1.08] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[30px]">
-        {generando ? t.preparandoTuPrimeraParada : t.tuRutaEmpieza}
+        {t.todaviaNoHayNada}
       </h2>
       <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.45] text-marca-tintaMedia min-[900px]:text-[15.5px] min-[900px]:leading-[1.5]">
-        {generando
-          ? t.enMenosDeUnMinuto
-          : profesor !== ""
-            ? t.encuantoAnalice(profesor)
-            : t.encuantoAnaliceSinProfesor}
+        {profesor !== "" ? t.cuandoAnaliceTuPrimeraClase(profesor) : t.cuandoTuProfesorAnalice}
       </p>
     </div>
   );

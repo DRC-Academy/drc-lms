@@ -131,11 +131,12 @@ export type TextosRuta = {
    * cuando solo una puede serlo. La fecha llega ya formateada; sin
    * profesor en la ficha se dice solo la fecha.
    */
-  generadaDeClase: (fecha: string, profesor: string) => string;
+  /** «Clase del 17 de septiembre con Noeli»: la atribución de toda parada. */
+  claseDel: (fecha: string, profesor: string) => string;
+  /** «Preparar la parada 1 con tu clase del 17 de septiembre con Noeli». */
+  prepararLaParadaConClase: (numero: number | null, fecha: string, profesor: string) => string;
 
   // --- la parada de hoy ---
-  tuUltimaClaseCon: (profesor: string) => string;
-  tuUltimaClase: string;
   diezEjerciciosConLoTuyo: string;
   tardaMenosDeUnMinuto: string;
 
@@ -146,11 +147,9 @@ export type TextosRuta = {
   noTienesQueHacerNada: string;
 
   // --- sin ruta todavía ---
-  tuRutaEmpieza: string;
-  preparandoTuPrimeraParada: string;
-  enMenosDeUnMinuto: string;
-  encuantoAnalice: (profesor: string) => string;
-  encuantoAnaliceSinProfesor: string;
+  todaviaNoHayNada: string;
+  cuandoAnaliceTuPrimeraClase: (profesor: string) => string;
+  cuandoTuProfesorAnalice: string;
 
   // --- ruta al día ---
   rutaAlDia: string;
@@ -211,13 +210,11 @@ const ES: TextosRuta = {
   noCambiaLoHecho: "No cambia lo que ya tienes hecho.",
   hacerla: "Hacerla",
   sigueAhi: "Sigue ahí para cuando quieras. No cambia la parada de hoy.",
-  generadaDeClase: (fecha, profesor) =>
+  claseDel: (fecha, profesor) => (profesor ? `Clase del ${fecha} con ${profesor}` : `Clase del ${fecha}`),
+  prepararLaParadaConClase: (numero, fecha, profesor) =>
     profesor
-      ? `Generada a partir de tu clase del ${fecha} con ${profesor}.`
-      : `Generada a partir de tu clase del ${fecha}.`,
-
-  tuUltimaClaseCon: (profesor) => `Tu última clase con ${profesor} ya está aquí`,
-  tuUltimaClase: "Tu última clase ya está aquí",
+      ? `Preparar la parada ${numero} con tu clase del ${fecha} con ${profesor}`
+      : `Preparar la parada ${numero} con tu clase del ${fecha}`,
   diezEjerciciosConLoTuyo: "Diez ejercicios hechos con lo que sabemos de ti.",
   tardaMenosDeUnMinuto: "Tarda menos de un minuto.",
 
@@ -228,13 +225,11 @@ const ES: TextosRuta = {
     "Tu profesor la prepara cuando suba lo que trabajéis. Sale de esa clase, así que hasta entonces no existe.",
   noTienesQueHacerNada: "No tienes que hacer nada: te la encuentras aquí abierta.",
 
-  tuRutaEmpieza: "Tu ruta empieza con tu primera clase",
-  preparandoTuPrimeraParada: "Preparando tu primera parada…",
-  enMenosDeUnMinuto: "En menos de un minuto la tienes aquí.",
-  encuantoAnalice: (profesor) =>
-    `En cuanto ${profesor} analice lo que trabajéis, aparece aquí tu primera parada: diez ejercicios hechos con lo tuyo.`,
-  encuantoAnaliceSinProfesor:
-    "En cuanto tu profesor analice lo que trabajéis, aparece aquí tu primera parada: diez ejercicios hechos con lo tuyo.",
+  todaviaNoHayNada: "Todavía no hay nada para practicar",
+  cuandoAnaliceTuPrimeraClase: (profesor) =>
+    `Cuando ${profesor} analice tu primera clase, aparecerá aquí tu primera parada.`,
+  cuandoTuProfesorAnalice:
+    "Cuando tu profesor analice tu primera clase, aparecerá aquí tu primera parada.",
 
   rutaAlDia: "Ruta al día",
   tuRuta: "Tu ruta",
@@ -296,11 +291,11 @@ const EN: TextosRuta = {
   noCambiaLoHecho: "It doesn't change what you've already done.",
   hacerla: "Do it",
   sigueAhi: "It stays here for whenever you like. It doesn't change today's stop.",
-  generadaDeClase: (fecha, profesor) =>
-    profesor ? `Built from your class on ${fecha} with ${profesor}.` : `Built from your class on ${fecha}.`,
-
-  tuUltimaClaseCon: (profesor) => `Your last class with ${profesor} is here`,
-  tuUltimaClase: "Your last class is here",
+  claseDel: (fecha, profesor) => (profesor ? `Class on ${fecha} with ${profesor}` : `Class on ${fecha}`),
+  prepararLaParadaConClase: (numero, fecha, profesor) =>
+    profesor
+      ? `Build stop ${numero} from your class on ${fecha} with ${profesor}`
+      : `Build stop ${numero} from your class on ${fecha}`,
   diezEjerciciosConLoTuyo: "Ten exercises built from what we know about you.",
   tardaMenosDeUnMinuto: "It takes under a minute.",
 
@@ -311,13 +306,11 @@ const EN: TextosRuta = {
     "Your teacher builds it once they upload what you work on. It comes from that class, so until then it doesn't exist.",
   noTienesQueHacerNada: "You don't have to do anything: you'll find it open here.",
 
-  tuRutaEmpieza: "Your path starts with your first class",
-  preparandoTuPrimeraParada: "Building your first stop…",
-  enMenosDeUnMinuto: "You'll have it here in under a minute.",
-  encuantoAnalice: (profesor) =>
-    `As soon as ${profesor} goes over what you work on, your first stop shows up here: ten exercises built from your own material.`,
-  encuantoAnaliceSinProfesor:
-    "As soon as your teacher goes over what you work on, your first stop shows up here: ten exercises built from your own material.",
+  todaviaNoHayNada: "Nothing to practise yet",
+  cuandoAnaliceTuPrimeraClase: (profesor) =>
+    `Once ${profesor} reviews your first class, your first stop will appear here.`,
+  cuandoTuProfesorAnalice:
+    "Once your teacher reviews your first class, your first stop will appear here.",
 
   rutaAlDia: "Path up to date",
   tuRuta: "Your path",

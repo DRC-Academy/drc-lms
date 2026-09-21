@@ -64,11 +64,9 @@ const CADENCIA_MS = 250;
  */
 export function usarGenerador({
   alumnoId,
-  bloques,
   generadosIniciales,
 }: {
   alumnoId: string;
-  bloques: Bloque[];
   generadosIniciales: Bloque[];
 }) {
   const [estado, setEstado] = useState<EstadoGeneracion>("listo");
@@ -111,9 +109,10 @@ export function usarGenerador({
     return [...generadosIniciales].reverse().concat(generadosNuevos.filter((b) => !yaEstan.has(b.id)));
   }, [generadosNuevos, generadosIniciales]);
 
-  // El catálogo va primero: es material de partida, sin clase detrás, y
-  // en un camino que va del pasado al presente es lo más antiguo.
-  const todos = useMemo(() => [...bloques, ...generados], [generados, bloques]);
+  // Ya no hay catálogo delante: el camino son sus bloques y nada más.
+  // `todos` se conserva como nombre porque es lo que consumen la ruta y
+  // las listas, y lo que significa no ha cambiado: todo lo suyo.
+  const todos = generados;
   const idsGenerados = useMemo(() => generados.map((b) => b.id), [generados]);
 
   // ---------------------------------------------------------------

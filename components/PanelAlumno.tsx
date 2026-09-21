@@ -30,7 +30,6 @@ import BloquesGenerados from "@/components/BloquesGenerados";
 export default function PanelAlumno({
   alumnoId,
   tarjeta,
-  bloques,
   generadosIniciales,
   idsTerminados,
   esAdministrador,
@@ -39,7 +38,6 @@ export default function PanelAlumno({
   alumnoId: string;
   /** La tarjeta de generación, o null si no hay de dónde tirar. */
   tarjeta: TarjetaPractica | null;
-  bloques: Bloque[];
   generadosIniciales: Bloque[];
   /** Bloques que ya ha cerrado: dejan de salir en el inicio. */
   idsTerminados: string[];
@@ -63,7 +61,7 @@ export default function PanelAlumno({
     generar,
     reintentar,
     zonaNuevos,
-  } = usarGenerador({ alumnoId, bloques, generadosIniciales });
+  } = usarGenerador({ alumnoId, generadosIniciales });
 
   /**
    * MIGRACIÓN DEL PROGRESO QUE QUEDÓ EN EL NAVEGADOR

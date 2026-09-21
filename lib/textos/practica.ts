@@ -92,10 +92,7 @@ export type TextosPractica = {
   enumerar: (partes: string[]) => string;
 
   // --- cuando toca esperar ---
-  esperaPrimeraClase: string;
   esperaProximaClase: string;
-  notaSinClase: (profesor: string) => string;
-  notaSinClaseSinProfesor: string;
 
   // --- el resumen de la última clase ---
   sinClaseTitulo: string;
@@ -213,12 +210,7 @@ const ES: TextosPractica = {
   fuenteExamen: (examen) => `el formato del ${examen}`,
   enumerar: (partes) => enumerarCon(partes, "y"),
 
-  esperaPrimeraClase: "Después de tu primera clase",
   esperaProximaClase: "Después de tu próxima clase",
-  notaSinClase: (profesor) =>
-    `Ya tienes tu bloque con lo que sabemos de ti. En cuanto ${profesor} analice tu primera clase, preparamos el siguiente con lo que trabajéis.`,
-  notaSinClaseSinProfesor:
-    "Ya tienes tu bloque con lo que sabemos de ti. En cuanto se analice tu primera clase, preparamos el siguiente con lo que trabajéis.",
 
   sinClaseTitulo: "Todavía no hay clase que repasar",
   sinClaseCuerpo:
@@ -335,12 +327,7 @@ const EN: TextosPractica = {
   fuenteExamen: (examen) => `the ${examen} format`,
   enumerar: (partes) => enumerarCon(partes, "and"),
 
-  esperaPrimeraClase: "After your first class",
   esperaProximaClase: "After your next class",
-  notaSinClase: (profesor) =>
-    `You already have your block, built from what we know about you. As soon as ${profesor} goes over your first class, we'll build the next one from that.`,
-  notaSinClaseSinProfesor:
-    "You already have your block, built from what we know about you. As soon as your first class is reviewed, we'll build the next one from that.",
 
   sinClaseTitulo: "No class to go over yet",
   sinClaseCuerpo:

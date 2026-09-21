@@ -1,7 +1,6 @@
 import { nivelDelAlumno } from "@/lib/estimacion";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBloque } from "@/lib/data";
 import { textosActuales } from "@/lib/idioma-servidor";
 import { obtenerAlumno } from "@/lib/gestion";
 import { buscarBloqueGenerado } from "@/lib/progreso-servidor";
@@ -37,16 +36,13 @@ export default async function PaginaBloque({
   const datos = await obtenerAlumno(params.id);
   if (!datos) notFound();
 
-  // Si el bloque no está en `lib/data.ts` es uno generado. Antes esos
-  // solo existían en el localStorage del navegador y había que buscarlos
-  // desde el cliente, con su pantalla de carga; ahora están en la base y
-  // se resuelven aquí, así que la página llega ya con los ejercicios.
+  // Todos los bloques son generados y están en la base: se resuelven
+  // aquí, así que la página llega ya con los ejercicios. Un bloque sin
+  // `claseOrigen` no sale en la ruta pero sigue abriéndose por su enlace.
   //
   // El equipo abre además los que generó él para revisar, que son los
   // que no salen en la práctica del alumno.
-  const bloque =
-    getBloque(params.bloqueId) ??
-    (await buscarBloqueGenerado(params.id, params.bloqueId, sesion.rol === "admin"));
+  const bloque = await buscarBloqueGenerado(params.id, params.bloqueId, sesion.rol === "admin");
 
   const nombre = datos.perfil?.nombre ?? "";
 

@@ -43,7 +43,7 @@ import { resolve } from "node:path";
 import { leerEnv } from "./learndash-zip.ts";
 import { conTraduccion, idiomaDe, type IdiomaBloque } from "../lib/traduccion-bloque.ts";
 import { traducirBloque, MODELO_TRADUCTOR } from "../lib/traductor.ts";
-import { BLOQUES, type Bloque } from "../lib/data.ts";
+import type { Bloque } from "../lib/data.ts";
 import { BANCO } from "../lib/banco.ts";
 
 const env = { ...leerEnv(resolve(process.cwd(), ".env.local")), ...process.env };
@@ -95,7 +95,7 @@ async function main() {
   // estable —lo pone el código— así que una sola traducción sirve para
   // cualquier alumno que lo abra. Los generados, en cambio, llevan un id
   // propio cada uno y hay que traducirlos de uno en uno.
-  for (const bloque of [...BLOQUES, ...BANCO]) {
+  for (const bloque of BANCO) {
     const destino: IdiomaBloque = idiomaDe(bloque) === "en" ? "es" : "en";
     if (yaEsta.has(`${bloque.id}|${destino}`)) continue;
     pendientes.push({ clave: bloque.id, bloque, destino });
@@ -115,7 +115,7 @@ async function main() {
     pendientes.push({ clave: fila.bloque_clave, bloque: conClave, destino });
   }
 
-  console.log(`catálogo y banco:    ${BLOQUES.length + BANCO.length}`);
+  console.log(`banco:               ${BANCO.length}`);
   console.log(`bloques guardados:   ${filas.length}`);
   console.log(`traducciones hechas: ${hechas.length}`);
   console.log(`pendientes:          ${pendientes.length}\n`);

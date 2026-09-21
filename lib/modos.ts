@@ -161,6 +161,14 @@ export type TarjetaPractica = {
    * nombrando solo lo que este alumno tiene.
    */
   fuentes: FuentesDelBloque;
+  /**
+   * La clase de la que saldría el bloque si lo pide ahora: la misma
+   * que `app/api/generar-bloque` estamparía como `claseOrigen`. La
+   * parada de generación la enseña —«Preparar la parada 3 con tu clase
+   * del 17 de septiembre con Noeli»— para que ninguna parada, ni la
+   * que aún no existe, se quede sin decir de qué clase es.
+   */
+  clase: { fecha: string; profesor: string };
 };
 
 /**
@@ -237,23 +245,8 @@ function describirFuentes(
 // una norma que se le impone.
 // ---------------------------------------------------------------
 
-function redactarEspera(
-  disponibilidad: Disponibilidad,
-  profesor: string,
-  tuvoClase: boolean,
-  t: TextosPractica
-): EsperaTarjeta | null {
+function redactarEspera(disponibilidad: Disponibilidad, t: TextosPractica): EsperaTarjeta | null {
   if (disponibilidad.disponible) return null;
-
-  if (!tuvoClase) {
-    // Ya generó con lo único que teníamos —su perfil, su examen— y no
-    // hay clase analizada que pueda traer nada nuevo. Es la espera más
-    // larga de todas y por eso se cuenta entera.
-    return {
-      etiquetaBoton: t.esperaPrimeraClase,
-      nota: profesor ? t.notaSinClase(profesor) : t.notaSinClaseSinProfesor,
-    };
-  }
 
   // SIN NOTA: el botón ya lo dice entero. Debajo hubo dos renglones
   // —"Ya has practicado lo de tu última clase. En cuanto tengas la
@@ -273,10 +266,13 @@ function redactarEspera(
  * para que el alumno no choque contra nada: ve antes de tocar que el
  * próximo bloque llega con su próxima clase.
  *
- * DEVUELVE NULL SOLO SIN NINGUNA FUENTE. Antes hacían falta condiciones
- * por modo; ahora basta con tener una de las cuatro cosas. Quien no
- * tiene ninguna —ni clase, ni perfil, ni examen— es a quien se le enseña
- * la invitación a completar el perfil, que es lo único que puede hacer.
+ * DEVUELVE NULL SIN CLASE ANALIZADA. La clase es la fuente que no puede
+ * faltar: sin ella no hay de qué hacer una parada, y un bloque hecho
+ * solo con el perfil y el examen sería material genérico que la ruta ya
+ * no enseña. El perfil y el examen siguen entrando en el bloque cuando
+ * los hay; lo que no hacen es sostenerlo solos. A quien no tiene clase
+ * se le enseña la ruta vacía y, si tampoco ha rellenado el perfil, la
+ * invitación a hacerlo.
  */
 export function calcularTarjeta(
   perfil: PerfilAlumno | null,
@@ -285,22 +281,15 @@ export function calcularTarjeta(
   t: TextosPractica,
   ahora: Date = new Date()
 ): TarjetaPractica | null {
+  if (!ultimaClase) return null;
+
   const conContexto = tieneContexto(perfil);
   const examen = perfil ? detectarExamen(perfil.plan) : null;
-
-  if (!ultimaClase && !conContexto && !examen) return null;
-
   const profesor = perfil?.profesor.trim() ?? "";
   const fuentes = describirFuentes(ultimaClase, conContexto, examen, t);
 
   const espera = redactarEspera(
-    calcularDisponibilidad(
-      comoFecha(ultimaGeneracion),
-      comoFecha(ultimaClase?.analizadoEn),
-      ahora
-    ),
-    profesor,
-    ultimaClase !== null,
+    calcularDisponibilidad(comoFecha(ultimaGeneracion), comoFecha(ultimaClase.analizadoEn), ahora),
     t
   );
 
@@ -312,7 +301,8 @@ export function calcularTarjeta(
     descripcion: fuentes ? t.diezEjerciciosCon(fuentes) : t.diezEjerciciosGenerico,
     llamada: t.llamada,
     espera,
-    fuentes: { clase: ultimaClase !== null, contexto: conContexto },
+    fuentes: { clase: true, contexto: conContexto },
+    clase: { fecha: ultimaClase.fechaClase.slice(0, 10), profesor },
   };
 }
 

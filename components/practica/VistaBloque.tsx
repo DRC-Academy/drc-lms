@@ -8,12 +8,15 @@ import { anotarParadaCerrada } from "@/lib/cierre-ruta";
 import { desdePractica, type Fase } from "@/lib/ejercicio-unificado";
 import { conTraduccion } from "@/lib/traduccion-bloque";
 import { formatearFecha } from "@/lib/perfil";
+import { UMBRAL_DOMINADO } from "@/lib/progreso";
 import VisorEjercicios, { type EstadoVisor, type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
 import CierreEjercicios from "@/components/ejercicios/CierreEjercicios";
 import PantallaConPanel from "@/components/leccion/PantallaConPanel";
 import PasoAPaso, { type Paso } from "@/components/leccion/PasoAPaso";
 import { usarMarco } from "@/components/leccion/MarcoCurso";
 import PanelBloque from "@/components/practica/PanelBloque";
+import Geckonoid from "@/components/mascota/Geckonoid";
+import { useMascota } from "@/components/mascota/useMascota";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { usarTraduccion } from "@/components/ejercicios/usarTraduccion";
 
@@ -30,6 +33,7 @@ import { usarTraduccion } from "@/components/ejercicios/usarTraduccion";
  *   - el paso a paso, que en vez de las partes del texto lleva las fases
  *   - la traducción del bloque al idioma que se lee
  *   - el guardado de avance, progreso y producción
+ *   - la mascota, que reacciona a lo que anuncia el visor
  *
  * Antes esto era `components/Practica.tsx`: la cabecera de siempre
  * arriba, un lateral de 300px, y el visor a pantalla entera con su
@@ -39,6 +43,17 @@ import { usarTraduccion } from "@/components/ejercicios/usarTraduccion";
  * Los ejercicios se traducen a la forma única en `desdePractica`, así
  * que el visor no distingue un `reconocer` generado de un `single` del
  * curso: son lo mismo.
+ *
+ * LA MASCOTA SIGUE LA ESCALA DE lib/gamificacion. Un ejercicio pasa
+ * diez veces por bloque: al acertar hace «ánimo» —pulgar, guiño, un
+ * rebote chico— y al fallar «duda»; nada de saltos ni estrellas, que
+ * repetidos diez veces dejan de decir algo. El bloque pasa unas
+ * veintiséis veces por curso y es un acuse: si queda dominado
+ * (`UMBRAL_DOMINADO`) hace «éxito», el salto con estrellas, una vez; si
+ * no, «ánimo». Nunca cara triste por un resultado: eso queda para la
+ * racha, cuando exista. El estado vive aquí porque aquí llegan los
+ * sucesos del visor; la pintan el panel, mientras hay ejercicio, y el
+ * cierre.
  */
 
 const ORDEN: Fase[] = ["reconocer", "transformar", "producir"];
@@ -92,6 +107,8 @@ export default function VistaBloque({
   });
   const respondido = (i: number) => estado.respondidos[i] === true;
   const acertado = (i: number) => estado.acertados[i] === true;
+
+  const mascota = useMascota();
 
   // LAS FASES, como pasos. Solo las que tiene el bloque: hay bloques sin
   // producir, y una fase vacía no es un paso.
@@ -150,17 +167,30 @@ export default function VistaBloque({
 
       // El servidor borra el avance al recibir el intento: cerrar el
       // bloque y quitar la marca de "iba por la mitad" son lo mismo.
-      case "final":
+      case "final": {
         guardar({ tipo: "progreso", aciertos: suceso.aciertos, total: suceso.total });
         // Y se deja la nota para la ruta: cuando el alumno vuelva, la
         // parada ya estará cerrada en el servidor y sin esto no habría
         // manera de saber que acababa de pasar. Ver `lib/cierre-ruta`.
         anotarParadaCerrada(bloque.id);
+        const pct = suceso.total > 0 ? (suceso.aciertos / suceso.total) * 100 : 0;
+        mascota.dispara(pct >= UMBRAL_DOMINADO ? "exito" : "animo");
         break;
+      }
 
       // Los intentos sueltos no se guardan en la práctica: aquí lo que
-      // cuenta es el resultado del bloque, que va en "final".
+      // cuenta es el resultado del bloque, que va en "final". La
+      // mascota sí se entera.
       case "intento":
+        mascota.dispara(suceso.correcto ? "animo" : "duda");
+        break;
+
+      // Al volver a un ejercicio desde el cierre, o al repetir el
+      // bloque, la mascota del panel se vuelve a montar: en reposo, no
+      // repitiendo el último gesto.
+      case "salto":
+      case "reinicio":
+        mascota.dispara("idle");
         break;
     }
   }
@@ -181,6 +211,7 @@ export default function VistaBloque({
           profesor={profesor}
           hrefParaTi={hrefParaTi}
           alElegir={cerrarPanel}
+          mascota={mascota}
         />
       }
       panelAria={todos.navegacion.paraTi}
@@ -244,7 +275,7 @@ export default function VistaBloque({
           notaAlPie={(ejercicio) =>
             bloque.claseOrigen && ejercicio.fase !== "producir" ? (
               <p className="mt-4 text-[12.5px] leading-[1.5] text-marca-grisSuave">
-                {todos.ruta.generadaDeClase(
+                {todos.ruta.claseDel(
                   formatearFecha(bloque.claseOrigen.fecha, todos.practica.fechaCorta),
                   bloque.claseOrigen.profesor
                 )}
@@ -264,6 +295,7 @@ export default function VistaBloque({
                 ejercicios={unificados}
                 acertado={bien}
                 verEjercicio={verEjercicio}
+                adorno={<Geckonoid estado={mascota.estado} disparo={mascota.disparo} size={150} etiqueta={null} />}
                 t={tx}
                 acciones={
                   <>

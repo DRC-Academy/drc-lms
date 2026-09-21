@@ -1064,15 +1064,17 @@ function BloqueDeTarjeta({
  * que cinco paradas dijeran «en tu última clase» a la vez: el texto
  * generado caduca con la siguiente clase; la fecha y el nombre, no.
  *
- * Sin `claseOrigen` —catálogo, banco, bloques sin clase analizada— no
- * se pinta nada: mejor callar que atribuir a una clase que no fue.
+ * Toda parada la lleva: la ruta se construye solo con bloques que
+ * tienen `claseOrigen` (ver `leerBloquesGenerados`). El `return null`
+ * de abajo es la red por si un bloque llegara por otro camino —el que
+ * se acaba de generar en esta misma sesión— sin ella; no debería.
  */
 function Atribucion({ bloque }: { bloque: Bloque }) {
   const { ruta: t, practica: tp } = usarIdioma().t;
   if (!bloque.claseOrigen) return null;
   return (
     <p className="mt-2 text-[12.5px] leading-[1.45] text-marca-grisSuave min-[900px]:text-[13px]">
-      {t.generadaDeClase(formatearFecha(bloque.claseOrigen.fecha, tp.fechaCorta), bloque.claseOrigen.profesor)}
+      {t.claseDel(formatearFecha(bloque.claseOrigen.fecha, tp.fechaCorta), bloque.claseOrigen.profesor)}
     </p>
   );
 }
@@ -1222,10 +1224,16 @@ function Tarjeta({
             {t.paradaListaParaAbrirN(parada.numero)}
           </p>
 
+          {/* La parada que aún no existe también dice de qué clase es: la
+              misma que el generador va a estampar como `claseOrigen`. */}
           <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[32px]">
-            {profesor !== ""
-              ? t.tuUltimaClaseCon(profesor)
-              : t.tuUltimaClase}
+            {generacion.tarjeta
+              ? t.prepararLaParadaConClase(
+                  parada.numero,
+                  formatearFecha(generacion.tarjeta.clase.fecha, tp.fechaCorta),
+                  generacion.tarjeta.clase.profesor
+                )
+              : t.prepararLaParada(parada.numero)}
           </h2>
 
           {/* De qué está hecho ESTE bloque. Lo redacta el servidor: es lo
@@ -1284,12 +1292,10 @@ function Tarjeta({
           {t.paradaUno}
         </p>
         <h2 className="mt-3 text-balance font-display text-[25px] font-extrabold leading-[1.09] tracking-[-0.025em] text-marca-tinta min-[900px]:text-[30px]">
-          {t.tuRutaEmpieza}
+          {t.todaviaNoHayNada}
         </h2>
         <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaMedia min-[900px]:text-[15.5px]">
-          {profesor !== ""
-            ? t.encuantoAnalice(profesor)
-            : t.encuantoAnaliceSinProfesor}
+          {profesor !== "" ? t.cuandoAnaliceTuPrimeraClase(profesor) : t.cuandoTuProfesorAnalice}
         </p>
       </div>
     );

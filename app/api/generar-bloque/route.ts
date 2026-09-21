@@ -694,9 +694,21 @@ export async function POST(peticion: Request) {
     titulosExcluidos,
   };
 
-  // Sin ninguna de las cuatro fuentes no hay nada que sea suyo, y la
-  // tarjeta ni siquiera se le ofrece. Llegar aquí es una petición a mano
-  // o una pestaña muy vieja.
+  // SIN CLASE ANALIZADA NO SE GENERA. Es la fuente que no puede faltar:
+  // cada bloque es una parada y cada parada es una clase, así que un
+  // bloque hecho solo con el perfil y el examen no tendría `claseOrigen`
+  // y no aparecería en ninguna ruta. La tarjeta ya no se ofrece sin
+  // clase (`calcularTarjeta`); llegar aquí es una petición a mano o una
+  // pestaña muy vieja, y se contesta como lo que es: todavía no toca.
+  if (!ultimaClase) {
+    traza("sin clase analizada");
+    return NextResponse.json(
+      { error: textosActuales().practica.apiSinDatosSuficientes },
+      { status: 409 }
+    );
+  }
+
+  // Con clase siempre hay materia prima; la comprobación queda como red.
   if (!hayMateriaPrima(materia)) {
     traza("sin materia prima");
     return NextResponse.json(

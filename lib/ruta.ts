@@ -105,18 +105,24 @@ export function estaDominado(progreso: ProgresoBloques, bloque: Bloque): boolean
  * Las paradas del camino, en orden y TODAS.
  *
  * EL ORDEN ES EL TIEMPO DE LAS CLASES. Los bloques llegan del más
- * antiguo al más reciente —el catálogo primero, que no sale de ninguna
- * clase, y después los generados por la fecha de la clase de la que
- * salieron, no por cuándo se generaron (ver `leerBloquesGenerados`)— y
- * el camino se pinta en ese orden: la parada 1 es la más vieja y la
- * última antes de la generación es la de la clase más reciente. Así
- * «vas por la 14 de 20» cuenta de verdad.
+ * antiguo al más reciente por la fecha de la clase de la que salieron,
+ * no por cuándo se generaron (ver `leerBloquesGenerados`), y el camino
+ * se pinta en ese orden: la parada 1 es la más vieja y la última antes
+ * de la generación es la de la clase más reciente. Así «vas por la 14
+ * de 20» cuenta de verdad. Ya no hay catálogo delante: cada parada es
+ * una clase suya, y todas llevan `claseOrigen`.
  *
  * LA ACTUAL ES SIEMPRE LA MÁS RECIENTE, la de la última clase, mientras
  * no esté hecha. «Estás aquí» es el presente: no vuelve atrás porque el
  * alumno se saltara una. Si la última ya está hecha, no hay actual y el
  * presente es la parada de generación —la próxima clase—, que es lo que
  * la pantalla enseña entonces.
+ *
+ * SIN BLOQUES NO HAY ACTUAL. Quien tiene clase analizada pero todavía
+ * no ha generado ve una sola parada: el candado abierto, que es donde
+ * cuelga «Estás aquí». Y sin clase ni bloques no hay parada ninguna:
+ * `generacion` llega null, esto devuelve `[]` y la pantalla pinta la
+ * ruta vacía.
  *
  * Las anteriores sin hacer no desaparecen: quedan detrás como
  * `pendiente`, abribles, sin competir con la de hoy.
