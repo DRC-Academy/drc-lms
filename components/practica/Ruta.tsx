@@ -600,6 +600,7 @@ export default function Ruta({
                 etapa={generacion.etapa}
                 progreso={generacion.progreso}
                 tardando={generacion.tardando}
+                fuentes={generacion.tarjeta?.fuentes}
               />
             </div>
           )}

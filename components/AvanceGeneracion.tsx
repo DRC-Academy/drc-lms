@@ -1,6 +1,7 @@
 "use client";
 
 import { textoDeEtapa, type EtapaGeneracion } from "@/lib/generacion";
+import type { FuentesDelBloque } from "@/lib/textos/practica";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 
 /**
@@ -29,10 +30,17 @@ export default function AvanceGeneracion({
   etapa,
   progreso,
   tardando,
+  fuentes,
 }: {
   etapa: EtapaGeneracion;
   progreso: number;
   tardando: boolean;
+  /**
+   * De qué está hecho el bloque, para que la línea de abajo nombre
+   * solo lo que este alumno tiene. Sin tarjeta no se promete nada más
+   * que el nivel, que es lo único que siempre hay.
+   */
+  fuentes?: FuentesDelBloque;
 }) {
   const t = usarIdioma().t.practica;
   const texto = textoDeEtapa(etapa, t);
@@ -71,7 +79,7 @@ export default function AvanceGeneracion({
       <p className="mt-3 text-[14px] leading-[1.5] text-marca-gris">
         {tardando
           ? t.seHaceDeRogar
-          : t.sonDiezEjercicios}
+          : t.preparadoConLoTuyo(fuentes ?? { clase: false, contexto: false })}
       </p>
     </div>
   );

@@ -35,6 +35,21 @@ const MESES_EN = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+/** "a, b y c": la conjunción es lo único que cambia con el idioma. */
+function enumerarCon(partes: string[], conjuncion: string): string {
+  return partes.length <= 1
+    ? (partes[0] ?? "")
+    : `${partes.slice(0, -1).join(", ")} ${conjuncion} ${partes[partes.length - 1]}`;
+}
+
+/**
+ * De qué está hecho el bloque de este alumno, en crudo. Lo calcula
+ * `calcularTarjeta` con las mismas señales que la descripción de la
+ * tarjeta, y lo lee la barra de avance para decir por qué tarda sin
+ * prometer una fuente que no tiene: "tu profesión" a quien no ha
+ * rellenado el perfil deja la frase en falso.
+ */
+export type FuentesDelBloque = { clase: boolean; contexto: boolean };
 
 export type TextosPractica = {
   // --- las tres fases, como sello del bloque ---
@@ -101,7 +116,11 @@ export type TextosPractica = {
   preparandoTuBloque: string;
   progresoPreparacion: string;
   seHaceDeRogar: string;
-  sonDiezEjercicios: string;
+  /**
+   * La línea bajo la barra: por qué tarda, en términos de lo que se
+   * hace para él. Nombra solo las fuentes que tiene; el nivel, siempre.
+   */
+  preparadoConLoTuyo: (fuentes: FuentesDelBloque) => string;
 
   // --- cuando la generación no sale ---
   porAhoraYaEsta: string;
@@ -192,10 +211,7 @@ const ES: TextosPractica = {
   fuenteRepeticiones: "lo que se te repite",
   fuenteContexto: "tu día a día",
   fuenteExamen: (examen) => `el formato del ${examen}`,
-  enumerar: (partes) =>
-    partes.length <= 1
-      ? (partes[0] ?? "")
-      : `${partes.slice(0, -1).join(", ")} y ${partes[partes.length - 1]}`,
+  enumerar: (partes) => enumerarCon(partes, "y"),
 
   esperaPrimeraClase: "Después de tu primera clase",
   esperaProximaClase: "Después de tu próxima clase",
@@ -214,15 +230,20 @@ const ES: TextosPractica = {
   colaYaPracticado: " En cuanto tengas la siguiente clase, preparamos el próximo bloque.",
   colaClaseNueva: " Ahí abajo puedes prepararte el bloque con lo que trabajasteis.",
 
-  etapaPreparando: "Repasando tus clases y tu perfil…",
-  etapaEscribiendo: "Escribiendo tus diez ejercicios…",
-  etapaRevisando: "Revisando que todo esté bien…",
+  etapaPreparando: "Repasando tu perfil, tu nivel y tu última clase…",
+  etapaEscribiendo: "Escribiendo tus ejercicios con lo que salió en clase…",
+  etapaRevisando: "Comprobando que cada ejercicio sea para ti…",
   etapaGuardando: "Guardando tu bloque…",
   etapaBanco: "Preparando un bloque de práctica…",
   preparandoTuBloque: "Preparando tu bloque",
   progresoPreparacion: "Progreso de la preparación",
-  seHaceDeRogar: "Se está haciendo de rogar, pero seguimos en ello.",
-  sonDiezEjercicios: "Son diez ejercicios, así que tarda un poco. Puedes quedarte aquí mientras.",
+  seHaceDeRogar: "Está tardando más de lo normal, pero seguimos preparándolo con lo tuyo.",
+  preparadoConLoTuyo: ({ clase, contexto }) => {
+    const partes = ["tu nivel"];
+    if (contexto) partes.unshift("tu profesión");
+    if (clase) partes.push("lo que trabajaste en tu última clase");
+    return `Estamos preparando tus ejercicios a partir de ${enumerarCon(partes, "y")}.`;
+  },
 
   porAhoraYaEsta: "Por ahora, ya está",
   estaVezNoHaSalido: "Esta vez no ha salido.",
@@ -312,10 +333,7 @@ const EN: TextosPractica = {
   fuenteRepeticiones: "what keeps coming back",
   fuenteContexto: "your working day",
   fuenteExamen: (examen) => `the ${examen} format`,
-  enumerar: (partes) =>
-    partes.length <= 1
-      ? (partes[0] ?? "")
-      : `${partes.slice(0, -1).join(", ")} and ${partes[partes.length - 1]}`,
+  enumerar: (partes) => enumerarCon(partes, "and"),
 
   esperaPrimeraClase: "After your first class",
   esperaProximaClase: "After your next class",
@@ -334,15 +352,20 @@ const EN: TextosPractica = {
   colaYaPracticado: " Once you have your next class, we'll build the next block.",
   colaClaseNueva: " Down below you can build the block from what you worked on.",
 
-  etapaPreparando: "Going over your classes and your profile…",
-  etapaEscribiendo: "Writing your ten exercises…",
-  etapaRevisando: "Checking everything is right…",
+  etapaPreparando: "Going over your profile, your level and your last class…",
+  etapaEscribiendo: "Writing your exercises from what came up in class…",
+  etapaRevisando: "Checking each exercise is right for you…",
   etapaGuardando: "Saving your block…",
   etapaBanco: "Getting a practice block ready…",
   preparandoTuBloque: "Building your block",
   progresoPreparacion: "Progress so far",
-  seHaceDeRogar: "It's taking its time, but we're still on it.",
-  sonDiezEjercicios: "It's ten exercises, so it takes a moment. You can stay here while it works.",
+  seHaceDeRogar: "It's taking longer than usual, but we're still building it around you.",
+  preparadoConLoTuyo: ({ clase, contexto }) => {
+    const partes = ["your level"];
+    if (contexto) partes.unshift("your profession");
+    if (clase) partes.push("what you worked on in your last class");
+    return `We're building your exercises from ${enumerarCon(partes, "and")}.`;
+  },
 
   porAhoraYaEsta: "That's it for now",
   estaVezNoHaSalido: "That didn't work this time.",

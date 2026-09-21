@@ -26,7 +26,7 @@ import type { PerfilAlumno, TipoExamen, UltimaClase } from "@/lib/data";
 import { NOMBRE_EXAMEN } from "@/lib/data";
 import { detectarExamen, formatearFecha } from "@/lib/perfil";
 import { calcularDisponibilidad, comoFecha, type Disponibilidad } from "@/lib/limites";
-import type { TextosPractica } from "@/lib/textos/practica";
+import type { FuentesDelBloque, TextosPractica } from "@/lib/textos/practica";
 
 // ---------------------------------------------------------------
 // EL ENLACE AL FORMULARIO DE PERFIL
@@ -155,6 +155,12 @@ export type TarjetaPractica = {
   llamada: string;
   /** Null cuando se puede generar ya. */
   espera: EsperaTarjeta | null;
+  /**
+   * Las mismas señales con las que se redactó `descripcion`, sin
+   * redactar: la barra de avance las necesita para decir por qué tarda
+   * nombrando solo lo que este alumno tiene.
+   */
+  fuentes: FuentesDelBloque;
 };
 
 /**
@@ -306,6 +312,7 @@ export function calcularTarjeta(
     descripcion: fuentes ? t.diezEjerciciosCon(fuentes) : t.diezEjerciciosGenerico,
     llamada: t.llamada,
     espera,
+    fuentes: { clase: ultimaClase !== null, contexto: conContexto },
   };
 }
 

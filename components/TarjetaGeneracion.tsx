@@ -138,7 +138,9 @@ export default function TarjetaGeneracion({
         </button>
       </article>
 
-      {generando && <AvanceGeneracion etapa={etapa} progreso={progreso} tardando={tardando} />}
+      {generando && (
+        <AvanceGeneracion etapa={etapa} progreso={progreso} tardando={tardando} fuentes={tarjeta.fuentes} />
+      )}
 
       {estado === "error" && (
         <div className="aparece rounded-[16px] border border-marca-examenBorde bg-marca-examen px-5 py-4">
