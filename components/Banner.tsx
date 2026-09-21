@@ -32,10 +32,16 @@ import type { CSSProperties, ReactNode } from "react";
  * pantalla con tres banners y tres botones que dicen "Continuar" no se
  * puede navegar con lector de pantalla. De eso se encarga `srSuffix`.
  *
- * LA ILUSTRACIÓN, si la hay, va a la izquierda del texto en escritorio,
- * con los pies en la línea del botón, y encima del texto en móvil. Solo
- * en `lg`: la del inicio lleva la mascota. Es un hueco, no una decisión
- * de esta pieza: qué se pinta lo dice quien la monta.
+ * LA ILUSTRACIÓN, si la hay, ocupa el vacío de la derecha en escritorio:
+ * pegada al borde derecho (24px) con los pies en la base (16px), fuera
+ * del flujo, y el texto le deja sitio con un relleno a la derecha. En
+ * móvil va encima del texto, en el flujo. Solo en `lg`: la del inicio
+ * lleva la mascota, a 200px de alto desde 1200 y a 150 entre 900 y
+ * 1199, que es donde la franja comparte fila con la tarjeta de 416px y
+ * al titular le quedan tres o cuatro palabras por línea. Es un hueco,
+ * no una decisión de esta pieza: qué se pinta lo dice quien la monta.
+ * Nada recorta: la franja no lleva overflow hidden, y lo que sobresalga
+ * —el brazo del diploma, el salto— se ve.
  */
 
 export type BannerSize = "lg" | "md" | "bar";
@@ -86,7 +92,7 @@ export default function Banner({
    * meses, que a 210 no se distingue de una mancha.
    */
   asideWidth?: string;
-  /** A la izquierda del texto en escritorio, encima en móvil. Solo en `lg`. */
+  /** A la derecha del texto en escritorio, encima en móvil. Solo en `lg`. */
   ilustracion?: ReactNode;
   /** Lo que va a ancho completo debajo de las dos columnas, si algo va. */
   children?: ReactNode;
@@ -168,17 +174,26 @@ export default function Banner({
   // esa anchura dos columnas dejan el titular en cuatro palabras por
   // línea.
   return (
-    <section className="banner rounded-[16px] px-6 py-6 min-[900px]:px-8 min-[900px]:py-[30px]">
+    <section
+      className={`banner relative rounded-[16px] px-6 py-6 min-[900px]:px-8 min-[900px]:py-[30px] ${
+        // Sitio para la ilustración a lo alto: su alto más 16px por
+        // arriba y por abajo. Una franja sin subtítulo es más baja que
+        // eso y la mascota asomaría por arriba.
+        ilustracion ? "min-[900px]:min-h-[182px] min-[1200px]:min-h-[232px]" : ""
+      }`}
+    >
       <div
         className={`grid gap-5 ${
           aside ? "min-[900px]:grid-cols-[minmax(0,1fr)_var(--banner-aside)] min-[900px]:gap-10" : ""
         }`}
         style={aside ? ({ "--banner-aside": asideWidth } as CSSProperties) : undefined}
       >
-        <div className="flex min-w-0 flex-col gap-4 min-[900px]:flex-row min-[900px]:items-end min-[900px]:gap-7">
-          {ilustracion && <div className="shrink-0">{ilustracion}</div>}
+        <div className="flex min-w-0 flex-col gap-4">
+          {ilustracion && (
+            <div className="shrink-0 min-[900px]:absolute min-[900px]:bottom-4 min-[900px]:right-6">{ilustracion}</div>
+          )}
 
-          <div className="flex min-w-0 flex-1 flex-col">
+          <div className={`flex min-w-0 flex-1 flex-col ${ilustracion ? "min-[900px]:pr-[150px] min-[1200px]:pr-[196px]" : ""}`}>
             {contenido}
 
             {(boton || secondaryText) && (
