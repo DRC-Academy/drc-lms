@@ -2,6 +2,13 @@
 Los parches de cada estado: lo que cambia entre el maestro y su variante.
 
     npm run mascota:parches            (antes: npm run mascota:base)
+    npm run mascota:parches -- --solo senala
+
+Con --solo <nombre> —el de la variante (racha) o el del estado o gesto
+(racha_perdida)— se rehace solo esa: se borran y se escriben solo sus
+PNG (<estado>_<n>, <estado>_completo, hueco_ y resto_<estado>), en
+parches.json se sustituyen solo sus entradas, en el mismo sitio, y
+rive/parches_check.png enseña solo esa variante. El resto no se toca.
 
 Para cada variante de rive/variantes/: la alinea al maestro (comun),
 quita el fondo a los dos con rembg —mismo modelo y parámetros—, y
@@ -58,6 +65,8 @@ zona de los ojos, cuyo blanco es del mismo gris.
 
 from __future__ import annotations
 
+import argparse
+import re
 import sys
 
 import cv2
@@ -151,10 +160,44 @@ def etiquetar(cx: float, cy: float) -> str:
     return "otro"
 
 
+def archivos_de(estado: str) -> list:
+    """Los PNG de una variante en PARCHES: sus parches, su hueco y su resto."""
+    patron = re.compile(rf"^(?:{re.escape(estado)}_(?:\d+|completo)|(?:hueco|resto)_{re.escape(estado)})\.png$")
+    return [f for f in PARCHES.glob("*.png") if patron.match(f.name)]
+
+
+def sustituir(lista: list[dict], clave: str, nombre: str, nuevos: list[dict]) -> list[dict]:
+    """La lista con las entradas de `nombre` cambiadas por `nuevos`, donde
+    estaban las viejas (o al final, si no había)."""
+    sitio = next((i for i, p in enumerate(lista) if p.get(clave) == nombre), len(lista))
+    return lista[:sitio] + nuevos + [p for p in lista[sitio:] if p.get(clave) != nombre]
+
+
+def sustituir_clave(viejo: dict[str, str], nombre: str, nuevo: dict[str, str]) -> dict[str, str]:
+    """El dict con la clave `nombre` según `nuevo`: en su sitio si ya
+    estaba, al final si es nueva, fuera si `nuevo` no la trae."""
+    salida = {k: (nuevo[k] if k == nombre else v) for k, v in viejo.items() if k != nombre or nombre in nuevo}
+    if nombre in nuevo and nombre not in viejo:
+        salida[nombre] = nuevo[nombre]
+    return salida
+
+
 def main() -> int:
     for flujo in (sys.stdout, sys.stderr):
         if hasattr(flujo, "reconfigure"):
             flujo.reconfigure(encoding="utf-8", errors="replace")
+
+    argumentos = argparse.ArgumentParser(description="Los parches de cada variante.")
+    argumentos.add_argument("--solo", metavar="NOMBRE", help="rehacer solo esta variante, estado o gesto")
+    solo = argumentos.parse_args().solo
+
+    variantes = [(n, e, "estado") for n, e in ESTADOS.items()] + [(n, g, "gesto") for n, g in GESTOS.items()]
+    if solo:
+        variantes = [v for v in variantes if solo in (v[0], v[1])]
+        if not variantes:
+            nombres = sorted({*ESTADOS, *ESTADOS.values(), *GESTOS, *GESTOS.values()})
+            print(f"--solo {solo}: no hay tal variante. Hay: {', '.join(nombres)}", file=sys.stderr)
+            return 1
 
     sesion = sesion_rembg()
     maestro = cargar_maestro()
@@ -166,7 +209,8 @@ def main() -> int:
     cola = poligono_cola(alfa_m.shape) > 0
 
     PARCHES.mkdir(parents=True, exist_ok=True)
-    for viejo in PARCHES.glob("*.png"):
+    viejos = archivos_de(variantes[0][1]) if solo else PARCHES.glob("*.png")
+    for viejo in viejos:
         viejo.unlink()
 
     k_apertura = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (APERTURA, APERTURA))
@@ -179,7 +223,6 @@ def main() -> int:
     restos: dict[str, str] = {}
     vistas: list[tuple[str, Image.Image]] = []
 
-    variantes = [(n, e, "estado") for n, e in ESTADOS.items()] + [(n, g, "gesto") for n, g in GESTOS.items()]
     for nombre, estado, clave_json in variantes:
         destino = parches if clave_json == "estado" else gestos
         variante = cargar_variante(nombre, maestro.size)
@@ -255,12 +298,21 @@ def main() -> int:
         vistas.append((estado, vista(lienzo, maestro_rgba, hueco, [p for p in destino if p.get(clave_json) == estado])))
 
     datos = leer_parches_json()
-    datos["parches"] = parches
-    datos["gestos"] = gestos
-    datos["huecos"] = huecos
-    datos["restos"] = restos
-    escribir_parches_json(datos)
-    print(f"\ncomponents/mascota/parches.json: {len(parches)} parches de estado, {len(gestos)} de gesto, {len(huecos)} huecos")
+    if solo:
+        _, estado, clave_json = variantes[0]
+        clave_lista = "parches" if clave_json == "estado" else "gestos"
+        datos[clave_lista] = sustituir(datos.get(clave_lista, []), clave_json, estado, parches if clave_json == "estado" else gestos)
+        datos["huecos"] = sustituir_clave(datos.get("huecos", {}), estado, huecos)
+        datos["restos"] = sustituir_clave(datos.get("restos", {}), estado, restos)
+        escribir_parches_json(datos)
+        print(f"\ncomponents/mascota/parches.json: solo {estado}, {len(parches) + len(gestos)} parches")
+    else:
+        datos["parches"] = parches
+        datos["gestos"] = gestos
+        datos["huecos"] = huecos
+        datos["restos"] = restos
+        escribir_parches_json(datos)
+        print(f"\ncomponents/mascota/parches.json: {len(parches)} parches de estado, {len(gestos)} de gesto, {len(huecos)} huecos")
 
     columnas = 4
     sep = 12

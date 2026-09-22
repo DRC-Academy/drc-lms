@@ -7,8 +7,16 @@
 //
 // Los huecos y restos (máscaras en escala de grises con alfa) se dejan
 // como están: son de 2 KB y una paleta les quitaría suavidad al borde.
+//
+// ES DETERMINISTA: con la misma entrada, los mismos bytes. La
+// cuantización de sharp lo es partiendo de RGBA, pero volver a
+// cuantizar un PNG que ya tiene paleta lo cambia un poco cada vez (y
+// rehacer sin cambios ensuciaba el diff de base, cola y cuerpo). Así
+// que un PNG con paleta —que solo sale de aquí: base.py y parches.py
+// escriben RGBA— se deja como está, y lo que sí se optimiza no se
+// reescribe si los bytes coinciden con los del disco.
 const sharp = require("sharp");
-const { readdirSync, statSync, renameSync, unlinkSync } = require("fs");
+const { readFileSync, readdirSync, statSync, renameSync, unlinkSync } = require("fs");
 const path = require("path");
 
 const PUBLICO = path.join(__dirname, "..", "..", "public", "mascota");
@@ -20,13 +28,18 @@ async function optimizar(ruta) {
   if (/^(hueco|resto)_/.test(nombre)) return { nombre, antes, despues: antes, nota: "máscara, se deja" };
 
   const imagen = sharp(ruta);
-  const { width } = await imagen.metadata();
+  const { width, isPalette } = await imagen.metadata();
+  if (isPalette) return { nombre, antes, despues: antes, nota: "ya optimizado" };
   const temporal = `${ruta}.tmp`;
   await imagen
     .resize({ width: Math.min(width, ANCHO_MAXIMO), withoutEnlargement: true })
     .png({ palette: true, quality: 90, effort: 10, compressionLevel: 9 })
     .toFile(temporal);
   const despues = statSync(temporal).size;
+  if (readFileSync(temporal).equals(readFileSync(ruta))) {
+    unlinkSync(temporal);
+    return { nombre, antes, despues: antes, nota: "igual" };
+  }
   if (despues < antes) {
     unlinkSync(ruta);
     renameSync(temporal, ruta);
