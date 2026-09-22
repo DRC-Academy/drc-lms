@@ -1,5 +1,5 @@
 import { nivelDelAlumno } from "@/lib/estimacion";
-import { obtenerPerfil } from "@/lib/gestion";
+import { obtenerCalendario, obtenerPerfil, obtenerQuitas } from "@/lib/gestion";
 import { exigirFoco } from "@/lib/sesion-servidor";
 import { textosActuales } from "@/lib/idioma-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
@@ -19,11 +19,9 @@ export const dynamic = "force-dynamic";
  * es el producto de verdad. Por eso el botón es lo más grande de la
  * pantalla y no hay nada compitiendo con él.
  *
- * TODO SALE DEL PERFIL, en una sola lectura. `meet_link` y `slots` los
- * trae `vista_perfil_alumno` desde que se ejecutó
- * `supabase/gestion-vista-perfil-clases.sql`; mientras no se ejecute
- * llegan vacíos y la pantalla enseña su estado sin horario, que es
- * correcto y no un error. El orden de despliegue da igual.
+ * LAS CLASES SALEN DEL CALENDARIO DE GESTIÓN, no del perfil: el grid del
+ * profesor (`vista_calendario_alumno`) y los 'quita' de
+ * `vista_excepciones_clase`. Ver `components/clases/MisClases.tsx`.
  *
  * `force-dynamic` porque la respuesta depende de la hora: una página
  * cacheada diría "hoy" el día siguiente.
@@ -31,7 +29,11 @@ export const dynamic = "force-dynamic";
 export default async function PaginaClases() {
   const { alumnoId, revisando, paraEnlaces } = await exigirFoco();
 
-  const perfil = await obtenerPerfil(alumnoId);
+  const [perfil, calendario, quitas] = await Promise.all([
+    obtenerPerfil(alumnoId),
+    obtenerCalendario(alumnoId),
+    obtenerQuitas(alumnoId),
+  ]);
   const t = textosActuales();
 
   // Solo para que la cabecera pueda pintar «Mi curso» sin cambiar de
@@ -68,15 +70,7 @@ export default async function PaginaClases() {
           <p className="text-[15px] text-marca-gris">{t.clases.tuHorarioSemanal}</p>
         </header>
 
-        <MisClases
-          slots={perfil?.slots ?? null}
-          meetLink={perfil?.meetLink ?? null}
-          // El profesor va en el banner porque es la mitad de la
-          // respuesta: "el jueves a las 17:00" sin con quién es media
-          // frase.
-          profesor={perfil?.profesor.trim() ?? ""}
-          t={t.clases}
-        />
+        <MisClases calendario={calendario} quitas={quitas} t={t.clases} />
       </main>
     </div>
   );

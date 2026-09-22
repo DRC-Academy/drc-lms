@@ -9,11 +9,11 @@
 // de una fecha inventada para traducir una cadena sería dar un rodeo
 // para acabar en el mismo diccionario.
 //
-// NO SE PROMETE NADA QUE NO SEPAMOS. El horario que viaja de Gestión es
-// el ACORDADO, no la agenda: una de cada cuatro clases se mueve
-// —recuperaciones, reprogramaciones— y eso no llega aquí. Por eso los
-// textos hablan de "tu horario" y la próxima clase se presenta como lo
-// que toca según ese horario, sin decir en ningún sitio "confirmada".
+// LA PRÓXIMA CLASE ES LA DEL CALENDARIO DE SU PROFESOR en Gestión, con
+// las recuperaciones y sin las cancelaciones anotadas (ver
+// `lib/calendario-gestion.ts`). Aun así los textos no dicen en ningún
+// sitio "confirmada": un cambio de última hora que el profesor no anote
+// no llega aquí.
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
@@ -39,11 +39,18 @@ export type TextosClases = {
   /** "con Jimena" */
   conProfesor: (nombre: string) => string;
 
+  /** Junto a la hora, discreto: "(hora de Madrid)". */
+  horaDeMadrid: string;
+
   // --- el botón ---
   unirse: string;
+  /** Debajo del botón en gris, mientras la sala no se ha abierto. */
+  seAbreAntes: string;
   /** Lo que se lee en vez del botón cuando no hay enlace utilizable. */
   sinEnlace: string;
-  sinEnlaceAyuda: string;
+
+  /** La línea que sustituye al banner cuando no hay próxima clase. */
+  sinProxima: string;
 
   // --- la lista del horario ---
   tuHorario: string;
@@ -101,10 +108,13 @@ export const CLASES: Record<Idioma, TextosClases> = {
     fechaLarga: (dia, numero, mes) => `${DIAS_ES[dia]} ${numero} de ${MESES_ES[mes]}`,
     franja: (desde, hasta) => `${desde} – ${hasta}`,
     conProfesor: (nombre) => `con ${nombre}`,
+    horaDeMadrid: "(hora de Madrid)",
 
     unirse: "Unirse a la clase",
-    sinEnlace: "Sin enlace todavía",
-    sinEnlaceAyuda: "Habla con tu profesor para que te pase el enlace de la clase.",
+    seAbreAntes: "Se abre 30 minutos antes",
+    sinEnlace: "Habla con tu profesor para el enlace",
+
+    sinProxima: "Aún no tienes tu próxima clase programada",
 
     tuHorario: "Tu horario",
     nombreDia: (dia) => DIAS_ES[dia],
@@ -128,10 +138,13 @@ export const CLASES: Record<Idioma, TextosClases> = {
     fechaLarga: (dia, numero, mes) => `${DIAS_EN[dia]} ${numero} ${MESES_EN[mes]}`,
     franja: (desde, hasta) => `${desde} – ${hasta}`,
     conProfesor: (nombre) => `with ${nombre}`,
+    horaDeMadrid: "(Madrid time)",
 
     unirse: "Join the class",
-    sinEnlace: "No link yet",
-    sinEnlaceAyuda: "Ask your teacher to send you the link for the class.",
+    seAbreAntes: "Opens 30 minutes before",
+    sinEnlace: "Ask your teacher for the link",
+
+    sinProxima: "Your next class isn't scheduled yet",
 
     tuHorario: "Your schedule",
     nombreDia: (dia) => DIAS_EN[dia],

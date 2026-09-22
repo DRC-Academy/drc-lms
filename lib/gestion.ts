@@ -24,6 +24,7 @@ import {
   comoTextoOpcional,
 } from "@/lib/perfil";
 import type { PerfilAlumno, ResumenAlumno, UltimaClase } from "@/lib/data";
+import type { FilaCalendario } from "@/lib/calendario-gestion";
 
 type Fila = Record<string, unknown>;
 
@@ -216,6 +217,58 @@ const VALIDACION_ACEPTADA = ["approved", "auto_approved", "ok"] as const;
  * que se quiere: el generador no trabaja con un transcript que nadie ha
  * dado por bueno.
  */
+// ---------------------------------------------------------------
+// LAS CLASES DEL ALUMNO
+//
+// Dos lecturas, y las dos las consumen `proximaDelAlumno` y
+// `horarioDelAlumno`: el calendario de Gestión (qué clases hay, con qué
+// profesor y con qué enlace) y los 'quita' de las excepciones (cuáles de
+// esas no van a ocurrir). Si falla una lectura se devuelve vacío y se
+// registra: sin calendario el alumno lee que aún no tiene su próxima
+// clase, y sin excepciones ve la clase que dice el calendario.
+// ---------------------------------------------------------------
+
+/** Las columnas de `vista_calendario_alumno`, nombradas: las de `FilaCalendario`. */
+const CALENDARIO =
+  "alumno_id, nombre_en_celda, teacher_id, profesor, celda, dia, hora, estado, alumno_celda, alumno_base, estado_base, week_date, recovery_for, rescheduled_to, asignacion_inicio, asignacion_alta, alumno_alta, baja, meet_link";
+
+/** Las celdas del calendario de Gestión que nombran al alumno. */
+export const obtenerCalendario = cache(async (alumnoId: string): Promise<FilaCalendario[]> => {
+  const { data, error } = await soloLectura("vista_calendario_alumno")
+    .select(CALENDARIO)
+    .eq("alumno_id", alumnoId)
+    .order("teacher_id", { ascending: true })
+    .order("celda", { ascending: true })
+    .returns<FilaCalendario[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo leer vista_calendario_alumno:", error.message);
+    return [];
+  }
+  return (data ?? []).filter(
+    (f) => typeof f.teacher_id === "string" && typeof f.celda === "string" && typeof f.nombre_en_celda === "string"
+  );
+});
+
+/**
+ * Los 'quita' del alumno: clases que Gestión tiene anotadas como que no
+ * van a ocurrir. Crudos: los valida `normalizarQuitas`.
+ */
+export const obtenerQuitas = cache(async (alumnoId: string): Promise<unknown[]> => {
+  const { data, error } = await soloLectura("vista_excepciones_clase")
+    .select("tipo, fecha, hora")
+    .eq("alumno_id", alumnoId)
+    .eq("tipo", "quita")
+    .order("fecha", { ascending: true })
+    .returns<unknown[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo leer vista_excepciones_clase:", error.message);
+    return [];
+  }
+  return data ?? [];
+});
+
 export async function obtenerUltimaClase(alumnoId: string): Promise<UltimaClase | null> {
   const { data, error } = await soloLectura("class_analyses")
     .select(ULTIMA_CLASE)

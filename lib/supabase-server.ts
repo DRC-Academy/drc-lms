@@ -40,18 +40,30 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // no hace es contestarle al LMS. El motivo largo, en `lib/gestion.ts`.
 //
 // `vista_excepciones_clase` entró con el botón de «Unirse a la clase».
-// El horario son los `slots` de la vista de perfil, pero un horario
-// recurrente no sabe que el jueves se movió al viernes: eso solo está
-// en `class_records`, que es el parte de los profesores y guarda notas
-// y capturas que el LMS no necesita. La vista entrega únicamente lo que
-// añade o quita una clase —fecha, hora, tipo y profesor—, ya cruzado
-// con el alumno. `supabase/gestion-vista-excepciones-clase.sql`.
+// Un calendario no sabe que la clase del jueves se canceló: eso solo
+// está en `class_records`, que es el parte de los profesores y guarda
+// notas y capturas que el LMS no necesita. La vista entrega únicamente
+// lo que añade o quita una clase —fecha, hora, tipo y profesor—, ya
+// cruzado con el alumno, y el LMS usa sus 'quita' para saltarse las
+// clases que no ocurren. `supabase/gestion-vista-excepciones-clase.sql`.
+//
+// `vista_calendario_alumno` entró con el botón de «Unirse a la clase»,
+// para que el alumno vea sus clases y abra su sala igual que su profesor
+// en Gestión: las celdas del grid de `teacher_calendars` que le nombran,
+// con el `meet_link` de la assignment del profesor de cada clase. La
+// lógica que las convierte en clases está copiada de Gestión en
+// `lib/calendario-gestion.ts`. `supabase/gestion-vista-calendario-alumno.sql`.
 //
 // Añadir algo a esta lista es ampliar lo que el LMS ve de una base con
 // datos de alumnos, profesores y nóminas. Solo con un motivo escrito,
 // como este.
 // ---------------------------------------------------------------
-export const VISTAS = ["vista_perfil_alumno", "class_analyses", "vista_excepciones_clase"] as const;
+export const VISTAS = [
+  "vista_perfil_alumno",
+  "class_analyses",
+  "vista_excepciones_clase",
+  "vista_calendario_alumno",
+] as const;
 export type Vista = (typeof VISTAS)[number];
 
 let cliente: SupabaseClient | null = null;

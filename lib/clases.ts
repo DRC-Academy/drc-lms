@@ -36,7 +36,8 @@
 // Módulo puro: sin `server-only`, lo importan componentes de cliente.
 // ---------------------------------------------------------------
 
-import { diaLocal, sumarDias } from "@/lib/fechas";
+import { diaLocal } from "@/lib/fechas";
+import { clasesDelAlumno, type ClaseDeGestion, type FilaCalendario } from "@/lib/calendario-gestion";
 
 /**
  * Los días tal y como los escribe Gestión, en el orden de
@@ -96,6 +97,15 @@ export type ProximaClase = DiaDeClase & {
   terminaEn: Date;
   /** Cuándo se puede pulsar el botón: `MINUTOS_ANTES` antes de empezar. */
   abreEn: Date;
+  /** Quien da ESTA clase, que en una recuperación puede no ser el habitual. */
+  profesor: string | null;
+  /**
+   * El `meet_link` CRUDO de la assignment de ese profesor: lo mismo que
+   * abre su botón en Gestión. NO VIAJA AL NAVEGADOR tal cual: lo valida
+   * `enlaceDeClase` y solo se pinta con la ventana abierta.
+   */
+  meetLink: string | null;
+  esRecuperacion: boolean;
 };
 
 /**
@@ -221,20 +231,6 @@ export function agruparPorDia(slots: Slot[]): DiaDeClase[] {
 // CUÁL ES LA PRÓXIMA
 // ---------------------------------------------------------------
 
-/** La hora de España de un instante, en minutos desde medianoche. */
-function minutosEnEspana(momento: Date): number {
-  const [h, m] = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Madrid",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })
-    .format(momento)
-    .split(":")
-    .map(Number);
-  return h * 60 + m;
-}
-
 /** El día de la semana de un día natural "2026-09-25". */
 function diaDeLaSemana(dia: string): number {
   return new Date(`${dia}T00:00:00Z`).getUTCDay();
@@ -296,66 +292,135 @@ export function instanteEnMadrid(dia: string, hora: string): Date {
 }
 
 /**
- * La clase que viene, o null si el alumno no tiene horario.
+ * Un 'quita' de `vista_excepciones_clase`: la clase de ese día —a esa
+ * hora, o todas si no trae hora— no ocurre. Sale de una cancelación, una
+ * falta o el origen de una reprogramación anotados en `class_records`.
+ */
+export type Quita = { fecha: string; hora: string | null };
+
+const ES_FECHA = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Los 'quita' de `vista_excepciones_clase`, validados. Las filas 'añade'
+ * se ignoran: las clases que se añaden ya salen del calendario de Gestión
+ * como celdas de recuperación.
+ */
+export function normalizarQuitas(valor: unknown): Quita[] {
+  if (!Array.isArray(valor)) return [];
+  const salida: Quita[] = [];
+  for (const crudo of valor) {
+    if (typeof crudo !== "object" || crudo === null) continue;
+    const { tipo, fecha, hora } = crudo as Record<string, unknown>;
+    if (tipo !== "quita" || typeof fecha !== "string" || !ES_FECHA.test(fecha)) continue;
+    if (hora === null || hora === undefined) {
+      salida.push({ fecha, hora: null });
+    } else if (typeof hora === "string" && ES_HORA.test(hora.trim())) {
+      salida.push({ fecha, hora: hora.trim() });
+    }
+    // Una hora que viene y no se entiende no se convierte en "todo el
+    // día": quitaría clases que nadie ha cancelado.
+  }
+  return salida;
+}
+
+/**
+ * Si un 'quita' se lleva esta clase: mismo día y, si trae hora, que caiga
+ * dentro de la clase. Dentro y no solo al empezar: en una clase de dos
+ * horas el parte puede ir a nombre de la segunda, y Gestión lo cruza
+ * igual (`recordInSpan`).
+ *
+ * UNA RECUPERACIÓN NO SE QUITA NUNCA, como en Gestión: allí una clase de
+ * recuperación no sale cancelada ni reprogramada aunque haya un parte
+ * para ese hueco. Pasa de verdad: un alumno con una cancelación a las
+ * 16:00 y su recuperación a las 16:00 del mismo día tiene clase.
+ */
+function laQuita(q: Quita, c: ClaseDeGestion): boolean {
+  if (c.esRecuperacion || q.fecha !== c.fecha) return false;
+  if (q.hora === null) return true;
+  const h = enMinutos(q.hora);
+  const inicio = enMinutos(c.desde);
+  return h >= inicio && h < inicio + c.horas * 60;
+}
+
+/**
+ * Cuántos días hacia delante se miran. Nueve semanas: cubre a un alumno
+ * con varias semanas seguidas canceladas y a uno sin horario fijo con una
+ * recuperación pactada a un mes vista. Más allá, una celda puntual del
+ * grid de Gestión ya no es fiable —cada celda guarda una sola semana—.
+ */
+export const DIAS_HACIA_DELANTE = 63;
+
+/**
+ * La clase que viene, o null si el alumno no tiene ninguna.
+ *
+ * LAS CLASES SON LAS DE GESTIÓN: `clases` sale de `clasesDelAlumno`
+ * (`lib/calendario-gestion.ts`), que es la lógica del «Mis clases» del
+ * profesor copiada tal cual. Aquí solo se decide cuál es la próxima, y
+ * esta es la única función del LMS que lo decide.
  *
  * LA QUE ESTÁ OCURRIENDO AHORA ES LA PRÓXIMA, y llega marcada con
- * `enCurso`. Es el momento en el que el botón de entrar importa más que
- * en ningún otro, así que sería justo el peor momento para saltar a la
- * de la semana que viene.
+ * `enCurso`: es el momento en el que el botón de entrar importa más que
+ * en ningún otro. Una clase deja de ser la próxima cuando TERMINA, no
+ * cuando empieza: el alumno que llega diez minutos tarde sigue teniendo
+ * su botón. Por eso se elige la de fin más temprano entre las que no han
+ * terminado.
  *
- * Una clase deja de ser la próxima cuando TERMINA, no cuando empieza:
- * el alumno que llega diez minutos tarde sigue teniendo su botón.
- *
- * Todo se cuenta en día natural español —`diaLocal` y `sumarDias` ya
- * están anclados a `Europe/Madrid`— así que el cambio de hora de octubre
- * no mueve nada: los días se suman como días, no como 86.400 segundos.
+ * Las que tienen un 'quita' se saltan y la próxima pasa a ser la
+ * siguiente.
  */
-export function proximaClase(dias: DiaDeClase[], ahora: Date = new Date()): ProximaClase | null {
-  if (dias.length === 0) return null;
-
+export function proximaClase(
+  clases: ClaseDeGestion[],
+  ahora: Date = new Date(),
+  quitas: Quita[] = []
+): ProximaClase | null {
   const hoy = diaLocal(ahora);
-  const hoyDow = diaDeLaSemana(hoy);
-  const minutos = minutosEnEspana(ahora);
-
   let mejor: ProximaClase | null = null;
-  let mejorClave = Infinity;
 
-  for (const dia of dias) {
-    const inicio = enMinutos(dia.desde);
-    // EL FINAL SE SUMA, NO SE LEE DE `hasta`. Una clase de 23:00 termina
-    // a las "00:00", y leer esa cadena da 0 minutos: el código la daba
-    // por terminada a cualquier hora del día y mandaba al alumno a la
-    // semana siguiente. Sumando, el final de esa clase son 1440 minutos
-    // y la comparación vuelve a tener sentido. Hay alumnos a las 23:00.
-    const fin = inicio + dia.horas * 60;
+  for (const c of clases) {
+    if (quitas.some((q) => laQuita(q, c))) continue;
 
-    let salto = (dia.indice - hoyDow + 7) % 7;
-    // Si es hoy pero ya terminó, la próxima es la de dentro de una semana.
-    if (salto === 0 && minutos >= fin) salto = 7;
+    const empiezaEn = instanteEnMadrid(c.fecha, c.desde);
+    // El final se suma al inicio, no se lee de una hora escrita: una clase
+    // de 23:00 termina a las "00:00" del día siguiente, y esa cadena leída
+    // sobre la misma fecha daría una clase que acaba antes de empezar.
+    const terminaEn = new Date(empiezaEn.getTime() + c.horas * 3_600_000);
+    if (terminaEn.getTime() <= ahora.getTime()) continue;
+    if (mejor && terminaEn.getTime() >= mejor.terminaEn.getTime()) continue;
 
-    const clave = salto * 1440 + inicio;
-    if (clave >= mejorClave) continue;
-
-    mejorClave = clave;
-    const fecha = sumarDias(hoy, salto);
-    const empiezaEn = instanteEnMadrid(fecha, dia.desde);
-
+    const indice = diaDeLaSemana(c.fecha);
     mejor = {
-      ...dia,
-      fecha,
-      esHoy: salto === 0,
-      enCurso: salto === 0 && minutos >= inicio && minutos < fin,
+      dia: DIAS[indice],
+      indice,
+      desde: c.desde,
+      hasta: comoHora(enMinutos(c.desde) + c.horas * 60),
+      horas: c.horas,
+      fecha: c.fecha,
+      esHoy: c.fecha === hoy,
+      enCurso: ahora.getTime() >= empiezaEn.getTime(),
       empiezaEn,
-      // El final se calcula desde el día de INICIO más las horas que
-      // dura, no formateando `hasta` sobre la misma fecha: una clase de
-      // 23:00 a 00:00 termina al día siguiente, y `hasta` diría "00:00"
-      // del día de antes.
-      terminaEn: new Date(empiezaEn.getTime() + dia.horas * 3_600_000),
+      terminaEn,
       abreEn: new Date(empiezaEn.getTime() - MINUTOS_ANTES * 60_000),
+      profesor: c.profesor?.trim() || null,
+      meetLink: c.meetLink,
+      esRecuperacion: c.esRecuperacion,
     };
   }
 
   return mejor;
+}
+
+/**
+ * Lo que necesita cualquier pantalla: las filas del calendario y las
+ * excepciones de Gestión, crudas, y la hora. La usan «Mis clases» y el
+ * inicio, así que las dos dicen siempre la misma clase.
+ */
+export function proximaDelAlumno(
+  filas: FilaCalendario[],
+  excepciones: unknown,
+  ahora: Date = new Date()
+): ProximaClase | null {
+  const clases = clasesDelAlumno(filas, diaLocal(ahora), DIAS_HACIA_DELANTE);
+  return proximaClase(clases, ahora, normalizarQuitas(excepciones));
 }
 
 /**
