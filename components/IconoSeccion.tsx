@@ -1,15 +1,21 @@
 /**
  * Los iconos de las cinco secciones y sus tipos.
  *
- * Viven aparte de `Cabecera.tsx` porque los pinta también la barra de
- * iconos de la lección, que es un componente de cliente, y la cabecera
+ * Viven aparte de `Navegacion.tsx` porque los pintan la barra lateral y
+ * las pestañas de abajo, que son componentes de cliente, y la navegación
  * importa cosas de servidor —las cookies del idioma— que un cliente no
  * puede arrastrar.
  */
 
 export type SeccionActiva = "inicio" | "curso" | "clases" | "practica" | "progreso";
 
-export type EnlaceSeccion = { clave: SeccionActiva; texto: string; href: string };
+export type EnlaceSeccion = {
+  clave: SeccionActiva;
+  texto: string;
+  /** La etiqueta de la barra de pestañas de móvil, donde `texto` no cabe. */
+  corto: string;
+  href: string;
+};
 
 export function Icono({
   seccion,
@@ -70,4 +76,36 @@ export function Icono({
       )}
     </svg>
   );
+}
+
+/**
+ * La sección en la que está una ruta, para marcarla en la navegación.
+ *
+ * SE DEDUCE DE LA RUTA Y NO SE PASA DESDE LA PÁGINA porque la navegación
+ * vive en el layout común (`app/(alumno)/layout.tsx`), y un layout no se
+ * vuelve a renderizar al pasar de una página a otra: si la sección le
+ * llegara del servidor, se quedaría marcada la primera.
+ *
+ * El bloque de práctica (`/alumno/<id>/<bloque>`) es «Para ti»: se abre
+ * desde allí y es de allí.
+ */
+export function seccionDeRuta(ruta: string): SeccionActiva | undefined {
+  if (ruta.startsWith("/clases")) return "clases";
+  if (ruta.startsWith("/curso/")) return "curso";
+  if (ruta.startsWith("/practica")) return "practica";
+  if (ruta.startsWith("/progreso")) return "progreso";
+  const alumno = ruta.match(/^\/alumno\/[^/]+(\/[^/]+)?\/?$/);
+  if (alumno) return alumno[1] ? "practica" : "inicio";
+  return undefined;
+}
+
+/**
+ * Qué panel lateral tiene la pantalla, si tiene uno: el del curso en una
+ * lección y el de las fases en un bloque. Entre 768 y 1200px ese panel
+ * no cabe al lado del texto y lo abre un icono de la barra.
+ */
+export function panelDeRuta(ruta: string): "curso" | "practica" | null {
+  if (/^\/curso\/[^/]+\/[^/]+/.test(ruta)) return "curso";
+  if (/^\/alumno\/[^/]+\/[^/]+/.test(ruta)) return "practica";
+  return null;
 }

@@ -79,9 +79,9 @@ export default function ChatAyuda({
 }: {
   nombre: string;
   /**
-   * Cuándo se ve el botón flotante. En la lección, la barra de iconos ya
-   * tiene uno de «Ayuda» a partir de 900px, y dos botones para lo mismo
-   * en la misma pantalla sobran: ahí el flotante solo sale en móvil.
+   * Cuándo se ve el botón flotante. La barra de iconos ya tiene uno de
+   * «Ayuda» a partir de 768px, y dos botones para lo mismo en la misma
+   * pantalla sobran: con la barra, el flotante solo sale en móvil.
    */
   botonFlotante?: "siempre" | "movil";
 }) {
@@ -438,7 +438,7 @@ export default function ChatAyuda({
         aria-expanded={abierto}
         className={`btn-verde inline-flex min-h-[48px] items-center gap-2 rounded-full px-5 text-[15px] font-semibold ${
           abierto ? "hidden min-[640px]:inline-flex" : ""
-        } ${lanzadorSoloMovil && !abierto ? "min-[900px]:hidden" : ""}`}
+        } ${lanzadorSoloMovil && !abierto ? "md:hidden" : ""}`}
       >
         <IconoAyuda className="h-[19px] w-[19px]" />
         {abierto ? t.cerrar : t.ayuda}

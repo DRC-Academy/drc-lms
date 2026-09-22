@@ -2,51 +2,53 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Icono, type EnlaceSeccion, type SeccionActiva } from "@/components/IconoSeccion";
+import { usePathname } from "next/navigation";
+import { Icono, panelDeRuta, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSeccion";
 import { abrirAyuda } from "@/components/ChatAyuda";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import MenuPerfil, { Globo } from "@/components/leccion/MenuPerfil";
 import { usarMarco } from "@/components/leccion/MarcoCurso";
 
 /**
- * La barra de iconos de la lección.
+ * La barra de iconos: la navegación de toda la aplicación en escritorio.
  *
  * Ochenta píxeles, fija a la izquierda, sin una sola palabra a la vista:
- * el símbolo arriba, las cuatro secciones debajo, y al pie la ayuda y el
- * perfil. Los nombres salen al pasar por encima. Es la misma navegación
- * que la cabecera —los mismos enlaces, calculados por la misma
- * función—, plegada para no quitarle ancho al texto.
+ * el símbolo arriba, las secciones debajo, y al pie la ayuda y el
+ * perfil (idioma y salida). Los nombres salen al pasar por encima o al
+ * llegar con el teclado. Nació en la lección y ahora la monta el marco
+ * común (`components/Navegacion.tsx`) en todas las pantallas.
  *
- * SOLO A PARTIR DE 900px. Por debajo, la navegación es la barra de abajo
- * de siempre, que es donde llega el pulgar; la pinta `MarcoCurso`.
+ * SOLO A PARTIR DE 768px. Por debajo, la navegación es la barra de
+ * pestañas de abajo (`NavegacionInferior`), que es donde llega el pulgar.
  *
- * EL ICONO DE «LECCIONES» solo existe entre 900 y 1200px: ahí el panel
- * del curso no cabe al lado del texto y se abre como un cajón desde
- * aquí. A partir de 1200 el panel está siempre a la vista y el icono
- * sobra.
+ * LA SECCIÓN ACTIVA LA DICE LA RUTA (`seccionDeRuta`): la barra vive en
+ * un layout, que no se vuelve a renderizar al cambiar de página.
+ *
+ * EL ICONO DEL PANEL solo existe entre 768 y 1200px y en las pantallas
+ * que tienen uno —la lección y el bloque—: ahí el panel no cabe al lado
+ * del texto y se abre como un cajón desde aquí.
  */
 export default function BarraLateral({
   enlaces,
   nombre,
   inicioHref,
-  seccion = "curso",
-  panel,
 }: {
   enlaces: EnlaceSeccion[];
   nombre: string;
-  /** A dónde lleva el símbolo: el inicio del alumno, como el logotipo de la cabecera. */
+  /** A dónde lleva el símbolo: el inicio del alumno, o el buscador del equipo. */
   inicioHref: string;
-  /** La sección en la que está la pantalla: el curso en la lección, «Para ti» en el bloque. */
-  seccion?: SeccionActiva;
-  /**
-   * El icono que abre el panel entre 900 y 1200px, con su nombre. Es
-   * el panel del curso en la lección y el de las fases en el bloque.
-   * Sin él no hay icono: es el caso de una pantalla sin panel.
-   */
-  panel?: { rotulo: string; aria: string } | null;
 }) {
   const { t } = usarIdioma();
   const { abrirPanel } = usarMarco();
+  const ruta = usePathname() ?? "/";
+  const seccion = seccionDeRuta(ruta);
+  const tipoPanel = panelDeRuta(ruta);
+  const panel =
+    tipoPanel === "curso"
+      ? { rotulo: t.curso.lecciones, aria: t.curso.abrirElPanel }
+      : tipoPanel === "practica"
+        ? { rotulo: t.ejercicios.tuPractica, aria: t.ejercicios.abrirElPanel }
+        : null;
 
   return (
     <aside
@@ -54,11 +56,12 @@ export default function BarraLateral({
       // `z-30`: la barra es pegajosa y eso ya la convierte en contexto de
       // apilamiento; sin un z propio, el panel de al lado —que viene
       // después— pintaría por encima de los globos y del menú del perfil.
-      className="sticky top-0 z-30 hidden h-dvh w-[80px] shrink-0 flex-col items-center border-r border-marca-borde bg-white pb-[18px] pt-[18px] min-[900px]:flex"
+      className="sticky top-0 z-30 hidden h-dvh w-[80px] shrink-0 flex-col items-center border-r border-marca-borde bg-white pb-[18px] pt-[18px] md:flex"
     >
       <Link
         href={inicioHref}
-        className="mb-[22px] block rounded-lg transition-opacity hover:opacity-70"
+        aria-label={t.navegacion.inicio}
+        className="mb-[22px] block rounded-lg transition-opacity hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc"
       >
         <Image src="/simbolo-drc.png" alt="DRC Academy" width={40} height={40} priority className="h-10 w-10" />
       </Link>
@@ -72,7 +75,7 @@ export default function BarraLateral({
               href={enlace.href}
               aria-current={activo ? "page" : undefined}
               aria-label={enlace.texto}
-              className={`group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors ${
+              className={`group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc ${
                 activo ? "bg-drc-chip-verde" : "hover:bg-marca-niebla"
               }`}
             >
@@ -82,13 +85,14 @@ export default function BarraLateral({
           );
         })}
 
-        {/* El cajón del panel, solo donde el panel no está a la vista. */}
+        {/* El cajón del panel, solo donde el panel no está a la vista.
+            Con sección o sin ella: en el buscador del equipo no hay. */}
         {panel && (
           <button
             type="button"
             onClick={abrirPanel}
             aria-label={panel.aria}
-            className="group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors hover:bg-marca-niebla min-[1200px]:hidden"
+            className="group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors hover:bg-marca-niebla focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc min-[1200px]:hidden"
           >
             <IconoLista />
             <Globo>{panel.rotulo}</Globo>
@@ -101,7 +105,7 @@ export default function BarraLateral({
           type="button"
           onClick={abrirAyuda}
           aria-label={t.navegacion.ayuda}
-          className="group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors hover:bg-marca-niebla"
+          className="group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors hover:bg-marca-niebla focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc"
         >
           <IconoAyuda />
           <Globo>{t.navegacion.ayuda}</Globo>
@@ -121,7 +125,7 @@ export function BarraLateralCargando() {
   return (
     <aside
       aria-hidden
-      className="sticky top-0 hidden h-dvh w-[80px] shrink-0 flex-col items-center border-r border-marca-borde bg-white pb-[18px] pt-[18px] min-[900px]:flex"
+      className="sticky top-0 hidden h-dvh w-[80px] shrink-0 flex-col items-center border-r border-marca-borde bg-white pb-[18px] pt-[18px] md:flex"
     >
       <Image src="/simbolo-drc.png" alt="" width={40} height={40} priority className="mb-[22px] h-10 w-10" />
       <div className="flex flex-col gap-1.5">

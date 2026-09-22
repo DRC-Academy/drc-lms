@@ -15,7 +15,7 @@
 // la sesión se cerraría sola al pasar el ratón por encima del botón.
 // Con POST hace falta un envío explícito.
 //
-// El formulario que lo llama está en `components/Cabecera.tsx` y es un
+// El formulario que lo llama está en `components/leccion/MenuPerfil.tsx` y es un
 // form de HTML normal, así que funciona aunque no cargue el JavaScript.
 // ---------------------------------------------------------------
 

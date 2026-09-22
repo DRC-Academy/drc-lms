@@ -16,9 +16,7 @@ import {
   leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
-import { rutaDeMiCurso } from "@/lib/cursos";
 import { comoFecha } from "@/lib/fechas";
-import Cabecera from "@/components/Cabecera";
 import PanelPractica from "@/components/PanelPractica";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +57,7 @@ export default async function PaginaPractica() {
   // la cookie, ve que quien pide no es alumno y marca el bloque como
   // `generado_por_equipo`, que lo deja fuera de la lista del alumno, de
   // su espera entre generaciones y del panel.
-  const { sesion, alumnoId, revisando, paraEnlaces } = await exigirFoco();
+  const { sesion, alumnoId } = await exigirFoco();
 
   const [datos, progreso, generadosCrudos, ultimaGeneracion] = await Promise.all([
     obtenerAlumno(alumnoId),
@@ -110,14 +108,6 @@ export default async function PaginaPractica() {
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
-      <Cabecera
-        nombre={perfil?.nombre.trim() || undefined}
-        alumnoId={alumnoId}
-        miCurso={principal ? rutaDeMiCurso(principal) : null}
-        seccion="practica"
-        foco={paraEnlaces}
-        revisando={revisando}
-      />
 
       {/* El hueco de abajo es para la barra fija: 120px es lo que mide con
           su margen, así que la última tarjeta nunca queda debajo. En

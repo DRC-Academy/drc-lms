@@ -15,7 +15,6 @@ import { calcularDiploma } from "@/lib/diploma";
 import { conFoco } from "@/lib/foco";
 import { comoFecha } from "@/lib/fechas";
 import { textosActuales } from "@/lib/idioma-servidor";
-import Cabecera from "@/components/Cabecera";
 import Ficha from "@/components/progreso/Ficha";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +67,7 @@ export default async function PaginaProgreso() {
   // Igual que "Para ti": el alumno de la sesión, o el que el equipo está
   // revisando. Esta pantalla es de solo lectura —no hay nada que
   // guardar— así que la revisión no necesita ninguna precaución extra.
-  const { alumnoId, revisando, paraEnlaces } = await exigirFoco();
+  const { alumnoId, paraEnlaces } = await exigirFoco();
 
   const [perfil, recorrido] = await Promise.all([
     obtenerPerfil(alumnoId),
@@ -131,14 +130,6 @@ export default async function PaginaProgreso() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Cabecera
-        nombre={perfil?.nombre.trim() || undefined}
-        alumnoId={alumnoId}
-        miCurso={principal ? rutaDeMiCurso(principal) : null}
-        seccion="progreso"
-        foco={paraEnlaces}
-        revisando={revisando}
-      />
 
       <Ficha
         nombre={perfil?.nombre ?? ""}

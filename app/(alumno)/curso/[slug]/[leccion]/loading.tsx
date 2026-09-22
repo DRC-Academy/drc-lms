@@ -4,7 +4,7 @@ import { textosActuales } from "@/lib/idioma-servidor";
  * Lo que se ve mientras carga una lección.
  *
  * QUÉ NO ESTÁ AQUÍ, Y ES LO IMPORTANTE: la barra de iconos. Vive en el
- * layout del curso y no se desmonta al cambiar de lección, así que aquí
+ * layout común del alumno y no se desmonta al cambiar de lección, así que aquí
  * no hay nada que sustituir: esto se pinta AL LADO de la barra de
  * verdad.
  *

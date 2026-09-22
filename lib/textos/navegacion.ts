@@ -42,6 +42,13 @@ export type TextosNavegacion = {
    * pantalla. El título de dentro sí lleva el posesivo.
    */
   clases: string;
+  /**
+   * Las etiquetas de la barra de pestañas de móvil. Son seis celdas
+   * —cinco secciones y el perfil— y a 375px cada una mide unos 62px:
+   * "Mi progreso" no cabe y se cortaba en "Mi progr…". Aquí va sin
+   * posesivo; el nombre entero sigue en el `aria-label`.
+   */
+  cortas: { inicio: string; clases: string; curso: string; practica: string; progreso: string };
   /** El `aria-label` de las dos barras, la de arriba y la de móvil. */
   secciones: string;
 
@@ -77,6 +84,7 @@ const ES: TextosNavegacion = {
   paraTi: "Para ti",
   miProgreso: "Mi progreso",
   clases: "Clases",
+  cortas: { inicio: "Inicio", clases: "Clases", curso: "Curso", practica: "Para ti", progreso: "Progreso" },
   secciones: "Secciones",
 
   ayuda: "Ayuda",
@@ -105,6 +113,7 @@ const EN: TextosNavegacion = {
   paraTi: "For you",
   miProgreso: "My progress",
   clases: "Classes",
+  cortas: { inicio: "Home", clases: "Classes", curso: "Course", practica: "For you", progreso: "Progress" },
   secciones: "Sections",
 
   ayuda: "Help",

@@ -11,7 +11,7 @@ import {
   type Periodo,
   type Vista,
 } from "@/lib/admin-servidor";
-import Cabecera from "@/components/Cabecera";
+import MarcoApp from "@/components/Navegacion";
 import PanelAdmin from "@/components/admin/PanelAdmin";
 import ListaPanel from "@/components/admin/ListaPanel";
 import ListaActivos from "@/components/admin/ListaActivos";
@@ -110,8 +110,10 @@ export default async function Home({
     : detalle.alumnos;
 
   return (
-    <>
-      <Cabecera />
+    // La misma navegación que el alumno, sin secciones: el equipo en su
+    // buscador todavía no tiene ninguna ficha de la que hablar. Le queda
+    // el símbolo y el perfil —idioma y salida—.
+    <MarcoApp datos={{ alumnoId: "", nombre: "", miCurso: null, foco: null, revisando: false }}>
 
       {/* 20px de margen lateral en móvil, no los 16 del resto de pantallas:
           aquí casi todo son filas que llegan hasta el borde de su tarjeta,
@@ -201,6 +203,6 @@ export default async function Home({
           />
         </div>
       </main>
-    </>
+    </MarcoApp>
   );
 }

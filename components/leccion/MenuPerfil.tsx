@@ -6,12 +6,11 @@ import BotonIdioma from "@/components/BotonIdioma";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 
 /**
- * El perfil, en la lección: quién es, en qué idioma lee y por dónde sale.
+ * El perfil: quién es, en qué idioma lee y por dónde sale.
  *
- * En el resto de la aplicación esas tres cosas viven en la cabecera. La
- * lección no la tiene, así que van detrás del avatar: al pie de la barra
- * de iconos en escritorio y como quinta pestaña de la navegación en
- * móvil. Lo que se abre es lo mismo en los dos sitios; lo que cambia es
+ * Desde que no hay cabecera, esas tres cosas van detrás del avatar en
+ * toda la aplicación: al pie de la barra de iconos en escritorio y como
+ * última pestaña de la navegación en móvil. Lo que se abre es lo mismo en los dos sitios; lo que cambia es
  * de dónde sale —un globo junto al avatar, o una hoja desde abajo—.
  *
  * SIN NOMBRE TAMBIÉN EXISTE. El equipo que repasa un curso sin ficha no
@@ -92,7 +91,7 @@ export default function MenuPerfil({
           onClick={() => setAbierto((v) => !v)}
           aria-expanded={abierto}
           aria-controls={idPanel}
-          className={`flex min-h-[44px] flex-col items-center justify-center gap-[5px] text-[12px] transition-colors ${
+          className={`flex min-h-[44px] flex-col items-center justify-center gap-[5px] rounded-[10px] text-[12px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-marca-verdeOsc ${
             abierto ? "font-semibold text-marca-tinta" : "font-medium text-marca-gris"
           }`}
         >
@@ -105,7 +104,7 @@ export default function MenuPerfil({
             por encima del botón flotante de la ayuda. */}
         {abierto &&
           createPortal(
-            <div className="fixed inset-0 z-[60] flex flex-col justify-end min-[900px]:hidden">
+            <div className="fixed inset-0 z-[60] flex flex-col justify-end md:hidden">
               <button
                 type="button"
                 aria-label={t.navegacion.cerrarElMenu}
@@ -116,7 +115,8 @@ export default function MenuPerfil({
                 id={idPanel}
                 role="dialog"
                 aria-label={t.navegacion.perfil}
-                className="aparece rounded-t-[20px] bg-white px-5 pb-8 pt-4"
+                className="aparece rounded-t-[20px] bg-white px-5 pt-4"
+                style={{ paddingBottom: "calc(32px + env(safe-area-inset-bottom))" }}
               >
                 <span aria-hidden className="mx-auto mb-4 block h-1 w-9 rounded-full bg-marca-bordeSuave" />
                 {contenido}
@@ -136,7 +136,7 @@ export default function MenuPerfil({
         aria-expanded={abierto}
         aria-controls={idPanel}
         aria-label={nombre.trim() ? t.navegacion.practicandoComo(nombre.trim()) : t.navegacion.perfil}
-        className="group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors hover:bg-marca-niebla"
+        className="group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors hover:bg-marca-niebla focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc"
       >
         <span
           aria-hidden

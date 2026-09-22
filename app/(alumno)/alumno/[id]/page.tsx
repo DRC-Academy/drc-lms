@@ -13,10 +13,8 @@ import {
   leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
-import { rutaDeMiCurso } from "@/lib/cursos";
 import { comoFecha } from "@/lib/fechas";
 import { calcularDiploma } from "@/lib/diploma";
-import Cabecera from "@/components/Cabecera";
 import AvatarProfesor from "@/components/AvatarProfesor";
 import BannerCurso from "@/components/BannerCurso";
 import BannerDiploma from "@/components/BannerDiploma";
@@ -212,16 +210,6 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
-      <Cabecera
-        nombre={nombre || undefined}
-        // El de la ficha, no el de la sesión: es lo que le da navegación
-        // al equipo sin sacarlo del alumno que está revisando.
-        alumnoId={params.id}
-        miCurso={principal ? rutaDeMiCurso(principal) : null}
-        seccion="inicio"
-        foco={foco}
-        revisando={revisando}
-      />
 
       <main className="mx-auto w-full max-w-contenido flex-1 px-4 pb-8 pt-[18px] min-[900px]:px-9 min-[900px]:pb-11 min-[900px]:pt-8">
         {/* Control del equipo, no del alumno: va arriba del todo y fuera

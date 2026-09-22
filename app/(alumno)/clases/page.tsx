@@ -1,11 +1,6 @@
-import { nivelDelAlumno } from "@/lib/estimacion";
-import { obtenerCalendario, obtenerPerfil, obtenerQuitas } from "@/lib/gestion";
+import { obtenerCalendario, obtenerQuitas } from "@/lib/gestion";
 import { exigirFoco } from "@/lib/sesion-servidor";
 import { textosActuales } from "@/lib/idioma-servidor";
-import { cursosDelInicio } from "@/lib/cursos-servidor";
-import { rutaDeMiCurso } from "@/lib/cursos";
-import { comoFecha } from "@/lib/fechas";
-import Cabecera from "@/components/Cabecera";
 import MisClases from "@/components/clases/MisClases";
 
 export const dynamic = "force-dynamic";
@@ -27,38 +22,16 @@ export const dynamic = "force-dynamic";
  * cacheada diría "hoy" el día siguiente.
  */
 export default async function PaginaClases() {
-  const { alumnoId, revisando, paraEnlaces } = await exigirFoco();
+  const { alumnoId } = await exigirFoco();
 
-  const [perfil, calendario, quitas] = await Promise.all([
-    obtenerPerfil(alumnoId),
+  const [calendario, quitas] = await Promise.all([
     obtenerCalendario(alumnoId),
     obtenerQuitas(alumnoId),
   ]);
   const t = textosActuales();
 
-  // Solo para que la cabecera pueda pintar «Mi curso» sin cambiar de
-  // forma entre pantallas, igual que en `/practica`.
-  const principal = perfil
-    ? (
-        await cursosDelInicio(
-          alumnoId,
-          perfil.plan,
-          nivelDelAlumno(alumnoId, perfil),
-          comoFecha(perfil.fechaInicio)
-        )
-      )[0]
-    : undefined;
-
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
-      <Cabecera
-        nombre={perfil?.nombre.trim() || undefined}
-        alumnoId={alumnoId}
-        miCurso={principal ? rutaDeMiCurso(principal) : null}
-        seccion="clases"
-        foco={paraEnlaces}
-        revisando={revisando}
-      />
 
       {/* El hueco de abajo es para la barra fija de móvil, igual que en
           las demás secciones. */}
