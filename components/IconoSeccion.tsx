@@ -1,5 +1,5 @@
 /**
- * Los iconos de las cuatro secciones y sus tipos.
+ * Los iconos de las cinco secciones y sus tipos.
  *
  * Viven aparte de `Cabecera.tsx` porque los pinta también la barra de
  * iconos de la lección, que es un componente de cliente, y la cabecera
@@ -7,7 +7,7 @@
  * puede arrastrar.
  */
 
-export type SeccionActiva = "inicio" | "curso" | "practica" | "progreso";
+export type SeccionActiva = "inicio" | "curso" | "clases" | "practica" | "progreso";
 
 export type EnlaceSeccion = { clave: SeccionActiva; texto: string; href: string };
 
@@ -50,6 +50,17 @@ export function Icono({
           reducida a lo que se distingue en 18 píxeles. Con trazo grueso y
           sin relleno, porque tres rectángulos rellenos a este tamaño se
           leen como un bloque macizo y no como una progresión. */}
+      {/* Clases: un calendario. Es el único icono de los cinco que tiene
+          que decir "cuándo", y a 18 píxeles el calendario es la forma
+          que nadie confunde: la cabecera con las dos anillas se lee
+          incluso rellena de verde. */}
+      {seccion === "clases" && (
+        <>
+          <rect x="2.6" y="3.9" width="12.8" height="11.2" rx="1.6" stroke={trazo} fill={relleno} />
+          <path d="M2.6 7.3h12.8" stroke={activo ? "#FFFFFF" : trazo} />
+          <path d="M6.2 2.5v2.4M11.8 2.5v2.4" stroke={trazo} />
+        </>
+      )}
       {seccion === "progreso" && (
         <>
           <path d="M3.4 14.6v-3.1" stroke={trazo} strokeWidth="2.2" />

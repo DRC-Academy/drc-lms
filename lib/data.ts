@@ -226,6 +226,34 @@ export type PerfilAlumno = {
    * entre "te lo envió" y "te lo enviará" sin saber cuál es verdad.
    */
   formTokenEnviadoEn: string | null;
+  /**
+   * La sala donde el alumno entra a clase, tal y como está escrita en
+   * `assignments.meet_link`. Null cuando el campo está vacío.
+   *
+   * SIN VALIDAR: aquí llega el texto crudo, incluido el que no es un
+   * enlace —hay siete alumnos con "aaa", "hola" o una invitación de Zoom
+   * pegada entera—. Quien decide si eso es un botón es `enlaceDeClase`
+   * en `lib/clases.ts`, que es el único sitio donde se mira.
+   *
+   * Y NO ES UN ENLACE POR CLASE: es la sala fija del profesor, que en
+   * varios casos comparten todos sus alumnos. No caduca.
+   */
+  meetLink: string | null;
+  /**
+   * El horario recurrente acordado, crudo de `assignments.slots`:
+   * `[{ day: "Miércoles", hour: "11:00" }, …]`, una entrada por HORA de
+   * clase. Lo lee `normalizarSlots` en `lib/clases.ts`.
+   *
+   * `unknown` y no un tipo: es JSON de una base que el LMS no controla,
+   * y tiparlo aquí sería prometer una forma que nadie garantiza. La
+   * promesa la hace el validador, no la declaración.
+   *
+   * Null mientras Gestión no haya ejecutado
+   * `supabase/gestion-vista-perfil-clases.sql`. Igual que con
+   * `formToken`, la columna que todavía no existe llega `undefined`, la
+   * sección de clases no se pinta y el orden de despliegue da igual.
+   */
+  slots: unknown;
 };
 
 /**

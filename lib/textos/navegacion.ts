@@ -34,6 +34,14 @@ export type TextosNavegacion = {
   miCurso: string;
   paraTi: string;
   miProgreso: string;
+  /**
+   * LA QUINTA PESTAÑA, y con ella la barra de móvil pasa de cuatro
+   * celdas a cinco: a 320px cada una baja de 77,5px a 62px. Por eso esta
+   * etiqueta es la más corta de las cinco —"Clases" / "Classes", seis y
+   * siete caracteres— en vez de "Mis clases", que es como se llama la
+   * pantalla. El título de dentro sí lleva el posesivo.
+   */
+  clases: string;
   /** El `aria-label` de las dos barras, la de arriba y la de móvil. */
   secciones: string;
 
@@ -68,6 +76,7 @@ const ES: TextosNavegacion = {
   miCurso: "Mi curso",
   paraTi: "Para ti",
   miProgreso: "Mi progreso",
+  clases: "Clases",
   secciones: "Secciones",
 
   ayuda: "Ayuda",
@@ -95,6 +104,7 @@ const EN: TextosNavegacion = {
   miCurso: "My course",
   paraTi: "For you",
   miProgreso: "My progress",
+  clases: "Classes",
   secciones: "Sections",
 
   ayuda: "Help",

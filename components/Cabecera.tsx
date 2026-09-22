@@ -94,7 +94,7 @@ export type ContextoCurso = {
 };
 
 /**
- * Las cuatro secciones del alumno, como enlaces.
+ * Las cinco secciones del alumno, como enlaces.
  *
  * Los calcula la cabecera desde siempre; ahora también los pide la barra
  * de iconos de la lección, que es la misma navegación con otra forma.
@@ -123,6 +123,17 @@ export function enlacesDeSecciones({
 
   return [
     { clave: "inicio" as const, texto: t.inicio, href: `/alumno/${alumnoId}` },
+    // CLASES VA LA SEGUNDA, y es lo único de este orden que no es
+    // histórico. Las otras tres son estudio por su cuenta y se pueden
+    // hacer a cualquier hora; esta tiene un botón que importa a una hora
+    // concreta, así que se pone donde se llega sin buscar. Mover la
+    // línea de sitio es todo lo que hace falta para cambiar de opinión.
+    //
+    // SE PINTA SIEMPRE, al revés que «Mi curso», que desaparece cuando
+    // no hay curso. Aquí no hace falta la condición: los 205 alumnos
+    // tienen horario, y el que algún día no lo tenga encuentra la
+    // pantalla explicándoselo en vez de una pestaña que se esfumó.
+    { clave: "clases" as const, texto: t.clases, href: "/clases" },
     ...(miCurso ? [{ clave: "curso" as const, texto: t.miCurso, href: miCurso }] : []),
     { clave: "practica" as const, texto: t.paraTi, href: "/practica" },
     // NOMBRE PROVISIONAL. "Mi ficha" quedó descartado —suena a

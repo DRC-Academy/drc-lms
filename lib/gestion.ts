@@ -63,6 +63,13 @@ function aPerfil(fila: Fila): PerfilAlumno {
     // aguanta que la columna todavía no exista en la vista de Gestión.
     formToken: comoTextoOpcional(fila.form_token),
     formTokenEnviadoEn: comoTextoOpcional(fila.form_token_enviado_en),
+    // Las dos de «Mis clases». Aguantan igual que las anteriores que la
+    // vista de Gestión todavía no las tenga: `comoTextoOpcional`
+    // devuelve null y `slots` se queda en undefined, que es lo que
+    // `normalizarSlots` trata como "sin horario".
+    // Ver `supabase/gestion-vista-perfil-clases.sql`.
+    meetLink: comoTextoOpcional(fila.meet_link),
+    slots: fila.slots ?? null,
   };
 }
 
