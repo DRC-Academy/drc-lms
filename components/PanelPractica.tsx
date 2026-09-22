@@ -150,7 +150,7 @@ export default function PanelPractica({
       <div className="flex flex-col gap-4 min-[900px]:flex-row min-[900px]:items-end min-[900px]:gap-7">
         {/* La mascota antes del texto: encima en móvil, a la izquierda
             en escritorio, como en la franja del inicio. */}
-        {conMascota && <MascotaBienvenida className="shrink-0" />}
+        {conMascota && <MascotaBienvenida id="parati-saludo" prioridad={1} className="shrink-0" />}
         <div className="min-w-0 flex-1">
           <p className="text-[10.5px] font-extrabold uppercase leading-none tracking-[0.16em] text-marca-verdeOsc min-[900px]:text-[11.5px]">
             {saludo} · {hoy}

@@ -15,7 +15,7 @@ import PantallaConPanel from "@/components/leccion/PantallaConPanel";
 import PasoAPaso, { type Paso } from "@/components/leccion/PasoAPaso";
 import { usarMarco } from "@/components/leccion/MarcoCurso";
 import PanelBloque from "@/components/practica/PanelBloque";
-import Geckonoid from "@/components/mascota/Geckonoid";
+import AnclaMascota from "@/components/mascota/AnclaMascota";
 import { useMascota } from "@/components/mascota/useMascota";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { usarTraduccion } from "@/components/ejercicios/usarTraduccion";
@@ -211,7 +211,7 @@ export default function VistaBloque({
           profesor={profesor}
           hrefParaTi={hrefParaTi}
           alElegir={cerrarPanel}
-          mascota={mascota}
+          conMascota
         />
       }
       panelAria={todos.navegacion.paraTi}
@@ -295,7 +295,7 @@ export default function VistaBloque({
                 ejercicios={unificados}
                 acertado={bien}
                 verEjercicio={verEjercicio}
-                adorno={<Geckonoid estado={mascota.estado} disparo={mascota.disparo} size={150} etiqueta={null} />}
+                adorno={<AnclaMascota id="bloque-cierre" prioridad={3} tamaño={150} />}
                 t={tx}
                 acciones={
                   <>

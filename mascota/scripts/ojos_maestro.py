@@ -43,7 +43,7 @@ from recortar import AIRE, UMBRAL_ALFA
 
 RIVE = Path(__file__).resolve().parents[1] / "rive"
 MAESTRO = RIVE / "maestro.png"
-DESTINO = RIVE / "piezas" / "ojos_maestro.png"
+DESTINO = RIVE.parent / "_archivo" / "piezas" / "ojos_maestro.png"
 VISTA = RIVE / "ojos_vista.png"
 
 # Los dos ojos con sus párpados, sin las fosas nasales (empiezan en y≈182),

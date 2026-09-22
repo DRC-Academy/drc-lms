@@ -1,31 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import Geckonoid, {
-  ESTADOS_MASCOTA,
-  GESTOS_MASCOTA,
-  MICRO_GESTOS,
-  type EstadoMascota,
-  type GestoMascota,
-  type MicroGesto,
-} from "@/components/mascota/Geckonoid";
-import { useMascota } from "@/components/mascota/useMascota";
+import AnclaMascota from "@/components/mascota/AnclaMascota";
+import { ESTADOS_MASCOTA, GESTOS_MASCOTA, type EstadoMascota, type GestoMascota } from "@/components/mascota/estados";
+import { INTENSIDADES, estadoVisible, storeMascota, useStoreMascota, type Intensidad } from "@/components/mascota/store";
 
 /**
- * Banco de pruebas de la mascota: la mascota y un botón por estado, y
- * otro por gesto (encima del estado que haya).
+ * EL TABLERO DE LA MASCOTA.
  *
- * No es una pantalla del alumno, pero cuelga del mismo middleware, así
- * que hace falta sesión para verla. Se queda en el repo a propósito:
- * es donde se comprueba cada gesto nuevo sin tener que provocarlo en
- * el producto. El fondo oscuro es el del banner (banner.fondo), donde
- * vive la mascota del inicio, y sirve para ver los bordes y los huecos:
- * sobre blanco un filete claro o un hueco mal cerrado no se notan.
- * La velocidad (0,5×, 1×, 2×) es para revisar los tiempos: a cámara
- * lenta se ve la anticipación y el aplastamiento del salto.
+ * No pinta una mascota propia: la que se ve es la única de la app (la
+ * de CapaMascota), y esto son cuatro anclas de prueba, de prioridades 1
+ * a 4, que se montan y desmontan con su casilla. Gana la de más
+ * prioridad visible; sin ninguna, se va a la percha de abajo a la
+ * derecha. Debajo de las anclas hay un tramo alto para bajar hasta que
+ * dejen de verse.
+ *
+ * Cuelga del mismo middleware que el resto, así que pide sesión. Se
+ * queda en el repo a propósito: es donde se prueba cada gesto sin
+ * tener que provocarlo en el producto. El fondo oscuro es el del banner
+ * (banner.fondo): sobre blanco un filete claro no se nota.
  */
 
-const NOMBRES: Record<EstadoMascota, string> = {
+const NOMBRES_ESTADO: Record<EstadoMascota, string> = {
   idle: "Idle",
   estudiando: "Estudiando",
   exito: "Éxito",
@@ -46,154 +42,139 @@ const NOMBRES_GESTO: Record<GestoMascota, string> = {
   mira_izq: "Mira a la izquierda",
   mira_der: "Mira a la derecha",
   sentado: "Sentado",
+  guino: "Guiño",
 };
 
-const NOMBRES_MICRO: Record<MicroGesto, string> = {
-  cabeza: "Cabeza",
-  balanceo: "Balanceo",
-  parpadeo_doble: "Parpadeo doble",
-  cola: "Cola",
-};
+const NOMBRES_INTENSIDAD: Record<Intensidad, string> = { tranquila: "Tranquila", normal: "Normal", juguetona: "Juguetona" };
 
-const TAMANOS = [120, 240, 400] as const;
+/** Las cuatro anclas de prueba: prioridad y alto. */
+const ANCLAS = [
+  { id: "dev-a", prioridad: 1, tamaño: 120 },
+  { id: "dev-b", prioridad: 2, tamaño: 88 },
+  { id: "dev-c", prioridad: 3, tamaño: 150 },
+  { id: "dev-d", prioridad: 4, tamaño: 200 },
+] as const;
+
+/** Estados que se sostienen: se ponen como base de las anclas, no se disparan. */
+const DE_BASE: readonly EstadoMascota[] = ["idle", "estudiando", "nivel_superado"];
+const DE_PASO = ESTADOS_MASCOTA.filter((e) => !DE_BASE.includes(e));
 const VELOCIDADES = [0.5, 1, 2] as const;
 
-export default function PaginaMascota() {
-  const mascota = useMascota();
-  const [size, setSize] = useState<(typeof TAMANOS)[number]>(240);
-  const [velocidad, setVelocidad] = useState<(typeof VELOCIDADES)[number]>(1);
-  const [volverAIdle, setVolverAIdle] = useState(true);
+const boton = "rounded-full border border-marca-borde bg-white px-3 py-1.5 text-[13px] font-semibold text-marca-tinta hover:bg-marca-niebla";
+const botonElegido = (si: boolean) =>
+  `rounded-full px-2.5 py-1 text-[13px] font-semibold ${si ? "bg-marca-tinta text-white" : "bg-marca-niebla text-marca-tinta"}`;
+
+export default function TableroMascota() {
+  const [montadas, setMontadas] = useState<Record<string, boolean>>({ "dev-a": true, "dev-b": true, "dev-c": false, "dev-d": false });
+  const [base, setBase] = useState<EstadoMascota>("idle");
   const [fondo, setFondo] = useState<"claro" | "oscuro">("claro");
-  const [micro, setMicro] = useState<{ nombre: MicroGesto; n: number }>();
-  const [ultimoGesto, setUltimoGesto] = useState<MicroGesto>();
+
+  const store = useStoreMascota((e) => e);
+  const visible = estadoVisible(store);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[880px] flex-col items-center gap-8 px-4 py-10">
+    <main className="mx-auto flex min-h-dvh w-full max-w-[980px] flex-col gap-6 px-5 py-10">
       <div>
-        <h1 className="text-center font-display text-[26px] font-bold text-marca-tinta">Geckonoid</h1>
-        <p className="mt-1 text-center text-[14px] text-marca-gris">
-          Estado: <strong className="text-marca-tinta">{mascota.estado}</strong> · disparo {mascota.disparo}
-          {ultimoGesto && (
-            <>
-              {" "}
-              · último micro-gesto: <strong className="text-marca-tinta">{NOMBRES_MICRO[ultimoGesto]}</strong>
-            </>
-          )}
+        <h1 className="font-display text-[26px] font-bold text-marca-tinta">Geckonoid · tablero</h1>
+        <p className="mt-1 text-[14px] text-marca-gris">
+          Ancla activa: <strong className="text-marca-tinta">{store.activa ?? "percha"}</strong> · estado{" "}
+          <strong className="text-marca-tinta">{visible}</strong>
+          {store.transitorio && " (de paso)"} · gesto <strong className="text-marca-tinta">{store.pose?.nombre ?? "—"}</strong> ·
+          intensidad <strong className="text-marca-tinta">{store.intensidad}</strong>
         </p>
       </div>
 
-      {/* Con aire a los lados y arriba: las manos de «éxito» sobresalen del lienzo, y el salto sube. */}
-      <div className={`rounded-[24px] border border-marca-borde px-16 pb-6 pt-14 ${fondo === "oscuro" ? "bg-banner-fondo" : "bg-white"}`}>
-        <Geckonoid
-          estado={mascota.estado}
-          disparo={mascota.disparo}
-          size={size}
-          volverAIdle={volverAIdle}
-          velocidad={velocidad}
-          pose={mascota.pose}
-          micro={micro}
-          onMicro={setUltimoGesto}
-        />
-      </div>
-
-      <div className="flex flex-wrap justify-center gap-2">
-        {ESTADOS_MASCOTA.map((estado) => (
-          <button
-            key={estado}
-            type="button"
-            onClick={() => mascota.dispara(estado)}
-            className={`rounded-full border px-4 py-2 text-[14px] font-semibold transition-colors ${
-              mascota.estado === estado
-                ? "border-marca-verde bg-marca-verdeFondo text-marca-verdeOsc"
-                : "border-marca-borde bg-white text-marca-tinta hover:bg-marca-niebla"
-            }`}
-          >
-            {NOMBRES[estado]}
-          </button>
-        ))}
-      </div>
-
-      {/* Los gestos: encima del estado, se van solos. */}
-      <div className="flex flex-wrap items-center justify-center gap-2 text-[13.5px] text-marca-gris">
-        Gesto
-        {GESTOS_MASCOTA.map((nombre) => (
-          <button
-            key={nombre}
-            type="button"
-            onClick={() => mascota.gesto(nombre)}
-            className="rounded-full border border-marca-borde bg-white px-3 py-1.5 text-[13px] font-semibold text-marca-tinta hover:bg-marca-niebla"
-          >
-            {NOMBRES_GESTO[nombre]}
-          </button>
-        ))}
-      </div>
-
-      {/* Los micro-gestos de idle, a mano: solos salen cada 8–15 s. */}
-      <div className="flex flex-wrap items-center justify-center gap-2 text-[13.5px] text-marca-gris">
-        Micro-gesto
-        {MICRO_GESTOS.map((nombre) => (
-          <button
-            key={nombre}
-            type="button"
-            onClick={() => setMicro((g) => ({ nombre, n: (g?.n ?? 0) + 1 }))}
-            className="rounded-full border border-marca-borde bg-white px-3 py-1.5 text-[13px] font-semibold text-marca-tinta hover:bg-marca-niebla"
-          >
-            {NOMBRES_MICRO[nombre]}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-center gap-4 text-[13.5px] text-marca-gris">
-        <span className="inline-flex items-center gap-1.5">
-          Alto
-          {TAMANOS.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setSize(t)}
-              className={`rounded-full px-2.5 py-1 font-semibold ${
-                size === t ? "bg-marca-tinta text-white" : "bg-marca-niebla text-marca-tinta"
-              }`}
-            >
-              {t}
+      {/* LOS MANDOS */}
+      <section className="flex flex-col gap-3 text-[13.5px] text-marca-gris">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-24">Intensidad</span>
+          {INTENSIDADES.map((i) => (
+            <button key={i} type="button" aria-pressed={store.intensidad === i} onClick={() => storeMascota.fijarIntensidad(i)} className={botonElegido(store.intensidad === i)}>
+              {NOMBRES_INTENSIDAD[i]}
             </button>
           ))}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          Velocidad
+          <span className="ml-4">Velocidad</span>
           {VELOCIDADES.map((x) => (
-            <button
-              key={x}
-              type="button"
-              onClick={() => setVelocidad(x)}
-              className={`rounded-full px-2.5 py-1 font-semibold ${
-                velocidad === x ? "bg-marca-tinta text-white" : "bg-marca-niebla text-marca-tinta"
-              }`}
-            >
+            <button key={x} type="button" aria-pressed={store.velocidad === x} onClick={() => storeMascota.fijarVelocidad(x)} className={botonElegido(store.velocidad === x)}>
               {x}×
             </button>
           ))}
-        </span>
-        <label className="inline-flex items-center gap-2">
-          <input type="checkbox" checked={volverAIdle} onChange={(e) => setVolverAIdle(e.target.checked)} />
-          Vuelve a idle a los 2,5 s
-        </label>
-        <span className="inline-flex items-center gap-1.5">
-          Fondo
+          <span className="ml-4">Fondo</span>
           {(["claro", "oscuro"] as const).map((f) => (
-            <button
-              key={f}
-              type="button"
-              aria-pressed={fondo === f}
-              onClick={() => setFondo(f)}
-              className={`rounded-full px-2.5 py-1 font-semibold ${
-                fondo === f ? "bg-marca-tinta text-white" : "bg-marca-niebla text-marca-tinta"
-              }`}
-            >
+            <button key={f} type="button" aria-pressed={fondo === f} onClick={() => setFondo(f)} className={botonElegido(fondo === f)}>
               {f === "claro" ? "Claro" : "Oscuro"}
             </button>
           ))}
-        </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-24">De paso</span>
+          {DE_PASO.map((e) => (
+            <button key={e} type="button" onClick={() => storeMascota.dispara(e)} className={boton}>
+              {NOMBRES_ESTADO[e]}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-24">De base</span>
+          {DE_BASE.map((e) => (
+            <button key={e} type="button" aria-pressed={base === e} onClick={() => setBase(e)} className={botonElegido(base === e)}>
+              {NOMBRES_ESTADO[e]}
+            </button>
+          ))}
+          <span className="text-marca-grisSuave">(el de las cuatro anclas)</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-24">Gesto</span>
+          {GESTOS_MASCOTA.map((g) => (
+            <button key={g} type="button" onClick={() => storeMascota.gesto(g)} className={boton}>
+              {NOMBRES_GESTO[g]}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-24">Anclas</span>
+          {ANCLAS.map((a) => (
+            <label key={a.id} className="inline-flex items-center gap-1.5">
+              <input type="checkbox" checked={montadas[a.id]} onChange={(e) => setMontadas((m) => ({ ...m, [a.id]: e.target.checked }))} />
+              {a.id} · p{a.prioridad} · {a.tamaño}px
+            </label>
+          ))}
+        </div>
+      </section>
+
+      {/* LAS ANCLAS. Con aire arriba: el salto de «éxito» sube. */}
+      <section className={`grid grid-cols-2 gap-4 rounded-[24px] border border-marca-borde p-6 pt-14 min-[700px]:grid-cols-4 ${fondo === "oscuro" ? "bg-banner-fondo" : "bg-white"}`}>
+        {ANCLAS.map((a) => (
+          <div key={a.id} className="flex min-h-[220px] flex-col items-center justify-end gap-2 rounded-[16px] border border-dashed border-marca-borde p-3">
+            {montadas[a.id] && <AnclaMascota id={a.id} prioridad={a.prioridad} tamaño={a.tamaño} estado={base} />}
+            <span className={`text-[12px] ${fondo === "oscuro" ? "text-white/70" : "text-marca-gris"}`}>
+              {a.id} · p{a.prioridad} {store.activa === a.id && "· activa"}
+            </span>
+          </div>
+        ))}
+      </section>
+
+      {/* EL STORE */}
+      <section className="grid gap-4 min-[800px]:grid-cols-2">
+        <div>
+          <h2 className="text-[13px] font-bold uppercase tracking-[0.1em] text-marca-grisSuave">Anclas registradas</h2>
+          <pre className="mt-2 overflow-x-auto rounded-[12px] bg-marca-niebla p-3 text-[12px] leading-[1.5] text-marca-tinta">
+            {Object.values(store.anclas)
+              .map((a) => `${a.id.padEnd(16)} p${a.prioridad}  ${a.estado.padEnd(15)} ${a.activa ? "" : "(fuera) "}${a.el ? "" : "(sin hueco)"}`)
+              .join("\n") || "—"}
+          </pre>
+        </div>
+        <div>
+          <h2 className="text-[13px] font-bold uppercase tracking-[0.1em] text-marca-grisSuave">Eventos</h2>
+          <pre className="mt-2 max-h-[260px] overflow-auto rounded-[12px] bg-marca-niebla p-3 text-[12px] leading-[1.5] text-marca-tinta">
+            {store.eventos.map((e) => `${new Date(e.t).toLocaleTimeString()}  ${e.tipo.padEnd(10)} ${e.detalle}`).join("\n") || "—"}
+          </pre>
+        </div>
+      </section>
+
+      {/* Para bajar hasta que las anclas dejen de verse y probar la percha. */}
+      <div className="flex h-[140vh] items-start justify-center rounded-[24px] border border-dashed border-marca-borde pt-10 text-[13px] text-marca-grisSuave">
+        Sin anclas a la vista: la mascota se va a la percha, abajo a la derecha.
       </div>
     </main>
   );

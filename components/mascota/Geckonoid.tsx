@@ -95,6 +95,15 @@ const agrupar = <P extends Parche>(lista: P[], clave: (p: P) => string) =>
   }, {});
 const PARCHES_POR_ESTADO = agrupar(DATOS.parches, (p) => p.estado);
 const PARCHES_POR_GESTO = agrupar(DATOS.gestos, (p) => p.gesto);
+// El guiño no tiene variante propia: son los parches de cara de «ánimo»
+// (el ojo cerrado y la ceja), sin el brazo del pulgar.
+PARCHES_POR_GESTO.guino = (PARCHES_POR_ESTADO.animo ?? []).filter((p) => p.etiqueta === "cara" || p.etiqueta === "cabeza");
+
+/**
+ * Los estados cuyos parches van ENCIMA del gesto en vez de apartarse:
+ * en «estudiando» los anteojos siguen puestos mientras piensa.
+ */
+const ESTADOS_SOBRE_GESTO: ReadonlySet<EstadoMascota> = new Set<EstadoMascota>(["estudiando"]);
 const SIN_PARCHES: Parche[] = [];
 const PARPADEO = PARCHES_POR_ESTADO.parpadeo ?? [];
 
@@ -127,6 +136,15 @@ const FUNDIDO_S = 0.2;
  * da 1 en cada frame.
  */
 const FUNDIDO_COMPLETO_S = 0.15;
+/**
+ * Por gesto completo, si difiere. Lo que se ve translúcido un instante
+ * son las partes que están en una sola de las dos poses (piernas, cola):
+ * en salto se acorta a 100 ms. En sentado se probó en dos fases —quitar
+ * antes cola y piernas de la base (60 ms)— y fue peor: el cuerpo se ve
+ * cortado a la altura de la cadera y sus piernas entran translúcidas
+ * igual. Queda con el fundido de siempre.
+ */
+const FUNDIDOS_COMPLETO_S: Partial<Record<GestoMascota, number>> = { salto: 0.1 };
 const RETARDO_CARA_S = 0.1;
 const RETARDO_BRAZO_S = 0.15;
 const RETARDO_ADORNO_S = 0.22;
@@ -196,8 +214,10 @@ export default function Geckonoid({
   onIdle,
   velocidad = 1,
   pose,
+  sostenida,
   micro,
   onMicro,
+  onToque,
   quieta = false,
   className = "",
   etiqueta = "Geckonoid",
@@ -214,6 +234,13 @@ export default function Geckonoid({
   velocidad?: number;
   /** Un gesto encima del estado. `n` cambia para repetirlo. Lo lleva `useMascota().gesto`. */
   pose?: { nombre: GestoMascota; n: number };
+  /**
+   * Un gesto que se queda puesto hasta que se quita (la mascota sentada
+   * en la percha). Un gesto de `pose` lo tapa mientras dura.
+   */
+  sostenida?: GestoMascota;
+  /** Al tocarla. Sin esto, tocarla no hace nada. */
+  onToque?: () => void;
   /** Un micro-gesto pedido desde fuera (solo en idle). `n` cambia para repetirlo. */
   micro?: { nombre: MicroGesto; n: number };
   /** Avisa de cada micro-gesto, espontáneo o pedido. */
@@ -301,22 +328,32 @@ export default function Geckonoid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pose?.n]);
 
+  // El gesto que se ve: el pedido si hay, si no el sostenido.
+  const gesto = useMemo(() => gestoVivo ?? (sostenida ? { nombre: sostenida, n: -1 } : null), [gestoVivo, sostenida]);
+
   // Lo que se ve: el estado, y el gesto encima. Si algún parche del
   // estado pisa uno del gesto, el estado entero se aparta —con su hueco—
-  // mientras dura.
-  const parchesGesto = gestoVivo ? (PARCHES_POR_GESTO[gestoVivo.nombre] ?? SIN_PARCHES) : SIN_PARCHES;
+  // mientras dura; salvo los de ESTADOS_SOBRE_GESTO, que van encima.
+  const parchesGesto = gesto ? (PARCHES_POR_GESTO[gesto.nombre] ?? SIN_PARCHES) : SIN_PARCHES;
   const parchesEstado = PARCHES_POR_ESTADO[vivo] ?? SIN_PARCHES;
   const completo = parchesGesto.some((p) => p.completo);
-  const estadoApartado = parchesEstado.some((p) => parchesGesto.some((g) => sePisan(p, g)));
+  const sobreGesto = ESTADOS_SOBRE_GESTO.has(vivo) && !completo;
+  const estadoApartado = !sobreGesto && parchesEstado.some((p) => parchesGesto.some((g) => sePisan(p, g)));
   const parches = useMemo(
-    () => (estadoApartado ? parchesGesto : [...parchesEstado, ...parchesGesto]),
-    [estadoApartado, parchesEstado, parchesGesto],
+    () => (estadoApartado ? parchesGesto : sobreGesto ? [...parchesGesto, ...parchesEstado] : [...parchesEstado, ...parchesGesto]),
+    [estadoApartado, sobreGesto, parchesEstado, parchesGesto],
   );
-  const huecos = [estadoApartado ? undefined : DATOS.huecos[vivo], gestoVivo && DATOS.huecos[gestoVivo.nombre]].filter(
+  const huecos = [estadoApartado ? undefined : DATOS.huecos[vivo], gesto && DATOS.huecos[gesto.nombre]].filter(
     (h): h is string => !!h,
   );
   const resto = estadoApartado ? undefined : DATOS.restos[vivo];
-  const restoGesto = gestoVivo ? DATOS.restos[gestoVivo.nombre] : undefined;
+  const restoGesto = gesto ? DATOS.restos[gesto.nombre] : undefined;
+
+  // El fundido del gesto completo: el de entrada lo dice el gesto; el de
+  // salida, el último completo que hubo.
+  const ultimoCompleto = useRef<GestoMascota | null>(null);
+  if (completo && gesto) ultimoCompleto.current = gesto.nombre;
+  const fundidoDe = ultimoCompleto.current ? FUNDIDOS_COMPLETO_S[ultimoCompleto.current] : undefined;
 
   // El parpadeo: cada 3–5 segundos, 150 ms, y solo si ningún parche del
   // estado tapa los ojos (en «ánimo» ya hay un guiño puesto).
@@ -475,6 +512,7 @@ export default function Geckonoid({
       ]),
     mira_izq: (el) => animar(el, { ...EN_REPOSO, rotate: -2 }, muelle(250, 22)),
     mira_der: (el) => animar(el, { ...EN_REPOSO, rotate: 2 }, muelle(250, 22)),
+    guino: (el) => animar(el, { ...EN_REPOSO, rotate: [0, 3, 0] }, { duration: seg(0.6), ease: "easeInOut" }),
     sentado: (el) =>
       correr([
         () => animar(el, { y: 0, rotate: 0, scaleX: 1.04, scaleY: 0.94 }, { duration: seg(0.1), ease: "easeOut" }),
@@ -487,8 +525,8 @@ export default function Geckonoid({
   const microEnCurso = useRef<{ stop: () => void } | null>(null);
   // Mientras hay un gesto de `pose`, ni el guion del estado ni los
   // micro-gestos tocan el cuerpo: se pisarían.
-  const gestoActivo = useRef(gestoVivo);
-  gestoActivo.current = gestoVivo;
+  const gestoActivo = useRef(gesto);
+  gestoActivo.current = gesto;
   const ultimoMicro = useRef<MicroGesto | null>(null);
   const [colaAmplia, setColaAmplia] = useState(false);
 
@@ -545,8 +583,8 @@ export default function Geckonoid({
       return;
     }
     if (cabeza.current) animar(cabeza.current, { rotate: 0 }, muelle(400, 25));
-    const gesto = GESTOS[vivo](el);
-    return () => gesto.stop();
+    const guion = GESTOS[vivo](el);
+    return () => guion.stop();
     // GESTOS se arma en cada render; lo que importa es el estado, la vez,
     // el tamaño y el ritmo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -558,7 +596,7 @@ export default function Geckonoid({
   useEffect(() => {
     const el = cuerpo.current;
     if (!el) return;
-    if (!gestoVivo) {
+    if (!gesto) {
       if (!trasGesto.current) return;
       trasGesto.current = false;
       if (reducido || quieta) return;
@@ -569,10 +607,10 @@ export default function Geckonoid({
     microEnCurso.current = null;
     if (reducido || quieta) return;
     if (cabeza.current) animar(cabeza.current, { rotate: 0 }, muelle(400, 25));
-    const movimiento = MOVIMIENTOS[gestoVivo.nombre](el);
+    const movimiento = MOVIMIENTOS[gesto.nombre](el);
     return () => movimiento.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gestoVivo, reducido, quieta]);
+  }, [gesto, reducido, quieta]);
 
   // Cada 8–15 s, un micro-gesto al azar de los que admite el estado,
   // nunca el mismo que el anterior. Al cambiar de estado se corta el
@@ -640,16 +678,13 @@ export default function Geckonoid({
     inclinacion.set(limitar(dx * 5, -5, 5));
   };
   const soltarCursor = () => inclinacion.set(0);
-  const tocar = () => {
-    if (reducido || vivo !== "idle") return;
-    mostrar("duda");
-  };
+  const tocar = () => onToque?.();
 
   const retardoParche = (p: Parche) => seg(p.etiqueta === "cara" || p.etiqueta === "cabeza" ? RETARDO_CARA_S : RETARDO_BRAZO_S);
   const fundido = (retardo = 0): Transition => ({ duration: seg(FUNDIDO_S), ease: "easeOut", delay: retardo });
   // Lineal y sin retardo, igual para las dos capas: arrancan en el mismo
   // frame y sus opacidades suman 1 en todos.
-  const fundidoCompleto: Transition = { duration: seg(FUNDIDO_COMPLETO_S), ease: "linear" };
+  const fundidoCompleto: Transition = { duration: seg(fundidoDe ?? FUNDIDO_COMPLETO_S), ease: "linear" };
   const parcheCompleto = parches.find((p) => p.completo);
   const parchesSueltos = parcheCompleto ? parches.filter((p) => !p.completo) : parches;
 
@@ -657,7 +692,7 @@ export default function Geckonoid({
     <div
       role={etiqueta === null ? undefined : "img"}
       aria-hidden={etiqueta === null || undefined}
-      aria-label={etiqueta === null ? undefined : `${etiqueta} · ${vivo}${gestoVivo ? ` · ${gestoVivo.nombre}` : ""}`}
+      aria-label={etiqueta === null ? undefined : `${etiqueta} · ${vivo}${gesto ? ` · ${gesto.nombre}` : ""}`}
       className={`relative select-none ${className}`}
       style={{ width: ancho, height: size }}
       onPointerMove={seguirCursor}
@@ -717,9 +752,9 @@ export default function Geckonoid({
                   transition={fundido(seg(RETARDO_CARA_S))}
                 />
               )}
-              {restoGesto && gestoVivo && (
+              {restoGesto && gesto && (
                 <motion.img
-                  key={`resto-gesto-${gestoVivo.n}`}
+                  key={`resto-gesto-${gesto.n}`}
                   src={src("cuerpo.png")}
                   alt=""
                   draggable={false}

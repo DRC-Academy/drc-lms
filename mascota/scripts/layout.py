@@ -5,7 +5,7 @@ que usa el componente React (components/mascota/layout.json).
     npm run mascota:layout
     npm run mascota:layout -- --ver          (además imprime la puntuación de cada ajuste)
 
-CÓMO. Cada pieza base (rive/piezas/*.png) se busca sobre rive/maestro.png
+CÓMO. Cada pieza base (_archivo/piezas/*.png) se busca sobre rive/maestro.png
 por template matching multiescala con OpenCV, usando el alfa de la pieza
 como máscara: se prueba una escala tras otra y se queda con la mejor
 correlación. Las piezas son renders aparte —no recortes del maestro—, así
@@ -122,7 +122,7 @@ AJUSTES: dict[str, tuple[int, int, int, int]] = {
 
 def cargar_pieza(nombre: str) -> Image.Image:
     for carpeta in ("piezas", "expresiones"):
-        ruta = RIVE / carpeta / f"{nombre}.png"
+        ruta = MASCOTA / "_archivo" / carpeta / f"{nombre}.png"
         if ruta.exists():
             with Image.open(ruta) as im:
                 return im.convert("RGBA")

@@ -1,18 +1,22 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useAnimate, useReducedMotion } from "framer-motion";
-import type { EstadoMascota } from "@/components/mascota/estados";
+import { DURACION_ESTADO_MS } from "@/components/mascota/estados";
 import parchesJson from "@/components/mascota/parches.json";
+import { useAnclaMascota } from "@/components/mascota/AnclaMascota";
+import { storeMascota } from "@/components/mascota/store";
 
-// La mascota entra por `next/dynamic`: pesa lo que pesa framer-motion y
-// no hace falta para pintar el camino, solo para vivir en él. Sin SSR,
-// porque dónde va se mide en el DOM.
-const Geckonoid = dynamic(() => import("@/components/mascota/Geckonoid"), { ssr: false });
+/** El id del ancla de la ruta. */
+const ANCLA = "parati-ruta";
 
 /**
- * LA MASCOTA EN EL CAMINO DE «PARA TI».
+ * EL SITIO DE LA MASCOTA EN EL CAMINO DE «PARA TI».
+ *
+ * No pinta la mascota: mueve un ANCLA (prioridad 2) por el camino, y
+ * CapaMascota, que la sigue en cada frame, pone encima la única
+ * mascota de la app. Lo de abajo describe dónde va ese hueco y cómo
+ * anda; la mascota va donde vaya él.
  *
  * Vive sobre la parada donde está el presente —la que lleva «Estás
  * aquí»— y cuando el presente cambia de parada, la recorre andando por
@@ -47,7 +51,8 @@ const Geckonoid = dynamic(() => import("@/components/mascota/Geckonoid"), { ssr:
  * la nueva parada con un fundido.
  *
  * Para el lector de pantalla es decorativa: el estado lo dice el nodo.
- * El tooltip («Estás en: …») es un `title`, para quien pasa el ratón.
+ * El tooltip («Estás en: …») es el `titulo` del ancla, y al tocarla se
+ * centra la parada (`onToque`), además del gesto que haga la mascota.
  */
 
 export type MapaRuta = "escritorio" | "movil";
@@ -176,12 +181,10 @@ export default function MascotaRuta({
   const reducido = useReducedMotion() ?? false;
   const [raiz, animar] = useAnimate<HTMLDivElement>();
   const [visible, setVisible] = useState(false);
-  // Aparecer con fundido, salvo cuando arranca andando: ahí tiene que
-  // estar ya, no irse encendiendo por el camino.
-  const [fundir, setFundir] = useState(true);
   const [mapa, setMapa] = useState<MapaRuta>("escritorio");
-  const [estado, setEstado] = useState<EstadoMascota>("idle");
-  const [disparo, setDisparo] = useState(0);
+  // Con todo hecho, el diploma: es el estado de base del ancla, el que
+  // tiene mientras está aquí. «Ánimo» al llegar es un estado de paso.
+  const [conDiploma, setConDiploma] = useState(false);
   const [quieta, setQuieta] = useState(false);
 
   // Lo que cambia cada render se lee de refs, para que los efectos no
@@ -199,10 +202,7 @@ export default function MascotaRuta({
   const andando = useRef<{ stop: () => void } | null>(null);
   const yaHizoScroll = useRef(false);
 
-  const dispara = (nuevo: EstadoMascota) => {
-    setEstado(nuevo);
-    setDisparo((n) => n + 1);
-  };
+  const animo = () => storeMascota.dispara("animo", { desde: ANCLA });
 
   /**
    * Lo que hace al quedarse en una parada: con todo hecho, el diploma;
@@ -214,8 +214,13 @@ export default function MascotaRuta({
     if (!completa) return;
     const vista = leer(window.sessionStorage, claveEscena(alumnoId)) === "1";
     setQuieta(vista);
-    dispara("nivel_superado");
-    if (!vista) escribir(window.sessionStorage, claveEscena(alumnoId), "1");
+    setConDiploma(true);
+    if (!vista) {
+      escribir(window.sessionStorage, claveEscena(alumnoId), "1");
+      // Celebrada una vez, se queda quieta: si la mascota se va a otra
+      // ancla y vuelve, no repite el salto.
+      setTimeout(() => setQuieta(true), DURACION_ESTADO_MS);
+    }
   };
 
   /** Lleva la ventana hasta el nodo del presente si no está a la vista, o siempre si se pide. */
@@ -259,7 +264,6 @@ export default function MascotaRuta({
     const terminar = () => {
       parada.current = clave;
       escribir(window.localStorage, claveVista(alumnoId), clave);
-      setFundir(true);
       setVisible(true);
     };
 
@@ -300,7 +304,6 @@ export default function MascotaRuta({
         ys[ys.length - 1] = 0;
 
         animar(el, { left: meta.x, top: meta.y, x: xs[0], y: ys[0] }, { duration: 0 });
-        setFundir(false);
         setVisible(true);
         const marcha = animar(
           el,
@@ -315,7 +318,7 @@ export default function MascotaRuta({
             terminar();
             // Al llegar: «ánimo», o el diploma si con esta ya está todo.
             if (completa) enReposo();
-            else dispara("animo");
+            else animo();
           },
           () => {}
         );
@@ -325,7 +328,7 @@ export default function MascotaRuta({
 
     if (reducido && desde !== null && desde !== clave) {
       // Sin caminata: se apaga, se coloca, y se enciende en la nueva
-      // con el fundido de la propia caja (transition de `opacity`).
+      // con el fundido de la capa, que se enciende en el ancla nueva.
       setVisible(false);
       animar(el, { left: meta.x, top: meta.y, x: 0, y: 0 }, { duration: 0 });
       requestAnimationFrame(() =>
@@ -347,7 +350,7 @@ export default function MascotaRuta({
     terminar();
     // Sin repetir la escena si ya está con el diploma: esto también
     // corre cuando los nodos solo se mueven de sitio.
-    if (estado !== "nivel_superado") enReposo();
+    if (!conDiploma) enReposo();
   };
   const colocarRef = useRef(colocar);
   colocarRef.current = colocar;
@@ -428,9 +431,20 @@ export default function MascotaRuta({
   useEffect(() => {
     if (completa) return;
     setQuieta(false);
-    if (estado === "nivel_superado") dispara("idle");
+    setConDiploma(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completa]);
+
+  const ancla = useAnclaMascota(ANCLA, {
+    prioridad: 2,
+    estado: conDiploma ? "nivel_superado" : "idle",
+    quieta,
+    activa: visible && claveAqui !== null,
+    titulo: estasEn(titulo),
+    onToque: () => {
+      if (claveAqui !== null) centrar(claveAqui, true);
+    },
+  });
 
   if (claveAqui === null) return null;
 
@@ -441,30 +455,17 @@ export default function MascotaRuta({
     <div
       ref={raiz}
       aria-hidden
-      title={estasEn(titulo)}
-      onClick={() => {
-        if (!completa) dispara("animo");
-        centrar(claveAqui, true);
-      }}
-      className="absolute z-[35] cursor-pointer"
+      className="pointer-events-none absolute"
       style={{
         width: ancho,
         height: alto,
         // Los pies (al 41 % del ancho) sobre el punto de anclaje.
         marginLeft: -PIES_X * ancho,
         marginTop: -alto,
-        opacity: visible ? 1 : 0,
-        transition: fundir ? "opacity 300ms ease" : "none",
       }}
     >
-      <Geckonoid
-        estado={estado}
-        disparo={disparo}
-        size={alto}
-        volverAIdle={estado !== "nivel_superado"}
-        quieta={quieta}
-        etiqueta={null}
-      />
+      {/* El hueco que mide la capa: se mueve con la caja al andar. */}
+      <div ref={ancla} className="h-full w-full" />
     </div>
   );
 }

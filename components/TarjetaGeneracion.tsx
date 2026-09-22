@@ -139,7 +139,7 @@ export default function TarjetaGeneracion({
       </article>
 
       {generando && (
-        <AvanceGeneracion etapa={etapa} progreso={progreso} tardando={tardando} fuentes={tarjeta.fuentes} />
+        <AvanceGeneracion etapa={etapa} progreso={progreso} tardando={tardando} fuentes={tarjeta.fuentes} anclaId="inicio-espera" />
       )}
 
       {estado === "error" && (

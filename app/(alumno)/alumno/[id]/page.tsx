@@ -16,7 +16,7 @@ import { cursosDelInicio } from "@/lib/cursos-servidor";
 import { comoFecha } from "@/lib/fechas";
 import { calcularDiploma } from "@/lib/diploma";
 import AvatarProfesor from "@/components/AvatarProfesor";
-import BannerCurso from "@/components/BannerCurso";
+import BannerCurso, { cursoTerminado } from "@/components/BannerCurso";
 import BannerDiploma from "@/components/BannerDiploma";
 import PanelAlumno from "@/components/PanelAlumno";
 import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
@@ -322,7 +322,14 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
                 proxima={proxima}
                 t={tc}
                 tieneCurso={estadosCurso.length > 0}
-                ilustracion={<MascotaBienvenida variante="franja" estado="idle" />}
+                ilustracion={
+                  <MascotaBienvenida
+                    id="inicio-clase"
+                    prioridad={1}
+                    variante="franja"
+                    estado={cursoTerminado(estadosCurso) ? "nivel_superado" : "idle"}
+                  />
+                }
               />
             ) : (
               <BannerCurso estados={estadosCurso} foco={foco} />

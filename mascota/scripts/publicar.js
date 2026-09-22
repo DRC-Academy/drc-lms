@@ -1,7 +1,7 @@
 // Copia las piezas de la mascota a public/mascota/, optimizadas.
 //   npm run mascota:publicar
 //
-// Cada PNG de rive/piezas/ y rive/expresiones/ (sin los .orig) sale con
+// Cada PNG de _archivo/piezas/ y _archivo/expresiones/ (sin los .orig) sale con
 // el mismo nombre, a 600px de ancho como mucho y en PNG con paleta
 // (cuantizado, como pngquant), que es lo que deja un archivo de 40–90 KB
 // donde el original pesa 300. El componente los carga de /mascota/<nombre>.png.
@@ -9,7 +9,8 @@ const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
 
-const RIVE = path.join(__dirname, "..", "rive");
+// Las piezas del enfoque anterior, ya archivadas en mascota/_archivo/.
+const RIVE = path.join(__dirname, "..", "_archivo");
 const DESTINO = path.join(__dirname, "..", "..", "public", "mascota");
 const ANCHO_MAXIMO = 600;
 

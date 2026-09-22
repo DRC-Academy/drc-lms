@@ -4,8 +4,7 @@ import Link from "next/link";
 import type { EjercicioUnificado, Fase } from "@/lib/ejercicio-unificado";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { Anillo, Barra, FilaSub, Marca } from "@/components/leccion/PiezasPanel";
-import Geckonoid from "@/components/mascota/Geckonoid";
-import type { MandoMascota } from "@/components/mascota/useMascota";
+import AnclaMascota from "@/components/mascota/AnclaMascota";
 
 /**
  * EL PANEL DEL BLOQUE, a la izquierda del ejercicio.
@@ -49,7 +48,7 @@ export default function PanelBloque({
   profesor,
   hrefParaTi,
   alElegir,
-  mascota,
+  conMascota = false,
 }: {
   titulo: string;
   /** «Gramática · B1»: de qué va y para qué nivel. */
@@ -66,8 +65,11 @@ export default function PanelBloque({
   hrefParaTi: string;
   /** Al pulsar la puerta: cierra el cajón en móvil. */
   alElegir?: () => void;
-  /** Qué hace la mascota. Sin esto no se pinta. */
-  mascota?: Pick<MandoMascota, "estado" | "disparo">;
+  /**
+   * Un sitio para la mascota en la cabecera (ancla de prioridad 2),
+   * mientras no se ha terminado: al terminar se va al cierre.
+   */
+  conMascota?: boolean;
 }) {
   const { t: todos } = usarIdioma();
   const t = todos.ejercicios;
@@ -115,9 +117,7 @@ export default function PanelBloque({
               {titulo}
             </span>
           </div>
-          {mascota && !terminado && (
-            <Geckonoid estado={mascota.estado} disparo={mascota.disparo} size={88} etiqueta={null} className="shrink-0" />
-          )}
+          {conMascota && !terminado && <AnclaMascota id="bloque-panel" prioridad={2} tamaño={88} />}
         </div>
 
         <div className="px-2.5 pb-2.5">

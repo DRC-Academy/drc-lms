@@ -32,7 +32,8 @@ export const DURACION_ESTADO_MS = 2500;
  * Los gestos: poses sueltas que se ponen ENCIMA del estado que haya
  * (`mascota.gesto("saludo")`), duran un rato y se van; el estado sigue
  * debajo con su reloj. «salto» y «sentado» cambian la pose entera: su
- * parche es el personaje completo y tapa el cuerpo y la cola.
+ * parche es el personaje completo y tapa el cuerpo y la cola. «guino»
+ * no tiene variante propia: usa la cara de «ánimo» (ver Geckonoid).
  */
 export type GestoMascota =
   | "saludo"
@@ -44,7 +45,8 @@ export type GestoMascota =
   | "asombro"
   | "mira_izq"
   | "mira_der"
-  | "sentado";
+  | "sentado"
+  | "guino";
 
 export const GESTOS_MASCOTA: readonly GestoMascota[] = [
   "saludo",
@@ -57,6 +59,7 @@ export const GESTOS_MASCOTA: readonly GestoMascota[] = [
   "mira_izq",
   "mira_der",
   "sentado",
+  "guino",
 ];
 
 /** Cuánto se enseña cada gesto. Dormir y sentarse piden algo más de tiempo para leerse. */
@@ -71,4 +74,5 @@ export const DURACION_GESTO_MS: Record<GestoMascota, number> = {
   mira_izq: 1400,
   mira_der: 1400,
   sentado: 2600,
+  guino: 900,
 };

@@ -10,6 +10,15 @@ import Banner from "@/components/Banner";
 import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
 
 /**
+ * El curso principal, terminado: con él la mascota lleva el diploma en
+ * la franja del inicio, sea la del curso o la de la clase.
+ */
+export function cursoTerminado(estados: EstadoCurso[]): boolean {
+  const principal = estados[0];
+  return !!principal && principal.total > 0 && principal.completadas >= principal.total;
+}
+
+/**
  * La pieza principal del inicio.
  *
  * La idea que lo ordena: quien tiene cinco minutos no debería tener que
@@ -89,7 +98,7 @@ export default function BannerCurso({
   // mes 2 sería la frase más rara de la pantalla. Lo que las separa es
   // el recuento, que no depende del drip.
   // ---------------------------------------------------------------
-  const terminado = total > 0 && completadas >= total;
+  const terminado = cursoTerminado(estados);
   const esperando = siguiente === null && !terminado;
 
   // EL MISMO DESTINO QUE LA PESTAÑA «MI CURSO». La regla —la lección
@@ -151,7 +160,7 @@ export default function BannerCurso({
         title={titulo}
         subtitle={siguiente?.titulo}
         action={{ label: llamada, href: destino, srSuffix: siguiente?.titulo ?? titulo }}
-        ilustracion={<MascotaBienvenida variante="franja" estado={terminado ? "nivel_superado" : "idle"} />}
+        ilustracion={<MascotaBienvenida id="inicio-curso" prioridad={2} variante="franja" estado={terminado ? "nivel_superado" : "idle"} />}
         // Dónde cae esta lección dentro del curso. Es lo único que
         // sobrevive de la columna de cifra, y sobrevive porque no lo dice
         // nadie más: el banner del diploma cuenta el curso entero, no en

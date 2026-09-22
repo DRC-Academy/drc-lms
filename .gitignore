@@ -21,6 +21,7 @@ mascota/.venv
 mascota/scripts/__pycache__
 # Copias de seguridad y vista previa de los scripts de la mascota: se rehacen
 mascota/rive/**/*.orig.png
+mascota/_archivo/**/*.orig.png
 mascota/rive/ojos_vista.png
 mascota/rive/variantes_check.png
 mascota/rive/base_check.png

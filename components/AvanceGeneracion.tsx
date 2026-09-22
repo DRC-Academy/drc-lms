@@ -3,7 +3,7 @@
 import { textoDeEtapa, type EtapaGeneracion } from "@/lib/generacion";
 import type { FuentesDelBloque } from "@/lib/textos/practica";
 import { usarIdioma } from "@/components/ProveedorIdioma";
-import Geckonoid from "@/components/mascota/Geckonoid";
+import AnclaMascota from "@/components/mascota/AnclaMascota";
 
 /**
  * Lo que ve el alumno mientras se prepara su bloque.
@@ -41,6 +41,7 @@ export default function AvanceGeneracion({
   progreso,
   tardando,
   fuentes,
+  anclaId,
 }: {
   etapa: EtapaGeneracion;
   progreso: number;
@@ -51,6 +52,12 @@ export default function AvanceGeneracion({
    * que el nivel, que es lo único que siempre hay.
    */
   fuentes?: FuentesDelBloque;
+  /**
+   * El ancla de la mascota mientras se genera: prioridad 3, la más alta
+   * de su pantalla, así que la mascota viene aquí a estudiar y vuelve a
+   * su sitio al acabar.
+   */
+  anclaId: string;
 }) {
   const t = usarIdioma().t.practica;
   const texto = textoDeEtapa(etapa, t);
@@ -94,7 +101,7 @@ export default function AvanceGeneracion({
         </p>
       </div>
 
-      <Geckonoid estado="estudiando" volverAIdle={false} size={112} etiqueta={null} className="shrink-0" />
+      <AnclaMascota id={anclaId} prioridad={3} tamaño={112} estado="estudiando" />
     </div>
   );
 }

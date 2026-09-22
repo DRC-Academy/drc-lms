@@ -678,6 +678,7 @@ export default function Ruta({
                 progreso={generacion.progreso}
                 tardando={generacion.tardando}
                 fuentes={generacion.tarjeta?.fuentes}
+                anclaId="parati-espera"
               />
             </div>
           )}

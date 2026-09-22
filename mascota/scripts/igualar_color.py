@@ -26,7 +26,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-RIVE = Path(__file__).resolve().parents[1] / "rive"
+# Las piezas del enfoque anterior, ya archivadas en mascota/_archivo/.
+RIVE = Path(__file__).resolve().parents[1] / "_archivo"
 
 # referencia → objetivos, relativos a rive/
 PARES: dict[str, list[str]] = {
