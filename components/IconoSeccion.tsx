@@ -101,7 +101,7 @@ export function seccionDeRuta(ruta: string): SeccionActiva | undefined {
 
 /**
  * Qué panel lateral tiene la pantalla, si tiene uno: el del curso en una
- * lección y el de las fases en un bloque. Entre 768 y 1200px ese panel
+ * lección y el de las fases en un bloque. Entre 900 y 1200px ese panel
  * no cabe al lado del texto y lo abre un icono de la barra.
  */
 export function panelDeRuta(ruta: string): "curso" | "practica" | null {

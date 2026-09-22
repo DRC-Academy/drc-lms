@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
  * EL HILO ENTRE EL PANEL DE LA PANTALLA Y EL ICONO QUE LO ABRE.
  *
  * El panel lateral —el del curso en una lección, el de las fases en un
- * bloque— vive en la página, porque cambia con ella. Pero entre 768 y
+ * bloque— vive en la página, porque cambia con ella. Pero entre 900 y
  * 1200px no cabe al lado del texto y lo abre un icono de la barra de
  * navegación, que vive en el layout común (`components/Navegacion.tsx`).
  * Este contexto es lo que los une: lo pone el marco de la aplicación y

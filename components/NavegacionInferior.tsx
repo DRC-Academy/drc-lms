@@ -7,7 +7,7 @@ import { Icono, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSecc
 
 /**
  * La barra de pestañas de abajo: la navegación de toda la aplicación por
- * debajo de 768px. Los mismos enlaces e iconos que la barra lateral de
+ * debajo de 900px, que es el corte de toda la aplicación. Los mismos enlaces e iconos que la barra lateral de
  * escritorio (`BarraLateral`), con etiqueta corta, y al final el perfil.
  *
  * `fixed` y no `sticky`, así que da igual dónde esté en el DOM. El hueco
@@ -42,7 +42,7 @@ export default function NavegacionInferior({
     <nav
       aria-label={secciones}
       data-nav-inferior
-      className="fixed inset-x-0 bottom-0 z-40 grid border-t border-marca-borde bg-white/[0.96] px-1 pt-2 backdrop-blur-md md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid border-t border-marca-borde bg-white/[0.96] px-1 pt-2 backdrop-blur-md min-[900px]:hidden"
       style={{
         gridTemplateColumns: `repeat(${celdas}, minmax(0, 1fr))`,
         paddingBottom: "calc(14px + env(safe-area-inset-bottom))",

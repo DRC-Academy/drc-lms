@@ -8,7 +8,7 @@
 //
 // DOS FORMAS, UNA SOLA FUENTE:
 //
-//   · escritorio (≥768px): la semana en siete columnas. Las filas cubren
+//   · escritorio (≥900px, el corte de la navegación): la semana en siete columnas. Las filas cubren
 //     solo las horas en las que el alumno tiene clase en estas cuatro
 //     semanas, con una de margen por cada lado: nada de filas vacías de
 //     madrugada. La misma rejilla para las cuatro, para que no salte al
@@ -108,7 +108,7 @@ export default function CalendarioClases({
 
 function Agenda({ semana, t, ahora }: { semana: SemanaCalendario; t: TextosClases; ahora: Date }) {
   return (
-    <ol className="flex flex-col gap-5 md:hidden">
+    <ol className="flex flex-col gap-5 min-[900px]:hidden">
       {semana.dias
         .filter((d) => d.clases.length > 0)
         .map((dia) => {
@@ -186,7 +186,7 @@ function Rejilla({
   const alto = horas.length * ALTO_HORA;
 
   return (
-    <div className="hidden overflow-hidden rounded-[22px] border border-marca-borde bg-white shadow-[0_18px_40px_-30px_rgba(18,33,26,0.45)] md:block">
+    <div className="hidden overflow-hidden rounded-[22px] border border-marca-borde bg-white shadow-[0_18px_40px_-30px_rgba(18,33,26,0.45)] min-[900px]:block">
       {/* Cabecera: el día y su número; hoy, con la chapa. */}
       <div className="grid border-b border-marca-borde" style={{ gridTemplateColumns: "56px repeat(7, minmax(0, 1fr))" }}>
         <span />

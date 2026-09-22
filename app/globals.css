@@ -98,10 +98,10 @@
     --paso-escalonado: 70ms;
   }
 
-  /* 767 y no 899: por encima de 768px la navegación es la barra lateral
+  /* 899: por encima de 900px la navegación es la barra lateral
      (`BarraLateral`). La zona segura del iPhone —la barra de inicio— se
      suma a la altura, porque la barra de pestañas la respeta. */
-  @media (max-width: 767px) {
+  @media (max-width: 899px) {
     body:has(nav[data-nav-inferior]) {
       --nav-inferior: calc(78px + env(safe-area-inset-bottom));
       padding-bottom: var(--nav-inferior);
@@ -491,7 +491,7 @@
     bottom: 96px;
   }
 
-  @media (max-width: 767px) {
+  @media (max-width: 899px) {
     /* La navegación de secciones solo existe en móvil. */
     body:has(nav[data-nav-inferior]) .zona-ayuda {
       bottom: calc(90px + env(safe-area-inset-bottom));

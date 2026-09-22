@@ -104,7 +104,7 @@ export default function MenuPerfil({
             por encima del botón flotante de la ayuda. */}
         {abierto &&
           createPortal(
-            <div className="fixed inset-0 z-[60] flex flex-col justify-end md:hidden">
+            <div className="fixed inset-0 z-[60] flex flex-col justify-end min-[900px]:hidden">
               <button
                 type="button"
                 aria-label={t.navegacion.cerrarElMenu}

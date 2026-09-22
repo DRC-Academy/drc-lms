@@ -2,7 +2,7 @@
 // LA NAVEGACIÓN DE TODA LA APLICACIÓN
 //
 // Una sola pieza. En escritorio, la barra de iconos a la izquierda que
-// nació en la lección (`BarraLateral`); por debajo de 768px, la barra de
+// nació en la lección (`BarraLateral`); por debajo de 900px, la barra de
 // pestañas de abajo (`NavegacionInferior`) con los mismos iconos. La
 // monta el layout común del alumno, `app/(alumno)/layout.tsx`, así que
 // ninguna pantalla se acuerda de ponerla y ninguna la pierde al cambiar
