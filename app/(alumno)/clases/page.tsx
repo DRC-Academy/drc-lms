@@ -37,7 +37,7 @@ export default async function PaginaClases() {
           las demás secciones. */}
       <main className="mx-auto flex w-full max-w-contenido flex-1 flex-col gap-6 px-4 pb-[120px] pt-[18px] lg:px-9 lg:pt-8">
         <header className="flex flex-col gap-1">
-          <h1 className="text-[24px] font-semibold leading-tight text-marca-tinta lg:text-[28px]">
+          <h1 className="font-display text-[26px] font-bold leading-tight text-marca-tinta lg:text-[30px]">
             {t.clases.misClases}
           </h1>
           <p className="text-[15px] text-marca-gris">{t.clases.tuHorarioSemanal}</p>

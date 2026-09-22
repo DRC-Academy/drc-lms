@@ -61,6 +61,8 @@ export type TextosClases = {
   conQuienYZona: (profesor: string | null) => string;
   /** Dónde ha ido el «Continuar» mientras la franja es la clase. */
   cursoEnMiCurso: string;
+  /** Delante del nombre del profesor, que va en negrita: "Con" / "With". */
+  con: string;
 
   // --- la lista del horario ---
   tuHorario: string;
@@ -129,7 +131,8 @@ export const CLASES: Record<Idioma, TextosClases> = {
     lineaProxima: (cuando, hora) => `Tu próxima clase: ${cuando}, ${hora}`,
     empiezaPronto: "Tu clase empieza pronto",
     conQuienYZona: (profesor) => (profesor ? `Con ${profesor} · hora de Madrid` : "Hora de Madrid"),
-    cursoEnMiCurso: "Tu curso te espera en «Mi curso».",
+    cursoEnMiCurso: "Tu curso te espera cuando termines",
+    con: "Con",
 
     tuHorario: "Tu horario",
     nombreDia: (dia) => DIAS_ES[dia],
@@ -164,7 +167,8 @@ export const CLASES: Record<Idioma, TextosClases> = {
     lineaProxima: (cuando, hora) => `Your next class: ${cuando}, ${hora}`,
     empiezaPronto: "Your class starts soon",
     conQuienYZona: (profesor) => (profesor ? `With ${profesor} · Madrid time` : "Madrid time"),
-    cursoEnMiCurso: "Your course is waiting in “My course”.",
+    cursoEnMiCurso: "Your course will be here when you're done",
+    con: "With",
 
     tuHorario: "Your schedule",
     nombreDia: (dia) => DIAS_EN[dia],
