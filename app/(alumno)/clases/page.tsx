@@ -1,8 +1,9 @@
-import { obtenerCalendario, obtenerExcepciones } from "@/lib/gestion";
+import { obtenerCalendario, obtenerExcepciones, obtenerNombresProfesor, obtenerRecorrido } from "@/lib/gestion";
 import { conFoco } from "@/lib/foco";
 import { exigirFoco } from "@/lib/sesion-servidor";
 import { textosActuales } from "@/lib/idioma-servidor";
 import MisClases from "@/components/clases/MisClases";
+import HistorialClases from "@/components/clases/HistorialClases";
 
 export const dynamic = "force-dynamic";
 
@@ -22,15 +23,21 @@ export const dynamic = "force-dynamic";
  * La semana del calendario va en `?semana=` (0 es la actual): se cambia
  * con enlaces y se calcula en el servidor, como todo lo demás.
  *
+ * DEBAJO, EL HISTORIAL: las clases pasadas y lo que se trabajó en cada
+ * una, con la misma pieza que el recorrido de «Mi progreso». Ver
+ * `components/clases/HistorialClases.tsx`.
+ *
  * `force-dynamic` porque la respuesta depende de la hora: una página
  * cacheada diría "hoy" el día siguiente.
  */
 export default async function PaginaClases({ searchParams }: { searchParams: { semana?: string } }) {
   const { alumnoId, paraEnlaces } = await exigirFoco();
 
-  const [calendario, excepciones] = await Promise.all([
+  const [calendario, excepciones, recorrido, profesores] = await Promise.all([
     obtenerCalendario(alumnoId),
     obtenerExcepciones(alumnoId),
+    obtenerRecorrido(alumnoId),
+    obtenerNombresProfesor(),
   ]);
   const semana = Number.parseInt(searchParams.semana ?? "0", 10);
   const t = textosActuales();
@@ -55,6 +62,8 @@ export default async function PaginaClases({ searchParams }: { searchParams: { s
           hrefSemana={(i) => conFoco(i === 0 ? "/clases" : `/clases?semana=${i}`, paraEnlaces)}
           t={t.clases}
         />
+
+        <HistorialClases clases={recorrido.todas} profesores={profesores} t={t.clases} />
       </main>
     </div>
   );

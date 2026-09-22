@@ -82,6 +82,13 @@ export type TextosClases = {
   reprogramada: (original: { dia: DiaSemana; numero: number }, nueva: { dia: DiaSemana; numero: number }, hora: string) => string;
   cancelada: string;
 
+  // --- el historial ---
+  historial: string;
+  historialAyuda: string;
+  historialVacio: string;
+  /** El rótulo de los temas de cada clase. */
+  temasYVocabulario: string;
+
   // --- la lista del horario ---
   tuHorario: string;
   nombreDia: (dia: DiaSemana) => string;
@@ -175,6 +182,11 @@ export const CLASES: Record<Idioma, TextosClases> = {
     reprogramada: (o, n, hora) => `Clase del ${DIAS_ES[o.dia]} ${o.numero} reprogramada al ${DIAS_ES[n.dia]} ${n.numero}, ${hora}`,
     cancelada: "Clase cancelada",
 
+    historial: "Tus clases anteriores",
+    historialAyuda: "Lo que trabajaste en cada una, de la más reciente a la primera.",
+    historialVacio: "Cuando hayas tenido tu primera clase, aquí verás lo que trabajaste en ella.",
+    temasYVocabulario: "Temas y vocabulario",
+
     tuHorario: "Tu horario",
     nombreDia: (dia) => DIAS_ES[dia],
     duracion: (horas) => (horas === 1 ? "1 hora" : `${horas} horas`),
@@ -226,6 +238,11 @@ export const CLASES: Record<Idioma, TextosClases> = {
     reprogramada: (o, n, hora) =>
       `${DIAS_EN[o.dia]} ${ordinal(o.numero)} class moved to ${DIAS_EN[n.dia]} ${ordinal(n.numero)}, ${hora}`,
     cancelada: "Class cancelled",
+
+    historial: "Your past classes",
+    historialAyuda: "What you worked on in each one, from the most recent to the first.",
+    historialVacio: "Once you've had your first class, you'll see here what you worked on.",
+    temasYVocabulario: "Topics and vocabulary",
 
     tuHorario: "Your schedule",
     nombreDia: (dia) => DIAS_EN[dia],

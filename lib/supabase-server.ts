@@ -54,6 +54,12 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // lógica que las convierte en clases está copiada de Gestión en
 // `lib/calendario-gestion.ts`. `supabase/gestion-vista-calendario-alumno.sql`.
 //
+// `vista_profesores` entró con el historial de «Clases»: el nombre del
+// profesor que dio cada clase pasada, que puede ser un suplente o alguien
+// que ya no le da clase y no está en su calendario. Solo `teacher_id` y
+// el nombre: nada de correos, notas ni nóminas.
+// `supabase/gestion-vista-profesores.sql`.
+//
 // Añadir algo a esta lista es ampliar lo que el LMS ve de una base con
 // datos de alumnos, profesores y nóminas. Solo con un motivo escrito,
 // como este.
@@ -63,6 +69,7 @@ export const VISTAS = [
   "class_analyses",
   "vista_excepciones_clase",
   "vista_calendario_alumno",
+  "vista_profesores",
 ] as const;
 export type Vista = (typeof VISTAS)[number];
 

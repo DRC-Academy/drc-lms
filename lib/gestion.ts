@@ -290,6 +290,31 @@ export const obtenerExcepciones = cache(async (alumnoId: string): Promise<unknow
   return data ?? [];
 });
 
+/**
+ * El nombre de cada profesor, por `teacher_id`, para el historial de
+ * clases: el que dio cada una, que puede ser un suplente o alguien que
+ * ya no le da clase. Sale de `vista_profesores`, que solo tiene eso.
+ * Si no se puede leer, el historial se enseña sin nombres.
+ */
+export const obtenerNombresProfesor = cache(async (): Promise<Map<string, string>> => {
+  const { data, error } = await soloLectura("vista_profesores")
+    .select("teacher_id, profesor")
+    .order("teacher_id", { ascending: true })
+    .returns<Fila[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo leer vista_profesores:", error.message);
+    return new Map();
+  }
+  const nombres = new Map<string, string>();
+  for (const fila of data ?? []) {
+    const id = comoTexto(fila.teacher_id);
+    const nombre = comoTexto(fila.profesor).trim();
+    if (id && nombre) nombres.set(id, nombre);
+  }
+  return nombres;
+});
+
 export async function obtenerUltimaClase(alumnoId: string): Promise<UltimaClase | null> {
   const { data, error } = await soloLectura("class_analyses")
     .select(ULTIMA_CLASE)
@@ -796,13 +821,31 @@ export type ClaseDelRecorrido = {
   fechaClase: string;
   titulo: string;
   resumen: string;
+  /**
+   * Los temas y el vocabulario que se trabajaron (`topics_covered`), tal
+   * cual los escribe el análisis: "Vocabulario y expresiones: skimp,
+   * off-putting… Práctica de speaking libre". Es lo que trabajó, no lo
+   * que falló: los errores (`errors_detected`) no se piden.
+   */
+  temas: string;
   /** Casi siempre null: la columna está vacía en 858 de 867 filas. */
   numero: number | null;
+  /** Quién dio la clase. El nombre lo pone `obtenerNombresProfesor`. */
+  teacherId: string | null;
+  /** Tiene análisis: título o resumen. Sin él, la clase es su fecha y su profesor. */
+  conAnalisis: boolean;
 };
 
 export type Recorrido = {
   /** Las clases con informe, de la más reciente a la más antigua. */
   clases: ClaseDelRecorrido[];
+  /**
+   * Todas las clases registradas, con informe o sin él, en el mismo
+   * orden. Las enseña el historial de «Clases»: una clase sin informe
+   * ocurrió igual, y allí sale con su fecha y su profesor, sin inventarle
+   * contenido. La ficha de progreso sigue con `clases`.
+   */
+  todas: ClaseDelRecorrido[];
   /**
    * TODAS las clases registradas, tengan informe o no.
    *
@@ -838,7 +881,7 @@ const MAXIMO_CLASES = 200;
  */
 export async function obtenerRecorrido(alumnoId: string): Promise<Recorrido> {
   const { data, error } = await soloLectura("class_analyses")
-    .select("id, class_number, class_title, class_summary, class_date, analyzed_at")
+    .select("id, teacher_id, class_number, class_title, class_summary, topics_covered, class_date, analyzed_at")
     .eq("student_id", alumnoId)
     // Hay alumnos con dos clases el mismo día; `analyzed_at` desempata
     // para que el orden no cambie entre recargas.
@@ -849,11 +892,11 @@ export async function obtenerRecorrido(alumnoId: string): Promise<Recorrido> {
 
   if (error) {
     console.error("[gestion] No se pudo leer el recorrido de class_analyses:", error.message);
-    return { clases: [], totalClases: 0, clasesContadas: 0 };
+    return { clases: [], todas: [], totalClases: 0, clasesContadas: 0 };
   }
 
   const filas = data ?? [];
-  const clases: ClaseDelRecorrido[] = [];
+  const todas: ClaseDelRecorrido[] = [];
   let mayorNumero = 0;
 
   for (const fila of filas) {
@@ -867,19 +910,25 @@ export async function obtenerRecorrido(alumnoId: string): Promise<Recorrido> {
 
     const titulo = comoTexto(fila.class_title).trim();
     const resumen = comoTexto(fila.class_summary).trim();
-    if (titulo === "" && resumen === "") continue;
+    const conAnalisis = titulo !== "" || resumen !== "";
 
-    clases.push({
+    todas.push({
       id: comoTexto(fila.id),
       fechaClase: comoTexto(fila.class_date),
       titulo,
       resumen,
+      // Los temas solo con análisis: sin título ni resumen, lo que haya
+      // en esa columna es un resto de un análisis que no terminó.
+      temas: conAnalisis ? comoTexto(fila.topics_covered).trim() : "",
       numero,
+      teacherId: comoTextoOpcional(fila.teacher_id),
+      conAnalisis,
     });
   }
 
   return {
-    clases,
+    clases: todas.filter((c) => c.conAnalisis),
+    todas,
     totalClases: filas.length,
     clasesContadas: Math.max(mayorNumero, filas.length),
   };
