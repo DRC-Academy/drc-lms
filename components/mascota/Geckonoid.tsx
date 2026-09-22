@@ -64,8 +64,8 @@ export { ESTADOS_MASCOTA, GESTOS_MASCOTA } from "@/components/mascota/estados";
  * gesto, el estado entero se aparta —hueco incluido: es una sola cara—,
  * y al acabar vuelve, con el cuerpo en la pose final del estado, sin
  * repetir su salto. Un estado nuevo corta el gesto. Los gestos
- * COMPLETOS («salto», «sentado») son el personaje entero: tapan el
- * cuerpo y la cola mientras duran.
+ * COMPLETOS («salto», «sentado») son el personaje entero: sustituyen al
+ * cuerpo, la cola y los parches mientras duran (FUNDIDO_COMPLETO_S).
  *
  * EL TAMAÑO. `size` es el ALTO del lienzo en píxeles; el ancho sale de
  * la proporción del maestro. Los parches de «éxito» y «nivel superado»
@@ -118,6 +118,15 @@ const CABEZA_OPACA = 0.43;
 const CABEZA_FUNDE = 0.5;
 
 const FUNDIDO_S = 0.2;
+/**
+ * El paso a un gesto completo y la vuelta: la base (con todo lo suyo) y
+ * el parche se funden a la vez con opacidades complementarias, y el
+ * parche se SUMA (mix-blend-mode: plus-lighter) en vez de ponerse
+ * encima. Apiladas normalmente, dos capas al 50 % tapan el 75 % y el
+ * fondo se transparenta a mitad de camino; sumadas, donde están las dos
+ * da 1 en cada frame.
+ */
+const FUNDIDO_COMPLETO_S = 0.15;
 const RETARDO_CARA_S = 0.1;
 const RETARDO_BRAZO_S = 0.15;
 const RETARDO_ADORNO_S = 0.22;
@@ -636,9 +645,13 @@ export default function Geckonoid({
     mostrar("duda");
   };
 
-  const retardoParche = (p: Parche) =>
-    p.completo ? 0 : seg(p.etiqueta === "cara" || p.etiqueta === "cabeza" ? RETARDO_CARA_S : RETARDO_BRAZO_S);
+  const retardoParche = (p: Parche) => seg(p.etiqueta === "cara" || p.etiqueta === "cabeza" ? RETARDO_CARA_S : RETARDO_BRAZO_S);
   const fundido = (retardo = 0): Transition => ({ duration: seg(FUNDIDO_S), ease: "easeOut", delay: retardo });
+  // Lineal y sin retardo, igual para las dos capas: arrancan en el mismo
+  // frame y sus opacidades suman 1 en todos.
+  const fundidoCompleto: Transition = { duration: seg(FUNDIDO_COMPLETO_S), ease: "linear" };
+  const parcheCompleto = parches.find((p) => p.completo);
+  const parchesSueltos = parcheCompleto ? parches.filter((p) => !p.completo) : parches;
 
   return (
     <div
@@ -660,15 +673,16 @@ export default function Geckonoid({
           animate={reducido ? undefined : { scale: [1, 1.015, 1] }}
           transition={{ duration: seg(3), repeat: Infinity, ease: "easeInOut" }}
         >
-          <div ref={cuerpo} className="absolute inset-0" style={{ transformOrigin: origenPies }}>
-            {/* La base: cuerpo, resto y cola. Un gesto completo la tapa
-                entera; se quita cuando él ya está opaco, y vuelve de golpe
-                debajo cuando él empieza a irse, para que no se transparenten. */}
+          {/* `isolation`: el parche completo se suma (plus-lighter) solo con
+              lo de dentro, no con el fondo de la página. */}
+          <div ref={cuerpo} className="absolute inset-0" style={{ transformOrigin: origenPies, isolation: "isolate" }}>
+            {/* Todo menos el gesto completo —cuerpo, resto, cola y parches—,
+                en una capa, para fundirla entera con él (ver FUNDIDO_COMPLETO_S). */}
             <motion.div
               className="absolute inset-0"
               initial={false}
               animate={{ opacity: completo ? 0 : 1 }}
-              transition={completo ? { duration: 0, delay: seg(FUNDIDO_S) } : { duration: 0 }}
+              transition={fundidoCompleto}
             >
               <div className="absolute inset-0" style={huecos.length ? mascaraPng(...huecos) : undefined}>
                 <img src={src("cuerpo.png")} alt="" draggable={false} className="absolute inset-0 h-full w-full" style={MASCARA_CUERPO} />
@@ -732,22 +746,38 @@ export default function Geckonoid({
                   if (colaAmplia) setColaAmplia(false);
                 }}
               />
+
+              <AnimatePresence>
+                {parchesSueltos.map((p) => (
+                  <motion.img
+                    key={p.archivo}
+                    src={srcParche(p.archivo)}
+                    alt=""
+                    draggable={false}
+                    style={caja(p)}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, transition: fundido() }}
+                    transition={fundido(retardoParche(p))}
+                  />
+                ))}
+              </AnimatePresence>
             </motion.div>
 
             <AnimatePresence>
-              {parches.map((p) => (
+              {parcheCompleto && (
                 <motion.img
-                  key={p.archivo}
-                  src={srcParche(p.archivo)}
+                  key={parcheCompleto.archivo}
+                  src={srcParche(parcheCompleto.archivo)}
                   alt=""
                   draggable={false}
-                  style={caja(p)}
+                  style={{ ...caja(parcheCompleto), mixBlendMode: "plus-lighter" }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  exit={{ opacity: 0, transition: fundido() }}
-                  transition={fundido(retardoParche(p))}
+                  exit={{ opacity: 0, transition: fundidoCompleto }}
+                  transition={fundidoCompleto}
                 />
-              ))}
+              )}
             </AnimatePresence>
 
             {/* Los adornos, en SVG: salen después de la cara. */}

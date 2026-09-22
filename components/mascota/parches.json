@@ -168,9 +168,9 @@
     {
       "gesto": "salto",
       "archivo": "salto_completo.png",
-      "x": -0.0337,
+      "x": -0.0309,
       "y": 0.0,
-      "ancho": 1.0478,
+      "ancho": 1.0421,
       "alto": 1.0,
       "etiqueta": "entero",
       "completo": true
@@ -187,9 +187,9 @@
     {
       "gesto": "estira",
       "archivo": "estira_1.png",
-      "x": -0.1433,
+      "x": -0.1404,
       "y": -0.0066,
-      "ancho": 1.118,
+      "ancho": 1.1124,
       "alto": 0.8188,
       "etiqueta": "cara"
     },
@@ -250,9 +250,9 @@
     {
       "gesto": "sentado",
       "archivo": "sentado_completo.png",
-      "x": -0.0112,
+      "x": -0.0084,
       "y": 0.0,
-      "ancho": 1.0197,
+      "ancho": 1.014,
       "alto": 1.0,
       "etiqueta": "entero",
       "completo": true

@@ -46,11 +46,10 @@ ESTADOS: dict[str, str] = {
 }
 
 # Variante → gesto: poses sueltas que el componente pone encima de
-# cualquier estado (mascota.gesto("saludo")), no estados. El archivo de
-# «señala» lleva eñe; el gesto, no.
+# cualquier estado (mascota.gesto("saludo")), no estados.
 GESTOS: dict[str, str] = {
     "saludo": "saludo",
-    "señala": "senala",
+    "senala": "senala",
     "salto": "salto",
     "dormido": "dormido",
     "estira": "estira",

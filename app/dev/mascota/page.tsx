@@ -18,7 +18,8 @@ import { useMascota } from "@/components/mascota/useMascota";
  * No es una pantalla del alumno, pero cuelga del mismo middleware, así
  * que hace falta sesión para verla. Se queda en el repo a propósito:
  * es donde se comprueba cada gesto nuevo sin tener que provocarlo en
- * el producto. El fondo oscuro es para ver los bordes y los huecos:
+ * el producto. El fondo oscuro es el del banner (banner.fondo), donde
+ * vive la mascota del inicio, y sirve para ver los bordes y los huecos:
  * sobre blanco un filete claro o un hueco mal cerrado no se notan.
  * La velocidad (0,5×, 1×, 2×) es para revisar los tiempos: a cámara
  * lenta se ve la anticipación y el aplastamiento del salto.
@@ -62,7 +63,7 @@ export default function PaginaMascota() {
   const [size, setSize] = useState<(typeof TAMANOS)[number]>(240);
   const [velocidad, setVelocidad] = useState<(typeof VELOCIDADES)[number]>(1);
   const [volverAIdle, setVolverAIdle] = useState(true);
-  const [oscuro, setOscuro] = useState(false);
+  const [fondo, setFondo] = useState<"claro" | "oscuro">("claro");
   const [micro, setMicro] = useState<{ nombre: MicroGesto; n: number }>();
   const [ultimoGesto, setUltimoGesto] = useState<MicroGesto>();
 
@@ -82,7 +83,7 @@ export default function PaginaMascota() {
       </div>
 
       {/* Con aire a los lados y arriba: las manos de «éxito» sobresalen del lienzo, y el salto sube. */}
-      <div className={`rounded-[24px] border border-marca-borde px-16 pb-6 pt-14 ${oscuro ? "bg-[#2b2f3a]" : "bg-white"}`}>
+      <div className={`rounded-[24px] border border-marca-borde px-16 pb-6 pt-14 ${fondo === "oscuro" ? "bg-banner-fondo" : "bg-white"}`}>
         <Geckonoid
           estado={mascota.estado}
           disparo={mascota.disparo}
@@ -177,10 +178,22 @@ export default function PaginaMascota() {
           <input type="checkbox" checked={volverAIdle} onChange={(e) => setVolverAIdle(e.target.checked)} />
           Vuelve a idle a los 2,5 s
         </label>
-        <label className="inline-flex items-center gap-2">
-          <input type="checkbox" checked={oscuro} onChange={(e) => setOscuro(e.target.checked)} />
-          Fondo oscuro
-        </label>
+        <span className="inline-flex items-center gap-1.5">
+          Fondo
+          {(["claro", "oscuro"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              aria-pressed={fondo === f}
+              onClick={() => setFondo(f)}
+              className={`rounded-full px-2.5 py-1 font-semibold ${
+                fondo === f ? "bg-marca-tinta text-white" : "bg-marca-niebla text-marca-tinta"
+              }`}
+            >
+              {f === "claro" ? "Claro" : "Oscuro"}
+            </button>
+          ))}
+        </span>
       </div>
     </main>
   );

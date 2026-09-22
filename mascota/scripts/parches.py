@@ -40,6 +40,20 @@ gesto. Los de comun.COMPLETOS —otra pose entera— no se recortan: su
 las coordenadas del maestro (mismo encuadre que base.png, ampliado si
 el personaje se sale del lienzo), marcado `"completo": true`. El
 componente lo pone en lugar del cuerpo y la cola.
+
+EL FILETE. En las poses con los brazos arriba (los completos y
+«estira») rembg deja en el hueco entre brazo y cabeza un filete de
+fondo claro, opaco: su alfa es 0 o 255, sin término medio. A esas
+variantes se les pasa `desflecar`: el alfa se erosiona EROSION px, se
+difumina un píxel para que el borde tenga alfa parcial, y donde el alfa
+es parcial y el color es más claro que CLARO en los tres canales —fondo,
+no gecko— se pone a 0. Eso limpia el filete del contorno, pero no los
+huecos CERRADOS —entre el brazo y la mejilla en «estira», dentro de la
+curva de la cola en «sentado»—, que rembg rellena como personaje, con
+alfa 255 y sin borde que erosionar: se quitan además las regiones del
+color del fondo (a menos de FONDO_TOLERANCIA en RGB y con saturación
+por debajo de FONDO_SATURACION) de HUECO_CERRADO px o más, salvo en la
+zona de los ojos, cuyo blanco es del mismo gris.
 """
 
 from __future__ import annotations
@@ -78,6 +92,15 @@ APERTURA = 3
 DILATACION = 14
 DIFUMINADO = 10
 AREA_MINIMA = 400
+DESFLECAR = COMPLETOS | {"estira"}  # ver EL FILETE
+EROSION = 2
+CLARO = 225
+FONDO_TOLERANCIA = 22
+FONDO_SATURACION = 30
+HUECO_CERRADO = 15
+# Donde caen los ojos en todas las variantes (píxeles del maestro, con
+# margen): ahí un gris claro es el blanco del ojo, no fondo.
+ZONA_OJOS = (385, 80, 640, 190)
 HUECO_MINIMO = 20  # píxeles del cuerpo que hay que quitar para escribir un hueco
 AIRE_VISTA = 60  # lo que sobresale del lienzo en la hoja de control (las manos de «éxito»)
 
@@ -88,6 +111,28 @@ ZONA_CABEZA = (383, 84, 645, 266)
 ZONA_CARA = (405, 110, 625, 250)
 ZONA_BRAZOS_Y = (60, 430)
 CENTRO_X = (480, 560)  # entre ambos, ni un brazo ni el otro
+
+
+def desflecar(v: np.ndarray, fondo: tuple[int, int, int]) -> np.ndarray:
+    """La variante sin fondo (RGBA) sin el filete claro del borde ni los
+    huecos cerrados de fondo. `fondo` es el color del fondo de la variante."""
+    alfa = v[..., 3].copy()
+    # Los huecos cerrados, primero: después la erosión les limpia el borde.
+    rgb = v[..., :3].astype(np.int16)
+    saturacion = cv2.cvtColor(v[..., :3], cv2.COLOR_RGB2HSV)[..., 1]
+    de_fondo = (np.abs(rgb - np.array(fondo, dtype=np.int16)).max(axis=2) < FONDO_TOLERANCIA) & (saturacion < FONDO_SATURACION) & (alfa > 0)
+    n, etiquetas, stats, centros = cv2.connectedComponentsWithStats(de_fondo.astype(np.uint8), connectivity=8)
+    ox0, oy0, ox1, oy1 = ZONA_OJOS
+    for i in range(1, n):
+        cx, cy = centros[i]
+        if stats[i][4] >= HUECO_CERRADO and not (ox0 <= cx <= ox1 and oy0 <= cy <= oy1):
+            alfa[etiquetas == i] = 0
+
+    alfa = cv2.erode(alfa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (EROSION * 2 + 1, EROSION * 2 + 1)))
+    alfa = cv2.GaussianBlur(alfa, (3, 3), 0)
+    claro = (v[..., :3] > CLARO).all(axis=2)
+    alfa[(alfa < 255) & claro] = 0
+    return np.dstack([v[..., :3], alfa])
 
 
 def etiquetar(cx: float, cy: float) -> str:
@@ -140,7 +185,7 @@ def main() -> int:
         variante = cargar_variante(nombre, maestro.size)
         if estado in COMPLETOS:
             # Sin alinear: la cámara es la misma y la pose, otra.
-            v = np.asarray(sin_fondo(variante, sesion))
+            v = desflecar(np.asarray(sin_fondo(variante, sesion)), color_fondo(variante))
             ys, xs = np.where(v[..., 3] > UMBRAL_ALFA)
             x0, y0 = min(lienzo.x0, int(xs.min())), min(lienzo.y0, int(ys.min()))
             x1, y1 = max(lienzo.x1, int(xs.max()) + 1), max(lienzo.y1, int(ys.max()) + 1)
@@ -153,6 +198,8 @@ def main() -> int:
         al = alinear(maestro, variante)
         v_rgb = desplazar(np.asarray(variante), al.dx, al.dy, color_fondo(variante))
         v = np.asarray(sin_fondo(Image.fromarray(v_rgb), sesion))
+        if estado in DESFLECAR:
+            v = desflecar(v, color_fondo(variante))
         alfa_v = v[..., 3].astype(np.float32) / 255.0
 
         # La diferencia, solo donde hay personaje en alguno de los dos y
