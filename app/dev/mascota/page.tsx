@@ -1,11 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import Geckonoid, { ESTADOS_MASCOTA, MICRO_GESTOS, type EstadoMascota, type MicroGesto } from "@/components/mascota/Geckonoid";
+import Geckonoid, {
+  ESTADOS_MASCOTA,
+  GESTOS_MASCOTA,
+  MICRO_GESTOS,
+  type EstadoMascota,
+  type GestoMascota,
+  type MicroGesto,
+} from "@/components/mascota/Geckonoid";
 import { useMascota } from "@/components/mascota/useMascota";
 
 /**
- * Banco de pruebas de la mascota: la mascota y un botón por estado.
+ * Banco de pruebas de la mascota: la mascota y un botón por estado, y
+ * otro por gesto (encima del estado que haya).
  *
  * No es una pantalla del alumno, pero cuelga del mismo middleware, así
  * que hace falta sesión para verla. Se queda en el repo a propósito:
@@ -26,6 +34,19 @@ const NOMBRES: Record<EstadoMascota, string> = {
   nivel_superado: "Nivel superado",
 };
 
+const NOMBRES_GESTO: Record<GestoMascota, string> = {
+  saludo: "Saludo",
+  senala: "Señala",
+  salto: "Salto",
+  dormido: "Dormido",
+  estira: "Se estira",
+  piensa: "Piensa",
+  asombro: "Asombro",
+  mira_izq: "Mira a la izquierda",
+  mira_der: "Mira a la derecha",
+  sentado: "Sentado",
+};
+
 const NOMBRES_MICRO: Record<MicroGesto, string> = {
   cabeza: "Cabeza",
   balanceo: "Balanceo",
@@ -42,7 +63,7 @@ export default function PaginaMascota() {
   const [velocidad, setVelocidad] = useState<(typeof VELOCIDADES)[number]>(1);
   const [volverAIdle, setVolverAIdle] = useState(true);
   const [oscuro, setOscuro] = useState(false);
-  const [gesto, setGesto] = useState<{ nombre: MicroGesto; n: number }>();
+  const [micro, setMicro] = useState<{ nombre: MicroGesto; n: number }>();
   const [ultimoGesto, setUltimoGesto] = useState<MicroGesto>();
 
   return (
@@ -68,8 +89,9 @@ export default function PaginaMascota() {
           size={size}
           volverAIdle={volverAIdle}
           velocidad={velocidad}
-          gesto={gesto}
-          onGesto={setUltimoGesto}
+          pose={mascota.pose}
+          micro={micro}
+          onMicro={setUltimoGesto}
         />
       </div>
 
@@ -90,6 +112,21 @@ export default function PaginaMascota() {
         ))}
       </div>
 
+      {/* Los gestos: encima del estado, se van solos. */}
+      <div className="flex flex-wrap items-center justify-center gap-2 text-[13.5px] text-marca-gris">
+        Gesto
+        {GESTOS_MASCOTA.map((nombre) => (
+          <button
+            key={nombre}
+            type="button"
+            onClick={() => mascota.gesto(nombre)}
+            className="rounded-full border border-marca-borde bg-white px-3 py-1.5 text-[13px] font-semibold text-marca-tinta hover:bg-marca-niebla"
+          >
+            {NOMBRES_GESTO[nombre]}
+          </button>
+        ))}
+      </div>
+
       {/* Los micro-gestos de idle, a mano: solos salen cada 8–15 s. */}
       <div className="flex flex-wrap items-center justify-center gap-2 text-[13.5px] text-marca-gris">
         Micro-gesto
@@ -97,7 +134,7 @@ export default function PaginaMascota() {
           <button
             key={nombre}
             type="button"
-            onClick={() => setGesto((g) => ({ nombre, n: (g?.n ?? 0) + 1 }))}
+            onClick={() => setMicro((g) => ({ nombre, n: (g?.n ?? 0) + 1 }))}
             className="rounded-full border border-marca-borde bg-white px-3 py-1.5 text-[13px] font-semibold text-marca-tinta hover:bg-marca-niebla"
           >
             {NOMBRES_MICRO[nombre]}

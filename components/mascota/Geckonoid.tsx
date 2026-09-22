@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as PointerEventReact } from "react";
 import { AnimatePresence, motion, useAnimate, useMotionValue, useReducedMotion, useSpring, type Transition } from "framer-motion";
 import parchesJson from "@/components/mascota/parches.json";
-import { DURACION_ESTADO_MS, type EstadoMascota } from "@/components/mascota/estados";
+import { DURACION_ESTADO_MS, DURACION_GESTO_MS, type EstadoMascota, type GestoMascota } from "@/components/mascota/estados";
 
-export type { EstadoMascota } from "@/components/mascota/estados";
-export { ESTADOS_MASCOTA } from "@/components/mascota/estados";
+export type { EstadoMascota, GestoMascota } from "@/components/mascota/estados";
+export { ESTADOS_MASCOTA, GESTOS_MASCOTA } from "@/components/mascota/estados";
 
 /**
  * GECKONOID, LA MASCOTA, ANIMADA EN CÓDIGO.
@@ -57,6 +57,16 @@ export { ESTADOS_MASCOTA } from "@/components/mascota/estados";
  * prefers-reduced-motion nada de esto se mueve: los estados se enseñan
  * solo con el fundido de los parches.
  *
+ * LOS GESTOS van aparte del estado: `pose={{ nombre: "saludo", n }}`
+ * (lo lleva `useMascota().gesto`) pone la pose encima de lo que haya
+ * durante DURACION_GESTO_MS y la quita sola; el estado sigue debajo con
+ * su reloj. Mientras dura, si algún parche del estado pisa uno del
+ * gesto, el estado entero se aparta —hueco incluido: es una sola cara—,
+ * y al acabar vuelve, con el cuerpo en la pose final del estado, sin
+ * repetir su salto. Un estado nuevo corta el gesto. Los gestos
+ * COMPLETOS («salto», «sentado») son el personaje entero: tapan el
+ * cuerpo y la cola mientras duran.
+ *
  * EL TAMAÑO. `size` es el ALTO del lienzo en píxeles; el ancho sale de
  * la proporción del maestro. Los parches de «éxito» y «nivel superado»
  * —las manos en alto, el diploma— sobresalen del lienzo por los lados,
@@ -66,20 +76,26 @@ export { ESTADOS_MASCOTA } from "@/components/mascota/estados";
  */
 
 type Caja = { x: number; y: number; ancho: number; alto: number };
-type Parche = Caja & { estado: string; archivo: string; etiqueta: string };
+type Parche = Caja & { archivo: string; etiqueta: string; completo?: boolean };
 
 const DATOS = parchesJson as {
   lienzo: { ancho: number; alto: number; proporcion: number };
   cola: Caja & { archivo: string; pivote: { x: number; y: number } };
-  parches: Parche[];
+  parches: (Parche & { estado: string })[];
+  gestos: (Parche & { gesto: string })[];
+  /** Por estado y por gesto: los nombres no se repiten. */
   huecos: Record<string, string>;
   restos: Record<string, string>;
 };
 
-const PARCHES_POR_ESTADO = DATOS.parches.reduce<Record<string, Parche[]>>((acc, p) => {
-  (acc[p.estado] ??= []).push(p);
-  return acc;
-}, {});
+const agrupar = <P extends Parche>(lista: P[], clave: (p: P) => string) =>
+  lista.reduce<Record<string, Parche[]>>((acc, p) => {
+    (acc[clave(p)] ??= []).push(p);
+    return acc;
+  }, {});
+const PARCHES_POR_ESTADO = agrupar(DATOS.parches, (p) => p.estado);
+const PARCHES_POR_GESTO = agrupar(DATOS.gestos, (p) => p.gesto);
+const SIN_PARCHES: Parche[] = [];
 const PARPADEO = PARCHES_POR_ESTADO.parpadeo ?? [];
 
 const src = (archivo: string) => `/mascota/${archivo}`;
@@ -170,8 +186,9 @@ export default function Geckonoid({
   volverAIdle = true,
   onIdle,
   velocidad = 1,
-  gesto,
-  onGesto,
+  pose,
+  micro,
+  onMicro,
   quieta = false,
   className = "",
   etiqueta = "Geckonoid",
@@ -186,10 +203,12 @@ export default function Geckonoid({
   onIdle?: () => void;
   /** Multiplica el ritmo de todo: 0.5 es a cámara lenta, 2 al doble. Para revisar. */
   velocidad?: number;
+  /** Un gesto encima del estado. `n` cambia para repetirlo. Lo lleva `useMascota().gesto`. */
+  pose?: { nombre: GestoMascota; n: number };
   /** Un micro-gesto pedido desde fuera (solo en idle). `n` cambia para repetirlo. */
-  gesto?: { nombre: MicroGesto; n: number };
+  micro?: { nombre: MicroGesto; n: number };
   /** Avisa de cada micro-gesto, espontáneo o pedido. */
-  onGesto?: (nombre: MicroGesto) => void;
+  onMicro?: (nombre: MicroGesto) => void;
   /**
    * Enseña el estado sin su gesto ni sus adornos: la cara y la pose,
    * pero ni salto ni estrellas. Para un estado que se sostiene y ya se
@@ -221,6 +240,13 @@ export default function Geckonoid({
   const [vez, setVez] = useState(0);
   const reloj = useRef<ReturnType<typeof setTimeout>>();
 
+  // El gesto que se enseña encima, con su propio reloj. `trasGesto` avisa
+  // al guion de que el gesto acaba de irse: el cuerpo vuelve a la pose
+  // del estado sin relanzar su movimiento (un «éxito» no salta dos veces).
+  const [gestoVivo, setGestoVivo] = useState<{ nombre: GestoMascota; n: number } | null>(null);
+  const relojGesto = useRef<ReturnType<typeof setTimeout>>();
+  const trasGesto = useRef(false);
+
   // `mostrar` es estable a propósito: lo que cambia entre renders
   // —volver o no a idle, el ritmo, `onIdle`, que se escribe en línea—
   // se lee de un ref. Si dependiera de ellos, cambiar la velocidad en
@@ -229,6 +255,9 @@ export default function Geckonoid({
   ajustes.current = { volverAIdle, ms, onIdle };
   const mostrar = useCallback((nuevo: EstadoMascota) => {
     clearTimeout(reloj.current);
+    clearTimeout(relojGesto.current);
+    trasGesto.current = false;
+    setGestoVivo(null);
     setVivo(nuevo);
     setVez((n) => n + 1);
     if (nuevo === "idle" || !ajustes.current.volverAIdle) return;
@@ -242,11 +271,43 @@ export default function Geckonoid({
   useEffect(() => {
     mostrar(estado);
   }, [estado, disparo, mostrar]);
-  useEffect(() => () => clearTimeout(reloj.current), []);
+  useEffect(
+    () => () => {
+      clearTimeout(reloj.current);
+      clearTimeout(relojGesto.current);
+    },
+    [],
+  );
 
-  const parches = PARCHES_POR_ESTADO[vivo] ?? [];
-  const hueco = DATOS.huecos[vivo];
-  const resto = DATOS.restos[vivo];
+  useEffect(() => {
+    if (!pose) return;
+    clearTimeout(relojGesto.current);
+    trasGesto.current = false;
+    setGestoVivo(pose);
+    relojGesto.current = setTimeout(() => {
+      trasGesto.current = true;
+      setGestoVivo(null);
+    }, ajustes.current.ms(DURACION_GESTO_MS[pose.nombre]));
+    // Solo cuando llega un pedido nuevo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pose?.n]);
+
+  // Lo que se ve: el estado, y el gesto encima. Si algún parche del
+  // estado pisa uno del gesto, el estado entero se aparta —con su hueco—
+  // mientras dura.
+  const parchesGesto = gestoVivo ? (PARCHES_POR_GESTO[gestoVivo.nombre] ?? SIN_PARCHES) : SIN_PARCHES;
+  const parchesEstado = PARCHES_POR_ESTADO[vivo] ?? SIN_PARCHES;
+  const completo = parchesGesto.some((p) => p.completo);
+  const estadoApartado = parchesEstado.some((p) => parchesGesto.some((g) => sePisan(p, g)));
+  const parches = useMemo(
+    () => (estadoApartado ? parchesGesto : [...parchesEstado, ...parchesGesto]),
+    [estadoApartado, parchesEstado, parchesGesto],
+  );
+  const huecos = [estadoApartado ? undefined : DATOS.huecos[vivo], gestoVivo && DATOS.huecos[gestoVivo.nombre]].filter(
+    (h): h is string => !!h,
+  );
+  const resto = estadoApartado ? undefined : DATOS.restos[vivo];
+  const restoGesto = gestoVivo ? DATOS.restos[gestoVivo.nombre] : undefined;
 
   // El parpadeo: cada 3–5 segundos, 150 ms, y solo si ningún parche del
   // estado tapa los ojos (en «ánimo» ya hay un guiño puesto).
@@ -281,6 +342,7 @@ export default function Geckonoid({
       src("cuerpo.png"),
       src(DATOS.cola.archivo),
       ...DATOS.parches.map((p) => srcParche(p.archivo)),
+      ...DATOS.gestos.map((p) => srcParche(p.archivo)),
       ...Object.values(DATOS.huecos).map(srcParche),
       ...Object.values(DATOS.restos).map(srcParche),
     ];
@@ -310,16 +372,21 @@ export default function Geckonoid({
     maxWidth: "none",
   });
 
-  /** Una máscara del tamaño del lienzo: un PNG (el hueco, su resto) o un degradado. */
-  const mascara = (imagen: string): CSSProperties => ({
-    maskImage: imagen,
-    WebkitMaskImage: imagen,
+  /**
+   * Una máscara del tamaño del lienzo: un PNG (el hueco, su resto) o un
+   * degradado. Con varias —el hueco del estado y el del gesto— se
+   * cortan: queda lo que dejan todas.
+   */
+  const mascara = (...imagenes: string[]): CSSProperties => ({
+    maskImage: imagenes.join(", "),
+    WebkitMaskImage: imagenes.join(", "),
     maskSize: "100% 100%",
     WebkitMaskSize: "100% 100%",
     maskRepeat: "no-repeat",
     WebkitMaskRepeat: "no-repeat",
+    ...(imagenes.length > 1 && { maskComposite: "intersect", WebkitMaskComposite: "source-in" }),
   });
-  const mascaraPng = (archivo: string) => mascara(`url(${srcParche(archivo)})`);
+  const mascaraPng = (...archivos: string[]) => mascara(...archivos.map((a) => `url(${srcParche(a)})`));
   const pc = (f: number) => `${(f * 100).toFixed(1)}%`;
   const MASCARA_CUERPO = mascara(`linear-gradient(to bottom, transparent ${pc(CORTE_CUERPO)}, #000 ${pc(CORTE_CUERPO)})`);
   const MASCARA_CABEZA = mascara(`linear-gradient(to bottom, #000 ${pc(CABEZA_OPACA)}, transparent ${pc(CABEZA_FUNDE)})`);
@@ -352,19 +419,67 @@ export default function Geckonoid({
     ],
   ];
 
+  /** Dónde queda el cuerpo en cada estado cuando termina su gesto. */
+  const POSE_FINAL: Record<EstadoMascota, typeof EN_REPOSO> = {
+    idle: EN_REPOSO,
+    estudiando: EN_REPOSO,
+    exito: EN_REPOSO,
+    duda: { y: 0, rotate: 6, scaleX: 1, scaleY: 1 },
+    animo: EN_REPOSO,
+    racha_perdida: { y: 10 * u, rotate: -4, scaleX: 1.02, scaleY: 0.97 },
+    nivel_superado: EN_REPOSO,
+  };
+
   const GESTOS: Record<EstadoMascota, (el: HTMLElement) => { stop: () => void }> = {
     idle: (el) => animar(el, EN_REPOSO, muelle(350, 22)),
     estudiando: (el) => animar(el, EN_REPOSO, muelle(350, 22)),
     exito: (el) => correr(salto(el, 30)),
-    duda: (el) => animar(el, { y: 0, rotate: 6, scaleX: 1, scaleY: 1 }, muelle(320, 18)),
+    duda: (el) => animar(el, POSE_FINAL.duda, muelle(320, 18)),
     animo: (el) => correr(salto(el, 10)),
-    racha_perdida: (el) => animar(el, { y: 10 * u, rotate: -4, scaleX: 1.02, scaleY: 0.97 }, muelle(300, 25)),
+    racha_perdida: (el) => animar(el, POSE_FINAL.racha_perdida, muelle(300, 25)),
     nivel_superado: (el) => correr(salto(el, 18)),
+  };
+
+  /**
+   * El movimiento de cada gesto de `pose`, desde los pies como los de
+   * los estados. Los parches ya dicen el gesto; esto lo acompaña: se
+   * inclina hacia donde señala o mira, se estira, se aplasta al
+   * sentarse. «salto» es el salto de verdad, con la pose en el aire.
+   */
+  const MOVIMIENTOS: Record<GestoMascota, (el: HTMLElement) => { stop: () => void }> = {
+    saludo: (el) =>
+      animar(el, { ...EN_REPOSO, rotate: [0, -2, 2, -1, 0] }, { duration: seg(1.4), times: [0, 0.25, 0.5, 0.75, 1], ease: "easeInOut" }),
+    senala: (el) => animar(el, { ...EN_REPOSO, rotate: -3 }, muelle(320, 20)),
+    salto: (el) => correr(salto(el, 24)),
+    dormido: (el) => animar(el, { y: 4 * u, rotate: 0, scaleX: 1.01, scaleY: 0.98 }, { duration: seg(0.8), ease: "easeInOut" }),
+    estira: (el) =>
+      correr([
+        () => animar(el, { y: 0, rotate: 0, scaleX: 0.97, scaleY: 1.05 }, { duration: seg(0.5), ease: "easeOut" }),
+        () => animar(el, { scaleY: 1.05 }, { duration: seg(0.7) }),
+        () => animar(el, EN_REPOSO, muelle(300, 20)),
+      ]),
+    piensa: (el) => animar(el, { ...EN_REPOSO, rotate: 3 }, muelle(200, 20)),
+    asombro: (el) =>
+      correr([
+        () => animar(el, { y: -6 * u, rotate: 0, scaleX: 0.97, scaleY: 1.04 }, { duration: seg(0.12), ease: "easeOut" }),
+        () => animar(el, EN_REPOSO, muelle(400, 15)),
+      ]),
+    mira_izq: (el) => animar(el, { ...EN_REPOSO, rotate: -2 }, muelle(250, 22)),
+    mira_der: (el) => animar(el, { ...EN_REPOSO, rotate: 2 }, muelle(250, 22)),
+    sentado: (el) =>
+      correr([
+        () => animar(el, { y: 0, rotate: 0, scaleX: 1.04, scaleY: 0.94 }, { duration: seg(0.1), ease: "easeOut" }),
+        () => animar(el, EN_REPOSO, muelle(420, 16)),
+      ]),
   };
 
   // Los micro-gestos de idle. El que esté en marcha se guarda para
   // poder cortarlo cuando llega un estado.
   const microEnCurso = useRef<{ stop: () => void } | null>(null);
+  // Mientras hay un gesto de `pose`, ni el guion del estado ni los
+  // micro-gestos tocan el cuerpo: se pisarían.
+  const gestoActivo = useRef(gestoVivo);
+  gestoActivo.current = gestoVivo;
   const ultimoMicro = useRef<MicroGesto | null>(null);
   const [colaAmplia, setColaAmplia] = useState(false);
 
@@ -404,7 +519,7 @@ export default function Geckonoid({
     microEnCurso.current?.stop();
     ultimoMicro.current = nombre;
     microEnCurso.current = hacerMicro(nombre);
-    onGesto?.(nombre);
+    onMicro?.(nombre);
   };
 
   // El gesto del estado. Corta el micro-gesto que hubiera, endereza la
@@ -412,7 +527,7 @@ export default function Geckonoid({
   // sin animar.
   useEffect(() => {
     const el = cuerpo.current;
-    if (!el) return;
+    if (!el || gestoActivo.current) return;
     microEnCurso.current?.stop();
     microEnCurso.current = null;
     if (reducido || quieta) {
@@ -428,6 +543,28 @@ export default function Geckonoid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vivo, vez, u, v, reducido, quieta]);
 
+  // El movimiento del gesto de `pose`, y al irse, de vuelta a la pose
+  // del estado (sin relanzar su guion). Si lo corta un estado nuevo,
+  // `trasGesto` viene en falso y el guion del estado se encarga.
+  useEffect(() => {
+    const el = cuerpo.current;
+    if (!el) return;
+    if (!gestoVivo) {
+      if (!trasGesto.current) return;
+      trasGesto.current = false;
+      if (reducido || quieta) return;
+      const vuelta = animar(el, POSE_FINAL[vivo], muelle(300, 22));
+      return () => vuelta.stop();
+    }
+    microEnCurso.current?.stop();
+    microEnCurso.current = null;
+    if (reducido || quieta) return;
+    if (cabeza.current) animar(cabeza.current, { rotate: 0 }, muelle(400, 25));
+    const movimiento = MOVIMIENTOS[gestoVivo.nombre](el);
+    return () => movimiento.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gestoVivo, reducido, quieta]);
+
   // Cada 8–15 s, un micro-gesto al azar de los que admite el estado,
   // nunca el mismo que el anterior. Al cambiar de estado se corta el
   // que esté en marcha.
@@ -438,7 +575,7 @@ export default function Geckonoid({
     const programar = () => {
       espera = setTimeout(() => {
         const opciones = microPosibles.filter((g) => g !== ultimoMicro.current);
-        lanzarMicro(opciones[Math.floor(Math.random() * opciones.length)]);
+        if (!gestoActivo.current) lanzarMicro(opciones[Math.floor(Math.random() * opciones.length)]);
         programar();
       }, ms(8000 + Math.random() * 7000));
     };
@@ -453,10 +590,10 @@ export default function Geckonoid({
 
   // Un micro-gesto pedido desde fuera (el banco de pruebas).
   useEffect(() => {
-    if (!gesto || !microPosibles?.includes(gesto.nombre) || reducido) return;
-    lanzarMicro(gesto.nombre);
+    if (!micro || !microPosibles?.includes(micro.nombre) || reducido || gestoActivo.current) return;
+    lanzarMicro(micro.nombre);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gesto?.n]);
+  }, [micro?.n]);
 
   // Las estrellas de «éxito» y «nivel superado»: 8–12, cada una con su
   // rumbo. Se generan en un efecto —no en el render— para que el
@@ -499,14 +636,15 @@ export default function Geckonoid({
     mostrar("duda");
   };
 
-  const retardoParche = (p: Parche) => seg(p.etiqueta === "cara" || p.etiqueta === "cabeza" ? RETARDO_CARA_S : RETARDO_BRAZO_S);
+  const retardoParche = (p: Parche) =>
+    p.completo ? 0 : seg(p.etiqueta === "cara" || p.etiqueta === "cabeza" ? RETARDO_CARA_S : RETARDO_BRAZO_S);
   const fundido = (retardo = 0): Transition => ({ duration: seg(FUNDIDO_S), ease: "easeOut", delay: retardo });
 
   return (
     <div
       role={etiqueta === null ? undefined : "img"}
       aria-hidden={etiqueta === null || undefined}
-      aria-label={etiqueta === null ? undefined : `${etiqueta} · ${vivo}`}
+      aria-label={etiqueta === null ? undefined : `${etiqueta} · ${vivo}${gestoVivo ? ` · ${gestoVivo.nombre}` : ""}`}
       className={`relative select-none ${className}`}
       style={{ width: ancho, height: size }}
       onPointerMove={seguirCursor}
@@ -523,55 +661,78 @@ export default function Geckonoid({
           transition={{ duration: seg(3), repeat: Infinity, ease: "easeInOut" }}
         >
           <div ref={cuerpo} className="absolute inset-0" style={{ transformOrigin: origenPies }}>
-            <div className="absolute inset-0" style={hueco ? mascaraPng(hueco) : undefined}>
-              <img src={src("cuerpo.png")} alt="" draggable={false} className="absolute inset-0 h-full w-full" style={MASCARA_CUERPO} />
-              <div ref={cabeza} className="absolute inset-0" style={{ transformOrigin: `${pc(CUELLO.x)} ${pc(CUELLO.y)}` }}>
-                <img src={src("cuerpo.png")} alt="" draggable={false} className="absolute inset-0 h-full w-full" style={MASCARA_CABEZA} />
-                {puedeParpadear &&
-                  PARPADEO.map((ojo) => (
-                    <motion.img
-                      key={ojo.archivo}
-                      src={srcParche(ojo.archivo)}
-                      alt=""
-                      draggable={false}
-                      style={caja(ojo)}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: cerrando ? 1 : 0 }}
-                      transition={{ duration: 0.05 }}
-                    />
-                  ))}
+            {/* La base: cuerpo, resto y cola. Un gesto completo la tapa
+                entera; se quita cuando él ya está opaco, y vuelve de golpe
+                debajo cuando él empieza a irse, para que no se transparenten. */}
+            <motion.div
+              className="absolute inset-0"
+              initial={false}
+              animate={{ opacity: completo ? 0 : 1 }}
+              transition={completo ? { duration: 0, delay: seg(FUNDIDO_S) } : { duration: 0 }}
+            >
+              <div className="absolute inset-0" style={huecos.length ? mascaraPng(...huecos) : undefined}>
+                <img src={src("cuerpo.png")} alt="" draggable={false} className="absolute inset-0 h-full w-full" style={MASCARA_CUERPO} />
+                <div ref={cabeza} className="absolute inset-0" style={{ transformOrigin: `${pc(CUELLO.x)} ${pc(CUELLO.y)}` }}>
+                  <img src={src("cuerpo.png")} alt="" draggable={false} className="absolute inset-0 h-full w-full" style={MASCARA_CABEZA} />
+                  {puedeParpadear &&
+                    PARPADEO.map((ojo) => (
+                      <motion.img
+                        key={ojo.archivo}
+                        src={srcParche(ojo.archivo)}
+                        alt=""
+                        draggable={false}
+                        style={caja(ojo)}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: cerrando ? 1 : 0 }}
+                        transition={{ duration: 0.05 }}
+                      />
+                    ))}
+                </div>
               </div>
-            </div>
 
-            {resto && (
+              {resto && (
+                <motion.img
+                  key={`resto-${vivo}-${vez}`}
+                  src={src("cuerpo.png")}
+                  alt=""
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full"
+                  style={mascaraPng(resto)}
+                  initial={{ opacity: 1 }}
+                  animate={{ opacity: 0 }}
+                  transition={fundido(seg(RETARDO_CARA_S))}
+                />
+              )}
+              {restoGesto && gestoVivo && (
+                <motion.img
+                  key={`resto-gesto-${gestoVivo.n}`}
+                  src={src("cuerpo.png")}
+                  alt=""
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full"
+                  style={mascaraPng(restoGesto)}
+                  initial={{ opacity: 1 }}
+                  animate={{ opacity: 0 }}
+                  transition={fundido(seg(RETARDO_CARA_S))}
+                />
+              )}
+
               <motion.img
-                key={`resto-${vivo}-${vez}`}
-                src={src("cuerpo.png")}
+                src={src(DATOS.cola.archivo)}
                 alt=""
                 draggable={false}
-                className="absolute inset-0 h-full w-full"
-                style={mascaraPng(resto)}
-                initial={{ opacity: 1 }}
-                animate={{ opacity: 0 }}
-                transition={fundido(seg(RETARDO_CARA_S))}
+                style={{ ...caja(DATOS.cola), originX: DATOS.cola.pivote.x, originY: DATOS.cola.pivote.y }}
+                animate={reducido ? undefined : colaAmplia ? { rotate: [null, -16, 14, -5] } : { rotate: [-5, 5, -5] }}
+                transition={
+                  colaAmplia
+                    ? { duration: seg(1.6), times: [0, 0.3, 0.7, 1], ease: "easeInOut" }
+                    : { duration: seg(2.5), repeat: Infinity, ease: "easeInOut" }
+                }
+                onAnimationComplete={() => {
+                  if (colaAmplia) setColaAmplia(false);
+                }}
               />
-            )}
-
-            <motion.img
-              src={src(DATOS.cola.archivo)}
-              alt=""
-              draggable={false}
-              style={{ ...caja(DATOS.cola), originX: DATOS.cola.pivote.x, originY: DATOS.cola.pivote.y }}
-              animate={reducido ? undefined : colaAmplia ? { rotate: [null, -16, 14, -5] } : { rotate: [-5, 5, -5] }}
-              transition={
-                colaAmplia
-                  ? { duration: seg(1.6), times: [0, 0.3, 0.7, 1], ease: "easeInOut" }
-                  : { duration: seg(2.5), repeat: Infinity, ease: "easeInOut" }
-              }
-              onAnimationComplete={() => {
-                if (colaAmplia) setColaAmplia(false);
-              }}
-            />
+            </motion.div>
 
             <AnimatePresence>
               {parches.map((p) => (

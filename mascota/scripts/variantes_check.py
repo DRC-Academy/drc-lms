@@ -18,6 +18,12 @@ El 80 % es sobre el cuadro entero; el personaje ocupa un cuarto,
 así que una pose distinta lo baja por debajo y un fondo distinto
 lo hunde. También se imprime la coincidencia solo sobre el
 personaje, que es la que dice cuánto cambió de verdad el gesto.
+
+Dos excepciones. Las de comun.IGUALAR_LUZ vienen con otro fondo: se les
+corrige la luz del personaje y se miden por él (MINIMO_PERSONAJE), no
+por el cuadro. Las de comun.COMPLETOS cambian la pose entera y no
+calzan por definición: se enseñan, pero no fallan —su parche es el
+personaje entero—.
 """
 
 from __future__ import annotations
@@ -28,12 +34,14 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from comun import ESTADOS, RIVE, alinear, cargar_maestro, cargar_variante, color_fondo, desplazar
+from comun import COMPLETOS, GESTOS, IGUALAR_LUZ, VARIANTES_TODAS as ESTADOS, RIVE, alinear, cargar_maestro, cargar_variante, color_fondo, desplazar
 
 SALIDA = RIVE / "variantes_check.png"
 UMBRAL_DIFERENCIA = 12
 MINIMO_COINCIDENCIA = 80.0
 MAXIMO_CORRIMIENTO = 15
+# Para las de luz igualada: con el fondo distinto el cuadro no dice nada.
+MINIMO_PERSONAJE = 35.0
 # El personaje, para la coincidencia «solo personaje»: lo que se aparta
 # del color del fondo más que esto, en el maestro o en la variante.
 UMBRAL_PERSONAJE = 40
@@ -83,13 +91,20 @@ def main() -> int:
 
         corrimiento = max(abs(al.dx), abs(al.dy))
         motivos = []
-        if cuadro < MINIMO_COINCIDENCIA:
+        if nombre in IGUALAR_LUZ:
+            if solo_personaje < MINIMO_PERSONAJE:
+                motivos.append(f"personaje {solo_personaje:.1f} % < {MINIMO_PERSONAJE:.0f} %")
+        elif cuadro < MINIMO_COINCIDENCIA:
             motivos.append(f"coincide {cuadro:.1f} % < {MINIMO_COINCIDENCIA:.0f} %")
         if corrimiento > MAXIMO_CORRIMIENTO:
             motivos.append(f"corrimiento {corrimiento} px > {MAXIMO_CORRIMIENTO}")
-        if motivos:
-            fallan.append(nombre)
-        veredicto = "FALLA: " + "; ".join(motivos) if motivos else "ok"
+        if GESTOS.get(nombre) in COMPLETOS:
+            veredicto = "completo: otra pose, va entero"
+            motivos = []
+        else:
+            if motivos:
+                fallan.append(nombre)
+            veredicto = "FALLA: " + "; ".join(motivos) if motivos else ("ok (luz igualada)" if nombre in IGUALAR_LUZ else "ok")
         print(f"{nombre:10s} {f'({al.dx:+d}, {al.dy:+d})':>12s} {al.escala:7.3f} {al.puntuacion:7.3f} {cuadro:7.1f}% {solo_personaje:9.1f}%  {veredicto}")
 
         # La fila de la hoja: maestro | variante alineada | diferencia.

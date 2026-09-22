@@ -31,6 +31,15 @@ Escribe components/mascota/parches.json (`parches`, `huecos`, `restos`; respeta
 mascota con sus parches puestos y el contorno de cada uno en rojo, y
 el hueco en azul; el rectángulo gris es el lienzo (las manos de
 «éxito» y el diploma sobresalen por la izquierda).
+
+LOS GESTOS (comun.GESTOS) salen igual, pero en la clave `gestos` y con
+`gesto` en vez de `estado`: son poses que se ponen encima de cualquier
+estado. Sus huecos y restos van en `huecos` y `restos` con el nombre del
+gesto. Los de comun.COMPLETOS —otra pose entera— no se recortan: su
+único parche, <gesto>_completo.png, es la variante entera sin fondo en
+las coordenadas del maestro (mismo encuadre que base.png, ampliado si
+el personaje se sale del lienzo), marcado `"completo": true`. El
+componente lo pone en lugar del cuerpo y la cola.
 """
 
 from __future__ import annotations
@@ -42,7 +51,9 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from comun import (
+    COMPLETOS,
     ESTADOS,
+    GESTOS,
     PUBLICO,
     RIVE,
     UMBRAL_ALFA,
@@ -118,12 +129,27 @@ def main() -> int:
     k_difuminar = (DIFUMINADO * 2 + 1, DIFUMINADO * 2 + 1)
 
     parches: list[dict] = []
+    gestos: list[dict] = []
     huecos: dict[str, str] = {}
     restos: dict[str, str] = {}
     vistas: list[tuple[str, Image.Image]] = []
 
-    for nombre, estado in ESTADOS.items():
+    variantes = [(n, e, "estado") for n, e in ESTADOS.items()] + [(n, g, "gesto") for n, g in GESTOS.items()]
+    for nombre, estado, clave_json in variantes:
+        destino = parches if clave_json == "estado" else gestos
         variante = cargar_variante(nombre, maestro.size)
+        if estado in COMPLETOS:
+            # Sin alinear: la cámara es la misma y la pose, otra.
+            v = np.asarray(sin_fondo(variante, sesion))
+            ys, xs = np.where(v[..., 3] > UMBRAL_ALFA)
+            x0, y0 = min(lienzo.x0, int(xs.min())), min(lienzo.y0, int(ys.min()))
+            x1, y1 = max(lienzo.x1, int(xs.max()) + 1), max(lienzo.y1, int(ys.max()) + 1)
+            archivo = f"{estado}_completo.png"
+            Image.fromarray(v[y0:y1, x0:x1]).save(PARCHES / archivo, "PNG")
+            destino.append({clave_json: estado, "archivo": archivo, **lienzo.caja(x0, y0, x1 - x0, y1 - y0), "etiqueta": "entero", "completo": True})
+            print(f"{nombre} → {estado}  COMPLETO  caja ({x0}, {y0})–({x1}, {y1})")
+            vistas.append((estado, vista(lienzo, maestro_rgba, np.ones(alfa_m.shape, dtype=np.float32), [destino[-1]])))
+            continue
         al = alinear(maestro, variante)
         v_rgb = desplazar(np.asarray(variante), al.dx, al.dy, color_fondo(variante))
         v = np.asarray(sin_fondo(Image.fromarray(v_rgb), sesion))
@@ -163,7 +189,7 @@ def main() -> int:
 
             cx, cy = (float(c) for c in centroides[i])
             etiqueta = etiquetar(cx, cy)
-            parches.append({"estado": estado, "archivo": archivo, **lienzo.caja(x0, y0, x1 - x0, y1 - y0), "etiqueta": etiqueta})
+            destino.append({clave_json: estado, "archivo": archivo, **lienzo.caja(x0, y0, x1 - x0, y1 - y0), "etiqueta": etiqueta})
             print(f"   {archivo:22s} {etiqueta:10s} caja ({x0}, {y0})–({x1}, {y1})  {area} px²")
 
         # El hueco se cuenta donde el cuerpo tiene algo que perder, pero
@@ -179,14 +205,15 @@ def main() -> int:
                 registro[estado] = archivo
             print(f"   hueco/resto_{estado}.png quita {quita} px del cuerpo")
 
-        vistas.append((estado, vista(lienzo, maestro_rgba, hueco, [p for p in parches if p["estado"] == estado])))
+        vistas.append((estado, vista(lienzo, maestro_rgba, hueco, [p for p in destino if p.get(clave_json) == estado])))
 
     datos = leer_parches_json()
     datos["parches"] = parches
+    datos["gestos"] = gestos
     datos["huecos"] = huecos
     datos["restos"] = restos
     escribir_parches_json(datos)
-    print(f"\ncomponents/mascota/parches.json: {len(parches)} parches, {len(huecos)} huecos")
+    print(f"\ncomponents/mascota/parches.json: {len(parches)} parches de estado, {len(gestos)} de gesto, {len(huecos)} huecos")
 
     columnas = 4
     sep = 12

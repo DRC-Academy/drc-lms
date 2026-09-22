@@ -45,6 +45,32 @@ ESTADOS: dict[str, str] = {
     "parpadeo": "parpadeo",
 }
 
+# Variante → gesto: poses sueltas que el componente pone encima de
+# cualquier estado (mascota.gesto("saludo")), no estados. El archivo de
+# «señala» lleva eñe; el gesto, no.
+GESTOS: dict[str, str] = {
+    "saludo": "saludo",
+    "señala": "senala",
+    "salto": "salto",
+    "dormido": "dormido",
+    "estira": "estira",
+    "piensa": "piensa",
+    "asombro": "asombro",
+    "mira_izq": "mira_izq",
+    "mira_der": "mira_der",
+    "sentado": "sentado",
+}
+
+# Los gestos que cambian la pose entera: el cuerpo del maestro no está
+# donde estaba (salta, se sienta) y no hay corrimiento que lo haga
+# calzar, así que no se recortan diferencias. Su parche es el personaje
+# entero sin fondo, con el encuadre de base.png, y el componente lo pone
+# EN LUGAR del cuerpo y la cola.
+COMPLETOS: set[str] = {"salto", "sentado"}
+
+# Todas las variantes, para las comprobaciones.
+VARIANTES_TODAS: dict[str, str] = {**ESTADOS, **GESTOS}
+
 MARGEN = 0.05  # del lienzo, por lado, sobre el bbox del maestro sin fondo
 UMBRAL_ALFA = 8  # por debajo es ruido del recorte, no personaje
 
@@ -74,7 +100,33 @@ def cargar_variante(nombre: str, tamano: tuple[int, int]) -> Image.Image:
     hace falta antes de buscar el corrimiento.
     """
     with Image.open(VARIANTES / f"{nombre}.jpg") as im:
-        return im.convert("RGB").resize(tamano, Image.Resampling.LANCZOS)
+        variante = im.convert("RGB").resize(tamano, Image.Resampling.LANCZOS)
+    if nombre in IGUALAR_LUZ:
+        variante = igualar_luz(cargar_maestro().resize(tamano), variante)
+    return variante
+
+
+# Las variantes que Gemini devolvió con otra luz: «asombro» sale entera
+# unos 20 niveles más oscura, fondo incluido (200 frente a 239). Sin
+# corregir, todo el personaje difiere y el parche sería el cuerpo entero.
+IGUALAR_LUZ = {"asombro"}
+
+
+def igualar_luz(maestro: Image.Image, variante: Image.Image) -> Image.Image:
+    """La variante con el color del maestro: por canal, la recta
+    (ganancia y desplazamiento) que mejor lleva el CUERPO de la variante
+    al del maestro, por mínimos cuadrados. El cuerpo no cambia entre
+    variantes y cae en el mismo sitio (el template matching no depende
+    del brillo), así que lo que difiera ahí es la luz."""
+    x0, y0, x1, y1 = CUERPO
+    m = np.asarray(maestro).astype(np.float32)
+    v = np.asarray(variante).astype(np.float32)
+    salida = np.empty_like(v)
+    for c in range(3):
+        a, b = m[y0:y1, x0:x1, c].ravel(), v[y0:y1, x0:x1, c].ravel()
+        ganancia, desplazamiento = np.polyfit(b, a, 1)
+        salida[..., c] = v[..., c] * ganancia + desplazamiento
+    return Image.fromarray(np.clip(np.round(salida), 0, 255).astype(np.uint8))
 
 
 @dataclass(frozen=True)

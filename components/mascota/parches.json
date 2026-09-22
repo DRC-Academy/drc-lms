@@ -116,13 +116,146 @@
     "duda": "hueco_duda.png",
     "animo": "hueco_animo.png",
     "racha_perdida": "hueco_racha_perdida.png",
-    "nivel_superado": "hueco_nivel_superado.png"
+    "nivel_superado": "hueco_nivel_superado.png",
+    "saludo": "hueco_saludo.png",
+    "senala": "hueco_senala.png",
+    "dormido": "hueco_dormido.png",
+    "estira": "hueco_estira.png",
+    "piensa": "hueco_piensa.png",
+    "asombro": "hueco_asombro.png"
   },
   "restos": {
     "exito": "resto_exito.png",
     "duda": "resto_duda.png",
     "animo": "resto_animo.png",
     "racha_perdida": "resto_racha_perdida.png",
-    "nivel_superado": "resto_nivel_superado.png"
-  }
+    "nivel_superado": "resto_nivel_superado.png",
+    "saludo": "resto_saludo.png",
+    "senala": "resto_senala.png",
+    "dormido": "resto_dormido.png",
+    "estira": "resto_estira.png",
+    "piensa": "resto_piensa.png",
+    "asombro": "resto_asombro.png"
+  },
+  "gestos": [
+    {
+      "gesto": "saludo",
+      "archivo": "saludo_1.png",
+      "x": -0.2022,
+      "y": -0.0131,
+      "ancho": 1.0562,
+      "alto": 0.821,
+      "etiqueta": "cara"
+    },
+    {
+      "gesto": "senala",
+      "archivo": "senala_1.png",
+      "x": 0.1096,
+      "y": -0.0153,
+      "ancho": 0.632,
+      "alto": 0.3996,
+      "etiqueta": "cara"
+    },
+    {
+      "gesto": "senala",
+      "archivo": "senala_2.png",
+      "x": -0.2107,
+      "y": 0.3428,
+      "ancho": 0.5787,
+      "alto": 0.4585,
+      "etiqueta": "brazo_izq"
+    },
+    {
+      "gesto": "salto",
+      "archivo": "salto_completo.png",
+      "x": -0.0337,
+      "y": 0.0,
+      "ancho": 1.0478,
+      "alto": 1.0,
+      "etiqueta": "entero",
+      "completo": true
+    },
+    {
+      "gesto": "dormido",
+      "archivo": "dormido_1.png",
+      "x": -0.0225,
+      "y": -0.0131,
+      "ancho": 0.882,
+      "alto": 0.8188,
+      "etiqueta": "cara"
+    },
+    {
+      "gesto": "estira",
+      "archivo": "estira_1.png",
+      "x": -0.1433,
+      "y": -0.0066,
+      "ancho": 1.118,
+      "alto": 0.8188,
+      "etiqueta": "cara"
+    },
+    {
+      "gesto": "piensa",
+      "archivo": "piensa_1.png",
+      "x": -0.0169,
+      "y": -0.0066,
+      "ancho": 0.8708,
+      "alto": 0.821,
+      "etiqueta": "cara"
+    },
+    {
+      "gesto": "asombro",
+      "archivo": "asombro_1.png",
+      "x": -0.0028,
+      "y": -0.0175,
+      "ancho": 0.7865,
+      "alto": 0.5524,
+      "etiqueta": "cara"
+    },
+    {
+      "gesto": "mira_izq",
+      "archivo": "mira_izq_1.png",
+      "x": 0.1096,
+      "y": 0.0655,
+      "ancho": 0.2697,
+      "alto": 0.2118,
+      "etiqueta": "cara"
+    },
+    {
+      "gesto": "mira_izq",
+      "archivo": "mira_izq_2.png",
+      "x": 0.4522,
+      "y": 0.0677,
+      "ancho": 0.2612,
+      "alto": 0.2052,
+      "etiqueta": "cara"
+    },
+    {
+      "gesto": "mira_der",
+      "archivo": "mira_der_1.png",
+      "x": 0.1461,
+      "y": 0.0895,
+      "ancho": 0.236,
+      "alto": 0.1834,
+      "etiqueta": "cara"
+    },
+    {
+      "gesto": "mira_der",
+      "archivo": "mira_der_2.png",
+      "x": 0.4522,
+      "y": 0.0895,
+      "ancho": 0.2725,
+      "alto": 0.1878,
+      "etiqueta": "cara"
+    },
+    {
+      "gesto": "sentado",
+      "archivo": "sentado_completo.png",
+      "x": -0.0112,
+      "y": 0.0,
+      "ancho": 1.0197,
+      "alto": 1.0,
+      "etiqueta": "entero",
+      "completo": true
+    }
+  ]
 }
