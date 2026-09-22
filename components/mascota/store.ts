@@ -63,7 +63,7 @@ export type Ancla = {
 export type EventoMascota = {
   n: number;
   t: number;
-  tipo: "ancla" | "estado" | "gesto" | "intensidad" | "activa";
+  tipo: "ancla" | "estado" | "gesto" | "intensidad" | "activa" | "viaje" | "escena" | "burbuja";
   detalle: string;
 };
 
@@ -72,7 +72,7 @@ type Estado = {
   activa: string | null;
   transitorio: EstadoMascota | null;
   disparo: number;
-  pose: { nombre: GestoMascota; n: number } | undefined;
+  pose: { nombre: GestoMascota; n: number; duracion?: number } | undefined;
   intensidad: Intensidad;
   velocidad: number;
   eventos: EventoMascota[];
@@ -183,9 +183,15 @@ export const storeMascota = {
     relojTransitorio = setTimeout(() => cambiar({ transitorio: null }), DURACION_ESTADO_MS);
   },
 
-  gesto(nombre: GestoMascota, opciones: { desde?: string } = {}) {
+  /** Un gesto encima de lo que haya. `duracion` en ms, si no la suya (DURACION_GESTO_MS). */
+  gesto(nombre: GestoMascota, opciones: { desde?: string; duracion?: number } = {}) {
     if (opciones.desde !== undefined && opciones.desde !== estado.activa) return;
-    cambiar({ pose: { nombre, n: (estado.pose?.n ?? 0) + 1 } }, { tipo: "gesto", detalle: nombre });
+    cambiar({ pose: { nombre, n: (estado.pose?.n ?? 0) + 1, duracion: opciones.duracion } }, { tipo: "gesto", detalle: nombre });
+  },
+
+  /** Deja constancia en la cola de eventos (los viajes, las escenas, las burbujas). */
+  anotar(tipo: EventoMascota["tipo"], detalle: string) {
+    cambiar({}, { tipo, detalle });
   },
 
   fijarVelocidad(velocidad: number) {

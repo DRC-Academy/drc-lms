@@ -47,9 +47,20 @@ evento, sin esperar al frame.
 - **Sin ancla visible, a la percha**: abajo a la derecha, pequeña y
   sentada, por encima de lo que haya fijo en esa esquina
   (`[data-nav-inferior]`, `[data-barra-inferior]`, `.zona-ayuda`) y del
-  safe-area.
-- **Al cambiar de ancla**, por ahora, se apaga y se enciende en la nueva
-  (130 ms). Es también lo que queda con `prefers-reduced-motion`.
+  safe-area. Con un cajón abierto (el panel del bloque por debajo de
+  1200 px, que lleva `data-cajon-mascota`) también, y la capa sube a
+  z-55 para quedar encima del velo; al cerrarlo vuelve a su ancla.
+- **Al cambiar de ancla, viaja**: se agacha (90 ms), vuela en parábola con
+  la pose de «salto» (500–800 ms según la distancia, estirada al subir y
+  al bajar, desde los pies), se aplasta al caer y pone cara de asombro
+  200 ms. El destino se mide en cada frame, así que llega aunque se
+  mueva; si sale de fuera de la ventana, arranca asomando por el borde.
+  Nunca dos viajes a la vez: lo que cambie en el aire espera a que
+  aterrice. La primera vez entra saltando desde abajo. Con
+  `prefers-reduced-motion` no viaja: se apaga y se enciende en el
+  destino (130 ms). Cada viaje queda en la cola de eventos.
+- **Al cerrar sesión** (el formulario de `/salir`) se despide con la mano
+  y el envío espera 900 ms.
 - **Al tocarla** en reposo: un gesto al azar entre saludo, salto y guiño,
   más lo que el ancla haga al tocarla (`onToque`: la ruta centra la
   parada).

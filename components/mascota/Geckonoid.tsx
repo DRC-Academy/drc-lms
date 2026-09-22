@@ -232,11 +232,15 @@ export default function Geckonoid({
   onIdle?: () => void;
   /** Multiplica el ritmo de todo: 0.5 es a cámara lenta, 2 al doble. Para revisar. */
   velocidad?: number;
-  /** Un gesto encima del estado. `n` cambia para repetirlo. Lo lleva `useMascota().gesto`. */
-  pose?: { nombre: GestoMascota; n: number };
+  /**
+   * Un gesto encima del estado. `n` cambia para repetirlo; `duracion`
+   * (ms) cambia la de DURACION_GESTO_MS. Lo lleva `useMascota().gesto`.
+   */
+  pose?: { nombre: GestoMascota; n: number; duracion?: number };
   /**
    * Un gesto que se queda puesto hasta que se quita (la mascota sentada
-   * en la percha). Un gesto de `pose` lo tapa mientras dura.
+   * en la percha, la pose de salto en el aire). Un gesto de `pose` lo
+   * tapa mientras dura. No mueve el cuerpo: quien lo sostiene ya lo mueve.
    */
   sostenida?: GestoMascota;
   /** Al tocarla. Sin esto, tocarla no hace nada. */
@@ -323,7 +327,7 @@ export default function Geckonoid({
     relojGesto.current = setTimeout(() => {
       trasGesto.current = true;
       setGestoVivo(null);
-    }, ajustes.current.ms(DURACION_GESTO_MS[pose.nombre]));
+    }, ajustes.current.ms(pose.duracion ?? DURACION_GESTO_MS[pose.nombre]));
     // Solo cuando llega un pedido nuevo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pose?.n]);
@@ -605,7 +609,8 @@ export default function Geckonoid({
     }
     microEnCurso.current?.stop();
     microEnCurso.current = null;
-    if (reducido || quieta) return;
+    // El sostenido (n < 0) no se mueve: lo lleva quien lo sostiene.
+    if (reducido || quieta || gesto.n < 0) return;
     if (cabeza.current) animar(cabeza.current, { rotate: 0 }, muelle(400, 25));
     const movimiento = MOVIMIENTOS[gesto.nombre](el);
     return () => movimiento.stop();
