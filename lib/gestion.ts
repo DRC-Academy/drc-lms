@@ -820,19 +820,23 @@ export type ClaseDelRecorrido = {
   id: string;
   fechaClase: string;
   titulo: string;
-  resumen: string;
   /**
    * Los temas y el vocabulario que se trabajaron (`topics_covered`), tal
    * cual los escribe el análisis: "Vocabulario y expresiones: skimp,
    * off-putting… Práctica de speaking libre". Es lo que trabajó, no lo
    * que falló: los errores (`errors_detected`) no se piden.
+   *
+   * NO HAY RESUMEN, Y NO SE PIDE. `class_summary` está escrito en tercera
+   * persona sobre el alumno —"Ella llegó sin cuaderno y muy metida en el
+   * trabajo"— y esos comentarios no se le enseñan. El título y los temas
+   * dicen lo que trabajó sin hablar de él.
    */
   temas: string;
   /** Casi siempre null: la columna está vacía en 858 de 867 filas. */
   numero: number | null;
   /** Quién dio la clase. El nombre lo pone `obtenerNombresProfesor`. */
   teacherId: string | null;
-  /** Tiene análisis: título o resumen. Sin él, la clase es su fecha y su profesor. */
+  /** Tiene análisis: título o temas. Sin él, la clase es su fecha y su profesor. */
   conAnalisis: boolean;
 };
 
@@ -881,7 +885,7 @@ const MAXIMO_CLASES = 200;
  */
 export async function obtenerRecorrido(alumnoId: string): Promise<Recorrido> {
   const { data, error } = await soloLectura("class_analyses")
-    .select("id, teacher_id, class_number, class_title, class_summary, topics_covered, class_date, analyzed_at")
+    .select("id, teacher_id, class_number, class_title, topics_covered, class_date, analyzed_at")
     .eq("student_id", alumnoId)
     // Hay alumnos con dos clases el mismo día; `analyzed_at` desempata
     // para que el orden no cambie entre recargas.
@@ -909,17 +913,14 @@ export async function obtenerRecorrido(alumnoId: string): Promise<Recorrido> {
     if (numero !== null && numero > mayorNumero) mayorNumero = numero;
 
     const titulo = comoTexto(fila.class_title).trim();
-    const resumen = comoTexto(fila.class_summary).trim();
-    const conAnalisis = titulo !== "" || resumen !== "";
+    const temas = comoTexto(fila.topics_covered).trim();
+    const conAnalisis = titulo !== "" || temas !== "";
 
     todas.push({
       id: comoTexto(fila.id),
       fechaClase: comoTexto(fila.class_date),
       titulo,
-      resumen,
-      // Los temas solo con análisis: sin título ni resumen, lo que haya
-      // en esa columna es un resto de un análisis que no terminó.
-      temas: conAnalisis ? comoTexto(fila.topics_covered).trim() : "",
+      temas,
       numero,
       teacherId: comoTextoOpcional(fila.teacher_id),
       conAnalisis,

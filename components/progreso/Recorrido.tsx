@@ -6,20 +6,23 @@ import { esHito } from "@/lib/recorrido";
 // ---------------------------------------------------------------
 // EL RECORRIDO CLASE A CLASE
 //
-// La pieza de la ficha de progreso que enseña cada clase con su resumen.
+// La pieza que enseña cada clase con su título y sus temas y vocabulario.
 // Vivía dentro de `Ficha.tsx`; sale a su archivo porque la usan dos
 // pantallas y tiene que ser la misma:
 //
-//   · la ficha de progreso («Mi progreso»), que es una réplica de la
-//     página pública de Gestión y enseña solo las clases con informe;
+//   · la ficha de progreso («Mi progreso»), que enseña solo las clases con
+//     informe;
 //   · el historial de «Clases», que enseña TODAS las pasadas con su
-//     `detalle`: quién la dio y los temas y el vocabulario trabajados.
-//     Una clase sin análisis sale con su fecha y su profesor, sin
-//     inventarle contenido.
+//     `detalle`: además, quién dio cada una. Una clase sin análisis sale
+//     con su fecha y su profesor, sin inventarle contenido.
 //
-// LO QUE NO SALE NUNCA: el transcript, las frases sueltas del alumno y
-// sus errores. `obtenerRecorrido` ni siquiera los pide. El tono es "lo
-// que trabajaste", nunca "lo que fallaste".
+// LO QUE NO SALE NUNCA: el transcript, las frases sueltas del alumno, sus
+// errores y el resumen (`class_summary`), que habla de él en tercera
+// persona. `obtenerRecorrido` ni siquiera los pide. El tono es "lo que
+// trabajaste", nunca "lo que fallaste".
+//
+// En esto la ficha se aparta de la página pública de Gestión, que sí
+// enseña el resumen.
 //
 // El CSS es el `pg-*` de la ficha (`components/progreso/estilos.tsx`):
 // quien monta esta pieza monta también `EstilosFicha`.
@@ -40,14 +43,13 @@ export type DetalleRecorrido = {
   profesores: Map<string, string>;
   /** "con Ignacio" */
   conProfesor: (nombre: string) => string;
-  /** El rótulo de los temas: "Temas y vocabulario". */
-  temas: string;
 };
 
 export default function Recorrido({
   clases,
   titulo,
   vacio,
+  rotuloTemas,
   detalle,
   retraso = "360ms",
 }: {
@@ -57,7 +59,9 @@ export default function Recorrido({
   titulo?: string;
   /** La frase cuando no hay ninguna. */
   vacio: string;
-  /** Solo en el historial: profesor y temas. La ficha va sin él. */
+  /** El rótulo de los temas: "Temas y vocabulario". */
+  rotuloTemas: string;
+  /** Solo en el historial: el profesor de cada clase. La ficha va sin él. */
   detalle?: DetalleRecorrido;
   /** El paso de la entrada escalonada de la ficha. */
   retraso?: string;
@@ -65,7 +69,9 @@ export default function Recorrido({
   const t = textosActuales().progreso;
   const primeras = clases.slice(0, VISIBLES);
   const resto = clases.slice(VISIBLES);
-  const tarjeta = (clase: ClaseDelRecorrido) => <Tarjeta key={clase.id} clase={clase} detalle={detalle} />;
+  const tarjeta = (clase: ClaseDelRecorrido) => (
+    <Tarjeta key={clase.id} clase={clase} rotuloTemas={rotuloTemas} detalle={detalle} />
+  );
 
   return (
     <section className="pg-rise" style={{ animationDelay: retraso }}>
@@ -89,7 +95,15 @@ export default function Recorrido({
   );
 }
 
-function Tarjeta({ clase, detalle }: { clase: ClaseDelRecorrido; detalle?: DetalleRecorrido }) {
+function Tarjeta({
+  clase,
+  rotuloTemas,
+  detalle,
+}: {
+  clase: ClaseDelRecorrido;
+  rotuloTemas: string;
+  detalle?: DetalleRecorrido;
+}) {
   const t = textosActuales().progreso;
   const numero = clase.numero ?? 0;
   const marcado = numero > 0 && esHito(numero);
@@ -113,10 +127,9 @@ function Tarjeta({ clase, detalle }: { clase: ClaseDelRecorrido; detalle?: Detal
           {marcado && <span className="pg-badge pg-badge-sm">{t.hito}</span>}
         </div>
         {clase.titulo !== "" && <p className="pg-tl-title">{clase.titulo}</p>}
-        {clase.resumen !== "" && <p className="pg-body">{clase.resumen}</p>}
-        {detalle && clase.temas !== "" && (
+        {clase.temas !== "" && (
           <div className="pg-tl-temas">
-            <p className="pg-tl-temas-rotulo">{detalle.temas}</p>
+            <p className="pg-tl-temas-rotulo">{rotuloTemas}</p>
             <p className="pg-body">{clase.temas}</p>
           </div>
         )}

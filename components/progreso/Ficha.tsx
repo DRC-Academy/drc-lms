@@ -278,7 +278,12 @@ export default function Ficha({
           </section>
         )}
 
-        <Recorrido clases={clases} titulo={t.tuRecorrido} vacio={t.recorridoVacio} />
+        <Recorrido
+          clases={clases}
+          titulo={t.tuRecorrido}
+          vacio={t.recorridoVacio}
+          rotuloTemas={textosActuales().clases.temasYVocabulario}
+        />
 
         <p className="pg-foot">
           {t.informePrivado}

@@ -4,7 +4,7 @@
 // Las clases pasadas y lo que se trabajó en cada una. No es una pieza
 // nueva: es el recorrido clase a clase de la ficha de progreso
 // (`components/progreso/Recorrido.tsx`), con su CSS, en su modo
-// `detalle` —quién dio la clase y los temas y el vocabulario—, y con
+// `detalle` —quién dio cada clase—, y con
 // TODAS las clases, también las que no tienen análisis: esas salen con su
 // fecha y su profesor, sin contenido inventado.
 //
@@ -44,7 +44,8 @@ export default function HistorialClases({
           clases={clases}
           vacio={t.historialVacio}
           retraso="0ms"
-          detalle={{ profesores, conProfesor: t.conProfesor, temas: t.temasYVocabulario }}
+          rotuloTemas={t.temasYVocabulario}
+          detalle={{ profesores, conProfesor: t.conProfesor }}
         />
       </div>
     </section>

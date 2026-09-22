@@ -175,8 +175,8 @@ export const CSS_FICHA = `
 .pg-tl-date { font-size: 12.5px; color: var(--pg-faint); }
 .pg-tl-title { font-size: 14.5px; font-weight: 600; color: var(--pg-green-dark); margin: 8px 0 0; }
 .pg-tl-card .pg-body { margin-top: 9px; font-size: 14.5px; color: var(--pg-muted); }
-/* SOLO EN EL LMS: los temas y el vocabulario de la clase, en el historial
-   de «Clases». La ficha de progreso no los pinta. */
+/* SOLO EN EL LMS: los temas y el vocabulario de la clase, en lugar del
+   resumen de Gestión, que habla del alumno en tercera persona. */
 .pg-tl-temas { margin-top: 12px; padding-top: 11px; border-top: 1px dashed var(--pg-line); }
 .pg-tl-temas-rotulo { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pg-green-dark); margin: 0; }
 .pg-tl-temas .pg-body { margin-top: 5px; }
