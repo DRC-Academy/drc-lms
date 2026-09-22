@@ -172,15 +172,31 @@ export async function leerBloquesGenerados(
 
   if (!incluirEquipo) consulta = consulta.eq("generado_por_equipo", false);
 
+  // EL TOPE TAMBIÉN SE CORTA POR LA CLASE. Ordenar aquí por
+  // `generado_en` y reordenar después por la clase dejaba una excepción
+  // a la regla: los veinte que se traían eran los veinte generados más
+  // tarde, así que un bloque de una clase reciente generado hace mucho
+  // se quedaba fuera del camino y uno de una clase vieja generado ayer
+  // entraba. Con menos de veinte bloques no se nota —hoy nadie pasa de
+  // seis—, pero la regla es que el camino es el de las clases, y una
+  // regla con una excepción escondida en un `limit` es la que rompe el
+  // día que alguien llega a veintiuno.
+  //
+  // `nullsFirst: false` deja al final los que no tienen clase: son los
+  // del banco, que el bucle de abajo descarta igual, y sin esto se
+  // comerían los veinte huecos.
   const { data, error } = await consulta
+    .order("contenido->claseOrigen->>fecha", { ascending: false, nullsFirst: false })
     .order("generado_en", { ascending: false })
     .limit(20)
     .returns<FilaBloque[]>();
 
   if (!registrar("No se pudo leer bloques_generados", error)) return [];
 
-  // El día que ordena cada uno es el de su clase. Los dos son días ISO,
-  // así que se comparan como texto.
+  // Y se vuelve a ordenar aquí, sobre lo ya validado: la consulta ordena
+  // por el JSON en bruto y este bucle es el que decide qué es una fecha
+  // de clase de verdad (`validarBloque`). Los dos son días ISO, así que
+  // se comparan como texto.
   const con: { bloque: Bloque; dia: string; generadoEn: string }[] = [];
   for (const fila of data ?? []) {
     const bloque = validarBloque(fila.contenido);
