@@ -39,11 +39,19 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // tabla. La vista sigue existiendo en Gestión para lo suyo; lo que ya
 // no hace es contestarle al LMS. El motivo largo, en `lib/gestion.ts`.
 //
+// `vista_excepciones_clase` entró con el botón de «Unirse a la clase».
+// El horario son los `slots` de la vista de perfil, pero un horario
+// recurrente no sabe que el jueves se movió al viernes: eso solo está
+// en `class_records`, que es el parte de los profesores y guarda notas
+// y capturas que el LMS no necesita. La vista entrega únicamente lo que
+// añade o quita una clase —fecha, hora, tipo y profesor—, ya cruzado
+// con el alumno. `supabase/gestion-vista-excepciones-clase.sql`.
+//
 // Añadir algo a esta lista es ampliar lo que el LMS ve de una base con
 // datos de alumnos, profesores y nóminas. Solo con un motivo escrito,
 // como este.
 // ---------------------------------------------------------------
-export const VISTAS = ["vista_perfil_alumno", "class_analyses"] as const;
+export const VISTAS = ["vista_perfil_alumno", "class_analyses", "vista_excepciones_clase"] as const;
 export type Vista = (typeof VISTAS)[number];
 
 let cliente: SupabaseClient | null = null;
