@@ -91,6 +91,41 @@ libres (no con los anteojos, ni con los ojos cerrados de «éxito»). Con
 `prefers-reduced-motion`, nada de esto. En el tablero, «Sueño +90 s /
 +150 s» adelanta el reloj (sin mover el ratón después: la despierta).
 
+#### Burbujas y escenas
+
+Las **burbujas** son una línea corta junto a la mascota, que la señala
+mientras tanto (`storeMascota.decir(clave)`). Los textos, en los dos
+idiomas, están **todos en `lib/textos/mascota.ts`**, para editarlos sin
+tocar código. Reglas (las aplica la capa): se dicen cuando está posada,
+como mucho una por pantalla y ninguna repetida en la sesión. Con
+`prefers-reduced-motion`, sin animación. Se anuncian al lector de
+pantalla (`role="status"`).
+
+| Cuándo | Qué hace | Burbuja |
+|---|---|---|
+| Primera vez en la sesión que se posa en la franja del inicio (`escena: "inicio"`) | entra saltando, saluda | «Aquí tienes por dónde seguir» |
+| Lo mismo, si vuelve tras 5 días o más (localStorage) | saluda y se asombra | «¡Cuánto tiempo! Sigamos por aquí» |
+| Termina una generación (`usarGenerador` → escena `bloque_listo`) | se quita los anteojos, asombro, viaja a su sitio | «Tu bloque está listo» |
+| Cierre de bloque ≥ 80 % | éxito (salto con la pose, estrellas, saludo) | solo con `BUCLE_PROFESOR`: «…se lo contaré a <profesor>» |
+| Cierre de bloque < 80 % | ánimo | «Buen trabajo, sigamos» (o la versión con profesor) |
+
+`BUCLE_PROFESOR` (en el mismo archivo) está en `false`: las burbujas que
+prometen contárselo al profesor no salen hasta que ese bucle exista.
+
+**Durante el bloque** (`VistaBloque`): un acierto, ánimo; tras un fallo,
+asombro y ánimo; 3 seguidos, ánimo con rebote más alto; 5 (y cada 5), un
+salto en el sitio sin estrellas; un fallo, duda. Mientras se lee el
+enunciado mira hacia él (`storeMascota.mirarA`, que manda sobre el
+cursor): en escritorio, desde el panel, a la derecha; en móvil, desde la
+percha, a la izquierda. Al tocar la respuesta vuelve a mirar al alumno.
+
+**Los gestos de estado**: «estudiando», anteojos y «piensa» cada 4 s;
+«éxito», anticipación, salto alto con la pose de «salto», estrellas,
+aterriza y saluda; «ánimo», el pulgar y un rebote; «duda», «piensa»
+600 ms y después la cara de duda con el signo; «nivel superado», salto
+con el diploma y confeti de tres colores de marca (1,2 s). Mientras
+viaja, el estado se congela y se enseña al aterrizar.
+
 ### Las anclas (components/mascota/AnclaMascota.tsx)
 
 Un ancla es un hueco vacío del tamaño que ocupará la mascota.
@@ -112,6 +147,7 @@ const ref = useAnclaMascota("parati-ruta", { prioridad: 2, estado, quieta, activ
 | `lado` | Hacia dónde se alinea si el hueco es más ancho que ella. |
 | `activa` | `false`: declarada pero fuera de juego por ahora. |
 | `titulo`, `onToque` | Tooltip y qué más pasa al tocarla aquí. |
+| `escena` | `"inicio"`: la escena de llegada, la primera vez en la sesión. |
 
 Los ids son únicos entre las anclas montadas a la vez. Las de la app:
 

@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 import { DURACION_ESTADO_MS, type EstadoMascota, type GestoMascota } from "@/components/mascota/estados";
+import type { MovimientoMascota } from "@/components/mascota/Geckonoid";
+import type { ClaveBurbuja } from "@/lib/textos/mascota";
 
 /**
  * EL ESTADO DE LA MASCOTA, UNO PARA TODA LA APP.
@@ -23,6 +25,13 @@ import { DURACION_ESTADO_MS, type EstadoMascota, type GestoMascota } from "@/com
  *   pose          el último gesto pedido; `n` cambia en cada pedido.
  *   intensidad    cuánta vida propia tiene (tranquila, normal, juguetona),
  *                 elegida por el alumno y guardada en localStorage.
+ *   movimiento    el último movimiento suelto pedido (vuelta, salto en el
+ *                 sitio, rebote); `n` cambia en cada pedido.
+ *   burbuja       la última línea pedida (lib/textos/mascota.ts); la capa
+ *                 decide si se dice (una por pantalla, ninguna repetida).
+ *   mirarA        un elemento hacia el que mirar (el enunciado del
+ *                 ejercicio); manda sobre el cursor.
+ *   escena        algo que pasó y que la capa escenifica («bloque_listo»).
  *   velocidad     el ritmo de todo (1 normal), solo para revisar en el
  *                 tablero de /dev/mascota.
  *   eventos       la cola de lo que ha pasado, lo último primero, para
@@ -35,6 +44,8 @@ import { DURACION_ESTADO_MS, type EstadoMascota, type GestoMascota } from "@/com
  */
 
 export type Intensidad = "tranquila" | "normal" | "juguetona";
+/** Lo que la capa escenifica cuando pasa. */
+export type EscenaMascota = "bloque_listo";
 export const INTENSIDADES: readonly Intensidad[] = ["tranquila", "normal", "juguetona"];
 
 /** Hacia dónde se alinea la mascota dentro de su hueco, si el hueco es más ancho que ella. */
@@ -56,6 +67,8 @@ export type Ancla = {
   titulo?: string;
   /** Qué más pasa al tocarla aquí (la ruta centra la parada). */
   onToque?: () => void;
+  /** Lo que escenifica al posarse aquí («inicio»: saludo y burbuja de llegada). */
+  escena?: "inicio";
   /** Para desempatar entre dos de la misma prioridad: gana la última. */
   orden: number;
 };
@@ -73,6 +86,10 @@ type Estado = {
   transitorio: EstadoMascota | null;
   disparo: number;
   pose: { nombre: GestoMascota; n: number; duracion?: number } | undefined;
+  movimiento: { nombre: MovimientoMascota; n: number } | undefined;
+  burbuja: { clave: ClaveBurbuja; profesor?: string; n: number } | undefined;
+  mirarA: HTMLElement | null;
+  escena: { nombre: EscenaMascota; n: number } | undefined;
   intensidad: Intensidad;
   velocidad: number;
   /** Solo para el tablero: cuánto se adelanta el reloj del sueño (ms). */
@@ -98,6 +115,10 @@ let estado: Estado = {
   transitorio: null,
   disparo: 0,
   pose: undefined,
+  movimiento: undefined,
+  burbuja: undefined,
+  mirarA: null,
+  escena: undefined,
   intensidad: "normal",
   velocidad: 1,
   adelantoSueno: 0,
@@ -190,6 +211,29 @@ export const storeMascota = {
   gesto(nombre: GestoMascota, opciones: { desde?: string; duracion?: number } = {}) {
     if (opciones.desde !== undefined && opciones.desde !== estado.activa) return;
     cambiar({ pose: { nombre, n: (estado.pose?.n ?? 0) + 1, duracion: opciones.duracion } }, { tipo: "gesto", detalle: nombre });
+  },
+
+  /** Un movimiento del cuerpo entero, sin parche: vuelta, salto en el sitio, rebote. */
+  moverse(nombre: MovimientoMascota) {
+    cambiar({ movimiento: { nombre, n: (estado.movimiento?.n ?? 0) + 1 } }, { tipo: "gesto", detalle: `movimiento ${nombre}` });
+  },
+
+  /**
+   * Una línea (lib/textos/mascota.ts). Se dice cuando la mascota está
+   * posada, si no se ha dicho ya en la sesión ni hay otra en la pantalla.
+   */
+  decir(clave: ClaveBurbuja, opciones: { profesor?: string } = {}) {
+    cambiar({ burbuja: { clave, profesor: opciones.profesor, n: (estado.burbuja?.n ?? 0) + 1 } }, { tipo: "burbuja", detalle: `pedida ${clave}` });
+  },
+
+  /** Mirar hacia un elemento (null: dejar de mirarlo). Manda sobre el cursor. */
+  mirarA(el: HTMLElement | null) {
+    if (estado.mirarA === el) return;
+    cambiar({ mirarA: el });
+  },
+
+  escena(nombre: EscenaMascota) {
+    cambiar({ escena: { nombre, n: (estado.escena?.n ?? 0) + 1 } }, { tipo: "escena", detalle: nombre });
   },
 
   /** Deja constancia en la cola de eventos (los viajes, las escenas, las burbujas). */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Bloque } from "@/lib/data";
 import { conFoco } from "@/lib/foco";
@@ -17,6 +17,8 @@ import { usarMarco } from "@/components/leccion/MarcoCurso";
 import PanelBloque from "@/components/practica/PanelBloque";
 import AnclaMascota from "@/components/mascota/AnclaMascota";
 import { useMascota } from "@/components/mascota/useMascota";
+import { storeMascota } from "@/components/mascota/store";
+import { BUCLE_PROFESOR } from "@/lib/textos/mascota";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { usarTraduccion } from "@/components/ejercicios/usarTraduccion";
 
@@ -110,6 +112,51 @@ export default function VistaBloque({
 
   const mascota = useMascota();
 
+  // LA MASCOTA DURANTE EL BLOQUE. Mientras se lee el enunciado, mira
+  // hacia él (hacia donde esté: en escritorio queda a su derecha, en
+  // móvil, desde la percha, a su izquierda); al tocar la respuesta
+  // vuelve a mirar al alumno. Y lleva la cuenta de los aciertos
+  // seguidos para ir subiendo sin celebrar: el éxito es del cierre.
+  const zonaVisor = useRef<HTMLDivElement>(null);
+  const racha = useRef({ seguidos: 0, trasFallo: false });
+  useEffect(() => {
+    const zona = zonaVisor.current;
+    storeMascota.mirarA(zona);
+    if (!zona) return;
+    const alResponder = () => storeMascota.mirarA(null);
+    const eventos = ["pointerdown", "keydown", "input"] as const;
+    eventos.forEach((e) => zona.addEventListener(e, alResponder, { passive: true }));
+    return () => {
+      eventos.forEach((e) => zona.removeEventListener(e, alResponder));
+      storeMascota.mirarA(null);
+    };
+  }, []);
+
+  /**
+   * Un acierto: tras un fallo, asombro y ánimo; a los 3 seguidos, ánimo
+   * con un rebote más alto; a los 5 (y cada 5), un salto en el sitio,
+   * sin estrellas. Un fallo, duda.
+   */
+  function reaccionarAlIntento(correcto: boolean) {
+    storeMascota.mirarA(null);
+    if (!correcto) {
+      racha.current = { seguidos: 0, trasFallo: true };
+      mascota.dispara("duda");
+      return;
+    }
+    const trasFallo = racha.current.trasFallo;
+    const seguidos = racha.current.seguidos + 1;
+    racha.current = { seguidos, trasFallo: false };
+    if (trasFallo) {
+      storeMascota.gesto("asombro", { duracion: 450 });
+      setTimeout(() => mascota.dispara("animo"), 450);
+      return;
+    }
+    mascota.dispara("animo");
+    if (seguidos % 5 === 0) storeMascota.moverse("salto_sitio");
+    else if (seguidos === 3) storeMascota.moverse("rebote");
+  }
+
   // LAS FASES, como pasos. Solo las que tiene el bloque: hay bloques sin
   // producir, y una fase vacía no es un paso.
   const fases = ORDEN.filter((fase) => unificados.some((e) => e.fase === fase));
@@ -157,6 +204,8 @@ export default function VistaBloque({
       // Deja constancia de por dónde iba: el bloque queda "en progreso".
       case "avance":
         guardar({ tipo: "avance", indice: suceso.indice, total: suceso.total });
+        // Un ejercicio nuevo: a leer el enunciado.
+        storeMascota.mirarA(zonaVisor.current);
         break;
 
       // El texto libre de la fase de producir, que es lo que llega al
@@ -174,7 +223,19 @@ export default function VistaBloque({
         // manera de saber que acababa de pasar. Ver `lib/cierre-ruta`.
         anotarParadaCerrada(bloque.id);
         const pct = suceso.total > 0 ? (suceso.aciertos / suceso.total) * 100 : 0;
-        mascota.dispara(pct >= UMBRAL_DOMINADO ? "exito" : "animo");
+        // La burbuja que nombra al profesor promete que el resultado le
+        // llega: solo con el bucle hecho (lib/textos/mascota.ts). Sin él,
+        // con el 80 % no se dice nada —ya lo dice el salto— y por debajo,
+        // que sigamos.
+        const conProfesor = BUCLE_PROFESOR && !!profesor;
+        if (pct >= UMBRAL_DOMINADO) {
+          mascota.dispara("exito");
+          if (conProfesor) storeMascota.decir("cierreBien", { profesor });
+        } else {
+          mascota.dispara("animo");
+          storeMascota.decir(conProfesor ? "cierreSigamosProfesor" : "cierreSigamos", { profesor });
+        }
+        storeMascota.mirarA(null);
         break;
       }
 
@@ -182,7 +243,7 @@ export default function VistaBloque({
       // cuenta es el resultado del bloque, que va en "final". La
       // mascota sí se entera.
       case "intento":
-        mascota.dispara(suceso.correcto ? "animo" : "duda");
+        reaccionarAlIntento(suceso.correcto);
         break;
 
       // Al volver a un ejercicio desde el cierre, o al repetir el
@@ -190,7 +251,9 @@ export default function VistaBloque({
       // repitiendo el último gesto.
       case "salto":
       case "reinicio":
+        racha.current = { seguidos: 0, trasFallo: false };
         mascota.dispara("idle");
+        storeMascota.mirarA(zonaVisor.current);
         break;
     }
   }
@@ -263,7 +326,7 @@ export default function VistaBloque({
         ) : null
       }
     >
-      <div className="mt-5 min-[900px]:mt-7">
+      <div ref={zonaVisor} className="mt-5 min-[900px]:mt-7">
         <VisorEjercicios
           ejercicios={unificados}
           alSuceso={alSuceso}

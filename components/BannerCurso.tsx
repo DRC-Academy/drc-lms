@@ -160,7 +160,7 @@ export default function BannerCurso({
         title={titulo}
         subtitle={siguiente?.titulo}
         action={{ label: llamada, href: destino, srSuffix: siguiente?.titulo ?? titulo }}
-        ilustracion={<MascotaBienvenida id="inicio-curso" prioridad={2} variante="franja" estado={terminado ? "nivel_superado" : "idle"} />}
+        ilustracion={<MascotaBienvenida id="inicio-curso" prioridad={2} variante="franja" escena="inicio" estado={terminado ? "nivel_superado" : "idle"} />}
         // Dónde cae esta lección dentro del curso. Es lo único que
         // sobrevive de la columna de cifra, y sobrevive porque no lo dice
         // nadie más: el banner del diploma cuenta el curso entero, no en

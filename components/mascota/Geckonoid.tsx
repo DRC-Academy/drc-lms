@@ -148,6 +148,10 @@ const FUNDIDOS_COMPLETO_S: Partial<Record<GestoMascota, number>> = { salto: 0.1 
 const RETARDO_CARA_S = 0.1;
 const RETARDO_BRAZO_S = 0.15;
 const RETARDO_ADORNO_S = 0.22;
+/** El signo de la duda sale al acabar el «piensa» (600 ms). */
+const RETARDO_SIGNO_S = 0.65;
+/** El confeti del diploma: tres colores de marca, 1,2 s. */
+const CONFETI = { colores: ["#1E9E3A", "#37C25A", "#FFC400"], piezas: 22, duracion: 1.2 };
 
 /** Movimientos del cuerpo entero sin parche propio, pedidos desde fuera. */
 export type MovimientoMascota = "vuelta" | "salto_sitio" | "rebote";
@@ -344,15 +348,27 @@ export default function Geckonoid({
     [],
   );
 
-  useEffect(() => {
-    if (!pose) return;
+  /**
+   * Pone un gesto encima durante `duracionMs`. Los de `pose` traen su
+   * movimiento; los que pone un guion (el salto de «éxito», el «piensa»
+   * de la duda) no, porque el guion ya mueve el cuerpo: se marcan con
+   * `n` negativo, igual que el sostenido.
+   */
+  const contadorGestos = useRef(0);
+  const ponerGesto = useCallback((nombre: GestoMascota, duracionMs: number, conMovimiento: boolean) => {
     clearTimeout(relojGesto.current);
     trasGesto.current = false;
-    setGestoVivo(pose);
+    const n = ++contadorGestos.current;
+    setGestoVivo({ nombre, n: conMovimiento ? n : -n });
     relojGesto.current = setTimeout(() => {
       trasGesto.current = true;
       setGestoVivo(null);
-    }, ajustes.current.ms(pose.duracion ?? DURACION_GESTO_MS[pose.nombre]));
+    }, ajustes.current.ms(duracionMs));
+  }, []);
+
+  useEffect(() => {
+    if (!pose) return;
+    ponerGesto(pose.nombre, pose.duracion ?? DURACION_GESTO_MS[pose.nombre], true);
     // Solo cuando llega un pedido nuevo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pose?.n]);
@@ -394,6 +410,14 @@ export default function Geckonoid({
   // salida, el último completo que hubo.
   const ultimoCompleto = useRef<GestoMascota | null>(null);
   if (completo && gesto) ultimoCompleto.current = gesto.nombre;
+  // Al salir de un completo, los parches que vuelven entran ya opacos:
+  // los funde la capa entera con él (plus-lighter), y con su propio
+  // fundido encima se transparentaría la base a medio camino.
+  const eraCompleto = useRef(false);
+  const saliendoDeCompleto = useRef(0);
+  if (eraCompleto.current && !completo) saliendoDeCompleto.current = Date.now();
+  eraCompleto.current = completo;
+  const entranOpacos = Date.now() - saliendoDeCompleto.current < 400;
   const fundidoDe = ultimoCompleto.current ? FUNDIDOS_COMPLETO_S[ultimoCompleto.current] : undefined;
 
   // El parpadeo: cada 3–5 segundos, 150 ms, y solo si ningún parche del
@@ -517,14 +541,43 @@ export default function Geckonoid({
     nivel_superado: EN_REPOSO,
   };
 
+  /** Lanza un guion y, a los `ms`, otra cosa; `stop` corta los dos. */
+  const conDespues = (guion: { stop: () => void }, despues: Array<[number, () => void]>) => {
+    const relojes = despues.map(([m, hacer]) => setTimeout(hacer, ms(m)));
+    return {
+      stop: () => {
+        guion.stop();
+        relojes.forEach(clearTimeout);
+      },
+    };
+  };
+
   const GESTOS: Record<EstadoMascota, (el: HTMLElement) => { stop: () => void }> = {
     idle: (el) => animar(el, EN_REPOSO, muelle(350, 22)),
     estudiando: (el) => animar(el, EN_REPOSO, muelle(350, 22)),
-    exito: (el) => correr(salto(el, 30)),
-    duda: (el) => animar(el, POSE_FINAL.duda, muelle(320, 18)),
+    // Anticipación, un salto alto con la pose de «salto» en el aire (las
+    // estrellas salen solas: es «éxito»), aterriza y saluda.
+    exito: (el) =>
+      conDespues(
+        correr([() => animar(el, { scaleY: 0.88, scaleX: 1.07, y: 0, rotate: 0 }, { duration: seg(0.12), ease: "easeIn" }), ...salto(el, 38)]),
+        // El salto dura hasta que aterriza y pasa directo al saludo: si
+        // volviera un instante a la cara de «éxito» en medio, se notaría.
+        [
+          [110, () => ponerGesto("salto", 590, false)],
+          [700, () => ponerGesto("saludo", 1200, false)],
+        ],
+      ),
+    // Primero lo piensa (600 ms) y después pone la cara de duda, con el
+    // signo que salta (ver RETARDO_SIGNO_S).
+    duda: (el) => {
+      ponerGesto("piensa", 600, false);
+      return conDespues(animar(el, { ...EN_REPOSO, rotate: 3 }, muelle(200, 20)), [[600, () => animar(el, POSE_FINAL.duda, muelle(320, 18))]]);
+    },
+    // El pulgar (el parche) y un rebote pequeño.
     animo: (el) => correr(salto(el, 10)),
     racha_perdida: (el) => animar(el, POSE_FINAL.racha_perdida, muelle(300, 25)),
-    nivel_superado: (el) => correr(salto(el, 18)),
+    // El salto con el diploma; el confeti sale solo (ver `confeti`).
+    nivel_superado: (el) => correr(salto(el, 22)),
   };
 
   /**
@@ -752,6 +805,33 @@ export default function Geckonoid({
     );
   }, [vivo, vez, u, reducido, quieta]);
 
+  // El confeti del diploma: rectangulitos de tres colores de marca que
+  // salen hacia arriba en abanico, giran y caen. Solo al enseñarse la
+  // escena, no cuando el diploma ya está (quieta).
+  type Papelito = { id: number; dx: number; dy: number; giro: number; color: string; ancho: number; retardo: number };
+  const [confeti, setConfeti] = useState<Papelito[]>([]);
+  useEffect(() => {
+    if (vivo !== "nivel_superado" || reducido || quieta) {
+      setConfeti([]);
+      return;
+    }
+    setConfeti(
+      Array.from({ length: CONFETI.piezas }, (_, i) => {
+        const rumbo = -Math.PI * (0.05 + Math.random() * 0.9);
+        const alcance = (50 + Math.random() * 70) * u;
+        return {
+          id: i,
+          dx: Math.cos(rumbo) * alcance,
+          dy: Math.sin(rumbo) * alcance,
+          giro: (Math.random() - 0.5) * 720,
+          color: CONFETI.colores[i % CONFETI.colores.length],
+          ancho: (5 + Math.random() * 5) * u,
+          retardo: Math.random() * 0.15,
+        };
+      }),
+    );
+  }, [vivo, vez, u, reducido, quieta]);
+
   // Con el ratón encima, se inclina hacia el cursor (5° como mucho).
   const inclinacion = useMotionValue(0);
   const inclinacionSuave = useSpring(inclinacion, { stiffness: 150, damping: 20 });
@@ -880,7 +960,7 @@ export default function Geckonoid({
                     alt=""
                     draggable={false}
                     style={caja(p)}
-                    initial={{ opacity: 0 }}
+                    initial={{ opacity: entranOpacos ? 1 : 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0, transition: fundido() }}
                     transition={fundido(retardoParche(p))}
@@ -937,6 +1017,27 @@ export default function Geckonoid({
                 </motion.svg>
               ))}
 
+            {confeti.map((c) => (
+              <motion.span
+                key={`${vez}-confeti-${c.id}`}
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  left: CABEZA.x * ancho,
+                  top: CABEZA.y * size,
+                  width: c.ancho,
+                  height: c.ancho * 0.45,
+                  borderRadius: 1,
+                  background: c.color,
+                  pointerEvents: "none",
+                }}
+                initial={{ x: 0, y: 0, opacity: 0, rotate: 0 }}
+                // Sube en abanico y cae un poco más abajo de donde llegó.
+                animate={{ x: [0, c.dx, c.dx * 1.1], y: [0, c.dy, c.dy + 40 * u], opacity: [0, 1, 1, 0], rotate: c.giro }}
+                transition={{ duration: seg(CONFETI.duracion), delay: seg(RETARDO_ADORNO_S + c.retardo), ease: "easeOut" }}
+              />
+            ))}
+
             {/* Los adornos, en SVG: salen después de la cara. */}
             {estrellas.map((e) => (
               <motion.svg
@@ -984,7 +1085,7 @@ export default function Geckonoid({
                   initial={reducido ? { scale: 1, opacity: 1, rotate: 12 } : { scale: 0, opacity: 0, rotate: 12 }}
                   animate={reducido ? { scale: 1, opacity: 1, rotate: 12 } : { scale: [0, 1.2, 1], opacity: [0, 1, 1], rotate: 12 }}
                   exit={{ scale: 0.6, opacity: 0, transition: { duration: seg(0.15) } }}
-                  transition={reducido ? { duration: 0 } : { duration: seg(0.35), delay: seg(RETARDO_ADORNO_S), ease: "easeOut" }}
+                  transition={reducido ? { duration: 0 } : { duration: seg(0.35), delay: seg(RETARDO_SIGNO_S), ease: "easeOut" }}
                 >
                   <text
                     x="12"

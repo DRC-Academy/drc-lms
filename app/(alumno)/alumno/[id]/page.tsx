@@ -327,6 +327,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
                     id="inicio-clase"
                     prioridad={1}
                     variante="franja"
+                    escena="inicio"
                     estado={cursoTerminado(estadosCurso) ? "nivel_superado" : "idle"}
                   />
                 }

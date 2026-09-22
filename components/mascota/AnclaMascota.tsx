@@ -36,10 +36,12 @@ export type OpcionesAncla = {
   activa?: boolean;
   titulo?: string;
   onToque?: () => void;
+  /** Lo que escenifica al posarse aquí la primera vez en la sesión («inicio»). */
+  escena?: "inicio";
 };
 
 export function useAnclaMascota(id: string, opciones: OpcionesAncla) {
-  const { prioridad, estado = "idle", quieta = false, lado = "centro", activa = true, titulo } = opciones;
+  const { prioridad, estado = "idle", quieta = false, lado = "centro", activa = true, titulo, escena } = opciones;
   const el = useRef<HTMLElement | null>(null);
   // El callback se lee de un ref: cambia en cada render y no tiene por
   // qué tocar el store.
@@ -49,7 +51,7 @@ export function useAnclaMascota(id: string, opciones: OpcionesAncla) {
 
   // Se registra al montar y se quita al desmontar; lo demás se actualiza.
   useEffect(() => {
-    storeMascota.registrarAncla(id, { prioridad, el: el.current, estado, quieta, lado, activa, titulo, onToque });
+    storeMascota.registrarAncla(id, { prioridad, el: el.current, estado, quieta, lado, activa, titulo, onToque, escena });
     return () => storeMascota.quitarAncla(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);

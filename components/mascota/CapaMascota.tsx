@@ -5,8 +5,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent as PointerEventReact } from "react";
 import parchesJson from "@/components/mascota/parches.json";
 import type { GestoMascota } from "@/components/mascota/estados";
-import type { MicroGesto, MiradaMascota, MovimientoMascota } from "@/components/mascota/Geckonoid";
+import type { MicroGesto, MiradaMascota } from "@/components/mascota/Geckonoid";
 import { estadoVisible, storeMascota, useStoreMascota, type Ancla } from "@/components/mascota/store";
+import { usarIdioma } from "@/components/ProveedorIdioma";
+import { BUCLE_PROFESOR, type ClaveBurbuja } from "@/lib/textos/mascota";
 
 // Framer y los parches pesan: no hacen falta para pintar la página.
 const Geckonoid = dynamic(() => import("@/components/mascota/Geckonoid"), { ssr: false });
@@ -73,6 +75,22 @@ const Geckonoid = dynamic(() => import("@/components/mascota/Geckonoid"), { ssr:
  * donde sea: al soltarla rebota, y a los 10 s vuelve a su sitio. En móvil
  * no se arrastra.
  *
+ * LAS BURBUJAS (lib/textos/mascota.ts). Una línea corta, junto a la
+ * mascota y con ella señalando, cuando ya está posada: como mucho una
+ * por pantalla, y ninguna repetida en la sesión (sessionStorage). Con
+ * prefers-reduced-motion aparecen sin animación. Se anuncian al lector
+ * de pantalla (role="status"), porque dicen algo.
+ *
+ * LAS ESCENAS.
+ *   inicio        la primera vez en la sesión que se posa en un ancla con
+ *                 `escena: "inicio"` (la franja): saluda y dice por dónde
+ *                 seguir; si el alumno vuelve tras 5 días o más, asombro y
+ *                 «¡Cuánto tiempo!».
+ *   bloque_listo  al acabar una generación: asombro donde estudiaba (ya
+ *                 sin los anteojos), viaja a su sitio y dice que está listo.
+ * Mientras vuela, el estado se congela: lo que llegue en el aire (el
+ * «éxito» del cierre) se enseña al aterrizar.
+ *
  * UN SOLO RELOJ. Parpadeo, respiración y micro-gestos los lleva el
  * único Geckonoid; el «piensa» cada 4 s de la espera, esta capa.
  */
@@ -108,6 +126,45 @@ const SUENO = { sienta: 90000, duerme: 150000, bostezo: 2000 };
 const MIRADA = { lejos: 90, cerca: 45, inclinacionPorPx: 4 / 250 };
 /** En móvil, cuánto sigue mirando el contenido después del scroll. */
 const MIRADA_SCROLL_MS = 700;
+/** Cuánto se ve una burbuja, y cuánto espera tras posarse para decirla. */
+const BURBUJA = { dura: 4000, espera: 450, ancho: 220, aire: 10 };
+const DIAS_CUANTO_TIEMPO = 5;
+const CLAVE_BURBUJAS = "drc:mascota-burbujas";
+const CLAVE_ESCENA_INICIO = "drc:mascota-escena-inicio";
+const CLAVE_ULTIMA_VISITA = "drc:mascota-ultima-visita";
+
+function leerSesion(clave: string): string | null {
+  try {
+    return window.sessionStorage.getItem(clave);
+  } catch {
+    return null;
+  }
+}
+function escribirSesion(clave: string, valor: string) {
+  try {
+    window.sessionStorage.setItem(clave, valor);
+  } catch {
+    // Sin almacenamiento: vale para esta pantalla.
+  }
+}
+
+/**
+ * Los días desde la visita anterior, leídos UNA vez por carga de la app
+ * (la navegación entre pantallas no cuenta como volver). Se escribe la
+ * de ahora para la próxima.
+ */
+let diasDesdeLaUltima: number | null | undefined;
+function diasSinVenir(): number | null {
+  if (diasDesdeLaUltima !== undefined) return diasDesdeLaUltima;
+  try {
+    const anterior = Number(window.localStorage.getItem(CLAVE_ULTIMA_VISITA));
+    window.localStorage.setItem(CLAVE_ULTIMA_VISITA, String(Date.now()));
+    diasDesdeLaUltima = anterior > 0 ? (Date.now() - anterior) / 86400000 : null;
+  } catch {
+    diasDesdeLaUltima = null;
+  }
+  return diasDesdeLaUltima;
+}
 
 type Somnolencia = "despierta" | "sentada" | "dormida";
 
@@ -166,7 +223,13 @@ export default function CapaMascota() {
   const [conCajon, setConCajon] = useState(false);
   const [mirada, setMirada] = useState<MiradaMascota>();
   const [inclinacion, setInclinacion] = useState(0);
-  const [movimiento, setMovimiento] = useState<{ nombre: MovimientoMascota; n: number }>();
+  const movimiento = useStoreMascota((e) => e.movimiento);
+  const burbujaPedida = useStoreMascota((e) => e.burbuja);
+  const escena = useStoreMascota((e) => e.escena);
+  const [miradaPagina, setMiradaPagina] = useState<MiradaMascota>();
+  const [burbuja, setBurbuja] = useState<{ texto: string; n: number }>();
+  const burbujaEl = useRef<HTMLDivElement>(null);
+  const t = usarIdioma().t.mascota;
   const [micro, setMicro] = useState<{ nombre: MicroGesto; n: number }>();
   const [somnolencia, setSomnolencia] = useState<Somnolencia>("despierta");
 
@@ -177,6 +240,8 @@ export default function CapaMascota() {
   const suelta = useRef<{ caja: Caja; hasta: number } | null>(null);
   const enVueloRef = useRef(false);
   enVueloRef.current = enVuelo;
+  /** Lo llama el bucle cada vez que se posa en un sitio nuevo. */
+  const alPosarse = useRef<(id: string | null) => void>(() => {});
 
   const estado = useStoreMascota(estadoVisible);
   const disparo = useStoreMascota((e) => e.disparo);
@@ -351,6 +416,7 @@ export default function CapaMascota() {
           posada = vuelo.hacia;
           ultimoDestino = vuelo.hasta;
           vuelo = null;
+          alPosarse.current(posada);
         }
         return;
       }
@@ -386,13 +452,44 @@ export default function CapaMascota() {
       // 4. ESCRIBIR. Sin viaje (movimiento reducido): se apaga y se
       // enciende en el sitio nuevo.
       if (posada !== undefined && id !== posada) apagadaHasta = ahora + TELEPORTE_MS;
+      if (id !== posada) alPosarse.current(id);
       posada = id;
       if (ahora < apagadaHasta) el.style.opacity = "0";
       else escribir(destino);
     };
 
+    // La mirada que pide la página (el enunciado) y la burbuja, que va
+    // junto a la mascota: a su izquierda si cabe —hacia allí señala—, si
+    // no a la derecha, a la altura de la cabeza.
+    let ultimaMiradaPagina: MiradaMascota | undefined;
+    const acompañar = () => {
+      const c = dibujada;
+      if (!c) return;
+      const w = c.alto * PROPORCION;
+      const objetivo = storeMascota.leer().mirarA;
+      let mira: MiradaMascota | undefined;
+      if (objetivo?.isConnected) {
+        const r = objetivo.getBoundingClientRect();
+        mira = r.left + r.width / 2 < c.x + w * PIES_X ? "mira_izq" : "mira_der";
+      }
+      if (mira !== ultimaMiradaPagina) {
+        ultimaMiradaPagina = mira;
+        setMiradaPagina(mira);
+      }
+      const b = burbujaEl.current;
+      if (b && b.dataset.visible === "1") {
+        const ancho = b.offsetWidth;
+        const cabe = c.x - ancho - BURBUJA.aire > 8;
+        const x = cabe ? c.x - ancho - BURBUJA.aire : Math.min(window.innerWidth - ancho - 8, c.x + w + BURBUJA.aire);
+        const y = limitar(c.y + c.alto * 0.08, 8, window.innerHeight - b.offsetHeight - 8);
+        b.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+        b.dataset.lado = cabe ? "izq" : "der";
+      }
+    };
+
     const bucle = () => {
       colocar();
+      acompañar();
       frame = requestAnimationFrame(bucle);
     };
     frame = requestAnimationFrame(bucle);
@@ -533,7 +630,7 @@ export default function CapaMascota() {
           } else if (elegido === "cabeza") {
             setMicro((m) => ({ nombre: "cabeza", n: (m?.n ?? 0) + 1 }));
           } else if (elegido === "salto_sitio") {
-            setMovimiento((m) => ({ nombre: "salto_sitio", n: (m?.n ?? 0) + 1 }));
+            storeMascota.moverse("salto_sitio");
           } else {
             storeMascota.gesto(elegido as GestoMascota);
           }
@@ -577,6 +674,75 @@ export default function CapaMascota() {
   const arrastrada = useRef(false);
   const relojClic = useRef<ReturnType<typeof setTimeout>>();
 
+  // ---------------------------------------------------------------
+  // LAS ESCENAS Y LAS BURBUJAS
+  // ---------------------------------------------------------------
+  // La de llegada al inicio: al posarse, la primera vez en la sesión.
+  alPosarse.current = (id) => {
+    if (id === null || reducido) return;
+    const ancla = storeMascota.leer().anclas[id];
+    if (ancla?.escena !== "inicio" || leerSesion(CLAVE_ESCENA_INICIO)) return;
+    escribirSesion(CLAVE_ESCENA_INICIO, "1");
+    const dias = diasSinVenir();
+    setTimeout(() => storeMascota.gesto("saludo"), 250);
+    setTimeout(() => {
+      if (dias !== null && dias >= DIAS_CUANTO_TIEMPO) {
+        storeMascota.gesto("asombro");
+        storeMascota.decir("cuantoTiempo");
+      } else {
+        storeMascota.decir("llegadaInicio");
+      }
+    }, 2100);
+  };
+  // La visita cuenta aunque no se pase por el inicio.
+  useEffect(() => {
+    if (!fuera) diasSinVenir();
+  }, [fuera]);
+
+  // Bloque listo: asombro donde estudiaba, y la burbuja al llegar a su sitio.
+  useEffect(() => {
+    if (escena?.nombre !== "bloque_listo") return;
+    storeMascota.gesto("asombro", { duracion: 700 });
+    storeMascota.decir("bloqueListo");
+  }, [escena?.n, escena?.nombre]);
+
+  // Una burbuja pedida se dice cuando está posada (no en el aire), si no
+  // se ha dicho en la sesión ni hay ya otra en esta pantalla.
+  const burbujaEnPantalla = useRef<string | null>(null);
+  useEffect(() => {
+    if (!burbujaPedida || enVuelo) return;
+    const reloj = setTimeout(() => {
+      const dichas = (leerSesion(CLAVE_BURBUJAS) ?? "").split(",").filter(Boolean);
+      if (dichas.includes(burbujaPedida.clave) || burbujaEnPantalla.current === ruta) {
+        storeMascota.anotar("burbuja", `callada ${burbujaPedida.clave}`);
+        return;
+      }
+      escribirSesion(CLAVE_BURBUJAS, [...dichas, burbujaPedida.clave].join(","));
+      burbujaEnPantalla.current = ruta;
+      setBurbuja({ texto: textoDe(burbujaPedida.clave, burbujaPedida.profesor), n: burbujaPedida.n });
+      storeMascota.gesto("senala", { duracion: 1600 });
+      storeMascota.anotar("burbuja", `dicha ${burbujaPedida.clave}`);
+    }, BURBUJA.espera);
+    return () => clearTimeout(reloj);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [burbujaPedida?.n, enVuelo]);
+  useEffect(() => {
+    if (!burbuja) return;
+    const reloj = setTimeout(() => setBurbuja(undefined), BURBUJA.dura);
+    return () => clearTimeout(reloj);
+  }, [burbuja]);
+
+  const textoDe = (clave: ClaveBurbuja, profesor?: string): string => {
+    const b = t.burbujas;
+    if (clave === "cierreBien") return b.cierreBien(profesor ?? "");
+    if (clave === "cierreSigamosProfesor") return b.cierreSigamosProfesor(profesor ?? "");
+    return b[clave];
+  };
+
+  // Mientras vuela, el estado se congela: se enseña al aterrizar.
+  const congelado = useRef({ estado, disparo });
+  if (!enVuelo) congelado.current = { estado, disparo };
+
   if (fuera) return null;
 
   const tocar = () => {
@@ -607,7 +773,7 @@ export default function CapaMascota() {
       if (!arrastre.current) return;
       suelta.current = { caja: arrastre.current, hasta: performance.now() + ARRASTRE.vuelveMs };
       arrastre.current = null;
-      setMovimiento((m) => ({ nombre: "rebote", n: (m?.n ?? 0) + 1 }));
+      storeMascota.moverse("rebote");
       storeMascota.anotar("viaje", "arrastrada y soltada");
     };
     window.addEventListener("pointermove", mover);
@@ -623,7 +789,7 @@ export default function CapaMascota() {
   };
   const alDobleClic = () => {
     clearTimeout(relojClic.current);
-    if (!reducido) setMovimiento((m) => ({ nombre: "vuelta", n: (m?.n ?? 0) + 1 }));
+    if (!reducido) storeMascota.moverse("vuelta");
   };
 
   const sostenida: GestoMascota | undefined = enVuelo
@@ -635,6 +801,20 @@ export default function CapaMascota() {
         : undefined;
 
   return (
+    <>
+    {/* La burbuja: fuera de la capa, que es aria-hidden, porque dice algo. */}
+    <div className={`pointer-events-none fixed inset-0 overflow-hidden ${conCajon ? "z-[56]" : "z-[39]"}`}>
+      <div
+        ref={burbujaEl}
+        role="status"
+        data-visible={burbuja ? "1" : "0"}
+        className={`absolute left-0 top-0 max-w-[220px] rounded-[14px] border border-marca-borde bg-white px-3.5 py-2.5 font-sans text-[13.5px] font-semibold leading-[1.35] text-marca-tinta shadow-[0_10px_24px_-10px_rgba(18,33,26,0.35)] ${
+          reducido ? "" : "transition-opacity duration-200 ease-out"
+        } ${burbuja ? "opacity-100" : "opacity-0"}`}
+      >
+        {burbuja?.texto}
+      </div>
+    </div>
     <div aria-hidden className={`pointer-events-none fixed inset-0 overflow-hidden ${conCajon ? "z-[55]" : "z-[38]"}`}>
       {/* Para leer el safe-area de abajo, que solo sabe CSS. */}
       <div ref={safeArea} className="invisible absolute" style={{ paddingBottom: "env(safe-area-inset-bottom)" }} />
@@ -650,15 +830,15 @@ export default function CapaMascota() {
         {/* El estiramiento y el aplastamiento de los viajes, desde los pies. */}
         <div ref={estirar} className="h-full w-full" style={{ transformOrigin: `${PIES_X * 100}% 100%` }}>
           <Geckonoid
-            estado={estado}
-            disparo={disparo}
+            estado={congelado.current.estado}
+            disparo={congelado.current.disparo}
             size={ALTO_BASE}
             velocidad={velocidad}
             volverAIdle={false}
             quieta={(activa?.quieta ?? false) && !transitorio}
             pose={pose}
             sostenida={sostenida}
-            mirada={somnolencia === "despierta" ? mirada : undefined}
+            mirada={somnolencia === "despierta" ? (miradaPagina ?? mirada) : undefined}
             inclinacion={somnolencia === "despierta" ? inclinacion : 0}
             movimiento={movimiento}
             micro={micro}
@@ -668,5 +848,6 @@ export default function CapaMascota() {
         </div>
       </div>
     </div>
+    </>
   );
 }

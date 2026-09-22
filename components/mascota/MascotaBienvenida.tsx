@@ -30,6 +30,7 @@ export default function MascotaBienvenida({
   prioridad,
   estado = "idle",
   variante = "saludo",
+  escena,
   className = "",
 }: {
   /** El id del ancla: único entre las montadas a la vez. */
@@ -37,7 +38,9 @@ export default function MascotaBienvenida({
   prioridad: number;
   estado?: EstadoMascota;
   variante?: keyof typeof SITIOS;
+  /** «inicio»: al posarse aquí la primera vez en la sesión, saluda y dice por dónde seguir. */
+  escena?: "inicio";
   className?: string;
 }) {
-  return <AnclaMascota id={id} prioridad={prioridad} estado={estado} className={`${SITIOS[variante]} ${className}`} />;
+  return <AnclaMascota id={id} prioridad={prioridad} estado={estado} escena={escena} className={`${SITIOS[variante]} ${className}`} />;
 }

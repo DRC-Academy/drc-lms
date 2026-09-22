@@ -12,6 +12,7 @@ import {
 } from "@/lib/generacion";
 import type { TextosPractica } from "@/lib/textos/practica";
 import { usarIdioma } from "@/components/ProveedorIdioma";
+import { storeMascota } from "@/components/mascota/store";
 
 /**
  * En qué punto está la generación.
@@ -181,6 +182,9 @@ export function usarGenerador({
       setProgreso(100);
       setGeneradosNuevos((previos) => [bloque, ...previos]);
       setEstado("listo");
+      // La mascota se quita los anteojos, se asombra y lo dice al llegar
+      // a su sitio (CapaMascota).
+      storeMascota.escena("bloque_listo");
 
       window.requestAnimationFrame(() => {
         zonaNuevos.current?.scrollIntoView({ behavior: "smooth", block: "start" });
