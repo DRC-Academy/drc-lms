@@ -149,6 +149,11 @@ const RETARDO_CARA_S = 0.1;
 const RETARDO_BRAZO_S = 0.15;
 const RETARDO_ADORNO_S = 0.22;
 
+/** Movimientos del cuerpo entero sin parche propio, pedidos desde fuera. */
+export type MovimientoMascota = "vuelta" | "salto_sitio" | "rebote";
+/** La mirada: solo los ojos, sin apartar la cara del estado. */
+export type MiradaMascota = "mira_izq" | "mira_der";
+
 /** Los micro-gestos de idle. */
 export type MicroGesto = "cabeza" | "balanceo" | "parpadeo_doble" | "cola";
 export const MICRO_GESTOS: readonly MicroGesto[] = ["cabeza", "balanceo", "parpadeo_doble", "cola"];
@@ -218,6 +223,10 @@ export default function Geckonoid({
   micro,
   onMicro,
   onToque,
+  mirada,
+  inclinacion: inclinacionFuera,
+  movimiento,
+  vidaPropia = true,
   quieta = false,
   className = "",
   etiqueta = "Geckonoid",
@@ -245,6 +254,22 @@ export default function Geckonoid({
   sostenida?: GestoMascota;
   /** Al tocarla. Sin esto, tocarla no hace nada. */
   onToque?: () => void;
+  /**
+   * Hacia dónde mira (seguir el cursor, mirar el enunciado). Solo los
+   * ojos: no aparta la cara del estado, y si el estado ya tiene los ojos
+   * ocupados —anteojos, ojos cerrados— o hay un gesto, no se ve.
+   */
+  mirada?: MiradaMascota;
+  /**
+   * La inclinación hacia el cursor, en grados, calculada fuera (la capa
+   * sigue el cursor por toda la pantalla). Sin esto, se inclina solo con
+   * el ratón encima.
+   */
+  inclinacion?: number;
+  /** Un movimiento del cuerpo entero (dar la vuelta, saltar en el sitio). `n` cambia para repetirlo. */
+  movimiento?: { nombre: MovimientoMascota; n: number };
+  /** Sus micro-gestos de reposo cada 8–15 s. False: los pide otro (la capa, según la intensidad). */
+  vidaPropia?: boolean;
   /** Un micro-gesto pedido desde fuera (solo en idle). `n` cambia para repetirlo. */
   micro?: { nombre: MicroGesto; n: number };
   /** Avisa de cada micro-gesto, espontáneo o pedido. */
@@ -334,6 +359,13 @@ export default function Geckonoid({
 
   // El gesto que se ve: el pedido si hay, si no el sostenido.
   const gesto = useMemo(() => gestoVivo ?? (sostenida ? { nombre: sostenida, n: -1 } : null), [gestoVivo, sostenida]);
+  // La mirada, debajo de todo: solo sin gesto y con los ojos del estado libres.
+  const parchesMirada = useMemo(() => {
+    if (!mirada || gesto) return SIN_PARCHES;
+    const ojos = PARCHES_POR_GESTO[mirada] ?? SIN_PARCHES;
+    const ocupados = (PARCHES_POR_ESTADO[vivo] ?? SIN_PARCHES).some((p) => ojos.some((o) => sePisan(p, o)));
+    return ocupados ? SIN_PARCHES : ojos;
+  }, [mirada, gesto, vivo]);
 
   // Lo que se ve: el estado, y el gesto encima. Si algún parche del
   // estado pisa uno del gesto, el estado entero se aparta —con su hueco—
@@ -344,8 +376,13 @@ export default function Geckonoid({
   const sobreGesto = ESTADOS_SOBRE_GESTO.has(vivo) && !completo;
   const estadoApartado = !sobreGesto && parchesEstado.some((p) => parchesGesto.some((g) => sePisan(p, g)));
   const parches = useMemo(
-    () => (estadoApartado ? parchesGesto : sobreGesto ? [...parchesGesto, ...parchesEstado] : [...parchesEstado, ...parchesGesto]),
-    [estadoApartado, sobreGesto, parchesEstado, parchesGesto],
+    () =>
+      estadoApartado
+        ? parchesGesto
+        : sobreGesto
+          ? [...parchesGesto, ...parchesEstado]
+          : [...parchesEstado, ...parchesGesto, ...parchesMirada],
+    [estadoApartado, sobreGesto, parchesEstado, parchesGesto, parchesMirada],
   );
   const huecos = [estadoApartado ? undefined : DATOS.huecos[vivo], gesto && DATOS.huecos[gesto.nombre]].filter(
     (h): h is string => !!h,
@@ -524,6 +561,33 @@ export default function Geckonoid({
       ]),
   };
 
+  /** Los movimientos sueltos: no tienen parche, solo mueven el cuerpo. */
+  const MOVIMIENTOS_SUELTOS: Record<MovimientoMascota, (el: HTMLElement) => { stop: () => void }> = {
+    // La vuelta entera, en el aire y sobre su centro (sobre los pies,
+    // a media vuelta quedaría cabeza abajo bajo el suelo). 360° es 0°:
+    // al acabar se deja en 0 sin que se note, y el eje vuelve a los pies
+    // para aplastarse al caer.
+    vuelta: (el) => {
+      const eje = (origen: string) => {
+        el.style.transformOrigin = origen;
+        return animar(el, {}, { duration: 0 });
+      };
+      return correr([
+        () => animar(el, { scaleY: 0.9, scaleX: 1.06, y: 0, rotate: 0 }, { duration: seg(0.1), ease: "easeIn" }),
+        () => eje(`${pc(PIES_X)} 55%`),
+        () => animar(el, { y: -40 * u, rotate: 180, scaleY: 1.04, scaleX: 0.97 }, { duration: seg(0.28), ease: "easeOut" }),
+        () => animar(el, { y: 0, rotate: 360, scaleY: 1, scaleX: 1 }, { duration: seg(0.28), ease: "easeIn" }),
+        () => animar(el, { rotate: 0 }, { duration: 0 }),
+        () => eje(origenPies),
+        () => animar(el, { scaleY: 0.9, scaleX: 1.08 }, { duration: seg(0.09), ease: "easeOut" }),
+        () => animar(el, EN_REPOSO, muelle(420, 16)),
+      ]);
+    },
+    // Sin estrellas: no es una celebración (lib/gamificacion).
+    salto_sitio: (el) => correr(salto(el, 22)),
+    rebote: (el) => correr(salto(el, 20)),
+  };
+
   // Los micro-gestos de idle. El que esté en marcha se guarda para
   // poder cortarlo cuando llega un estado.
   const microEnCurso = useRef<{ stop: () => void } | null>(null);
@@ -617,12 +681,27 @@ export default function Geckonoid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gesto, reducido, quieta]);
 
+  // Un movimiento suelto pedido desde fuera. Corta el micro-gesto y, al
+  // acabar, el cuerpo queda en reposo.
+  useEffect(() => {
+    const el = cuerpo.current;
+    if (!movimiento || !el || reducido) return;
+    microEnCurso.current?.stop();
+    microEnCurso.current = null;
+    const m = MOVIMIENTOS_SUELTOS[movimiento.nombre](el);
+    return () => {
+      m.stop();
+      el.style.transformOrigin = origenPies;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [movimiento?.n]);
+
   // Cada 8–15 s, un micro-gesto al azar de los que admite el estado,
   // nunca el mismo que el anterior. Al cambiar de estado se corta el
   // que esté en marcha.
   const microPosibles = MICRO_POR_ESTADO[vivo];
   useEffect(() => {
-    if (!microPosibles || reducido) return;
+    if (!microPosibles || reducido || !vidaPropia) return;
     let espera: ReturnType<typeof setTimeout>;
     const programar = () => {
       espera = setTimeout(() => {
@@ -638,7 +717,7 @@ export default function Geckonoid({
       microEnCurso.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vivo, reducido, v]);
+  }, [vivo, reducido, v, vidaPropia]);
 
   // Un micro-gesto pedido desde fuera (el banco de pruebas).
   useEffect(() => {
@@ -676,13 +755,19 @@ export default function Geckonoid({
   // Con el ratón encima, se inclina hacia el cursor (5° como mucho).
   const inclinacion = useMotionValue(0);
   const inclinacionSuave = useSpring(inclinacion, { stiffness: 150, damping: 20 });
+  useEffect(() => {
+    if (inclinacionFuera === undefined) return;
+    inclinacion.set(reducido ? 0 : limitar(inclinacionFuera, -5, 5));
+  }, [inclinacionFuera, reducido, inclinacion]);
   const seguirCursor = (e: PointerEventReact<HTMLDivElement>) => {
-    if (reducido || e.pointerType !== "mouse") return;
+    if (reducido || e.pointerType !== "mouse" || inclinacionFuera !== undefined) return;
     const r = e.currentTarget.getBoundingClientRect();
     const dx = (e.clientX - (r.left + r.width * PIES_X)) / (r.width / 2);
     inclinacion.set(limitar(dx * 5, -5, 5));
   };
-  const soltarCursor = () => inclinacion.set(0);
+  const soltarCursor = () => {
+    if (inclinacionFuera === undefined) inclinacion.set(0);
+  };
   const tocar = () => onToque?.();
 
   const retardoParche = (p: Parche) => seg(p.etiqueta === "cara" || p.etiqueta === "cabeza" ? RETARDO_CARA_S : RETARDO_BRAZO_S);
@@ -819,6 +904,38 @@ export default function Geckonoid({
                 />
               )}
             </AnimatePresence>
+
+            {/* Dormida: tres zetas que suben y se apagan, en bucle. */}
+            {gesto?.nombre === "dormido" &&
+              !reducido &&
+              [0, 1, 2].map((i) => (
+                <motion.svg
+                  key={`zeta-${i}`}
+                  viewBox="0 0 20 20"
+                  width={(0.07 + i * 0.015) * size}
+                  height={(0.07 + i * 0.015) * size}
+                  aria-hidden
+                  style={{ position: "absolute", left: 0.66 * ancho, top: 0.02 * size, pointerEvents: "none" }}
+                  initial={{ x: 0, y: 0, opacity: 0 }}
+                  animate={{ x: [0, 10 * u, 18 * u], y: [0, -22 * u, -44 * u], opacity: [0, 1, 0] }}
+                  transition={{ duration: seg(2.4), delay: seg(0.8 * i), repeat: Infinity, ease: "easeOut" }}
+                >
+                  <text
+                    x="10"
+                    y="16"
+                    textAnchor="middle"
+                    fontFamily="'Radio Canada Big', 'Radio Canada', system-ui, sans-serif"
+                    fontWeight={800}
+                    fontSize="18"
+                    fill="#dff3e4"
+                    stroke={VERDE_OSCURO}
+                    strokeWidth={1.4}
+                    paintOrder="stroke"
+                  >
+                    z
+                  </text>
+                </motion.svg>
+              ))}
 
             {/* Los adornos, en SVG: salen después de la cara. */}
             {estrellas.map((e) => (

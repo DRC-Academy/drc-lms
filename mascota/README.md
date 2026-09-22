@@ -63,12 +63,33 @@ evento, sin esperar al frame.
   y el envío espera 900 ms.
 - **Al tocarla** en reposo: un gesto al azar entre saludo, salto y guiño,
   más lo que el ancla haga al tocarla (`onToque`: la ruta centra la
-  parada).
+  parada). **Doble clic**: una vuelta entera en el aire. **Arrastrarla**
+  (con ratón, desde 900 px): se queda donde se suelta, rebota, y a los
+  10 s vuelve viajando a su sitio. En móvil no se arrastra.
 - **La espera**: con «estudiando» de base, «piensa» cada 4 s, con los
   anteojos puestos.
 
-Parpadeo, respiración y micro-gestos los lleva el único `Geckonoid`: hay
-un solo reloj.
+Parpadeo y respiración los lleva el único `Geckonoid`; los micro-gestos
+y el sueño, la capa (`vidaPropia={false}` en el Geckonoid): hay un solo
+reloj.
+
+#### La vida propia, según la intensidad
+
+| | tranquila | normal | juguetona |
+|---|---|---|---|
+| Respira, parpadea, sigue el cursor | sí | sí | sí |
+| Micro-gestos (mirar a un lado y a otro alternando, pensar, estirarse, inclinar la cabeza) | — | cada 8–15 s | cada 4–7,5 s, y a veces un salto en el sitio |
+| Sueño: a los 90 s sin tocar nada bosteza y se sienta; a los 60 s más se duerme, con zetas | — | sí | sí |
+
+Cualquier cosa del alumno (ratón, tecla, rueda, toque, scroll) la
+despierta con asombro. **Seguir el cursor**: con ratón, los ojos
+(`mira_izq`/`mira_der`, que miran hacia la izquierda y la derecha de la
+pantalla) siguen al cursor por toda la pantalla, y se inclina hasta 4°
+hacia él. **En móvil**, sin cursor, mientras se hace scroll mira hacia el
+contenido que pasa. La mirada solo se pone si el estado tiene los ojos
+libres (no con los anteojos, ni con los ojos cerrados de «éxito»). Con
+`prefers-reduced-motion`, nada de esto. En el tablero, «Sueño +90 s /
++150 s» adelanta el reloj (sin mover el ratón después: la despierta).
 
 ### Las anclas (components/mascota/AnclaMascota.tsx)
 

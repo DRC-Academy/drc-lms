@@ -75,6 +75,8 @@ type Estado = {
   pose: { nombre: GestoMascota; n: number; duracion?: number } | undefined;
   intensidad: Intensidad;
   velocidad: number;
+  /** Solo para el tablero: cuánto se adelanta el reloj del sueño (ms). */
+  adelantoSueno: number;
   eventos: EventoMascota[];
 };
 
@@ -98,6 +100,7 @@ let estado: Estado = {
   pose: undefined,
   intensidad: "normal",
   velocidad: 1,
+  adelantoSueno: 0,
   eventos: [],
 };
 let intensidadLeida = false;
@@ -192,6 +195,11 @@ export const storeMascota = {
   /** Deja constancia en la cola de eventos (los viajes, las escenas, las burbujas). */
   anotar(tipo: EventoMascota["tipo"], detalle: string) {
     cambiar({}, { tipo, detalle });
+  },
+
+  /** Tablero: hacer como si llevara `ms` sin que nadie toque nada. */
+  adelantarSueno(ms: number) {
+    cambiar({ adelantoSueno: ms }, { tipo: "escena", detalle: `sueño adelantado ${Math.round(ms / 1000)} s` });
   },
 
   fijarVelocidad(velocidad: number) {

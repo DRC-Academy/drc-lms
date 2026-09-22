@@ -99,6 +99,14 @@ export default function TableroMascota() {
               {x}×
             </button>
           ))}
+          <span className="ml-4">Sueño</span>
+          {/* Sin mover el ratón después: cualquier cosa la despierta. */}
+          <button type="button" onClick={() => storeMascota.adelantarSueno(90000)} className={boton}>
+            +90 s
+          </button>
+          <button type="button" onClick={() => storeMascota.adelantarSueno(150000)} className={boton}>
+            +150 s
+          </button>
           <span className="ml-4">Fondo</span>
           {(["claro", "oscuro"] as const).map((f) => (
             <button key={f} type="button" aria-pressed={fondo === f} onClick={() => setFondo(f)} className={botonElegido(fondo === f)}>

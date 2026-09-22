@@ -2,9 +2,10 @@
 
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as PointerEventReact } from "react";
 import parchesJson from "@/components/mascota/parches.json";
 import type { GestoMascota } from "@/components/mascota/estados";
+import type { MicroGesto, MiradaMascota, MovimientoMascota } from "@/components/mascota/Geckonoid";
 import { estadoVisible, storeMascota, useStoreMascota, type Ancla } from "@/components/mascota/store";
 
 // Framer y los parches pesan: no hacen falta para pintar la página.
@@ -52,6 +53,26 @@ const Geckonoid = dynamic(() => import("@/components/mascota/Geckonoid"), { ssr:
  *
  * AL CERRAR SESIÓN se despide con la mano antes de irse.
  *
+ * LA VIDA PROPIA, según la intensidad del store:
+ *   tranquila  respira, parpadea y sigue el cursor. Nada más.
+ *   normal     además, cada 8–15 s, un micro-gesto: mirar a un lado y al
+ *              otro (alternando), pensar, estirarse, inclinar la cabeza.
+ *              A los 90 s sin que nadie toque nada, bosteza (se estira) y
+ *              se sienta; a los 60 s más se duerme, con zetas. Cualquier
+ *              cosa —mover el ratón, una tecla, el scroll— la despierta
+ *              con asombro.
+ *   juguetona  lo mismo con los intervalos a la mitad, y de vez en cuando
+ *              un salto en el sitio.
+ * Con el ratón, los ojos siguen al cursor por toda la pantalla y se
+ * inclina un poco hacia él; en móvil, sin cursor, mientras se hace
+ * scroll mira hacia el contenido que pasa. Con prefers-reduced-motion,
+ * nada de esto.
+ *
+ * TOCARLA. Un clic, un gesto al azar (saludo, salto, guiño); doble clic,
+ * una vuelta entera con salto. Con el ratón se puede arrastrar y soltar
+ * donde sea: al soltarla rebota, y a los 10 s vuelve a su sitio. En móvil
+ * no se arrastra.
+ *
  * UN SOLO RELOJ. Parpadeo, respiración y micro-gestos los lleva el
  * único Geckonoid; el «piensa» cada 4 s de la espera, esta capa.
  */
@@ -76,6 +97,19 @@ const DESPEDIDA_MS = 900;
 const EVITAR = "[data-nav-inferior], [data-barra-inferior] > *, .zona-ayuda";
 /** Los gestos al tocarla en reposo. */
 const AL_TOCAR: readonly GestoMascota[] = ["saludo", "salto", "guino"];
+/** Entre un clic y otro para que cuente como doble. */
+const DOBLE_CLIC_MS = 250;
+const ARRASTRE = { umbral: 5, vuelveMs: 10000 };
+/** Cada cuánto un micro-gesto (ms), por intensidad. */
+const MICRO_CADA: Record<"normal" | "juguetona", [number, number]> = { normal: [8000, 15000], juguetona: [4000, 7500] };
+/** A los cuántos ms sin nada bosteza y se sienta, y a los cuántos se duerme. */
+const SUENO = { sienta: 90000, duerme: 150000, bostezo: 2000 };
+/** El cursor: a cuántos px a un lado mira hacia él, y cuándo vuelve al frente. */
+const MIRADA = { lejos: 90, cerca: 45, inclinacionPorPx: 4 / 250 };
+/** En móvil, cuánto sigue mirando el contenido después del scroll. */
+const MIRADA_SCROLL_MS = 700;
+
+type Somnolencia = "despierta" | "sentada" | "dormida";
 
 type Caja = { x: number; y: number; alto: number };
 type Vuelo = {
@@ -107,6 +141,19 @@ function cajaDeAncla(ancla: Ancla, rect: DOMRect): Caja {
   return { x, y: rect.top, alto: rect.height };
 }
 
+/** prefers-reduced-motion, sin cargar framer (la capa no lo necesita para esto). */
+function useMovimientoReducido(): boolean {
+  const [reducido, setReducido] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducido(mq.matches);
+    const cambio = () => setReducido(mq.matches);
+    mq.addEventListener("change", cambio);
+    return () => mq.removeEventListener("change", cambio);
+  }, []);
+  return reducido;
+}
+
 export default function CapaMascota() {
   const ruta = usePathname();
   // Fuera de la zona del alumno (la baja de avisos) no hay mascota.
@@ -117,6 +164,19 @@ export default function CapaMascota() {
   const safeArea = useRef<HTMLDivElement>(null);
   const [enVuelo, setEnVuelo] = useState(false);
   const [conCajon, setConCajon] = useState(false);
+  const [mirada, setMirada] = useState<MiradaMascota>();
+  const [inclinacion, setInclinacion] = useState(0);
+  const [movimiento, setMovimiento] = useState<{ nombre: MovimientoMascota; n: number }>();
+  const [micro, setMicro] = useState<{ nombre: MicroGesto; n: number }>();
+  const [somnolencia, setSomnolencia] = useState<Somnolencia>("despierta");
+
+  // Lo que comparten el bucle y los manejadores: dónde está dibujada, si
+  // se está arrastrando o se soltó en algún sitio, y si está en el aire.
+  const dibujadaRef = useRef<Caja | null>(null);
+  const arrastre = useRef<Caja | null>(null);
+  const suelta = useRef<{ caja: Caja; hasta: number } | null>(null);
+  const enVueloRef = useRef(false);
+  enVueloRef.current = enVuelo;
 
   const estado = useStoreMascota(estadoVisible);
   const disparo = useStoreMascota((e) => e.disparo);
@@ -124,6 +184,7 @@ export default function CapaMascota() {
   const activa = useStoreMascota((e) => (e.activa ? e.anclas[e.activa] : undefined));
   const transitorio = useStoreMascota((e) => e.transitorio);
   const velocidad = useStoreMascota((e) => e.velocidad);
+  const intensidad = useStoreMascota((e) => e.intensidad);
   const enPercha = !activa;
 
   // ---------------------------------------------------------------
@@ -153,6 +214,7 @@ export default function CapaMascota() {
       el.style.opacity = opacidad;
       if (estirar.current) estirar.current.style.transform = sx === 1 && sy === 1 ? "" : `scale(${sx}, ${sy})`;
       dibujada = c;
+      dibujadaRef.current = c;
     };
 
     const cajaDePercha = (ancho: number, alto: number): Caja => {
@@ -263,7 +325,23 @@ export default function CapaMascota() {
         }
       }
 
-      // 2. EN EL AIRE, el viaje manda: el destino se vuelve a medir (se
+      // 2. ARRASTRADA, o soltada hace menos de 10 s: donde la dejaron.
+      if (arrastre.current) {
+        vuelo = null;
+        posada = "__arrastre";
+        escribir(arrastre.current);
+        return;
+      }
+      if (suelta.current) {
+        if (ahora < suelta.current.hasta) {
+          posada = "__suelta";
+          escribir(suelta.current.caja);
+          return;
+        }
+        suelta.current = null;
+      }
+
+      // EN EL AIRE, el viaje manda: el destino se vuelve a medir (se
       // puede mover), y lo demás espera a que aterrice.
       if (vuelo) {
         const destinoAncla = vuelo.hacia === null ? null : anclas[vuelo.hacia];
@@ -357,6 +435,148 @@ export default function CapaMascota() {
     return () => document.removeEventListener("submit", alEnviar, true);
   }, [fuera]);
 
+  // ---------------------------------------------------------------
+  // LA VIDA PROPIA
+  // ---------------------------------------------------------------
+  const reducido = useMovimientoReducido();
+  // La fuente es la ref (la leen los manejadores); el estado es para pintar.
+  const somnolenciaRef = useRef<Somnolencia>("despierta");
+  const ultimaInteraccion = useRef(0);
+
+  // Cualquier cosa del alumno cuenta como que sigue ahí, y la despierta.
+  useEffect(() => {
+    if (fuera) return;
+    ultimaInteraccion.current = Date.now();
+    const alInteractuar = () => {
+      ultimaInteraccion.current = Date.now();
+      if (storeMascota.leer().adelantoSueno) storeMascota.adelantarSueno(0);
+      if (somnolenciaRef.current !== "despierta") {
+        somnolenciaRef.current = "despierta";
+        setSomnolencia("despierta");
+        storeMascota.gesto("asombro");
+      }
+    };
+    const eventos = ["pointermove", "pointerdown", "keydown", "wheel", "touchstart", "scroll"] as const;
+    eventos.forEach((e) => window.addEventListener(e, alInteractuar, { passive: true, capture: true }));
+    return () => eventos.forEach((e) => window.removeEventListener(e, alInteractuar, { capture: true }));
+  }, [fuera]);
+
+  // Los ojos siguen al cursor, y se inclina hacia él. Solo con ratón.
+  useEffect(() => {
+    if (fuera || reducido) return;
+    let ultimaMirada: MiradaMascota | undefined;
+    let ultimaInclinacion = 0;
+    const alMover = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return;
+      const c = dibujadaRef.current;
+      if (!c) return;
+      const centro = c.x + c.alto * PROPORCION * PIES_X;
+      const dx = e.clientX - centro;
+      let nueva = ultimaMirada;
+      if (dx < -MIRADA.lejos) nueva = "mira_izq";
+      else if (dx > MIRADA.lejos) nueva = "mira_der";
+      else if (Math.abs(dx) < MIRADA.cerca) nueva = undefined;
+      if (nueva !== ultimaMirada) {
+        ultimaMirada = nueva;
+        setMirada(nueva);
+      }
+      // En medios grados: no hace falta más, y así no se repinta en cada píxel.
+      const grados = Math.round(limitar(dx * MIRADA.inclinacionPorPx, -4, 4) * 2) / 2;
+      if (grados !== ultimaInclinacion) {
+        ultimaInclinacion = grados;
+        setInclinacion(grados);
+      }
+    };
+    window.addEventListener("pointermove", alMover, { passive: true });
+    return () => window.removeEventListener("pointermove", alMover);
+  }, [fuera, reducido]);
+
+  // En móvil, sin cursor: mientras se hace scroll, mira hacia el contenido.
+  useEffect(() => {
+    if (fuera || reducido || !window.matchMedia("(pointer: coarse)").matches) return;
+    let reloj: ReturnType<typeof setTimeout> | undefined;
+    const alScroll = () => {
+      const c = dibujadaRef.current;
+      if (!c) return;
+      // A la derecha de la pantalla, el contenido le queda a su izquierda.
+      setMirada(c.x + c.alto * PROPORCION * PIES_X > window.innerWidth / 2 ? "mira_izq" : "mira_der");
+      clearTimeout(reloj);
+      reloj = setTimeout(() => setMirada(undefined), MIRADA_SCROLL_MS);
+    };
+    window.addEventListener("scroll", alScroll, { passive: true, capture: true });
+    return () => {
+      clearTimeout(reloj);
+      window.removeEventListener("scroll", alScroll, { capture: true });
+    };
+  }, [fuera, reducido]);
+
+  // Los micro-gestos, según la intensidad: nunca el mismo dos veces, y
+  // las miradas alternando.
+  const enReposo = estado === "idle" && !transitorio && somnolencia === "despierta";
+  useEffect(() => {
+    if (fuera || reducido || intensidad === "tranquila" || !enReposo) return;
+    const [min, max] = MICRO_CADA[intensidad];
+    let reloj: ReturnType<typeof setTimeout>;
+    let ultimo = "";
+    let lado: MiradaMascota = "mira_der";
+    const programar = () => {
+      reloj = setTimeout(() => {
+        if (!enVueloRef.current && !arrastre.current) {
+          const opciones = enPercha ? ["cabeza"] : ["mira", "piensa", "estira", "cabeza"];
+          if (intensidad === "juguetona" && !enPercha && Math.random() < 0.25) opciones.push("salto_sitio");
+          const posibles = opciones.filter((o) => o !== ultimo);
+          const elegido = posibles[Math.floor(Math.random() * posibles.length)] ?? "cabeza";
+          ultimo = elegido;
+          if (elegido === "mira") {
+            lado = lado === "mira_izq" ? "mira_der" : "mira_izq";
+            storeMascota.gesto(lado);
+          } else if (elegido === "cabeza") {
+            setMicro((m) => ({ nombre: "cabeza", n: (m?.n ?? 0) + 1 }));
+          } else if (elegido === "salto_sitio") {
+            setMovimiento((m) => ({ nombre: "salto_sitio", n: (m?.n ?? 0) + 1 }));
+          } else {
+            storeMascota.gesto(elegido as GestoMascota);
+          }
+        }
+        programar();
+      }, min + Math.random() * (max - min));
+    };
+    programar();
+    return () => clearTimeout(reloj);
+  }, [fuera, reducido, intensidad, enReposo, enPercha]);
+
+  // El sueño: a los 90 s sin nada, bosteza y se sienta; a los 60 s más,
+  // se duerme. Si llega otro estado (una generación, un acierto),
+  // despierta sin más.
+  useEffect(() => {
+    if (fuera || reducido || intensidad === "tranquila") return;
+    const reloj = setInterval(() => {
+      const e = storeMascota.leer();
+      const quieto = Date.now() - ultimaInteraccion.current + e.adelantoSueno;
+      if (e.transitorio || estadoVisible(e) !== "idle") {
+        if (somnolenciaRef.current !== "despierta") {
+          somnolenciaRef.current = "despierta";
+          setSomnolencia("despierta");
+        }
+        return;
+      }
+      if (somnolenciaRef.current === "despierta" && quieto >= SUENO.sienta) {
+        somnolenciaRef.current = "sentada";
+        storeMascota.gesto("estira", { duracion: SUENO.bostezo });
+        setTimeout(() => {
+          if (somnolenciaRef.current === "sentada") setSomnolencia("sentada");
+        }, SUENO.bostezo);
+      } else if (somnolenciaRef.current === "sentada" && quieto >= SUENO.duerme) {
+        somnolenciaRef.current = "dormida";
+        setSomnolencia("dormida");
+      }
+    }, 1000);
+    return () => clearInterval(reloj);
+  }, [fuera, reducido, intensidad]);
+
+  const arrastrada = useRef(false);
+  const relojClic = useRef<ReturnType<typeof setTimeout>>();
+
   if (fuera) return null;
 
   const tocar = () => {
@@ -367,6 +587,53 @@ export default function CapaMascota() {
     }
   };
 
+  // Un clic espera un poco por si es doble; el arrastre anula el clic.
+  const puedeArrastrar = (e: PointerEventReact) =>
+    !reducido && e.pointerType !== "touch" && window.innerWidth >= MOVIL_PX && !enVueloRef.current;
+  const alPulsar = (e: PointerEventReact<HTMLDivElement>) => {
+    const c = dibujadaRef.current;
+    if (!c || !puedeArrastrar(e)) return;
+    const inicio = { x: e.clientX, y: e.clientY };
+    const desfase = { x: e.clientX - c.x, y: e.clientY - c.y };
+    const alto = c.alto;
+    const mover = (m: PointerEvent) => {
+      if (!arrastre.current && Math.hypot(m.clientX - inicio.x, m.clientY - inicio.y) < ARRASTRE.umbral) return;
+      arrastrada.current = true;
+      arrastre.current = { x: m.clientX - desfase.x, y: m.clientY - desfase.y, alto };
+    };
+    const soltar = () => {
+      window.removeEventListener("pointermove", mover);
+      window.removeEventListener("pointerup", soltar);
+      if (!arrastre.current) return;
+      suelta.current = { caja: arrastre.current, hasta: performance.now() + ARRASTRE.vuelveMs };
+      arrastre.current = null;
+      setMovimiento((m) => ({ nombre: "rebote", n: (m?.n ?? 0) + 1 }));
+      storeMascota.anotar("viaje", "arrastrada y soltada");
+    };
+    window.addEventListener("pointermove", mover);
+    window.addEventListener("pointerup", soltar);
+  };
+  const alClic = () => {
+    if (arrastrada.current) {
+      arrastrada.current = false;
+      return;
+    }
+    clearTimeout(relojClic.current);
+    relojClic.current = setTimeout(tocar, DOBLE_CLIC_MS);
+  };
+  const alDobleClic = () => {
+    clearTimeout(relojClic.current);
+    if (!reducido) setMovimiento((m) => ({ nombre: "vuelta", n: (m?.n ?? 0) + 1 }));
+  };
+
+  const sostenida: GestoMascota | undefined = enVuelo
+    ? "salto"
+    : somnolencia === "dormida"
+      ? "dormido"
+      : somnolencia === "sentada" || enPercha
+        ? "sentado"
+        : undefined;
+
   return (
     <div aria-hidden className={`pointer-events-none fixed inset-0 overflow-hidden ${conCajon ? "z-[55]" : "z-[38]"}`}>
       {/* Para leer el safe-area de abajo, que solo sabe CSS. */}
@@ -374,8 +641,11 @@ export default function CapaMascota() {
       <div
         ref={caja}
         title={activa?.titulo}
-        className="pointer-events-auto absolute left-0 top-0 origin-top-left cursor-pointer transition-opacity duration-150"
+        className="pointer-events-auto absolute left-0 top-0 origin-top-left cursor-pointer touch-manipulation transition-opacity duration-150"
         style={{ width: ALTO_BASE * PROPORCION, height: ALTO_BASE, opacity: 0 }}
+        onPointerDown={alPulsar}
+        onClick={alClic}
+        onDoubleClick={alDobleClic}
       >
         {/* El estiramiento y el aplastamiento de los viajes, desde los pies. */}
         <div ref={estirar} className="h-full w-full" style={{ transformOrigin: `${PIES_X * 100}% 100%` }}>
@@ -387,8 +657,12 @@ export default function CapaMascota() {
             volverAIdle={false}
             quieta={(activa?.quieta ?? false) && !transitorio}
             pose={pose}
-            sostenida={enVuelo ? "salto" : enPercha ? "sentado" : undefined}
-            onToque={tocar}
+            sostenida={sostenida}
+            mirada={somnolencia === "despierta" ? mirada : undefined}
+            inclinacion={somnolencia === "despierta" ? inclinacion : 0}
+            movimiento={movimiento}
+            micro={micro}
+            vidaPropia={false}
             etiqueta={null}
           />
         </div>
