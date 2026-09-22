@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { agruparPorDia, enlaceDeClase, normalizarSlots, proximaClase } from "@/lib/clases";
+import {
+  agruparPorDia,
+  enlaceDeClase,
+  instanteEnMadrid,
+  normalizarSlots,
+  proximaClase,
+  ventanaAbierta,
+} from "@/lib/clases";
 
 /**
  * Los instantes se escriben en UTC a propósito: es lo que hace que estas
@@ -229,5 +236,103 @@ describe("enlaceDeClase", () => {
   it("el dominio a secas no es la sala de nadie", () => {
     expect(enlaceDeClase("https://meet.google.com")).toBeNull();
     expect(enlaceDeClase("https://meet.google.com/")).toBeNull();
+  });
+});
+
+describe("instanteEnMadrid", () => {
+  it("en verano, las 17:00 de Madrid son las 15:00 UTC", () => {
+    expect(instanteEnMadrid("2026-09-25", "17:00").toISOString()).toBe("2026-09-25T15:00:00.000Z");
+  });
+
+  it("en invierno, las 17:00 de Madrid son las 16:00 UTC", () => {
+    // Ya pasado el cambio del 25 de octubre de 2026.
+    expect(instanteEnMadrid("2026-11-05", "17:00").toISOString()).toBe("2026-11-05T16:00:00.000Z");
+  });
+
+  it("el día del cambio, antes y después de las 03:00, cada uno con su desfase", () => {
+    // El 25/10/2026 a las 03:00 España atrasa a las 02:00.
+    expect(instanteEnMadrid("2026-10-25", "01:00").toISOString()).toBe("2026-10-24T23:00:00.000Z");
+    expect(instanteEnMadrid("2026-10-25", "10:00").toISOString()).toBe("2026-10-25T09:00:00.000Z");
+  });
+});
+
+describe("la ventana del botón", () => {
+  const juevesA17 = agruparPorDia([{ dia: "Jueves", hora: "17:00" }]);
+  // Jueves 24/09/2026. En España, 17:00 = 15:00 UTC.
+  const proxima = () => proximaClase(juevesA17, new Date("2026-09-24T08:00:00Z"))!;
+
+  it("los instantes salen anclados a la hora de España", () => {
+    const p = proxima();
+    expect(p.fecha).toBe("2026-09-24");
+    expect(p.empiezaEn.toISOString()).toBe("2026-09-24T15:00:00.000Z");
+    expect(p.terminaEn.toISOString()).toBe("2026-09-24T16:00:00.000Z");
+    expect(p.abreEn.toISOString()).toBe("2026-09-24T14:30:00.000Z");
+  });
+
+  it("cerrada por la mañana", () => {
+    expect(ventanaAbierta(proxima(), new Date("2026-09-24T08:00:00Z"))).toBe(false);
+  });
+
+  it("cerrada un minuto antes de que abra", () => {
+    expect(ventanaAbierta(proxima(), new Date("2026-09-24T14:29:00Z"))).toBe(false);
+  });
+
+  it("abierta en el minuto exacto en que abre", () => {
+    expect(ventanaAbierta(proxima(), new Date("2026-09-24T14:30:00Z"))).toBe(true);
+  });
+
+  it("abierta mientras la clase ocurre", () => {
+    expect(ventanaAbierta(proxima(), new Date("2026-09-24T15:30:00Z"))).toBe(true);
+  });
+
+  it("cerrada en el instante en que la clase termina", () => {
+    // La ventana no se alarga: si la clase se estira, el alumno ya está dentro.
+    expect(ventanaAbierta(proxima(), new Date("2026-09-24T16:00:00Z"))).toBe(false);
+  });
+
+  it("una clase de dos horas abre igual media hora antes, no una", () => {
+    const dosHoras = agruparPorDia([
+      { dia: "Jueves", hora: "17:00" },
+      { dia: "Jueves", hora: "18:00" },
+    ]);
+    const p = proximaClase(dosHoras, new Date("2026-09-24T08:00:00Z"))!;
+    expect(p.abreEn.toISOString()).toBe("2026-09-24T14:30:00.000Z");
+    expect(p.terminaEn.toISOString()).toBe("2026-09-24T17:00:00.000Z");
+  });
+
+  it("después del cambio de hora la ventana sigue cuadrando", () => {
+    // Jueves 05/11/2026: 17:00 en España = 16:00 UTC, así que abre a las 15:30 UTC.
+    const p = proximaClase(juevesA17, new Date("2026-11-05T09:00:00Z"))!;
+    expect(p.abreEn.toISOString()).toBe("2026-11-05T15:30:00.000Z");
+    expect(ventanaAbierta(p, new Date("2026-11-05T15:29:00Z"))).toBe(false);
+    expect(ventanaAbierta(p, new Date("2026-11-05T15:30:00Z"))).toBe(true);
+  });
+
+  it("sin clase no hay ventana", () => {
+    expect(ventanaAbierta(null, new Date("2026-09-24T15:30:00Z"))).toBe(false);
+  });
+
+  it("la clase de las 23:00 es la de HOY, no la de la semana que viene", () => {
+    // Leyendo `hasta` ("00:00") como 0 minutos, a las 10:00 de la mañana
+    // esta clase ya parecía terminada. Hay alumnos a las 23:00.
+    const tarde = agruparPorDia([{ dia: "Jueves", hora: "23:00" }]);
+    const p = proximaClase(tarde, new Date("2026-09-24T08:00:00Z"))!;
+    expect(p.fecha).toBe("2026-09-24");
+    expect(p.esHoy).toBe(true);
+  });
+
+  it("y a las 23:30 está en curso", () => {
+    const tarde = agruparPorDia([{ dia: "Jueves", hora: "23:00" }]);
+    // 23:30 en España = 21:30 UTC.
+    const p = proximaClase(tarde, new Date("2026-09-24T21:30:00Z"))!;
+    expect(p.enCurso).toBe(true);
+  });
+
+  it("una clase que cruza la medianoche termina al día siguiente", () => {
+    const tarde = agruparPorDia([{ dia: "Jueves", hora: "23:00" }]);
+    const p = proximaClase(tarde, new Date("2026-09-24T08:00:00Z"))!;
+    // 23:00 en España = 21:00 UTC; termina a las 22:00 UTC del mismo día UTC,
+    // que en España ya es el viernes.
+    expect(p.terminaEn.toISOString()).toBe("2026-09-24T22:00:00.000Z");
   });
 });

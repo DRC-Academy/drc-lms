@@ -75,7 +75,7 @@ export type DiaDeClase = {
   horas: number;
 };
 
-/** La clase que viene, ya con su fecha. */
+/** La clase que viene, ya con su fecha y sus instantes. */
 export type ProximaClase = DiaDeClase & {
   /** Día natural español, "2026-09-25". */
   fecha: string;
@@ -83,7 +83,31 @@ export type ProximaClase = DiaDeClase & {
   esHoy: boolean;
   /** Está ocurriendo ahora mismo. */
   enCurso: boolean;
+  /**
+   * LOS TRES INSTANTES, EN ABSOLUTO.
+   *
+   * `dia`, `desde` y `hasta` son hora española escrita; estos son el
+   * momento exacto, sin zona y sin ambigüedad. Existen porque la
+   * ventana del botón no se puede decidir comparando cadenas: hay que
+   * poder restar, y hay que poder mandárselos al navegador para que se
+   * encienda solo sin volver a preguntar qué hora es en Madrid.
+   */
+  empiezaEn: Date;
+  terminaEn: Date;
+  /** Cuándo se puede pulsar el botón: `MINUTOS_ANTES` antes de empezar. */
+  abreEn: Date;
 };
+
+/**
+ * Cuánto antes se abre la sala.
+ *
+ * TREINTA MINUTOS FIJOS, también si la clase dura dos horas: media hora
+ * es lo que tarda alguien en prepararse para entrar, y eso no depende de
+ * lo que dure la clase. Y no se cierra tarde por si se alarga —cuando
+ * eso pasa el alumno ya está dentro, y quien está dentro no necesita el
+ * botón—.
+ */
+export const MINUTOS_ANTES = 30;
 
 // ---------------------------------------------------------------
 // LEER LO QUE LLEGA DE LA BASE
@@ -216,6 +240,61 @@ function diaDeLaSemana(dia: string): number {
   return new Date(`${dia}T00:00:00Z`).getUTCDay();
 }
 
+// ---------------------------------------------------------------
+// DE HORA ESPAÑOLA A INSTANTE
+//
+// Esto es lo único de este módulo que no es aritmética de días, y hace
+// falta para la ventana del botón: "el jueves a las 17:00 en Madrid"
+// tiene que convertirse en un instante para poder compararlo con
+// `Date.now()` y para poder mandárselo al navegador.
+//
+// SIN LIBRERÍA Y SIN OFFSET ESCRITO A MANO. Se le pregunta a `Intl` cuál
+// es el desfase de Madrid EN ESE MOMENTO, que es lo que cambia el 25 de
+// octubre. Un `-2` fijo funcionaría hasta ese día y luego mandaría a
+// todo el mundo a la sala una hora tarde.
+// ---------------------------------------------------------------
+
+const PARTES_MADRID = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Madrid",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
+/** Milisegundos que Madrid va por delante de UTC en ese instante. */
+function desfaseMadrid(momento: Date): number {
+  const p: Record<string, number> = {};
+  for (const parte of PARTES_MADRID.formatToParts(momento)) {
+    if (parte.type !== "literal") p[parte.type] = Number(parte.value);
+  }
+  const comoSiFueraUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return comoSiFueraUtc - momento.getTime();
+}
+
+/**
+ * El instante en que, en Madrid, es `dia` a las `hora`.
+ *
+ * DOS PASADAS, y la segunda no es paranoia: el desfase se pide para un
+ * instante que todavía no se conoce, así que la primera estimación puede
+ * caer al otro lado del cambio de hora y devolver el desfase que no era.
+ * Con la segunda, la única hora que sigue siendo ambigua es la que se
+ * repite la madrugada del cambio, a las 02:00 de un domingo de octubre,
+ * y ahí no hay clases.
+ */
+export function instanteEnMadrid(dia: string, hora: string): Date {
+  const [anio, mes, diaMes] = dia.split("-").map(Number);
+  const [hh, mm] = hora.split(":").map(Number);
+  const comoUtc = Date.UTC(anio, mes - 1, diaMes, hh, mm, 0);
+
+  let instante = comoUtc - desfaseMadrid(new Date(comoUtc));
+  instante = comoUtc - desfaseMadrid(new Date(instante));
+  return new Date(instante);
+}
+
 /**
  * La clase que viene, o null si el alumno no tiene horario.
  *
@@ -242,8 +321,13 @@ export function proximaClase(dias: DiaDeClase[], ahora: Date = new Date()): Prox
   let mejorClave = Infinity;
 
   for (const dia of dias) {
-    const fin = enMinutos(dia.hasta);
     const inicio = enMinutos(dia.desde);
+    // EL FINAL SE SUMA, NO SE LEE DE `hasta`. Una clase de 23:00 termina
+    // a las "00:00", y leer esa cadena da 0 minutos: el código la daba
+    // por terminada a cualquier hora del día y mandaba al alumno a la
+    // semana siguiente. Sumando, el final de esa clase son 1440 minutos
+    // y la comparación vuelve a tener sentido. Hay alumnos a las 23:00.
+    const fin = inicio + dia.horas * 60;
 
     let salto = (dia.indice - hoyDow + 7) % 7;
     // Si es hoy pero ya terminó, la próxima es la de dentro de una semana.
@@ -253,15 +337,38 @@ export function proximaClase(dias: DiaDeClase[], ahora: Date = new Date()): Prox
     if (clave >= mejorClave) continue;
 
     mejorClave = clave;
+    const fecha = sumarDias(hoy, salto);
+    const empiezaEn = instanteEnMadrid(fecha, dia.desde);
+
     mejor = {
       ...dia,
-      fecha: sumarDias(hoy, salto),
+      fecha,
       esHoy: salto === 0,
       enCurso: salto === 0 && minutos >= inicio && minutos < fin,
+      empiezaEn,
+      // El final se calcula desde el día de INICIO más las horas que
+      // dura, no formateando `hasta` sobre la misma fecha: una clase de
+      // 23:00 a 00:00 termina al día siguiente, y `hasta` diría "00:00"
+      // del día de antes.
+      terminaEn: new Date(empiezaEn.getTime() + dia.horas * 3_600_000),
+      abreEn: new Date(empiezaEn.getTime() - MINUTOS_ANTES * 60_000),
     };
   }
 
   return mejor;
+}
+
+/**
+ * Si la sala se puede abrir ahora.
+ *
+ * Esta es la única función que decide si el botón se puede pulsar, y la
+ * llama el SERVIDOR. El navegador no vota: lo único que hace con
+ * `abreEn` es saber cuántos segundos faltan para volver a preguntar.
+ */
+export function ventanaAbierta(proxima: ProximaClase | null, ahora: Date = new Date()): boolean {
+  if (!proxima) return false;
+  const t = ahora.getTime();
+  return t >= proxima.abreEn.getTime() && t < proxima.terminaEn.getTime();
 }
 
 // ---------------------------------------------------------------
