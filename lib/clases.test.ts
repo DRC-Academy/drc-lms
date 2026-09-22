@@ -7,9 +7,11 @@ import {
   normalizarQuitas,
   normalizarSlots,
   proximaClase,
+  semanasDelAlumno,
   ventanaAbierta,
   type Quita,
 } from "@/lib/clases";
+import { CLASES } from "@/lib/textos/clases";
 import { clasesDelAlumno, type FilaCalendario } from "@/lib/calendario-gestion";
 import { diaLocal } from "@/lib/fechas";
 
@@ -613,7 +615,7 @@ describe("los quita de las excepciones", () => {
   it("normalizarQuitas se queda con los quita bien formados", () => {
     expect(
       normalizarQuitas([
-        { tipo: "quita", fecha: "2026-09-23", hora: "16:00" },
+        { tipo: "quita", fecha: "2026-09-23", hora: "16:00", class_type: "cancelada_con_preaviso" },
         { tipo: "quita", fecha: "2026-09-24", hora: null },
         { tipo: "añade", fecha: "2026-09-25", hora: "10:00" },
         { tipo: "quita", fecha: "2026-09-26", hora: "a las 4" }, // no se convierte en día entero
@@ -621,8 +623,8 @@ describe("los quita de las excepciones", () => {
         null,
       ])
     ).toEqual([
-      { fecha: "2026-09-23", hora: "16:00" },
-      { fecha: "2026-09-24", hora: null },
+      { fecha: "2026-09-23", hora: "16:00", tipo: "cancelada_con_preaviso" },
+      { fecha: "2026-09-24", hora: null, tipo: null },
     ]);
     expect(normalizarQuitas(null)).toEqual([]);
   });
@@ -650,5 +652,112 @@ describe("los límites de la ventana, con hora simulada", () => {
     const nueva = siguiente(filasDeSlots([{ dia: "Jueves", hora: "17:00" }]), despues)!;
     expect(nueva.fecha).toBe("2026-10-01");
     expect(ventanaAbierta(nueva, despues)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------
+// EL CALENDARIO DE «CLASES»
+// ---------------------------------------------------------------
+
+describe("semanasDelAlumno", () => {
+  const horario = filasDeSlots([
+    { dia: "Lunes", hora: "10:00" },
+    { dia: "Jueves", hora: "18:00" },
+  ]);
+  // Miércoles 23/09/2026, 12:00 en España.
+  const miercoles = CEST("2026-09-23T10:00:00Z");
+
+  it("cuatro semanas, de lunes a domingo, empezando por la actual", () => {
+    const s = semanasDelAlumno(horario, [], miercoles);
+    expect(s).toHaveLength(4);
+    expect(s.map((x) => [x.lunes, x.domingo])).toEqual([
+      ["2026-09-21", "2026-09-27"],
+      ["2026-09-28", "2026-10-04"],
+      ["2026-10-05", "2026-10-11"],
+      ["2026-10-12", "2026-10-18"],
+    ]);
+    expect(s[0].dias.find((d) => d.esHoy)?.fecha).toBe("2026-09-23");
+  });
+
+  it("nada del pasado: el lunes de esta semana ya no sale", () => {
+    const s = semanasDelAlumno(horario, [], miercoles);
+    expect(s[0].dias[0].clases).toHaveLength(0); // lunes 21
+    expect(s[0].dias[3].clases.map((c) => [c.desde, c.estado])).toEqual([["18:00", "normal"]]); // jueves 24
+    expect(s[1].dias[0].clases.map((c) => c.desde)).toEqual(["10:00"]); // lunes 28
+  });
+
+  it("una celda de recuperación sale como recuperación", () => {
+    const recuperacion = fila({
+      celda: "Viernes_17:00",
+      estado: "bloqueado",
+      estado_base: "libre",
+      week_date: "2026-09-21",
+      recovery_for: "2026-09-10",
+    });
+    const s = semanasDelAlumno([...horario, recuperacion], [], miercoles);
+    expect(s[0].dias[4].clases.map((c) => [c.desde, c.estado])).toEqual([["17:00", "recuperacion"]]);
+  });
+
+  it("el destino de una reprogramación lleva la fecha original, y el origen no sale", () => {
+    // El lunes 28 a las 10:00 se movió al jueves 1/10 a las 20:00. A las
+    // 20 y no a las 19: pegada a la clase normal de las 18:00, Gestión la
+    // fundiría con ella en un bloque mixto de dos horas.
+    const origen = fila({
+      celda: "Lunes_10:00",
+      estado: "reprogramada",
+      alumno_base: "Ana Pérez",
+      estado_base: "ocupado",
+      week_date: "2026-09-28",
+      rescheduled_to: "2026-10-01",
+    });
+    const destino = fila({
+      celda: "Jueves_20:00",
+      estado: "bloqueado",
+      estado_base: "libre",
+      week_date: "2026-09-28",
+      recovery_for: "2026-09-28",
+    });
+    const excepciones = [
+      { tipo: "quita", class_type: "reprogramada", fecha: "2026-09-28", hora: "10:00", original_date: "2026-09-28" },
+      { tipo: "añade", class_type: "reprogramada", fecha: "2026-10-01", hora: "20:00", original_date: "2026-09-28" },
+    ];
+    const s = semanasDelAlumno([...horario, origen, destino], excepciones, miercoles);
+    expect(s[1].dias[0].clases).toHaveLength(0); // lunes 28: el origen no sale
+    const jueves = s[1].dias[3].clases; // jueves 1/10
+    expect(jueves.map((c) => [c.desde, c.estado, c.original])).toEqual([
+      ["18:00", "normal", null],
+      ["20:00", "reprogramada", "2026-09-28"],
+    ]);
+  });
+
+  it("una clase cancelada se ve, apagada, y deja de ser la próxima", () => {
+    const excepciones = [
+      { tipo: "quita", class_type: "cancelada_con_preaviso", fecha: "2026-09-24", hora: "18:00", original_date: null },
+    ];
+    const s = semanasDelAlumno(horario, excepciones, miercoles);
+    expect(s[0].dias[3].clases.map((c) => [c.desde, c.estado])).toEqual([["18:00", "cancelada"]]);
+    // Y la próxima clase se la salta, con los mismos datos.
+    const p = siguiente(horario, miercoles, normalizarQuitas(excepciones))!;
+    expect(p.fecha).toBe("2026-09-28");
+  });
+
+  it("una semana sin clases queda vacía", () => {
+    const baja = filasDeSlots([{ dia: "Lunes", hora: "10:00" }], { baja: "2026-09-30" });
+    const s = semanasDelAlumno(baja, [], miercoles);
+    expect(s[2].dias.every((d) => d.clases.length === 0)).toBe(true);
+  });
+});
+
+describe("textos del calendario", () => {
+  it("la reprogramada, en los dos idiomas", () => {
+    expect(CLASES.es.reprogramada({ dia: "Lunes", numero: 28 }, { dia: "Jueves", numero: 1 }, "18:00")).toBe(
+      "Clase del lunes 28 reprogramada al jueves 1, 18:00"
+    );
+    expect(CLASES.en.reprogramada({ dia: "Lunes", numero: 28 }, { dia: "Jueves", numero: 1 }, "18:00")).toBe(
+      "Monday 28th class moved to Thursday 1st, 18:00"
+    );
+    expect(CLASES.en.reprogramada({ dia: "Lunes", numero: 11 }, { dia: "Martes", numero: 22 }, "09:00")).toBe(
+      "Monday 11th class moved to Tuesday 22nd, 09:00"
+    );
   });
 });

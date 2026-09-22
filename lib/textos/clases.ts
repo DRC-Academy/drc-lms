@@ -64,6 +64,24 @@ export type TextosClases = {
   /** Delante del nombre del profesor, que va en negrita: "Con" / "With". */
   con: string;
 
+  // --- el calendario ---
+  calendario: string;
+  /** El rango de la semana: "Del 21 al 27 de septiembre". */
+  rangoSemana: (lunes: { dia: number; mes: number }, domingo: { dia: number; mes: number }) => string;
+  estaSemana: string;
+  semanaAnterior: string;
+  semanaSiguiente: string;
+  /** La línea neutra de una semana sin clases. */
+  semanaSinClases: string;
+  /** "lun" / "Mon", para la cabecera de las columnas. */
+  diaCorto: (dia: DiaSemana) => string;
+  /** El día de la agenda de móvil: "Jueves 24 de septiembre". */
+  diaAgenda: (dia: DiaSemana, numero: number, mes: number) => string;
+  recuperacion: string;
+  /** "Clase del lunes 28 reprogramada al jueves 1, 18:00". */
+  reprogramada: (original: { dia: DiaSemana; numero: number }, nueva: { dia: DiaSemana; numero: number }, hora: string) => string;
+  cancelada: string;
+
   // --- la lista del horario ---
   tuHorario: string;
   nombreDia: (dia: DiaSemana) => string;
@@ -108,6 +126,14 @@ const MESES_EN = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+/** 1st, 2nd, 3rd, 4th… 11th, 12th, 13th, 21st. */
+function ordinal(n: number): string {
+  const decena = n % 100;
+  if (decena >= 11 && decena <= 13) return `${n}th`;
+  const sufijo = { 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th";
+  return `${n}${sufijo}`;
+}
+
 export const CLASES: Record<Idioma, TextosClases> = {
   es: {
     misClases: "Mis clases",
@@ -133,6 +159,21 @@ export const CLASES: Record<Idioma, TextosClases> = {
     conQuienYZona: (profesor) => (profesor ? `Con ${profesor} · hora de Madrid` : "Hora de Madrid"),
     cursoEnMiCurso: "Tu curso te espera cuando termines",
     con: "Con",
+
+    calendario: "Tu calendario",
+    rangoSemana: (l, d) =>
+      l.mes === d.mes
+        ? `Del ${l.dia} al ${d.dia} de ${MESES_ES[d.mes]}`
+        : `Del ${l.dia} de ${MESES_ES[l.mes]} al ${d.dia} de ${MESES_ES[d.mes]}`,
+    estaSemana: "Esta semana",
+    semanaAnterior: "Semana anterior",
+    semanaSiguiente: "Semana siguiente",
+    semanaSinClases: "No tienes clases programadas esta semana.",
+    diaCorto: (dia) => DIAS_ES[dia].slice(0, 3),
+    diaAgenda: (dia, numero, mes) => `${DIAS_ES[dia]} ${numero} de ${MESES_ES[mes]}`,
+    recuperacion: "Clase de recuperación",
+    reprogramada: (o, n, hora) => `Clase del ${DIAS_ES[o.dia]} ${o.numero} reprogramada al ${DIAS_ES[n.dia]} ${n.numero}, ${hora}`,
+    cancelada: "Clase cancelada",
 
     tuHorario: "Tu horario",
     nombreDia: (dia) => DIAS_ES[dia],
@@ -169,6 +210,22 @@ export const CLASES: Record<Idioma, TextosClases> = {
     conQuienYZona: (profesor) => (profesor ? `With ${profesor} · Madrid time` : "Madrid time"),
     cursoEnMiCurso: "Your course will be here when you're done",
     con: "With",
+
+    calendario: "Your calendar",
+    rangoSemana: (l, d) =>
+      l.mes === d.mes
+        ? `${l.dia}–${d.dia} ${MESES_EN[d.mes]}`
+        : `${l.dia} ${MESES_EN[l.mes]} – ${d.dia} ${MESES_EN[d.mes]}`,
+    estaSemana: "This week",
+    semanaAnterior: "Previous week",
+    semanaSiguiente: "Next week",
+    semanaSinClases: "You have no classes scheduled this week.",
+    diaCorto: (dia) => DIAS_EN[dia].slice(0, 3),
+    diaAgenda: (dia, numero, mes) => `${DIAS_EN[dia]} ${numero} ${MESES_EN[mes]}`,
+    recuperacion: "Make-up class",
+    reprogramada: (o, n, hora) =>
+      `${DIAS_EN[o.dia]} ${ordinal(o.numero)} class moved to ${DIAS_EN[n.dia]} ${ordinal(n.numero)}, ${hora}`,
+    cancelada: "Class cancelled",
 
     tuHorario: "Your schedule",
     nombreDia: (dia) => DIAS_EN[dia],

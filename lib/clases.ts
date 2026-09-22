@@ -36,7 +36,7 @@
 // Módulo puro: sin `server-only`, lo importan componentes de cliente.
 // ---------------------------------------------------------------
 
-import { diaLocal } from "@/lib/fechas";
+import { diaLocal, sumarDias } from "@/lib/fechas";
 import { clasesDelAlumno, type ClaseDeGestion, type FilaCalendario } from "@/lib/calendario-gestion";
 
 /**
@@ -296,7 +296,16 @@ export function instanteEnMadrid(dia: string, hora: string): Date {
  * hora, o todas si no trae hora— no ocurre. Sale de una cancelación, una
  * falta o el origen de una reprogramación anotados en `class_records`.
  */
-export type Quita = { fecha: string; hora: string | null };
+export type Quita = {
+  fecha: string;
+  hora: string | null;
+  /**
+   * El `class_type` del parte. Solo lo mira el calendario: el origen de
+   * una reprogramación (`reprogramada`) no se enseña como cancelada, porque
+   * la clase sale en su destino.
+   */
+  tipo?: string | null;
+};
 
 const ES_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -310,12 +319,13 @@ export function normalizarQuitas(valor: unknown): Quita[] {
   const salida: Quita[] = [];
   for (const crudo of valor) {
     if (typeof crudo !== "object" || crudo === null) continue;
-    const { tipo, fecha, hora } = crudo as Record<string, unknown>;
+    const { tipo, fecha, hora, class_type } = crudo as Record<string, unknown>;
     if (tipo !== "quita" || typeof fecha !== "string" || !ES_FECHA.test(fecha)) continue;
+    const tipoParte = typeof class_type === "string" ? class_type : null;
     if (hora === null || hora === undefined) {
-      salida.push({ fecha, hora: null });
+      salida.push({ fecha, hora: null, tipo: tipoParte });
     } else if (typeof hora === "string" && ES_HORA.test(hora.trim())) {
-      salida.push({ fecha, hora: hora.trim() });
+      salida.push({ fecha, hora: hora.trim(), tipo: tipoParte });
     }
     // Una hora que viene y no se entiende no se convierte en "todo el
     // día": quitaría clases que nadie ha cancelado.
@@ -373,40 +383,48 @@ export function proximaClase(
   ahora: Date = new Date(),
   quitas: Quita[] = []
 ): ProximaClase | null {
-  const hoy = diaLocal(ahora);
   let mejor: ProximaClase | null = null;
 
   for (const c of clases) {
     if (quitas.some((q) => laQuita(q, c))) continue;
 
-    const empiezaEn = instanteEnMadrid(c.fecha, c.desde);
-    // El final se suma al inicio, no se lee de una hora escrita: una clase
-    // de 23:00 termina a las "00:00" del día siguiente, y esa cadena leída
-    // sobre la misma fecha daría una clase que acaba antes de empezar.
-    const terminaEn = new Date(empiezaEn.getTime() + c.horas * 3_600_000);
-    if (terminaEn.getTime() <= ahora.getTime()) continue;
-    if (mejor && terminaEn.getTime() >= mejor.terminaEn.getTime()) continue;
-
-    const indice = diaDeLaSemana(c.fecha);
-    mejor = {
-      dia: DIAS[indice],
-      indice,
-      desde: c.desde,
-      hasta: comoHora(enMinutos(c.desde) + c.horas * 60),
-      horas: c.horas,
-      fecha: c.fecha,
-      esHoy: c.fecha === hoy,
-      enCurso: ahora.getTime() >= empiezaEn.getTime(),
-      empiezaEn,
-      terminaEn,
-      abreEn: new Date(empiezaEn.getTime() - MINUTOS_ANTES * 60_000),
-      profesor: c.profesor?.trim() || null,
-      meetLink: c.meetLink,
-      esRecuperacion: c.esRecuperacion,
-    };
+    const clase = aClase(c, ahora);
+    if (clase.terminaEn.getTime() <= ahora.getTime()) continue;
+    if (mejor && clase.terminaEn.getTime() >= mejor.terminaEn.getTime()) continue;
+    mejor = clase;
   }
 
   return mejor;
+}
+
+/**
+ * Una clase de Gestión con su día, sus horas escritas y sus tres
+ * instantes. La usan la próxima clase y el calendario, así que las dos
+ * cuentan el tiempo igual.
+ */
+function aClase(c: ClaseDeGestion, ahora: Date): ProximaClase {
+  const empiezaEn = instanteEnMadrid(c.fecha, c.desde);
+  // El final se suma al inicio, no se lee de una hora escrita: una clase
+  // de 23:00 termina a las "00:00" del día siguiente, y esa cadena leída
+  // sobre la misma fecha daría una clase que acaba antes de empezar.
+  const terminaEn = new Date(empiezaEn.getTime() + c.horas * 3_600_000);
+  const indice = diaDeLaSemana(c.fecha);
+  return {
+    dia: DIAS[indice],
+    indice,
+    desde: c.desde,
+    hasta: comoHora(enMinutos(c.desde) + c.horas * 60),
+    horas: c.horas,
+    fecha: c.fecha,
+    esHoy: c.fecha === diaLocal(ahora),
+    enCurso: ahora.getTime() >= empiezaEn.getTime() && ahora.getTime() < terminaEn.getTime(),
+    empiezaEn,
+    terminaEn,
+    abreEn: new Date(empiezaEn.getTime() - MINUTOS_ANTES * 60_000),
+    profesor: c.profesor?.trim() || null,
+    meetLink: c.meetLink,
+    esRecuperacion: c.esRecuperacion,
+  };
 }
 
 /**
@@ -421,6 +439,131 @@ export function proximaDelAlumno(
 ): ProximaClase | null {
   const clases = clasesDelAlumno(filas, diaLocal(ahora), DIAS_HACIA_DELANTE);
   return proximaClase(clases, ahora, normalizarQuitas(excepciones));
+}
+
+// ---------------------------------------------------------------
+// EL CALENDARIO: ESTA SEMANA Y LAS TRES SIGUIENTES
+//
+// Las mismas clases que dan la próxima (`clasesDelAlumno`, la lógica de
+// Gestión) y los mismos 'quita'. Lo único que añade es el estado de cada
+// una, para pintarla:
+//
+//   normal         una clase del horario.
+//   recuperacion   una celda de recuperación del grid.
+//   reprogramada   una celda de recuperación que es el DESTINO de una
+//                  reprogramación: hay un 'añade' de tipo reprogramada en
+//                  ese día cuyo `original_date` es el `recoveryFor` de la
+//                  celda. Lleva la fecha original, la del parte.
+//   cancelada      una clase del horario con un 'quita'. Se ve, apagada y
+//                  sin botón. Una recuperación no se cancela nunca, como
+//                  en Gestión.
+//
+// El origen de una reprogramación no sale: su 'quita' es de tipo
+// reprogramada, y la clase ya aparece en su destino con el aviso.
+//
+// NADA DEL PASADO: una clase que ya ha terminado no sale, aunque sea de
+// esta semana. El pasado es el historial.
+// ---------------------------------------------------------------
+
+export type EstadoCalendario = "normal" | "recuperacion" | "reprogramada" | "cancelada";
+
+export type ClaseCalendario = ProximaClase & {
+  estado: EstadoCalendario;
+  /** Reprogramada: el día que tenía antes, "2026-09-28". */
+  original: string | null;
+};
+
+export type DiaCalendario = { fecha: string; esHoy: boolean; clases: ClaseCalendario[] };
+
+export type SemanaCalendario = {
+  /** El lunes y el domingo de la semana, días naturales españoles. */
+  lunes: string;
+  domingo: string;
+  dias: DiaCalendario[];
+};
+
+/** Cuántas semanas enseña el calendario: esta y las tres siguientes. */
+export const SEMANAS_CALENDARIO = 4;
+
+/**
+ * Los destinos de reprogramación de `vista_excepciones_clase`: sus
+ * 'añade' de tipo reprogramada, con el día al que se movió la clase y el
+ * día que tenía.
+ */
+export function normalizarReprogramaciones(valor: unknown): { fecha: string; original: string }[] {
+  if (!Array.isArray(valor)) return [];
+  const salida: { fecha: string; original: string }[] = [];
+  for (const crudo of valor) {
+    if (typeof crudo !== "object" || crudo === null) continue;
+    const { tipo, class_type, fecha, original_date } = crudo as Record<string, unknown>;
+    if (tipo !== "añade" || class_type !== "reprogramada") continue;
+    if (typeof fecha !== "string" || !ES_FECHA.test(fecha)) continue;
+    if (typeof original_date !== "string" || !ES_FECHA.test(original_date)) continue;
+    salida.push({ fecha, original: original_date });
+  }
+  return salida;
+}
+
+/** El lunes de la semana de un día natural. */
+export function lunesDe(dia: string): string {
+  return sumarDias(dia, -((diaDeLaSemana(dia) + 6) % 7));
+}
+
+/**
+ * Las semanas del calendario, de la actual en adelante. Función pura: la
+ * hora entra como argumento.
+ */
+export function semanasDelAlumno(
+  filas: FilaCalendario[],
+  excepciones: unknown,
+  ahora: Date = new Date(),
+  semanas: number = SEMANAS_CALENDARIO
+): SemanaCalendario[] {
+  const hoy = diaLocal(ahora);
+  const primerLunes = lunesDe(hoy);
+  const clases = clasesDelAlumno(filas, primerLunes, semanas * 7 - 1);
+  const quitas = normalizarQuitas(excepciones);
+  const reprogramaciones = normalizarReprogramaciones(excepciones);
+
+  const porDia = new Map<string, ClaseCalendario[]>();
+  for (const c of clases) {
+    const clase = aClase(c, ahora);
+    if (clase.terminaEn.getTime() <= ahora.getTime()) continue;
+
+    let estado: EstadoCalendario = "normal";
+    let original: string | null = null;
+
+    const quita = quitas.find((q) => laQuita(q, c));
+    if (quita) {
+      if (quita.tipo === "reprogramada") continue;
+      estado = "cancelada";
+    } else if (c.esRecuperacion) {
+      const movida = reprogramaciones.find((r) => r.fecha === c.fecha && r.original === c.recoveryFor);
+      if (movida) {
+        estado = "reprogramada";
+        original = movida.original;
+      } else {
+        estado = "recuperacion";
+      }
+    }
+
+    const lista = porDia.get(c.fecha) ?? [];
+    lista.push({ ...clase, estado, original });
+    porDia.set(c.fecha, lista);
+  }
+
+  const salida: SemanaCalendario[] = [];
+  for (let s = 0; s < semanas; s++) {
+    const lunes = sumarDias(primerLunes, s * 7);
+    const dias: DiaCalendario[] = [];
+    for (let d = 0; d < 7; d++) {
+      const fecha = sumarDias(lunes, d);
+      const delDia = (porDia.get(fecha) ?? []).sort((a, b) => a.empiezaEn.getTime() - b.empiezaEn.getTime());
+      dias.push({ fecha, esHoy: fecha === hoy, clases: delDia });
+    }
+    salida.push({ lunes, domingo: sumarDias(lunes, 6), dias });
+  }
+  return salida;
 }
 
 /**

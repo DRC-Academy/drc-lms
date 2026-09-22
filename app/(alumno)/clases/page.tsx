@@ -1,4 +1,5 @@
-import { obtenerCalendario, obtenerQuitas } from "@/lib/gestion";
+import { obtenerCalendario, obtenerExcepciones } from "@/lib/gestion";
+import { conFoco } from "@/lib/foco";
 import { exigirFoco } from "@/lib/sesion-servidor";
 import { textosActuales } from "@/lib/idioma-servidor";
 import MisClases from "@/components/clases/MisClases";
@@ -15,19 +16,23 @@ export const dynamic = "force-dynamic";
  * pantalla y no hay nada compitiendo con él.
  *
  * LAS CLASES SALEN DEL CALENDARIO DE GESTIÓN, no del perfil: el grid del
- * profesor (`vista_calendario_alumno`) y los 'quita' de
- * `vista_excepciones_clase`. Ver `components/clases/MisClases.tsx`.
+ * profesor (`vista_calendario_alumno`) y las excepciones anotadas
+ * (`vista_excepciones_clase`). Ver `components/clases/MisClases.tsx`.
+ *
+ * La semana del calendario va en `?semana=` (0 es la actual): se cambia
+ * con enlaces y se calcula en el servidor, como todo lo demás.
  *
  * `force-dynamic` porque la respuesta depende de la hora: una página
  * cacheada diría "hoy" el día siguiente.
  */
-export default async function PaginaClases() {
-  const { alumnoId } = await exigirFoco();
+export default async function PaginaClases({ searchParams }: { searchParams: { semana?: string } }) {
+  const { alumnoId, paraEnlaces } = await exigirFoco();
 
-  const [calendario, quitas] = await Promise.all([
+  const [calendario, excepciones] = await Promise.all([
     obtenerCalendario(alumnoId),
-    obtenerQuitas(alumnoId),
+    obtenerExcepciones(alumnoId),
   ]);
+  const semana = Number.parseInt(searchParams.semana ?? "0", 10);
   const t = textosActuales();
 
   return (
@@ -43,7 +48,13 @@ export default async function PaginaClases() {
           <p className="text-[15px] text-marca-gris">{t.clases.tuHorarioSemanal}</p>
         </header>
 
-        <MisClases calendario={calendario} quitas={quitas} t={t.clases} />
+        <MisClases
+          calendario={calendario}
+          excepciones={excepciones}
+          semana={Number.isFinite(semana) ? semana : 0}
+          hrefSemana={(i) => conFoco(i === 0 ? "/clases" : `/clases?semana=${i}`, paraEnlaces)}
+          t={t.clases}
+        />
       </main>
     </div>
   );

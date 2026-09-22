@@ -221,7 +221,7 @@ const VALIDACION_ACEPTADA = ["approved", "auto_approved", "ok"] as const;
 // LAS CLASES DEL ALUMNO
 //
 // Dos lecturas, y las dos las consumen `proximaDelAlumno` y
-// `horarioDelAlumno`: el calendario de Gestión (qué clases hay, con qué
+// `semanasDelAlumno`: el calendario de Gestión (qué clases hay, con qué
 // profesor y con qué enlace) y los 'quita' de las excepciones (cuáles de
 // esas no van a ocurrir). Si falla una lectura se devuelve vacío y se
 // registra: sin calendario el alumno lee que aún no tiene su próxima
@@ -259,6 +259,27 @@ export const obtenerQuitas = cache(async (alumnoId: string): Promise<unknown[]> 
     .select("tipo, fecha, hora")
     .eq("alumno_id", alumnoId)
     .eq("tipo", "quita")
+    .order("fecha", { ascending: true })
+    .returns<unknown[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo leer vista_excepciones_clase:", error.message);
+    return [];
+  }
+  return data ?? [];
+});
+
+/**
+ * Todas las excepciones del alumno —'quita' y 'añade'—, con el tipo del
+ * parte y la fecha original. Las pide el calendario de «Clases»: los
+ * 'quita' para las canceladas y los 'añade' de tipo reprogramada para
+ * saber de dónde viene una clase movida. Crudas: las validan
+ * `normalizarQuitas` y `normalizarReprogramaciones`.
+ */
+export const obtenerExcepciones = cache(async (alumnoId: string): Promise<unknown[]> => {
+  const { data, error } = await soloLectura("vista_excepciones_clase")
+    .select("tipo, class_type, fecha, hora, original_date")
+    .eq("alumno_id", alumnoId)
     .order("fecha", { ascending: true })
     .returns<unknown[]>();
 

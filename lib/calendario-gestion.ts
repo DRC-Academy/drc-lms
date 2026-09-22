@@ -573,6 +573,12 @@ export type ClaseDeGestion = {
   meetLink: string | null;
   /** Celda de recuperación (o destino de una reprogramación). */
   esRecuperacion: boolean;
+  /**
+   * De una recuperación, el día de la clase que repone (`recoveryFor` de
+   * la celda). En el destino de una reprogramación es el día original:
+   * es lo que la une con su parte.
+   */
+  recoveryFor: string | null;
 };
 
 /**
@@ -601,31 +607,11 @@ export function clasesDelAlumno(filas: FilaCalendario[], desde: string, dias: nu
           profesor: t.profesor,
           meetLink: c.meetLink?.trim() || null,
           esRecuperacion: !!c.isRecovery,
+          recoveryFor: c.isRecovery ? c.recoveryFor ?? null : null,
         });
       }
     }
   }
 
   return salida.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.desde.localeCompare(b.desde));
-}
-
-/**
- * El horario recurrente del alumno según el calendario: las celdas cuyo
- * alumno de fondo es él, con todos sus profesores. Es lo que pinta la
- * lista «Tu horario» de «Mis clases».
- */
-export function horarioDelAlumno(filas: FilaCalendario[]): AssignedSlot[] {
-  const vistos = new Set<string>();
-  const salida: AssignedSlot[] = [];
-  for (const t of alumnoDeGestion(filas)) {
-    for (const a of t.assignments) {
-      for (const s of a.slots) {
-        const k = `${s.day}|${s.hour}`;
-        if (vistos.has(k)) continue;
-        vistos.add(k);
-        salida.push(s);
-      }
-    }
-  }
-  return salida;
 }

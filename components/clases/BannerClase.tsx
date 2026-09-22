@@ -142,12 +142,32 @@ export default function BannerClase({
  *   sala cerrada            el botón en gris, deshabilitado y SIN enlace,
  *                           con la nota de cuándo se abre.
  */
-export function BotonClase({ proxima, t, ahora }: { proxima: ProximaClase; t: TextosClases; ahora: Date }) {
+export function BotonClase({
+  proxima,
+  t,
+  ahora,
+  compacto = false,
+}: {
+  proxima: ProximaClase;
+  t: TextosClases;
+  ahora: Date;
+  /**
+   * Dentro de un bloque del calendario: el mismo botón, más bajo y a lo
+   * ancho del bloque. El texto sigue a 19px en negrita, que es lo que lo
+   * deja en contraste de texto grande.
+   */
+  compacto?: boolean;
+}) {
   const enlace = enlaceDeClase(proxima.meetLink);
+  const medida = compacto ? "min-h-[44px] w-full px-4" : "min-h-[54px] w-full px-8 sm:w-auto";
 
   if (!enlace) {
     return (
-      <p className="inline-flex rounded-[14px] border border-marca-bordeSuave bg-white/70 px-4 py-3 text-[15px] font-semibold text-marca-tintaMedia">
+      <p
+        className={`inline-flex rounded-[14px] border border-marca-bordeSuave bg-white/70 font-semibold text-marca-tintaMedia ${
+          compacto ? "px-3 py-2 text-[13.5px]" : "px-4 py-3 text-[15px]"
+        }`}
+      >
         {t.sinEnlace}
       </p>
     );
@@ -161,7 +181,7 @@ export function BotonClase({ proxima, t, ahora }: { proxima: ProximaClase; t: Te
         // `noopener` no es ceremonia: sin él, la pestaña que se abre puede
         // reescribir la que deja atrás, que es la sesión del alumno.
         rel="noopener noreferrer"
-        className="pulsable inline-flex min-h-[54px] w-full items-center justify-center rounded-full bg-marca-verde px-8 text-[19px] font-bold text-white shadow-[0_4px_0_#14722A,0_10px_20px_rgba(30,158,58,0.25)] transition-colors hover:bg-marca-verdeOsc focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc sm:w-auto"
+        className={`pulsable inline-flex ${medida} items-center justify-center rounded-full bg-marca-verde text-[19px] font-bold text-white shadow-[0_4px_0_#14722A,0_10px_20px_rgba(30,158,58,0.25)] transition-colors hover:bg-marca-verdeOsc focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc`}
       >
         {t.unirse}
       </a>
