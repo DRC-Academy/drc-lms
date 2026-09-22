@@ -52,6 +52,16 @@ export type TextosClases = {
   /** La línea que sustituye al banner cuando no hay próxima clase. */
   sinProxima: string;
 
+  // --- el inicio ---
+  /** La línea del saludo: "Tu próxima clase: jueves 24 de septiembre, 20:00". */
+  lineaProxima: (cuando: string, hora: string) => string;
+  /** Etiqueta de la franja cuando la sala está abierta y la clase aún no empezó. */
+  empiezaPronto: string;
+  /** Debajo de la hora en la franja: "Con Ignacio · hora de Madrid". */
+  conQuienYZona: (profesor: string | null) => string;
+  /** Dónde ha ido el «Continuar» mientras la franja es la clase. */
+  cursoEnMiCurso: string;
+
   // --- la lista del horario ---
   tuHorario: string;
   nombreDia: (dia: DiaSemana) => string;
@@ -116,6 +126,11 @@ export const CLASES: Record<Idioma, TextosClases> = {
 
     sinProxima: "Aún no tienes tu próxima clase programada",
 
+    lineaProxima: (cuando, hora) => `Tu próxima clase: ${cuando}, ${hora}`,
+    empiezaPronto: "Tu clase empieza pronto",
+    conQuienYZona: (profesor) => (profesor ? `Con ${profesor} · hora de Madrid` : "Hora de Madrid"),
+    cursoEnMiCurso: "Tu curso te espera en «Mi curso».",
+
     tuHorario: "Tu horario",
     nombreDia: (dia) => DIAS_ES[dia],
     duracion: (horas) => (horas === 1 ? "1 hora" : `${horas} horas`),
@@ -145,6 +160,11 @@ export const CLASES: Record<Idioma, TextosClases> = {
     sinEnlace: "Ask your teacher for the link",
 
     sinProxima: "Your next class isn't scheduled yet",
+
+    lineaProxima: (cuando, hora) => `Your next class: ${cuando}, ${hora}`,
+    empiezaPronto: "Your class starts soon",
+    conQuienYZona: (profesor) => (profesor ? `With ${profesor} · Madrid time` : "Madrid time"),
+    cursoEnMiCurso: "Your course is waiting in “My course”.",
 
     tuHorario: "Your schedule",
     nombreDia: (dia) => DIAS_EN[dia],

@@ -57,6 +57,17 @@ export type BannerAction = {
    * " Estilo indirecto". Nunca repite lo que ya dice `label`.
    */
   srSuffix?: string;
+  /**
+   * Un enlace que sale del LMS —la sala de la clase—: se abre en otra
+   * pestaña y sin `Link` de Next, que es para rutas propias.
+   */
+  externo?: boolean;
+  /**
+   * "marca": el verde de acción de la marca (`marca-verde`) en vez del
+   * verde claro de la franja. Lo usa el botón de «Unirse a la clase»,
+   * que es el mismo botón en toda la aplicación. Ver `.banner-cta-marca`.
+   */
+  tono?: "marca";
 };
 
 export default function Banner({
@@ -247,7 +258,7 @@ function TextoApoyo({ children, enLinea }: { children: ReactNode; enLinea?: bool
  * la franja y tiene que poder pulsarse con el pulgar.
  */
 function BotonBanner({ action, size }: { action: BannerAction; size: BannerSize }) {
-  const clases = `banner-cta inline-flex items-center justify-center rounded-full font-bold transition-colors ${
+  const clases = `banner-cta ${action.tono === "marca" ? "banner-cta-marca " : ""}inline-flex items-center justify-center rounded-full font-bold transition-colors ${
     size === "bar"
       ? "min-h-[44px] shrink-0 px-[30px] py-[13px] text-[15px]"
       : "min-h-[44px] w-full px-8 py-3.5 text-[15px] min-[900px]:w-auto min-[900px]:text-[16px]"
@@ -259,6 +270,16 @@ function BotonBanner({ action, size }: { action: BannerAction; size: BannerSize 
       {action.srSuffix && <span className="sr-only"> {action.srSuffix}</span>}
     </>
   );
+
+  if (action.href && action.externo) {
+    return (
+      // `noopener` no es ceremonia: sin él, la pestaña que se abre puede
+      // reescribir la que deja atrás, que es la sesión del alumno.
+      <a href={action.href} target="_blank" rel="noopener noreferrer" className={clases}>
+        {dentro}
+      </a>
+    );
+  }
 
   if (action.href) {
     return (

@@ -415,6 +415,20 @@
     background: theme("colors.banner.ctaHover");
   }
 
+  /* EL VERDE DE ACCIÓN, TAMBIÉN SOBRE LA TINTA. Solo para «Unirse a la
+     clase», que tiene que ser el mismo botón en la franja del inicio y
+     en «Mis clases». Sobre la tinta el botón se distingue a 4,8:1 (el
+     mínimo de un control es 3:1); el texto blanco queda a 3,5:1, igual
+     que en todos los `.btn-verde` de la aplicación. */
+  .banner-cta-marca {
+    --banner-cta-fg: #FFFFFF;
+    background: theme("colors.marca.verde");
+  }
+
+  .banner-cta-marca:hover {
+    background: theme("colors.marca.verdeOsc");
+  }
+
   /* ---------------------------------------------------------------
      LO QUE SE PULSA, SE HUNDE
 

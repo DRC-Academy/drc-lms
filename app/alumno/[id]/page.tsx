@@ -1,6 +1,7 @@
 import { nivelDelAlumno } from "@/lib/estimacion";
 import { notFound } from "next/navigation";
-import { obtenerAlumno } from "@/lib/gestion";
+import { obtenerAlumno, obtenerCalendario, obtenerQuitas } from "@/lib/gestion";
+import { proximaDelAlumno, ventanaAbierta } from "@/lib/clases";
 import { formatearFecha } from "@/lib/perfil";
 import { calcularTarjeta } from "@/lib/modos";
 import { idiomaActual, textosActuales } from "@/lib/idioma-servidor";
@@ -20,6 +21,9 @@ import AvatarProfesor from "@/components/AvatarProfesor";
 import BannerCurso from "@/components/BannerCurso";
 import BannerDiploma from "@/components/BannerDiploma";
 import PanelAlumno from "@/components/PanelAlumno";
+import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
+import { FranjaClase, LineaClase } from "@/components/clases/BannerClase";
+import RefrescoEnCortes from "@/components/clases/RefrescoEnCortes";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
 // prerenderizar y los datos cambian en cuanto se analiza una clase nueva.
@@ -47,13 +51,16 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   // Gestión primero: de su `plan` y su `nivel` sale qué cursos le tocan,
   // así que la consulta de cursos no puede ir en el mismo lote.
-  const [datos, progreso, generadosCrudos, ultimaGeneracion] = await Promise.all([
+  const [datos, progreso, generadosCrudos, ultimaGeneracion, calendario, quitas] = await Promise.all([
     obtenerAlumno(params.id),
     leerProgresoAlumno(params.id),
     // Con el rol: los bloques que el equipo genera para revisar solo
     // salen en la lista de quien los generó. Al alumno no le aparecen.
     leerBloquesGenerados(params.id, sesion.rol === "admin"),
     leerUltimaGeneracion(params.id),
+    // Las clases, del calendario de Gestión. Ver «LA PRÓXIMA CLASE» abajo.
+    obtenerCalendario(params.id),
+    obtenerQuitas(params.id),
   ]);
 
 
@@ -150,9 +157,30 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   const saludo = ultimaClase ? tp.saludoConClase(primerNombre) : tp.saludoSinClase(primerNombre);
 
   const quien = profesor || tp.tuProfesor;
-  const subtitulo = ultimaClase
+  const subtituloDeSiempre = ultimaClase
     ? tp.trabajoContigoElDia(quien, formatearFecha(ultimaClase.fechaClase, tp.fechaCorta))
     : tp.cursoPreparado(quien);
+
+  // ---------------------------------------------------------------
+  // LA PRÓXIMA CLASE, SIN QUE EL INICIO CREZCA
+  //
+  // La misma función que «Mis clases» (`proximaDelAlumno`), con la hora
+  // del SERVIDOR. Fuera de la ventana es la línea de debajo del saludo:
+  // cuándo y con quién, o la línea neutra si no hay ninguna. Dentro de la
+  // ventana —de media hora antes al final— la franja en tinta pasa a ser
+  // la clase, con su botón, y el saludo vuelve a su frase de siempre para
+  // no decir lo mismo dos veces. `RefrescoEnCortes` pide que se vuelva a
+  // calcular al abrirse la sala y al terminar.
+  // ---------------------------------------------------------------
+  const tc = textosActuales().clases;
+  const ahora = new Date();
+  const proxima = proximaDelAlumno(calendario, quitas, ahora);
+  const enVentana = proxima !== null && ventanaAbierta(proxima, ahora);
+  const subtitulo = enVentana
+    ? subtituloDeSiempre
+    : proxima
+      ? <LineaClase proxima={proxima} t={tc} ahora={ahora} />
+      : tc.sinProxima;
 
   // ---------------------------------------------------------------
   // LA COLUMNA DE LA DERECHA
@@ -300,8 +328,21 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           generadosIniciales={generados}
           idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}
-          banner={<BannerCurso estados={estadosCurso} foco={foco} />}
+          banner={
+            proxima && enVentana ? (
+              <FranjaClase
+                proxima={proxima}
+                t={tc}
+                tieneCurso={estadosCurso.length > 0}
+                ilustracion={<MascotaBienvenida variante="franja" estado="idle" />}
+              />
+            ) : (
+              <BannerCurso estados={estadosCurso} foco={foco} />
+            )
+          }
         />
+
+        {proxima && <RefrescoEnCortes cortes={[proxima.abreEn.getTime(), proxima.terminaEn.getTime()]} />}
 
       </main>
     </div>

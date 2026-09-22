@@ -25,6 +25,8 @@
 import { enlaceDeClase, ventanaAbierta, type ProximaClase } from "@/lib/clases";
 import { diaLocal, sumarDias } from "@/lib/fechas";
 import type { TextosClases } from "@/lib/textos/clases";
+import type { ReactNode } from "react";
+import Banner from "@/components/Banner";
 import RefrescoEnCortes from "@/components/clases/RefrescoEnCortes";
 
 export default function BannerClase({
@@ -139,5 +141,58 @@ export function SinProxima({ t }: { t: TextosClases }) {
     <p className="rounded-2xl border border-marca-borde bg-white px-5 py-4 text-[15px] text-marca-tintaMedia">
       {t.sinProxima}
     </p>
+  );
+}
+
+// ---------------------------------------------------------------
+// EN EL INICIO
+//
+// El inicio no crece por la clase. Fuera de la ventana, la clase es la
+// línea de debajo del saludo: cuándo y con quién, sin botón (el botón
+// gris vive en «Mis clases»). Dentro de la ventana, la franja en tinta
+// —la de «Continúa donde lo dejaste»— pasa a ser la clase, con el botón
+// en el verde de marca; el curso sigue a un toque en «Mi curso».
+// ---------------------------------------------------------------
+
+/** La línea de debajo del saludo, fuera de la ventana. */
+export function LineaClase({ proxima, t, ahora }: { proxima: ProximaClase; t: TextosClases; ahora: Date }) {
+  return (
+    <>
+      <span className="font-semibold text-marca-tinta">{t.lineaProxima(cuando(proxima, t, ahora), proxima.desde)}</span>{" "}
+      <span className="text-[12px] text-marca-grisTenue min-[900px]:text-[13px]">{t.horaDeMadrid}</span>
+      {proxima.profesor && <> · {t.conProfesor(proxima.profesor)}</>}
+    </>
+  );
+}
+
+/**
+ * La franja del inicio mientras la sala está abierta. Es el `Banner` de
+ * siempre, con la mascota, y el botón en el verde de acción.
+ *
+ * Sin enlace utilizable no hay botón: la franja dice la hora y, en lugar
+ * de la llamada, que se lo pida a su profesor.
+ */
+export function FranjaClase({
+  proxima,
+  t,
+  tieneCurso,
+  ilustracion,
+}: {
+  proxima: ProximaClase;
+  t: TextosClases;
+  /** Si el alumno tiene curso, se le dice dónde ha quedado su «Continuar». */
+  tieneCurso: boolean;
+  ilustracion?: ReactNode;
+}) {
+  const enlace = enlaceDeClase(proxima.meetLink);
+  return (
+    <Banner
+      eyebrow={proxima.enCurso ? t.claseEnCurso : t.empiezaPronto}
+      title={t.franja(proxima.desde, proxima.hasta)}
+      subtitle={t.conQuienYZona(proxima.profesor)}
+      action={enlace ? { label: t.unirse, href: enlace, externo: true, tono: "marca" } : undefined}
+      ilustracion={ilustracion}
+      secondaryText={enlace ? (tieneCurso ? t.cursoEnMiCurso : undefined) : t.sinEnlace}
+    />
   );
 }
