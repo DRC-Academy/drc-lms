@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------
 // LECTURAS CONTRA DRC GESTIÓN
 //
-// Todo lo que el LMS sabe de un alumno sale de las dos vistas del
-// contrato. Aquí se leen, se normalizan y se deduplican; el resto de
-// la aplicación no vuelve a tocar Supabase.
+// Todo lo que el LMS sabe de un alumno sale de `vista_perfil_alumno` y
+// de `class_analyses`. Aquí se leen, se normalizan y se deduplican; el
+// resto de la aplicación no vuelve a tocar Supabase.
 //
 // Las reglas puras sobre esos datos (examen, nivel, fechas, parseo)
 // están en `lib/perfil.ts`, que no es server-only y por tanto se puede
@@ -66,16 +66,26 @@ function aPerfil(fila: Fila): PerfilAlumno {
   };
 }
 
+/**
+ * Una fila de `class_analyses` como `UltimaClase`.
+ *
+ * Los nombres de columna son los de la tabla, no los de la vista que
+ * esto leía antes (ver `ULTIMA_CLASE` más abajo). Las formas son
+ * idénticas —comprobado columna a columna: `class_date` llega como día
+ * ISO corto y `next_class_guide` como cadena JSON, igual que
+ * `fecha_clase` y `guia_proxima`—, así que el resto de la aplicación no
+ * se entera del cambio.
+ */
 function aUltimaClase(fila: Fila): UltimaClase {
   return {
-    alumnoId: comoTexto(fila.alumno_id),
-    fechaClase: comoTexto(fila.fecha_clase),
-    titulo: comoTexto(fila.titulo),
-    temas: comoTexto(fila.temas),
-    errores: comoTexto(fila.errores),
-    notasProgreso: comoTexto(fila.notas_progreso),
-    guiaProxima: asGuiaProxima(fila.guia_proxima),
-    analizadoEn: comoTexto(fila.analizado_en),
+    alumnoId: comoTexto(fila.student_id),
+    fechaClase: comoTexto(fila.class_date),
+    titulo: comoTexto(fila.class_title),
+    temas: comoTexto(fila.topics_covered),
+    errores: comoTexto(fila.errors_detected),
+    notasProgreso: comoTexto(fila.progress_notes),
+    guiaProxima: asGuiaProxima(fila.next_class_guide),
+    analizadoEn: comoTexto(fila.analyzed_at),
   };
 }
 
@@ -128,19 +138,67 @@ export const obtenerPerfil = cache(async (alumnoId: string): Promise<PerfilAlumn
   return filas.length > 0 ? aPerfil(filas[0]) : null;
 });
 
+// ---------------------------------------------------------------
+// CUÁL ES «LA ÚLTIMA CLASE», Y POR QUÉ YA NO SALE DE LA VISTA
+//
+// Esto leía `vista_ultima_clase`, que da una fila por alumno. La vista
+// no está rota: hace exactamente lo que le pidieron, y lo que le
+// pidieron no es lo que el LMS necesita. Comprobado contra los datos,
+// fila a fila, la vista es
+//
+//     la más reciente de class_analyses por alumno
+//     con analysis_status = 'ready'
+//     Y validation_status IN ('approved', 'auto_approved', 'ok')
+//
+// —176 de 176 filas encajan con esa regla, incluido el `analizado_en`
+// exacto—. El segundo filtro es el problema: Gestión marca `review` la
+// clase cuyo transcript dispara una heurística suya (demasiado corto,
+// duración insuficiente…) y la deja esperando a que una persona la
+// mire. Mientras nadie la mire, la clase NO SALE DE LA VISTA aunque su
+// análisis esté completo y tenga temas, errores y resumen.
+//
+// Para Gestión eso es su cola de revisión. Para el LMS era un agujero:
+// 21 de 180 alumnos tenían aquí una clase más vieja que la última que
+// la plataforma ya había analizado, y a cuatro de ellos la vista no les
+// devolvía ninguna fila. Como esta es la clase que `generar-bloque`
+// estampa en `claseOrigen`, esos alumnos generaban una parada con la
+// fecha equivocada —y la fecha de la parada no se vuelve a tocar—.
+//
+// Así que se lee la tabla y se aplica el único filtro que el LMS
+// necesita: `ready`. Con errores o sin ellos, revisada o pendiente de
+// revisar. No se toca la vista de Gestión: sigue ahí para la cola de
+// revisión, que es para lo que la hicieron; lo que cambia es de dónde
+// mira el LMS. Y se cambia aquí, en la lectura que comparten todas las
+// pantallas, no en el generador: si la ficha, el panel y la práctica
+// dijeran cada uno una clase distinta, tendríamos tres verdades.
+//
+// EL DESEMPATE ES `analyzed_at`, igual que en el resto del módulo: hay
+// alumnos con dos clases el mismo día y sin él la fila elegida cambia
+// entre recargas.
+// ---------------------------------------------------------------
+
+/** Las columnas de `class_analyses` que componen una `UltimaClase`. */
+const ULTIMA_CLASE =
+  "student_id, class_date, class_title, topics_covered, errors_detected, progress_notes, next_class_guide, analyzed_at";
+
 /**
  * Última clase analizada de un alumno, o null si todavía no tiene ninguna.
- * Solo 76 de los 174 alumnos tienen fila aquí.
+ *
+ * `ready` y nada más: es la clase más nueva que la plataforma ha
+ * terminado de analizar, que es lo que el alumno acaba de dar.
  */
 export async function obtenerUltimaClase(alumnoId: string): Promise<UltimaClase | null> {
-  const { data, error } = await soloLectura("vista_ultima_clase")
-    .select("*")
-    .eq("alumno_id", alumnoId)
-    .order("fecha_clase", { ascending: false })
+  const { data, error } = await soloLectura("class_analyses")
+    .select(ULTIMA_CLASE)
+    .eq("student_id", alumnoId)
+    .eq("analysis_status", "ready")
+    .order("class_date", { ascending: false })
+    .order("analyzed_at", { ascending: false })
+    .limit(1)
     .returns<Fila[]>();
 
   if (error) {
-    console.error("[gestion] No se pudo leer vista_ultima_clase:", error.message);
+    console.error("[gestion] No se pudo leer la última clase de class_analyses:", error.message);
     return null;
   }
 
@@ -295,34 +353,63 @@ export type ClasePanel = {
 /**
  * La última clase de cada alumno, para saber quién tiene transcript.
  *
+ * MISMA DEFINICIÓN QUE `obtenerUltimaClase`: la más reciente `ready` de
+ * `class_analyses`, sin mirar `validation_status`. El panel tiene que
+ * contar lo mismo que la ficha; leyendo cada uno de un sitio, el equipo
+ * veía "sin transcript" a un alumno cuya clase estaba analizada y
+ * esperando revisión.
+ *
  * No basta con tener fila: hay filas con `temas` y `errores` vacíos, que
  * es una clase registrada sin análisis detrás. Para el panel eso cuenta
  * igual que no tenerla, porque el modo repaso no puede construir nada.
+ *
+ * SE PAGINA, y no es por prudencia. PostgREST corta en 1000 filas y no
+ * hay `limit` que lo suba: hoy hay 1324 clases `ready`, así que una
+ * sola consulta perdería 324 —y como vienen ordenadas por fecha, las
+ * que se perderían son las de los alumnos que llevan más tiempo sin
+ * clase, que desaparecerían del panel enteros—. La vista devolvía una
+ * fila por alumno y nunca llegó a rozar el tope; la tabla son todas las
+ * clases de todos, y sí lo roza.
  */
-export async function clasesDelPanel(): Promise<ClasePanel[]> {
-  const { data, error } = await soloLectura("vista_ultima_clase")
-    .select("alumno_id, titulo, temas, errores, fecha_clase")
-    .order("fecha_clase", { ascending: false })
-    .returns<Fila[]>();
+const PAGINA = 1000;
 
-  if (error) {
-    console.error("[gestion] No se pudo leer las clases para el panel:", error.message);
-    return [];
+export async function clasesDelPanel(): Promise<ClasePanel[]> {
+  const filas: Fila[] = [];
+
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await soloLectura("class_analyses")
+      .select("student_id, class_title, topics_covered, errors_detected, class_date, analyzed_at")
+      .eq("analysis_status", "ready")
+      .order("class_date", { ascending: false })
+      .order("analyzed_at", { ascending: false })
+      .range(desde, desde + PAGINA - 1)
+      .returns<Fila[]>();
+
+    if (error) {
+      console.error("[gestion] No se pudo leer las clases para el panel:", error.message);
+      return [];
+    }
+
+    const pagina = data ?? [];
+    filas.push(...pagina);
+    if (pagina.length < PAGINA) break;
   }
 
   const vistos = new Set<string>();
   const salida: ClasePanel[] = [];
 
-  for (const fila of data ?? []) {
-    const alumnoId = comoTexto(fila.alumno_id);
+  for (const fila of filas) {
+    const alumnoId = comoTexto(fila.student_id);
     if (alumnoId === "" || vistos.has(alumnoId)) continue;
     vistos.add(alumnoId);
 
     salida.push({
       alumnoId,
-      titulo: comoTexto(fila.titulo),
-      conTranscript: comoTexto(fila.temas).trim() !== "" || comoTexto(fila.errores).trim() !== "",
-      fechaClase: comoTexto(fila.fecha_clase),
+      titulo: comoTexto(fila.class_title),
+      conTranscript:
+        comoTexto(fila.topics_covered).trim() !== "" ||
+        comoTexto(fila.errors_detected).trim() !== "",
+      fechaClase: comoTexto(fila.class_date),
     });
   }
 
@@ -437,16 +524,15 @@ export async function listarAlumnos(busqueda = "", limite = 20): Promise<Resumen
 // ---------------------------------------------------------------
 // EL HISTORIAL DE CLASES
 //
-// `vista_ultima_clase` da una fila por alumno: la última. Sirve para
-// saber qué acaba de ver, no para ver qué arrastra, y eso es la mitad
-// del material del bloque único: un error que aparece en tres clases
-// seguidas no es un despiste, es el punto que se le resiste de verdad,
-// y no lo ve nadie porque cada clase se analiza sola.
+// La última clase sirve para saber qué acaba de ver el alumno, no para
+// ver qué arrastra, y eso es la mitad del material del bloque único: un
+// error que aparece en tres clases seguidas no es un despiste, es el
+// punto que se le resiste de verdad, y no lo ve nadie porque cada clase
+// se analiza sola.
 //
-// Se lee `class_analyses`, que es la tabla de la que sale esa vista.
-// Sigue siendo SOLO LECTURA contra Gestión, que es la regla que
-// importa; lo que se pierde es la comodidad de que el contrato fueran
-// exactamente dos vistas. Se piden columnas nombradas y nunca `*`: la
+// Se lee `class_analyses`, la misma tabla de la que sale todo lo demás
+// de este módulo. Sigue siendo SOLO LECTURA contra Gestión, que es la
+// regla que importa. Se piden columnas nombradas y nunca `*`: la
 // tabla guarda el transcript entero, decenas de miles de caracteres por
 // clase, y aquí no se usa para nada.
 //

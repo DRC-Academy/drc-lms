@@ -23,20 +23,27 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // ---------------------------------------------------------------
 // LO ÚNICO QUE EL LMS PUEDE LEER DE GESTIÓN
 //
-// Las dos primeras son las vistas del contrato: se hicieron para esto y
-// no exponen nada más que lo acordado.
+// `vista_perfil_alumno` es la vista del contrato: se hizo para esto y
+// no expone nada más que lo acordado.
 //
 // `class_analyses` es una TABLA y entró después, con el bloque único: la
-// vista de la última clase da una fila por alumno y no deja ver qué
+// vista de la última clase daba una fila por alumno y no dejaba ver qué
 // arrastra de las anteriores, que es la mitad del material del bloque.
 // Se lee con columnas nombradas, nunca con `*`: la tabla guarda el
 // transcript entero y no se quiere ni de paso.
+//
+// SE FUE `vista_ultima_clase`, y no por limpieza: filtraba por
+// `validation_status`, así que se saltaba la clase que Gestión ha
+// analizado pero todavía tiene en su cola de revisión. El LMS necesita
+// la última clase analizada, revisada o no, y eso solo está en la
+// tabla. La vista sigue existiendo en Gestión para lo suyo; lo que ya
+// no hace es contestarle al LMS. El motivo largo, en `lib/gestion.ts`.
 //
 // Añadir algo a esta lista es ampliar lo que el LMS ve de una base con
 // datos de alumnos, profesores y nóminas. Solo con un motivo escrito,
 // como este.
 // ---------------------------------------------------------------
-export const VISTAS = ["vista_perfil_alumno", "vista_ultima_clase", "class_analyses"] as const;
+export const VISTAS = ["vista_perfil_alumno", "class_analyses"] as const;
 export type Vista = (typeof VISTAS)[number];
 
 let cliente: SupabaseClient | null = null;
@@ -118,6 +125,13 @@ type Consulta = {
    * única que no se recorta sola por tener una fila por alumno.
    */
   limit(cantidad: number): Consulta;
+  /**
+   * Una ventana de filas, para paginar. PostgREST corta en 1000 y no hay
+   * `limit` que lo suba, así que la única lectura que puede pasar de ahí
+   * —la última clase de TODOS los alumnos, en `clasesDelPanel`— tiene
+   * que pedirlas por tramos. Sigue siendo un SELECT: acota, no escribe.
+   */
+  range(desde: number, hasta: number): Consulta;
   returns<T>(): PromiseLike<Resultado<T>>;
 };
 

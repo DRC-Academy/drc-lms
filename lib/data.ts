@@ -241,7 +241,7 @@ export type GuiaProxima = {
   notes: string;
 };
 
-/** Fila de `vista_ultima_clase`, normalizada. */
+/** La última clase `ready` de `class_analyses`, normalizada. */
 export type UltimaClase = {
   alumnoId: string;
   /** ISO corto, `YYYY-MM-DD`. */
