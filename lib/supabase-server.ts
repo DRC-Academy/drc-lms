@@ -119,6 +119,12 @@ type Consulta = {
    * SELECT igual que `eq`; no escribe nada.
    */
   not(columna: string, operador: string, valor: unknown): Consulta;
+  /**
+   * La columna tiene que ser uno de estos valores. Lo pide el filtro de
+   * validación de las clases, que es una lista blanca de estados y no
+   * un `eq`. Acota el SELECT; no escribe nada.
+   */
+  in(columna: string, valores: readonly string[]): Consulta;
   order(columna: string, opciones: { ascending: boolean }): Consulta;
   /**
    * Tope de filas. Lo pide la lectura del historial de clases, que es la

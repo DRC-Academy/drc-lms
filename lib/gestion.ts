@@ -141,36 +141,42 @@ export const obtenerPerfil = cache(async (alumnoId: string): Promise<PerfilAlumn
 // ---------------------------------------------------------------
 // CUÁL ES «LA ÚLTIMA CLASE», Y POR QUÉ YA NO SALE DE LA VISTA
 //
-// Esto leía `vista_ultima_clase`, que da una fila por alumno. La vista
-// no está rota: hace exactamente lo que le pidieron, y lo que le
-// pidieron no es lo que el LMS necesita. Comprobado contra los datos,
-// fila a fila, la vista es
+// Esto leía `vista_ultima_clase`, que da una fila por alumno.
+// Comprobado contra los datos, fila a fila, esa vista es
 //
 //     la más reciente de class_analyses por alumno
 //     con analysis_status = 'ready'
 //     Y validation_status IN ('approved', 'auto_approved', 'ok')
 //
 // —176 de 176 filas encajan con esa regla, incluido el `analizado_en`
-// exacto—. El segundo filtro es el problema: Gestión marca `review` la
-// clase cuyo transcript dispara una heurística suya (demasiado corto,
-// duración insuficiente…) y la deja esperando a que una persona la
-// mire. Mientras nadie la mire, la clase NO SALE DE LA VISTA aunque su
-// análisis esté completo y tenga temas, errores y resumen.
+// exacto—. La regla es la correcta y no cambia. Lo que cambia es de
+// dónde sale: ahora se lee la tabla y el filtro se escribe aquí.
 //
-// Para Gestión eso es su cola de revisión. Para el LMS era un agujero:
-// 21 de 180 alumnos tenían aquí una clase más vieja que la última que
-// la plataforma ya había analizado, y a cuatro de ellos la vista no les
-// devolvía ninguna fila. Como esta es la clase que `generar-bloque`
-// estampa en `claseOrigen`, esos alumnos generaban una parada con la
-// fecha equivocada —y la fecha de la parada no se vuelve a tocar—.
+// POR QUÉ NO SEGUIR LEYENDO LA VISTA, si hace lo mismo. Porque hacía lo
+// mismo por casualidad documental: la definición vive en Gestión, nadie
+// de este lado la había leído nunca, y el día que se descubrió fue
+// persiguiendo por qué 21 alumnos tenían aquí una clase más vieja que
+// la última analizada. Con la regla escrita en este módulo, el próximo
+// que se lo pregunte lo lee aquí en vez de deducirlo de los datos.
 //
-// Así que se lee la tabla y se aplica el único filtro que el LMS
-// necesita: `ready`. Con errores o sin ellos, revisada o pendiente de
-// revisar. No se toca la vista de Gestión: sigue ahí para la cola de
-// revisión, que es para lo que la hicieron; lo que cambia es de dónde
-// mira el LMS. Y se cambia aquí, en la lectura que comparten todas las
-// pantallas, no en el generador: si la ficha, el panel y la práctica
-// dijeran cada uno una clase distinta, tendríamos tres verdades.
+// QUÉ SIGNIFICA EL FILTRO DE VALIDACIÓN. Gestión marca `review` la
+// clase cuyo transcript dispara una heurística suya —demasiado corto,
+// duración insuficiente…— y la deja esperando a que una persona la
+// mire. Hasta que la miran, esa clase NO cuenta como última clase del
+// alumno, aunque su análisis esté completo. No es un fallo: es la cola
+// de revisión de Gestión, y el LMS la respeta. La consecuencia es real
+// y está aceptada: hoy 21 de 180 alumnos tienen aquí una clase anterior
+// a su última analizada, y se resuelve sola cuando la cola se trabaja.
+//
+// ES UNA LISTA BLANCA, NO UNA LISTA NEGRA, y esa es la parte que
+// importa: `rejected` —la clase que una persona miró y descartó— queda
+// fuera por no estar en la lista, y también quedará fuera cualquier
+// estado que Gestión invente mañana. Con una lista negra de `rejected`,
+// un estado nuevo entraría solo y nadie se enteraría.
+//
+// SE CAMBIA AQUÍ, en la lectura que comparten todas las pantallas, y no
+// en el generador: si la ficha, el panel y la práctica dijeran cada uno
+// una clase distinta, tendríamos tres verdades.
 //
 // EL DESEMPATE ES `analyzed_at`, igual que en el resto del módulo: hay
 // alumnos con dos clases el mismo día y sin él la fila elegida cambia
@@ -182,16 +188,33 @@ const ULTIMA_CLASE =
   "student_id, class_date, class_title, topics_covered, errors_detected, progress_notes, next_class_guide, analyzed_at";
 
 /**
- * Última clase analizada de un alumno, o null si todavía no tiene ninguna.
+ * Los estados de validación que cuentan como clase del alumno.
  *
- * `ready` y nada más: es la clase más nueva que la plataforma ha
- * terminado de analizar, que es lo que el alumno acaba de dar.
+ * `approved` la revisó una persona; `auto_approved` pasó la heurística
+ * sin que nadie tuviera que mirarla; `ok` es el estado viejo, anterior a
+ * que la validación tuviera estados, y sigue habiendo 24 filas así.
+ *
+ * Fuera quedan `review` —esperando revisión— y `rejected`, que es una
+ * clase que alguien miró y descartó.
+ */
+const VALIDACION_ACEPTADA = ["approved", "auto_approved", "ok"] as const;
+
+/**
+ * Última clase analizada y validada de un alumno, o null si no tiene
+ * ninguna.
+ *
+ * Null no significa «no ha dado clase»: significa que no tiene ninguna
+ * que haya pasado la validación. Un alumno cuyas clases están todas en
+ * la cola de revisión llega aquí como si no tuviera ninguna, y eso es lo
+ * que se quiere: el generador no trabaja con un transcript que nadie ha
+ * dado por bueno.
  */
 export async function obtenerUltimaClase(alumnoId: string): Promise<UltimaClase | null> {
   const { data, error } = await soloLectura("class_analyses")
     .select(ULTIMA_CLASE)
     .eq("student_id", alumnoId)
     .eq("analysis_status", "ready")
+    .in("validation_status", VALIDACION_ACEPTADA)
     .order("class_date", { ascending: false })
     .order("analyzed_at", { ascending: false })
     .limit(1)
@@ -353,23 +376,22 @@ export type ClasePanel = {
 /**
  * La última clase de cada alumno, para saber quién tiene transcript.
  *
- * MISMA DEFINICIÓN QUE `obtenerUltimaClase`: la más reciente `ready` de
- * `class_analyses`, sin mirar `validation_status`. El panel tiene que
- * contar lo mismo que la ficha; leyendo cada uno de un sitio, el equipo
- * veía "sin transcript" a un alumno cuya clase estaba analizada y
- * esperando revisión.
+ * MISMA DEFINICIÓN QUE `obtenerUltimaClase`, filtro de validación
+ * incluido: la más reciente `ready` y validada de `class_analyses`. El
+ * panel tiene que contar lo mismo que la ficha, o el equipo ve una
+ * fecha en una pantalla y otra en la de al lado.
  *
  * No basta con tener fila: hay filas con `temas` y `errores` vacíos, que
  * es una clase registrada sin análisis detrás. Para el panel eso cuenta
  * igual que no tenerla, porque el modo repaso no puede construir nada.
  *
  * SE PAGINA, y no es por prudencia. PostgREST corta en 1000 filas y no
- * hay `limit` que lo suba: hoy hay 1324 clases `ready`, así que una
- * sola consulta perdería 324 —y como vienen ordenadas por fecha, las
- * que se perderían son las de los alumnos que llevan más tiempo sin
- * clase, que desaparecerían del panel enteros—. La vista devolvía una
- * fila por alumno y nunca llegó a rozar el tope; la tabla son todas las
- * clases de todos, y sí lo roza.
+ * hay `limit` que lo suba: hoy hay 1279 clases `ready` y validadas, así
+ * que una sola consulta perdería 279 —y como vienen ordenadas por
+ * fecha, las que se perderían son las de los alumnos que llevan más
+ * tiempo sin clase, que desaparecerían del panel enteros—. La vista
+ * devolvía una fila por alumno y nunca llegó a rozar el tope; la tabla
+ * son todas las clases de todos, y sí lo roza.
  */
 const PAGINA = 1000;
 
@@ -380,6 +402,7 @@ export async function clasesDelPanel(): Promise<ClasePanel[]> {
     const { data, error } = await soloLectura("class_analyses")
       .select("student_id, class_title, topics_covered, errors_detected, class_date, analyzed_at")
       .eq("analysis_status", "ready")
+      .in("validation_status", VALIDACION_ACEPTADA)
       .order("class_date", { ascending: false })
       .order("analyzed_at", { ascending: false })
       .range(desde, desde + PAGINA - 1)
