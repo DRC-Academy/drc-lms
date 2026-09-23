@@ -77,7 +77,8 @@ const Geckonoid = dynamic(() => import("@/components/mascota/Geckonoid"), { ssr:
  *
  * LAS BURBUJAS (lib/textos/mascota.ts). Una línea corta, junto a la
  * mascota y con ella señalando, cuando ya está posada: como mucho una
- * por pantalla, y ninguna repetida en la sesión (sessionStorage). Con
+ * por pantalla, y ninguna repetida en la sesión (sessionStorage); la de
+ * bloque listo, solo si no ha salido otra antes en la visita. Con
  * prefers-reduced-motion aparecen sin animación. Se anuncian al lector
  * de pantalla (role="status"), porque dicen algo.
  *
@@ -707,13 +708,16 @@ export default function CapaMascota() {
   }, [escena?.n, escena?.nombre]);
 
   // Una burbuja pedida se dice cuando está posada (no en el aire), si no
-  // se ha dicho en la sesión ni hay ya otra en esta pantalla.
+  // se ha dicho en la sesión ni hay ya otra en esta pantalla. La de bloque
+  // listo, además, solo si es la primera de la visita: sale en otra
+  // pantalla que la de llegada, y dos seguidas sobran.
   const burbujaEnPantalla = useRef<string | null>(null);
   useEffect(() => {
     if (!burbujaPedida || enVuelo) return;
     const reloj = setTimeout(() => {
       const dichas = (leerSesion(CLAVE_BURBUJAS) ?? "").split(",").filter(Boolean);
-      if (dichas.includes(burbujaPedida.clave) || burbujaEnPantalla.current === ruta) {
+      const sobra = burbujaPedida.clave === "bloqueListo" && dichas.length > 0;
+      if (sobra || dichas.includes(burbujaPedida.clave) || burbujaEnPantalla.current === ruta) {
         storeMascota.anotar("burbuja", `callada ${burbujaPedida.clave}`);
         return;
       }
