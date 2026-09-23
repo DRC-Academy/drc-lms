@@ -12,22 +12,22 @@
 // máquina a la tercera.
 //
 //   correcto      acierto suelto
-//   casi          casi: la mitad de los huecos o más, a una o dos letras
-//                 de la respuesta, o las opciones buenas sin ninguna mala
+//   casi          un solo hueco mal, o los fallos a una o dos letras de
+//                 la respuesta, o las opciones buenas sin ninguna mala
 //   incorrecto    lo demás
 //   pistaIntro    al pedir la pista; la pista va debajo
-//   racha         tres aciertos seguidos o más
+//   encadenadas   tres aciertos seguidos o más (sin hablar de «racha»:
+//                 el producto no tiene rachas)
 //   recuperacion  el acierto justo después de un fallo
 //
 // EL TONO. Español de España y tuteo, cálido y corto. La mascota NUNCA
 // dice «incorrecto», «error» ni «mal»: un fallo es algo que mirar
-// juntos, no una nota. Sin género gramatical para el alumno («lanzado»,
-// «atento»): no sabemos quién lee.
+// juntos, no una nota.
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
 
-export type TipoFrase = "correcto" | "casi" | "incorrecto" | "pistaIntro" | "racha" | "recuperacion";
+export type TipoFrase = "correcto" | "casi" | "incorrecto" | "pistaIntro" | "encadenadas" | "recuperacion";
 
 export type TextosMascotaFeedback = {
   frases: Record<TipoFrase, readonly string[]>;
@@ -69,18 +69,18 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
       pistaIntro: [
         "A ver, te doy una pista",
         "Fíjate bien en esto",
-        "Una ayudita",
+        "Te doy una pista",
         "Te echo una mano",
         "Piensa en esto",
-        "Toma, una pista",
+        "Mira esto, te ayudará",
       ],
-      racha: [
-        "¡Qué racha llevas!",
+      encadenadas: [
+        "¡Qué bien vas!",
         "Una tras otra, ¡sigue!",
-        "Esto ya es una racha",
         "No hay quien te pare",
         "Se te está dando genial",
         "¡Otra más! Sigue así",
+        "Vas lanzado",
       ],
       recuperacion: [
         "¡Ahora sí!",
@@ -124,18 +124,18 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
       pistaIntro: [
         "Here's a hint",
         "Look closely at this",
-        "A little help",
+        "Let me give you a hint",
         "Let me give you a hand",
         "Think about this",
-        "Here's a clue",
+        "Look at this, it'll help",
       ],
-      racha: [
-        "What a streak!",
+      encadenadas: [
+        "You're doing so well!",
         "One after another, keep it up!",
-        "You're on a roll",
         "Nothing's stopping you",
         "You're doing great",
         "Another one! Keep going",
+        "You're on a roll",
       ],
       recuperacion: [
         "Now you've got it!",

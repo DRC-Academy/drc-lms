@@ -44,10 +44,11 @@ import { storeMascota } from "@/components/mascota/store";
  * LA CORRECCIÓN LA DICE LA MASCOTA. El veredicto, la respuesta buena,
  * la explicación y la pista van en el cuadro de diálogo del pie de la
  * tarjeta (`DialogoMascota`), no en líneas sueltas: el visor decide qué
- * se dice —acierto, casi, fallo, racha, recuperación— y el cuadro lo
- * pinta. Lo que la mascota HACE con cada respuesta (ánimo, duda, los
- * saltos de la racha) no es de aquí: va en el suceso «intento» y lo
- * decide cada pantalla, porque el curso no celebra lo que la práctica sí.
+ * se dice —acierto, casi, fallo, encadenadas, recuperación— y el
+ * cuadro lo pinta. Lo que la mascota HACE con cada respuesta (ánimo,
+ * duda, los saltos de los aciertos seguidos) no es de aquí: va en el
+ * suceso «intento» y lo decide cada pantalla, porque el curso no
+ * celebra lo que la práctica sí.
  *
  * Y NO SABE EN QUÉ IDIOMA ESTÁ. Todo lo que escribe sale de `t`, que es
  * el área de ejercicios del diccionario (`lib/textos/`). El idioma ya no
@@ -101,6 +102,12 @@ function distancia(a: string, b: string): number {
 }
 
 /**
+ * Cómo salió una respuesta. «casi» cuenta como fallo en todo lo que se
+ * guarda; solo cambia lo que dice y hace la mascota.
+ */
+export type Resultado = "correcto" | "casi" | "incorrecto";
+
+/**
  * Lo que hay que guardar, dicho en términos del visor.
  *
  * El visor no sabe de endpoints. Anuncia lo que ha pasado y quien lo
@@ -108,12 +115,6 @@ function distancia(a: string, b: string): number {
  * `/api/intento-ejercicio` y la práctica manda avance y progreso a
  * `/api/progreso`. Ninguno de los dos caminos cambia por esta refactor.
  */
-/**
- * Cómo salió una respuesta. «casi» cuenta como fallo en todo lo que se
- * guarda; solo cambia lo que dice y hace la mascota.
- */
-export type Resultado = "correcto" | "casi" | "incorrecto";
-
 export type SucesoVisor =
   | {
       tipo: "intento";
@@ -232,22 +233,22 @@ export default function VisorEjercicios({
   }
 
   /**
-   * La racha de la visita al visor: aciertos seguidos y si lo último fue
-   * un fallo. Decide la frase (racha, recuperación) y viaja en el suceso
-   * para que cada pantalla escale lo que haga la mascota.
+   * Los aciertos encadenados de la visita al visor, y si lo último fue
+   * un fallo. Decide la frase (encadenadas, recuperación) y viaja en el
+   * suceso para que cada pantalla escale lo que haga la mascota.
    */
-  const racha = useRef({ seguidos: 0, trasFallo: false });
+  const encadenadas = useRef({ seguidos: 0, trasFallo: false });
 
   /**
    * Una respuesta: la anuncia y devuelve lo que dirá la mascota, que se
    * guarda con el ejercicio (volver atrás enseña lo mismo que se dijo).
    */
   function responder(resultado: Resultado): Estado["dicho"] {
-    const { seguidos: antes, trasFallo } = racha.current;
+    const { seguidos: antes, trasFallo } = encadenadas.current;
     const seguidos = resultado === "correcto" ? antes + 1 : 0;
-    racha.current = { seguidos, trasFallo: resultado !== "correcto" };
+    encadenadas.current = { seguidos, trasFallo: resultado !== "correcto" };
     const tipo: TipoFrase =
-      resultado !== "correcto" ? resultado : trasFallo ? "recuperacion" : seguidos >= 3 ? "racha" : "correcto";
+      resultado !== "correcto" ? resultado : trasFallo ? "recuperacion" : seguidos >= 3 ? "encadenadas" : "correcto";
     anunciar({ tipo: "intento", ejercicio, correcto: resultado === "correcto", resultado, seguidos, trasFallo });
     return { tipo, i: elegirFrase(tipo, tm.frases[tipo].length) };
   }
@@ -349,8 +350,9 @@ export default function VisorEjercicios({
     const nuevos = estado.huecosOk.map((v, j) => (j === i ? bien : v));
 
     // El intento se registra cuando ya están todos: es un ejercicio, no
-    // un hueco. Casi: la mitad o más bien (con dos o más), o cada hueco
-    // que falla a una o dos letras de una respuesta aceptada.
+    // un hueco. Casi: con dos o más, uno solo mal; o cada hueco que
+    // falla, a una o dos letras de una respuesta aceptada. Con la mitad
+    // bien no basta.
     if (nuevos.every((v) => v !== null)) {
       const acertados = nuevos.filter((v) => v === true).length;
       const todosCerca = nuevos.every(
@@ -359,7 +361,7 @@ export default function VisorEjercicios({
       const resultado: Resultado =
         acertados === nuevos.length
           ? "correcto"
-          : todosCerca || (nuevos.length >= 2 && acertados * 2 >= nuevos.length)
+          : todosCerca || (nuevos.length >= 2 && acertados === nuevos.length - 1)
             ? "casi"
             : "incorrecto";
       cambiar({ huecosOk: nuevos, dicho: responder(resultado) });
@@ -419,7 +421,7 @@ export default function VisorEjercicios({
   }
 
   function repetir() {
-    racha.current = { seguidos: 0, trasFallo: false };
+    encadenadas.current = { seguidos: 0, trasFallo: false };
     setEstados(ejercicios.map(VACIO));
     setIndice(0);
     setCerrado(false);
@@ -428,7 +430,7 @@ export default function VisorEjercicios({
   }
 
   function verEjercicio(i: number) {
-    racha.current = { seguidos: 0, trasFallo: false };
+    encadenadas.current = { seguidos: 0, trasFallo: false };
     setIndice(i);
     setCerrado(false);
     anunciar({ tipo: "salto", indice: i });
@@ -547,7 +549,7 @@ export default function VisorEjercicios({
   //
   // LA FRASE la encabeza: la dice la mascota y sale de
   // lib/textos/mascota-feedback.ts según cómo fue (acierto, casi, fallo,
-  // racha, recuperación). Es la misma en el curso y en la práctica.
+  // encadenadas, recuperación). Es la misma en el curso y en la práctica.
   //
   // DEBAJO, EL VEREDICTO DEL MODELO, si lo hay: lo escribe para ESTE
   // ejercicio (`veredictoAcierto` / `veredictoFallo`) y apunta al
