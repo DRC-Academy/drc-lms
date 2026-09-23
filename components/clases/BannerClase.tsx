@@ -9,10 +9,10 @@
 //
 // EL LENGUAJE ES EL DE LA RUTA DE «PARA TI» (`components/practica/Ruta.tsx`),
 // no uno nuevo: la clase es la parada que viene en el camino del alumno.
-// El lecho claro del sendero, el disco con sombra sólida debajo —el que
-// se lee como pulsable—, la chapa redondeada con su colita, amarilla solo
-// cuando la sala está abierta (es el «Estás aquí» de la clase), y los
-// titulares en Radio Canada Big extranegrita, como el resto de la app.
+// El disco con sombra sólida debajo —el que se lee como pulsable—, la
+// chapa redondeada con su colita, amarilla solo cuando la sala está
+// abierta (es el «Estás aquí» de la clase), y los titulares en Radio
+// Canada Big extranegrita, como el resto de la app.
 //
 // LA JERARQUÍA: la hora, lo más grande; luego el día y el profesor; luego
 // el botón. El texto del botón va en negrita a 19px: blanco sobre el
@@ -74,11 +74,10 @@ export default function BannerClase({
         abierta ? "border-marca-verde bg-marca-verdeFondo" : "border-marca-borde bg-white"
       }`}
     >
-      {/* LA PARADA EN EL CAMINO: el disco sobre el lecho del sendero, y
-          la chapa colgando de él. El tramo de delante va en punteado,
-          como el camino por andar de la ruta. */}
+      {/* LA PARADA: el disco y la chapa colgando de él. Sin el tramo de
+          sendero que llevaba detrás: una línea que no llevaba a ningún
+          sitio se leía como decoración suelta. */}
       <div className={`relative flex items-center gap-4 ${ilustracion ? "pr-[92px] sm:pr-0" : ""}`}>
-        <Sendero />
         <DiscoClase abierta={abierta} />
         <Chapa destacada={abierta}>{chapa}</Chapa>
       </div>
@@ -252,41 +251,6 @@ function Chapa({ destacada, children }: { destacada: boolean; children: ReactNod
       />
       <span className="relative">{children}</span>
     </span>
-  );
-}
-
-/**
- * El sendero: el lecho claro de la ruta, detrás del disco, y el tramo de
- * delante en punteado. Decorativo: estira con la tarjeta y no dice nada
- * que no diga el texto.
- */
-function Sendero() {
-  return (
-    <svg
-      aria-hidden
-      // Ancho explícito: un SVG con posición absoluta no se estira con
-      // `left` y `right`, toma el de su proporción y el lecho se cortaba.
-      className="pointer-events-none absolute -left-8 top-1/2 h-10 w-[calc(100%+4rem)] -translate-y-1/2"
-      viewBox="0 0 400 40"
-      preserveAspectRatio="none"
-      fill="none"
-    >
-      <path
-        d="M0 22 C 60 30, 90 12, 150 20 S 260 30, 400 16"
-        stroke="#DCEEE4"
-        strokeWidth="14"
-        strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-      />
-      <path
-        d="M0 22 C 60 30, 90 12, 150 20 S 260 30, 400 16"
-        stroke="#C4DECF"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeDasharray="1 14"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
   );
 }
 
