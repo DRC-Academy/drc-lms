@@ -40,7 +40,7 @@ export default function MascotaClase({ idHora }: { idHora: string }) {
 
   return (
     <div className="absolute right-2 top-2 md:right-6 md:top-4">
-      <AnclaMascota id={ANCLA} prioridad={2} lado="der" className="h-[72px] w-[56px] md:h-[128px] md:w-[100px]" />
+      <AnclaMascota id={ANCLA} prioridad={2} lado="der" className="h-[84px] w-[65px] md:h-[160px] md:w-[124px]" />
     </div>
   );
 }

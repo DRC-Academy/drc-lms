@@ -88,7 +88,7 @@ export default function BannerClase({
           sitio se leía como decoración suelta. */}
       <div
         className={`relative flex items-center gap-4 ${ilustracion ? "pr-[92px] sm:pr-0" : ""} ${
-          frase ? "flex-wrap gap-y-3 pr-[44px] md:flex-nowrap md:pr-[112px]" : ""
+          frase ? "flex-wrap gap-x-3 gap-y-3 pr-[50px] md:flex-nowrap md:gap-x-4 md:pr-[136px]" : ""
         }`}
       >
         <DiscoClase abierta={abierta} />
