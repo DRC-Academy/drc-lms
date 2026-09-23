@@ -21,11 +21,14 @@ export default function HistorialClases({
   clases,
   profesores,
   t,
+  anclas = false,
 }: {
   /** `Recorrido.todas`: de la más reciente a la más antigua. */
   clases: ClaseDelRecorrido[];
   profesores: Map<string, string>;
   t: TextosClases;
+  /** Un `id` por clase, para que el calendario enlace a cada una (ver `Recorrido`). */
+  anclas?: boolean;
 }) {
   return (
     <section className="flex flex-col gap-4" aria-labelledby="titulo-historial">
@@ -46,6 +49,7 @@ export default function HistorialClases({
           retraso="0ms"
           rotuloTemas={t.temasYVocabulario}
           detalle={{ profesores, conProfesor: t.conProfesor }}
+          anclas={anclas}
         />
       </div>
     </section>

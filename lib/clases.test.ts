@@ -686,6 +686,12 @@ describe("semanasDelAlumno", () => {
     expect(s[1].dias[0].clases.map((c) => c.desde)).toEqual(["10:00"]); // lunes 28
   });
 
+  it("con conPasadas, las ya terminadas de esta semana salen marcadas", () => {
+    const s = semanasDelAlumno(horario, [], miercoles, undefined, { conPasadas: true });
+    expect(s[0].dias[0].clases.map((c) => [c.desde, c.terminada])).toEqual([["10:00", true]]); // lunes 21
+    expect(s[0].dias[3].clases.map((c) => [c.desde, c.terminada])).toEqual([["18:00", false]]); // jueves 24
+  });
+
   it("una celda de recuperación sale como recuperación", () => {
     const recuperacion = fila({
       celda: "Viernes_17:00",

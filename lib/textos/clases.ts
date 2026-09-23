@@ -95,12 +95,27 @@ export type TextosClases = {
   /** "1 hora" / "2 horas" */
   duracion: (horas: number) => string;
 
-  // --- estados vacíos ---
-  sinHorario: string;
-  sinHorarioAyuda: string;
-
   /** Aviso de la zona horaria, al pie. */
   horaDeEspana: string;
+
+  // --- el rediseño de «Clases» (vista previa) ---
+  /** La tarjeta de al lado del banner: la clase más reciente del historial. */
+  tuUltimaClase: string;
+  /** El enlace de una clase hecha a lo que se trabajó en ella, en el historial. */
+  verLoQueTrabajaste: string;
+  /** Una clase de esta semana que ya ha terminado. */
+  hecha: string;
+  /** La que está ocurriendo ahora mismo, en el calendario. */
+  enCurso: string;
+  /** Un día de la semana sin clase, en el calendario de escritorio. */
+  sinClase: string;
+  /** Volver a la semana actual desde otra. */
+  volverAEstaSemana: string;
+  /** El estado vacío de la pantalla entera: sin horario ni clases. */
+  vacioTitulo: string;
+  vacioTexto: string;
+  /** El enlace del estado vacío, a la práctica. */
+  vacioAccion: string;
 };
 
 const DIAS_ES: Record<DiaSemana, string> = {
@@ -191,11 +206,18 @@ export const CLASES: Record<Idioma, TextosClases> = {
     nombreDia: (dia) => DIAS_ES[dia],
     duracion: (horas) => (horas === 1 ? "1 hora" : `${horas} horas`),
 
-    sinHorario: "Todavía no tienes horario",
-    sinHorarioAyuda:
-      "En cuanto se fije con tu profesor, tus clases aparecerán aquí.",
 
     horaDeEspana: "Todas las horas son de España peninsular.",
+
+    tuUltimaClase: "Tu última clase",
+    verLoQueTrabajaste: "Ver lo que trabajaste",
+    hecha: "Hecha",
+    enCurso: "En curso",
+    sinClase: "Sin clase",
+    volverAEstaSemana: "Volver a esta semana",
+    vacioTitulo: "Aquí aparecerán tus clases",
+    vacioTexto: "En cuanto fijes tu horario con tu profesor, verás aquí cuándo es cada clase y podrás entrar desde esta página. Mientras tanto, tu práctica te espera.",
+    vacioAccion: "Ir a mi práctica",
   },
 
   en: {
@@ -248,10 +270,17 @@ export const CLASES: Record<Idioma, TextosClases> = {
     nombreDia: (dia) => DIAS_EN[dia],
     duracion: (horas) => (horas === 1 ? "1 hour" : `${horas} hours`),
 
-    sinHorario: "You don't have a schedule yet",
-    sinHorarioAyuda:
-      "As soon as it's agreed with your teacher, your classes will show up here.",
 
     horaDeEspana: "All times are mainland Spain time.",
+
+    tuUltimaClase: "Your last class",
+    verLoQueTrabajaste: "See what you worked on",
+    hecha: "Done",
+    enCurso: "In progress",
+    sinClase: "No class",
+    volverAEstaSemana: "Back to this week",
+    vacioTitulo: "Your classes will show up here",
+    vacioTexto: "As soon as you agree your schedule with your teacher, you'll see here when each class is and you'll be able to join from this page. In the meantime, your practice is waiting for you.",
+    vacioAccion: "Go to my practice",
   },
 };

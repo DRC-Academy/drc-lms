@@ -52,6 +52,7 @@ export default function Recorrido({
   rotuloTemas,
   detalle,
   retraso = "360ms",
+  anclas = false,
 }: {
   /** Las clases, de la más reciente a la más antigua. */
   clases: ClaseDelRecorrido[];
@@ -65,12 +66,18 @@ export default function Recorrido({
   detalle?: DetalleRecorrido;
   /** El paso de la entrada escalonada de la ficha. */
   retraso?: string;
+  /**
+   * Un `id` por tarjeta (`clase-<id>`), para enlazar a una clase concreta
+   * desde fuera: el calendario de «Clases» lleva de cada clase hecha a lo
+   * que se trabajó en ella.
+   */
+  anclas?: boolean;
 }) {
   const t = textosActuales().progreso;
   const primeras = clases.slice(0, VISIBLES);
   const resto = clases.slice(VISIBLES);
   const tarjeta = (clase: ClaseDelRecorrido) => (
-    <Tarjeta key={clase.id} clase={clase} rotuloTemas={rotuloTemas} detalle={detalle} />
+    <Tarjeta key={clase.id} clase={clase} rotuloTemas={rotuloTemas} detalle={detalle} ancla={anclas} />
   );
 
   return (
@@ -99,10 +106,12 @@ function Tarjeta({
   clase,
   rotuloTemas,
   detalle,
+  ancla,
 }: {
   clase: ClaseDelRecorrido;
   rotuloTemas: string;
   detalle?: DetalleRecorrido;
+  ancla: boolean;
 }) {
   const t = textosActuales().progreso;
   const numero = clase.numero ?? 0;
@@ -115,7 +124,11 @@ function Tarjeta({
   const profesor = detalle && clase.teacherId ? detalle.profesores.get(clase.teacherId) : undefined;
 
   return (
-    <li className={`pg-tl-item${marcado ? " is-milestone" : ""}`}>
+    <li
+      id={ancla ? `clase-${clase.id}` : undefined}
+      className={`pg-tl-item${marcado ? " is-milestone" : ""}`}
+      style={ancla ? { scrollMarginTop: 24 } : undefined}
+    >
       <span className="pg-tl-node" aria-hidden />
       <div className="pg-card pg-tl-card">
         {/* Muchas filas no traen número de clase. Antes salía "Clase —",

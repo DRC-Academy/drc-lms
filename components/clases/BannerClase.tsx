@@ -145,28 +145,17 @@ export function BotonClase({
   proxima,
   t,
   ahora,
-  compacto = false,
 }: {
   proxima: ProximaClase;
   t: TextosClases;
   ahora: Date;
-  /**
-   * Dentro de un bloque del calendario: el mismo botón, más bajo y a lo
-   * ancho del bloque. El texto sigue a 19px en negrita, que es lo que lo
-   * deja en contraste de texto grande.
-   */
-  compacto?: boolean;
 }) {
   const enlace = enlaceDeClase(proxima.meetLink);
-  const medida = compacto ? "min-h-[44px] w-full px-4" : "min-h-[54px] w-full px-8 sm:w-auto";
+  const medida = "min-h-[54px] w-full px-8 sm:w-auto";
 
   if (!enlace) {
     return (
-      <p
-        className={`inline-flex rounded-[14px] border border-marca-bordeSuave bg-white/70 font-semibold text-marca-tintaMedia ${
-          compacto ? "px-3 py-2 text-[13.5px]" : "px-4 py-3 text-[15px]"
-        }`}
-      >
+      <p className="inline-flex rounded-[14px] border border-marca-bordeSuave bg-white/70 px-4 py-3 text-[15px] font-semibold text-marca-tintaMedia">
         {t.sinEnlace}
       </p>
     );
@@ -233,8 +222,11 @@ function DiscoClase({ abierta }: { abierta: boolean }) {
   );
 }
 
-/** La chapa de la ruta, con su colita hacia el disco. Amarilla solo con la sala abierta. */
-function Chapa({ destacada, children }: { destacada: boolean; children: ReactNode }) {
+/**
+ * La chapa de la ruta, con su colita hacia el disco. Amarilla solo con la
+ * sala abierta. La usa también el calendario (`SemanaClases`).
+ */
+export function Chapa({ destacada, children }: { destacada: boolean; children: ReactNode }) {
   return (
     <span
       className={`relative inline-flex items-center whitespace-nowrap rounded-full px-[14px] py-[7px] text-[13px] font-bold ${

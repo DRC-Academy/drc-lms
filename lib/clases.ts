@@ -461,14 +461,19 @@ export function proximaDelAlumno(
 // El origen de una reprogramación no sale: su 'quita' es de tipo
 // reprogramada, y la clase ya aparece en su destino con el aviso.
 //
-// NADA DEL PASADO: una clase que ya ha terminado no sale, aunque sea de
-// esta semana. El pasado es el historial.
+// NADA DEL PASADO, salvo que se pida: una clase que ya ha terminado no
+// sale, aunque sea de esta semana; el pasado es el historial. Con
+// `conPasadas`, las terminadas de estas semanas sí salen, marcadas con
+// `terminada`, para que la semana en curso no enseñe huecos donde hubo
+// clase.
 // ---------------------------------------------------------------
 
 export type EstadoCalendario = "normal" | "recuperacion" | "reprogramada" | "cancelada";
 
 export type ClaseCalendario = ProximaClase & {
   estado: EstadoCalendario;
+  /** Ya ha terminado. Solo llega a true con `conPasadas`. */
+  terminada: boolean;
   /** Reprogramada: el día que tenía antes, "2026-09-28". */
   original: string | null;
 };
@@ -517,7 +522,8 @@ export function semanasDelAlumno(
   filas: FilaCalendario[],
   excepciones: unknown,
   ahora: Date = new Date(),
-  semanas: number = SEMANAS_CALENDARIO
+  semanas: number = SEMANAS_CALENDARIO,
+  { conPasadas = false }: { conPasadas?: boolean } = {}
 ): SemanaCalendario[] {
   const hoy = diaLocal(ahora);
   const primerLunes = lunesDe(hoy);
@@ -528,7 +534,8 @@ export function semanasDelAlumno(
   const porDia = new Map<string, ClaseCalendario[]>();
   for (const c of clases) {
     const clase = aClase(c, ahora);
-    if (clase.terminaEn.getTime() <= ahora.getTime()) continue;
+    const terminada = clase.terminaEn.getTime() <= ahora.getTime();
+    if (terminada && !conPasadas) continue;
 
     let estado: EstadoCalendario = "normal";
     let original: string | null = null;
@@ -548,7 +555,7 @@ export function semanasDelAlumno(
     }
 
     const lista = porDia.get(c.fecha) ?? [];
-    lista.push({ ...clase, estado, original });
+    lista.push({ ...clase, estado, original, terminada });
     porDia.set(c.fecha, lista);
   }
 
@@ -621,7 +628,7 @@ const DOMINIOS = [
  *
  * Null es un resultado normal y la pantalla sabe qué hacer con él: el
  * horario se enseña igual y el botón se cambia por el aviso de que se lo
- * pida a su profesor. Ver `components/clases/MisClases.tsx`.
+ * pida a su profesor. Ver `BotonClase` en `components/clases/BannerClase.tsx`.
  */
 export function enlaceDeClase(valor: string | null | undefined): string | null {
   const texto = String(valor ?? "").trim();
