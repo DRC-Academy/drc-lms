@@ -5,7 +5,8 @@
 // mismo `main` —ancho máximo, márgenes, corte de 900 px—, la misma
 // cabecera y la misma rejilla de tarjeta ancha y columna de 416 px.
 //
-//   · ARRIBA, LA PRÓXIMA CLASE (`BannerClase`, el del inicio) y a su lado
+//   · ARRIBA, LA PRÓXIMA CLASE (`BannerClase`, el del inicio, aquí con la
+//     mascota señalando el horario: `MascotaClase`) y a su lado
 //     la última que se dio, con lo que se trabajó y el enlace a su sitio
 //     en el historial. Lo que viene y lo que acaba de pasar, juntos.
 //   · EL CALENDARIO (`SemanaClases`): esta semana y las tres siguientes.
@@ -82,7 +83,7 @@ export default function PantallaClases({
             className={`entra grid items-stretch gap-3 min-[900px]:gap-5 ${ultima ? "min-[1200px]:grid-cols-[minmax(0,1fr)_416px]" : ""}`}
             style={{ animationDelay: "var(--paso-escalonado)" }}
           >
-            {proxima ? <BannerClase proxima={proxima} t={tc} ahora={ahora} /> : <SinProxima t={tc} />}
+            {proxima ? <BannerClase proxima={proxima} t={tc} ahora={ahora} conMascota /> : <SinProxima t={tc} />}
             {ultima && <UltimaClase clase={ultima} profesores={profesores} t={t} />}
           </div>
 

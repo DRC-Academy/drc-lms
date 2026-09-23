@@ -39,8 +39,10 @@ import type { ReactNode } from "react";
 import { enlaceDeClase, ventanaAbierta, type ProximaClase } from "@/lib/clases";
 import { diaLocal, sumarDias } from "@/lib/fechas";
 import type { TextosClases } from "@/lib/textos/clases";
+import { textosActuales } from "@/lib/idioma-servidor";
 import AvatarProfesor from "@/components/AvatarProfesor";
 import RefrescoEnCortes from "@/components/clases/RefrescoEnCortes";
+import MascotaClase from "@/components/clases/MascotaClase";
 
 /**
  * La tarjeta de la próxima clase.
@@ -49,6 +51,9 @@ import RefrescoEnCortes from "@/components/clases/RefrescoEnCortes";
  * franja del curso por la de la clase. `secundario` es la línea de debajo
  * del botón. `refresco` monta los dos cortes de la ventana; el inicio los
  * monta él mismo, así que ahí va apagado.
+ *
+ * `conMascota` la pone arriba a la derecha con su bocadillo (ver
+ * `MascotaClase`). No va con `ilustracion`: son dos formas de lo mismo.
  */
 export default function BannerClase({
   proxima,
@@ -57,6 +62,7 @@ export default function BannerClase({
   ilustracion,
   secundario,
   refresco = true,
+  conMascota = false,
 }: {
   proxima: ProximaClase;
   t: TextosClases;
@@ -64,8 +70,10 @@ export default function BannerClase({
   ilustracion?: ReactNode;
   secundario?: ReactNode;
   refresco?: boolean;
+  conMascota?: boolean;
 }) {
   const abierta = ventanaAbierta(proxima, ahora);
+  const frase = conMascota && !ilustracion ? fraseDeLaMascota(proxima, abierta, ahora, t) : null;
   const chapa = abierta ? (proxima.enCurso ? t.claseEnCurso : t.empiezaPronto) : t.proximaClase;
 
   return (
@@ -77,10 +85,17 @@ export default function BannerClase({
       {/* LA PARADA: el disco y la chapa colgando de él. Sin el tramo de
           sendero que llevaba detrás: una línea que no llevaba a ningún
           sitio se leía como decoración suelta. */}
-      <div className={`relative flex items-center gap-4 ${ilustracion ? "pr-[92px] sm:pr-0" : ""}`}>
+      <div
+        className={`relative flex items-center gap-4 ${ilustracion ? "pr-[92px] sm:pr-0" : ""} ${
+          frase ? "flex-wrap gap-y-3 pr-[44px] md:flex-nowrap md:pr-[112px]" : ""
+        }`}
+      >
         <DiscoClase abierta={abierta} />
         <Chapa destacada={abierta}>{chapa}</Chapa>
+        {frase && <Bocadillo frase={frase} />}
       </div>
+
+      {frase && <MascotaClase idHora={ID_HORA} />}
 
       {/* LA MASCOTA, EN LA ESQUINA. Su hueco (`MascotaBienvenida`) mide 90px
           en móvil, 150 entre 900 y 1199 y 200 a partir de ahí: dentro de
@@ -98,7 +113,10 @@ export default function BannerClase({
       >
         {/* LA HORA, LO MÁS GRANDE. Es la respuesta a la pregunta con la
             que se abre esta pantalla. */}
-        <p className="font-display text-[40px] font-extrabold leading-[1.02] tracking-[-0.02em] text-marca-tinta sm:text-[52px]">
+        <p
+          id={frase ? ID_HORA : undefined}
+          className="font-display text-[40px] font-extrabold leading-[1.02] tracking-[-0.02em] text-marca-tinta sm:text-[52px]"
+        >
           {t.franja(proxima.desde, proxima.hasta)}
         </p>
 
@@ -128,6 +146,56 @@ export default function BannerClase({
       {refresco && <RefrescoEnCortes cortes={[proxima.abreEn.getTime(), proxima.terminaEn.getTime()]} />}
     </section>
   );
+}
+
+/**
+ * El bocadillo de la mascota, en la fila de la chapa. En móvil baja a su
+ * propia línea, con el pico hacia arriba, a la mascota; desde 768 px va a
+ * la derecha de la chapa, con el pico a la derecha, y encoge antes de
+ * pisarla. Aparece un poco después, cuando la mascota ya ha llegado.
+ * Texto normal: lo lee el lector de pantalla.
+ */
+function Bocadillo({ frase }: { frase: string }) {
+  return (
+    <p
+      className="aparece relative basis-full rounded-[14px] border border-marca-borde bg-white px-3.5 py-2.5 text-pretty text-[15px] font-semibold leading-[1.35] text-marca-tinta shadow-[0_10px_24px_-12px_rgba(18,33,26,0.35)] md:ml-auto md:min-w-0 md:max-w-[300px] md:flex-1 md:basis-auto"
+      style={{ animationDelay: "700ms" }}
+    >
+      <span
+        aria-hidden
+        className="absolute -top-[7px] right-5 h-3 w-3 rotate-45 border-l border-t border-marca-borde bg-white md:-right-[7px] md:top-1/2 md:-translate-y-1/2 md:border-l-0 md:border-r"
+      />
+      <span className="relative">{frase}</span>
+    </p>
+  );
+}
+
+/** El horario, para que la mascota lo mire. Hay un banner por pantalla. */
+const ID_HORA = "hora-de-la-clase";
+
+/**
+ * Lo que dice la mascota del banner: una frase al azar por visita (cada
+ * petición al servidor), del grupo que toca según el botón. El estado sale
+ * de lo mismo que decide el botón —`enlaceDeClase` y `ventanaAbierta`,
+ * que llega ya calculada—; aquí no se vuelve a mirar la hora.
+ */
+function fraseDeLaMascota(proxima: ProximaClase, abierta: boolean, ahora: Date, t: TextosClases): string {
+  const frases = textosActuales().mascota.clase;
+  const grupo = !enlaceDeClase(proxima.meetLink)
+    ? frases.sinEnlace
+    : !abierta
+      ? frases.cerrada
+      : proxima.enCurso
+        ? frases.enCurso
+        : frases.abierta;
+  const hoy = diaLocal(ahora);
+  const decir = grupo[Math.floor(Math.random() * grupo.length)];
+  return decir({
+    hora: proxima.desde,
+    cuando: cuando(proxima, t, ahora),
+    esFecha: proxima.fecha !== hoy && proxima.fecha !== sumarDias(hoy, 1),
+    profesor: proxima.profesor,
+  });
 }
 
 /**
