@@ -7,6 +7,7 @@ import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/Visor
 import CierreEjercicios from "@/components/ejercicios/CierreEjercicios";
 import type { EstadoEjerciciosActual } from "@/components/leccion/PanelCurso";
 import BotonCompletar from "@/components/leccion/BotonCompletar";
+import { reaccionarEnCurso } from "@/components/ejercicios/reaccionesMascota";
 
 /**
  * Los ejercicios de la lección.
@@ -22,6 +23,11 @@ import BotonCompletar from "@/components/leccion/BotonCompletar";
  * el botón de idioma, así que pulsarlo aquí cambia también esta
  * pantalla. La lista de números escritos que había aquí —la misma once
  * palabras que en el visor— se fue a `lib/textos-ejercicios.ts`.
+ *
+ * LA MASCOTA, SIN ESCALADA. El cuadro de diálogo es el mismo que en la
+ * práctica (lo pone el visor), pero lo que hace con cada respuesta es
+ * menos: ánimo o duda, nunca saltos ni rebotes por racha. La lección
+ * pasa 187 veces por curso y no celebra (ver lib/gamificacion).
  */
 
 /**
@@ -79,7 +85,9 @@ export default function FlujoEjercicios({
   function alSuceso(suceso: SucesoVisor) {
     // El curso solo guarda intentos. Ni avance ni producción: la lección
     // no lleva un "iba por la mitad", y su cierre es marcarla completada.
-    if (suceso.tipo === "intento") registrarIntento(suceso.ejercicio.id, suceso.correcto);
+    if (suceso.tipo !== "intento") return;
+    if (registrarIntentos) registrarIntento(suceso.ejercicio.id, suceso.correcto);
+    reaccionarEnCurso(suceso);
   }
 
   return (
@@ -87,7 +95,6 @@ export default function FlujoEjercicios({
       ejercicios={unificados}
       alSuceso={alSuceso}
       alEstado={alEstado}
-      guardarIntentos={registrarIntentos}
       cierre={({ aciertos, total, repetir, verEjercicio, acertado, t }) => (
         <CierreEjercicios
           etiqueta={t.ejerciciosTerminados}

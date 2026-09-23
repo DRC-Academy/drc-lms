@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { normalizarRespuesta } from "@/lib/validarBloque";
 import type { EjercicioUnificado } from "@/lib/ejercicio-unificado";
 import type { TextosEjercicios } from "@/lib/textos/ejercicios";
+import type { TipoFrase } from "@/lib/textos/mascota-feedback";
 import { usarIdioma } from "@/components/ProveedorIdioma";
+import DialogoMascota, { elegirFrase } from "@/components/ejercicios/DialogoMascota";
+import { storeMascota } from "@/components/mascota/store";
 
 /**
  * EL VISOR DE EJERCICIOS. Uno solo, para las dos fuentes.
@@ -38,6 +41,14 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
  * las dos pantallas entra por props: la pantalla de cierre y qué hacer
  * con cada suceso que haya que guardar.
  *
+ * LA CORRECCIÓN LA DICE LA MASCOTA. El veredicto, la respuesta buena,
+ * la explicación y la pista van en el cuadro de diálogo del pie de la
+ * tarjeta (`DialogoMascota`), no en líneas sueltas: el visor decide qué
+ * se dice —acierto, casi, fallo, racha, recuperación— y el cuadro lo
+ * pinta. Lo que la mascota HACE con cada respuesta (ánimo, duda, los
+ * saltos de la racha) no es de aquí: va en el suceso «intento» y lo
+ * decide cada pantalla, porque el curso no celebra lo que la práctica sí.
+ *
  * Y NO SABE EN QUÉ IDIOMA ESTÁ. Todo lo que escribe sale de `t`, que es
  * el área de ejercicios del diccionario (`lib/textos/`). El idioma ya no
  * vive aquí: es una preferencia de toda la aplicación, guardada en una
@@ -57,6 +68,38 @@ const CONTENEDOR =
 
 const NUMERO_FASE = { reconocer: 1, transformar: 2, producir: 3 };
 
+/** Lo que piensa la mascota antes de dar la pista. */
+const PIENSA_MS = 1000;
+
+/**
+ * Si una respuesta ya normalizada se queda a una letra de alguna de las
+ * aceptadas (a dos, si es de doce letras o más): una errata, un plural,
+ * un artículo de menos. Es lo que separa «casi» de un fallo.
+ */
+function cerca(dada: string, aceptadas: string[]): boolean {
+  if (dada === "") return false;
+  return aceptadas.some((a) => {
+    const buena = normalizarRespuesta(a);
+    const tope = Math.max(buena.length, dada.length) >= 12 ? 2 : 1;
+    return Math.abs(buena.length - dada.length) <= tope && distancia(dada, buena) <= tope;
+  });
+}
+
+/** Levenshtein, con una sola fila. */
+function distancia(a: string, b: string): number {
+  const fila = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let diagonal = fila[0];
+    fila[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const arriba = fila[j];
+      fila[j] = Math.min(fila[j] + 1, fila[j - 1] + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
+      diagonal = arriba;
+    }
+  }
+  return fila[b.length];
+}
+
 /**
  * Lo que hay que guardar, dicho en términos del visor.
  *
@@ -65,8 +108,23 @@ const NUMERO_FASE = { reconocer: 1, transformar: 2, producir: 3 };
  * `/api/intento-ejercicio` y la práctica manda avance y progreso a
  * `/api/progreso`. Ninguno de los dos caminos cambia por esta refactor.
  */
+/**
+ * Cómo salió una respuesta. «casi» cuenta como fallo en todo lo que se
+ * guarda; solo cambia lo que dice y hace la mascota.
+ */
+export type Resultado = "correcto" | "casi" | "incorrecto";
+
 export type SucesoVisor =
-  | { tipo: "intento"; ejercicio: EjercicioUnificado; correcto: boolean }
+  | {
+      tipo: "intento";
+      ejercicio: EjercicioUnificado;
+      correcto: boolean;
+      resultado: Resultado;
+      /** Aciertos seguidos contando este (0 si no lo es). */
+      seguidos: number;
+      /** Si la respuesta anterior había sido un fallo (o un casi). */
+      trasFallo: boolean;
+    }
   | { tipo: "avance"; indice: number; total: number }
   | { tipo: "produccion"; ejercicio: EjercicioUnificado; texto: string }
   | { tipo: "final"; aciertos: number; total: number }
@@ -106,6 +164,10 @@ type Estado = {
   verModelo: boolean;
   /** `libre`: criterios que se ha marcado a sí mismo. */
   marcados: number[];
+  /** Lo que dijo la mascota al responder: el tipo de frase y cuál de ellas. */
+  dicho: { tipo: TipoFrase; i: number } | null;
+  /** Con qué frase dio la pista, si se pidió. */
+  pista: number | null;
 };
 
 const VACIO = (ejercicio: EjercicioUnificado): Estado => ({
@@ -117,6 +179,8 @@ const VACIO = (ejercicio: EjercicioUnificado): Estado => ({
   textoOk: null,
   verModelo: false,
   marcados: [],
+  dicho: null,
+  pista: null,
 });
 
 export default function VisorEjercicios({
@@ -125,7 +189,6 @@ export default function VisorEjercicios({
   notaAlPie,
   alSuceso,
   alEstado,
-  guardarIntentos = true,
 }: {
   ejercicios: EjercicioUnificado[];
   /**
@@ -150,11 +213,10 @@ export default function VisorEjercicios({
   alSuceso?: (suceso: SucesoVisor) => void;
   /** Por dónde va, en cada cambio. Ver `EstadoVisor`. */
   alEstado?: (estado: EstadoVisor) => void;
-  /** false para el equipo: revisa el curso, no lo cursa. */
-  guardarIntentos?: boolean;
 }) {
   const { t: todos } = usarIdioma();
   const t = todos.ejercicios;
+  const tm = todos.mascota.feedback;
   const [indice, setIndice] = useState(0);
   const [cerrado, setCerrado] = useState(false);
   const [estados, setEstados] = useState<Estado[]>(() => ejercicios.map(VACIO));
@@ -166,8 +228,28 @@ export default function VisorEjercicios({
     setEstados((previos) => previos.map((e, i) => (i === indice ? { ...e, ...parcial } : e)));
 
   function anunciar(suceso: SucesoVisor) {
-    if (suceso.tipo === "intento" && !guardarIntentos) return;
     alSuceso?.(suceso);
+  }
+
+  /**
+   * La racha de la visita al visor: aciertos seguidos y si lo último fue
+   * un fallo. Decide la frase (racha, recuperación) y viaja en el suceso
+   * para que cada pantalla escale lo que haga la mascota.
+   */
+  const racha = useRef({ seguidos: 0, trasFallo: false });
+
+  /**
+   * Una respuesta: la anuncia y devuelve lo que dirá la mascota, que se
+   * guarda con el ejercicio (volver atrás enseña lo mismo que se dijo).
+   */
+  function responder(resultado: Resultado): Estado["dicho"] {
+    const { seguidos: antes, trasFallo } = racha.current;
+    const seguidos = resultado === "correcto" ? antes + 1 : 0;
+    racha.current = { seguidos, trasFallo: resultado !== "correcto" };
+    const tipo: TipoFrase =
+      resultado !== "correcto" ? resultado : trasFallo ? "recuperacion" : seguidos >= 3 ? "racha" : "correcto";
+    anunciar({ tipo: "intento", ejercicio, correcto: resultado === "correcto", resultado, seguidos, trasFallo });
+    return { tipo, i: elegirFrase(tipo, tm.frases[tipo].length) };
   }
 
   // --- qué sabe de cada ejercicio ---
@@ -239,16 +321,23 @@ export default function VisorEjercicios({
       return;
     }
 
-    cambiar({ elegidas: [i], resuelto: true });
-    anunciar({ tipo: "intento", ejercicio, correcto: ejercicio.correctas.includes(i) });
+    const dicho = responder(ejercicio.correctas.includes(i) ? "correcto" : "incorrecto");
+    cambiar({ elegidas: [i], resuelto: true, dicho });
   }
 
+  /**
+   * Varias correctas. Casi: las marcadas son todas buenas pero falta
+   * alguna, o están todas las buenas y sobra una.
+   */
   function comprobarVarias() {
     const bien =
       estado.elegidas.length === ejercicio.correctas.length &&
       [...estado.elegidas].sort().join() === [...ejercicio.correctas].sort().join();
-    cambiar({ resuelto: true });
-    anunciar({ tipo: "intento", ejercicio, correcto: bien });
+    const malas = estado.elegidas.filter((i) => !ejercicio.correctas.includes(i)).length;
+    const buenas = estado.elegidas.length - malas;
+    const casi = (malas === 0 && buenas > 0) || (buenas === ejercicio.correctas.length && malas === 1);
+    const dicho = responder(bien ? "correcto" : casi ? "casi" : "incorrecto");
+    cambiar({ resuelto: true, dicho });
   }
 
   /** Corrige un hueco al salir del campo. Sin espacios ni mayúsculas. */
@@ -258,12 +347,24 @@ export default function VisorEjercicios({
 
     const bien = (ejercicio.huecos[i] ?? []).some((v) => normalizarRespuesta(v) === dada);
     const nuevos = estado.huecosOk.map((v, j) => (j === i ? bien : v));
-    cambiar({ huecosOk: nuevos });
 
     // El intento se registra cuando ya están todos: es un ejercicio, no
-    // un hueco.
+    // un hueco. Casi: la mitad o más bien (con dos o más), o cada hueco
+    // que falla a una o dos letras de una respuesta aceptada.
     if (nuevos.every((v) => v !== null)) {
-      anunciar({ tipo: "intento", ejercicio, correcto: nuevos.every((v) => v === true) });
+      const acertados = nuevos.filter((v) => v === true).length;
+      const todosCerca = nuevos.every(
+        (v, j) => v === true || cerca(normalizarRespuesta(estado.huecos[j] ?? ""), ejercicio.huecos[j] ?? [])
+      );
+      const resultado: Resultado =
+        acertados === nuevos.length
+          ? "correcto"
+          : todosCerca || (nuevos.length >= 2 && acertados * 2 >= nuevos.length)
+            ? "casi"
+            : "incorrecto";
+      cambiar({ huecosOk: nuevos, dicho: responder(resultado) });
+    } else {
+      cambiar({ huecosOk: nuevos });
     }
   }
 
@@ -271,8 +372,32 @@ export default function VisorEjercicios({
     if (yaRespondido || estado.texto.trim() === "") return;
     const dada = normalizarRespuesta(estado.texto);
     const bien = ejercicio.respuestas.some((r) => normalizarRespuesta(r) === dada);
-    cambiar({ resuelto: true, textoOk: bien });
-    anunciar({ tipo: "intento", ejercicio, correcto: bien });
+    const dicho = responder(bien ? "correcto" : cerca(dada, ejercicio.respuestas) ? "casi" : "incorrecto");
+    cambiar({ resuelto: true, textoOk: bien, dicho });
+  }
+
+  /**
+   * La pista: la mascota piensa un momento, señala y la dice en el
+   * cuadro. El ejercicio se fija al pedirla: si el alumno avanza
+   * mientras piensa, la pista no cae en el siguiente.
+   */
+  const [pensando, setPensando] = useState(false);
+  function pedirPista() {
+    if (pensando) return;
+    const deCual = indice;
+    const reducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    storeMascota.mirarA(null);
+    storeMascota.gesto("piensa", { duracion: PIENSA_MS });
+    setPensando(true);
+    setTimeout(
+      () => {
+        setPensando(false);
+        storeMascota.gesto("senala");
+        const i = elegirFrase("pistaIntro", tm.frases.pistaIntro.length);
+        setEstados((previos) => previos.map((e, k) => (k === deCual ? { ...e, pista: i } : e)));
+      },
+      reducido ? 0 : PIENSA_MS
+    );
   }
 
   function avanzar() {
@@ -294,6 +419,7 @@ export default function VisorEjercicios({
   }
 
   function repetir() {
+    racha.current = { seguidos: 0, trasFallo: false };
     setEstados(ejercicios.map(VACIO));
     setIndice(0);
     setCerrado(false);
@@ -302,10 +428,48 @@ export default function VisorEjercicios({
   }
 
   function verEjercicio(i: number) {
+    racha.current = { seguidos: 0, trasFallo: false };
     setIndice(i);
     setCerrado(false);
     anunciar({ tipo: "salto", indice: i });
     window.scrollTo({ top: 0 });
+  }
+
+  /**
+   * LA MASCOTA MIRA EL ENUNCIADO mientras no hay respuesta (hacia donde
+   * esté: la capa lo resuelve), y deja de mirarlo en cuanto el alumno
+   * toca algo del ejercicio: entonces le mira a él.
+   */
+  const zonaEjercicio = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const zona = zonaEjercicio.current;
+    if (cerrado || yaRespondido || !zona) {
+      storeMascota.mirarA(null);
+      return;
+    }
+    storeMascota.mirarA(zona);
+    // Después del evento, no durante: el store repinta en síncrono y, si
+    // lo hace antes que el onChange de React, un campo controlado pierde
+    // lo que se acaba de escribir.
+    const dejar = () => setTimeout(() => storeMascota.mirarA(null), 0);
+    const eventos = ["pointerdown", "keydown", "input"] as const;
+    eventos.forEach((e) => zona.addEventListener(e, dejar, { passive: true }));
+    return () => {
+      eventos.forEach((e) => zona.removeEventListener(e, dejar));
+      storeMascota.mirarA(null);
+    };
+  }, [indice, cerrado, yaRespondido]);
+
+  /**
+   * En móvil el cuadro es un dock fijo abajo: cada vez que cambia de
+   * alto, los botones se asoman por encima de él. `scroll-margin-bottom`
+   * (en los botones) es lo que cuenta el dock y la navegación.
+   */
+  const botones = useRef<HTMLDivElement>(null);
+  function alMedirDock(alto: number) {
+    if (alto <= 0 || window.innerWidth >= 900) return;
+    const suave = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    requestAnimationFrame(() => botones.current?.scrollIntoView({ block: "nearest", behavior: suave ? "smooth" : "auto" }));
   }
 
   /**
@@ -379,21 +543,20 @@ export default function VisorEjercicios({
     .join(" · ");
 
   // ---------------------------------------------------------------
-  // LA CORRECCIÓN, EN DOS PIEZAS
+  // LA CORRECCIÓN, EN EL CUADRO DE LA MASCOTA
   //
-  // EL VEREDICTO la encabeza. Lo escribe el modelo para ESTE ejercicio
-  // y viene en `veredictoAcierto` / `veredictoFallo`; cuando no viene
-  // —el curso no lo trae nunca— se pone el de siempre.
+  // LA FRASE la encabeza: la dice la mascota y sale de
+  // lib/textos/mascota-feedback.ts según cómo fue (acierto, casi, fallo,
+  // racha, recuperación). Es la misma en el curso y en la práctica.
   //
-  // LA SOLUCIÓN es cuál era la respuesta, y solo hay que escribirla
-  // donde no esté ya en pantalla: en `escritura` y en `huecos` no se ve
-  // por ningún lado, mientras que en `opciones` la buena se queda
-  // marcada en verde entre las cuatro.
+  // DEBAJO, EL VEREDICTO DEL MODELO, si lo hay: lo escribe para ESTE
+  // ejercicio (`veredictoAcierto` / `veredictoFallo`) y apunta al
+  // distractor concreto, que es más de lo que puede decir una frase
+  // genérica. El curso no lo trae nunca.
   //
-  // Van partidas porque el veredicto del modelo sustituye al texto por
-  // defecto, y ese texto llevaba la respuesta dentro. Sin partirlas, un
-  // veredicto mejor se llevaría por delante el único sitio donde el
-  // alumno podía leer cuál era la buena.
+  // LA SOLUCIÓN, si no acertó: en `escritura` y en `huecos` no se ve por
+  // ningún lado; en `opciones` la buena ya está en verde, pero se
+  // escribe igual para que el cuadro se lea entero sin mirar arriba.
   // ---------------------------------------------------------------
   const solucionEscrita = esHuecos
     ? t.respuestaEra(ejercicio.huecos.map((a) => a[0] ?? "—"))
@@ -401,15 +564,34 @@ export default function VisorEjercicios({
       ? t.unaVersionCorrecta(ejercicio.respuestas[0] ?? "—")
       : null;
 
-  const veredictoPorDefecto = yaAcertado
-    ? esHuecos
-      ? t.huecosCorrectos(ejercicio.huecos.length)
-      : t.esoEs
-    : solucionEscrita
-      ? t.casi(solucionEscrita)
-      : t.noEraEsa(solucion);
-
   const veredicto = yaAcertado ? ejercicio.veredictoAcierto : ejercicio.veredictoFallo;
+
+  // Lo que dice la mascota: tras responder, la frase del veredicto y,
+  // debajo, el del modelo si lo hay, cuál era la buena (si falló) y la
+  // explicación; antes, la pista si la pidió. `libre` no se corrige: no
+  // dice nada.
+  const dialogo: { clave: string; frase: string | null; cuerpo: ReactNode } =
+    yaRespondido && estado.dicho && !esLibre
+      ? {
+          clave: `v:${estado.dicho.tipo}:${estado.dicho.i}`,
+          frase: tm.frases[estado.dicho.tipo][estado.dicho.i] ?? null,
+          cuerpo: (
+            <>
+              {veredicto && <p className="font-medium text-marca-tinta">{veredicto}</p>}
+              {!yaAcertado && (
+                <p>{solucionEscrita ?? tm.laRespuestaEs(solucion)}</p>
+              )}
+              {ejercicio.explicacion && <p>{ejercicio.explicacion}</p>}
+            </>
+          ),
+        }
+      : !yaRespondido && estado.pista !== null && ejercicio.pista
+        ? {
+            clave: `p:${estado.pista}`,
+            frase: tm.frases.pistaIntro[estado.pista] ?? null,
+            cuerpo: <p>{ejercicio.pista}</p>,
+          }
+        : { clave: "", frase: null, cuerpo: null };
 
   const pendienteVarias = esOpciones && ejercicio.variasCorrectas && !estado.resuelto;
   const puedeComprobarVarias = pendienteVarias && estado.elegidas.length > 0;
@@ -417,7 +599,8 @@ export default function VisorEjercicios({
   const puedeComprobarEscritura = pendienteEscritura && estado.texto.trim() !== "";
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
+    // En móvil, sitio debajo de los botones para el dock del cuadro.
+    <div className="flex min-w-0 flex-1 flex-col max-[899px]:pb-[var(--dock-dialogo,0px)]">
       {/* La tarjeta del ejercicio: el mismo contenedor que cada parte del
           texto de la lección. La salida, el idioma y el estado de la
           traducción no están aquí: son del marco de alrededor. */}
@@ -446,7 +629,7 @@ export default function VisorEjercicios({
       </div>
 
       <div className="flex flex-1 flex-col">
-        <div className="flex flex-1 flex-col">
+        <div ref={zonaEjercicio} className="flex flex-1 flex-col">
           {/* --------------------------- FASE --------------------------- */}
           {ejercicio.fase && (
             <p className="mb-3 text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-marca-verde">
@@ -516,7 +699,6 @@ export default function VisorEjercicios({
           )}
 
           {esEscritura && (
-            <>
               <textarea
                 value={estado.texto}
                 onChange={(e) => cambiar({ texto: e.target.value })}
@@ -531,15 +713,6 @@ export default function VisorEjercicios({
                 placeholder={t.placeholderEscritura}
                 className="mt-5 w-full resize-none rounded-[14px] border-[1.5px] border-marca-borde bg-white px-5 py-4 text-[16.5px] leading-[1.5] text-marca-tinta outline-none transition-colors focus:border-marca-verde disabled:opacity-70"
               />
-              {!yaRespondido && ejercicio.pista && (
-                <details className="mt-3 text-[14px] text-marca-gris">
-                  <summary className="cursor-pointer py-1 transition-colors hover:text-marca-verdeOsc">
-                    {t.verPista}
-                  </summary>
-                  <p className="aparece mt-2 leading-[1.5]">{ejercicio.pista}</p>
-                </details>
-              )}
-            </>
           )}
 
           {esLibre && (
@@ -559,48 +732,30 @@ export default function VisorEjercicios({
             />
           )}
 
-          {/* ---------------------------- CORRECCIÓN ---------------------------- */}
-          {yaRespondido && !esLibre && (
-            <div className="mt-5 min-[900px]:mt-[22px]">
-              <div className="flex items-center gap-[11px]">
-                <span
-                  aria-hidden
-                  className={`grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full text-[11px] font-semibold leading-none text-white ${
-                    yaAcertado ? "bg-marca-verde" : "bg-marca-calido"
-                  }`}
-                >
-                  {yaAcertado ? "✓" : "—"}
-                </span>
-                <p className="text-pretty text-[15px] font-medium leading-[1.45] text-marca-tintaCuerpo min-[900px]:text-[16px]">
-                  {veredicto ?? veredictoPorDefecto}
-                </p>
-              </div>
-
-              {/* CUÁL ERA LA BUENA. Solo cuando el veredicto del modelo
-                  ha ocupado el sitio del texto por defecto, que era el
-                  que la llevaba dentro. El sangrado la alinea con el
-                  veredicto, por debajo de la insignia. */}
-              {veredicto && !yaAcertado && solucionEscrita && (
-                <p className="mt-2 pl-[33px] text-pretty text-[14.5px] leading-[1.5] text-marca-tintaCuerpo min-[900px]:text-[15px]">
-                  {solucionEscrita}
-                </p>
-              )}
-
-              {/* LA EXPLICACIÓN SOLO SI EXISTE. Los 1.492 del curso la
-                  traen vacía, y reservarle sitio dejaría un hueco que
-                  parece contenido a medio cargar. */}
-              {ejercicio.explicacion && (
-                <p className="mt-3 rounded-[14px] bg-marca-niebla px-4 py-3.5 text-pretty text-[14.5px] leading-[1.55] text-marca-tintaCuerpo min-[900px]:text-[15px]">
-                  {ejercicio.explicacion}
-                </p>
-              )}
-            </div>
-          )}
-
           {notaAlPie?.(ejercicio, t)}
-
         </div>
       </div>
+
+        {/* ------------------------ LO QUE DICE LA MASCOTA ------------------------ */}
+        <DialogoMascota
+          clave={`${ejercicio.id}:${dialogo.clave}`}
+          frase={dialogo.frase}
+          cuerpo={dialogo.cuerpo}
+          aria={tm.aria}
+          alMedirDock={alMedirDock}
+          acciones={
+            !yaRespondido && ejercicio.pista && estado.pista === null ? (
+              <button
+                type="button"
+                onClick={pedirPista}
+                disabled={pensando}
+                className="rounded-full btn-verde-linea px-5 py-2 text-[14px] font-semibold disabled:opacity-60"
+              >
+                {tm.pista}
+              </button>
+            ) : null
+          }
+        />
       </div>
 
       {/* ------------------------------- BOTONES -------------------------------
@@ -613,7 +768,11 @@ export default function VisorEjercicios({
           atrás enseña lo ya respondido sin perder nada. En el primero no
           hay destino y el hueco se queda: quitarlo movería el botón
           principal de sitio al pasar del primero al segundo. */}
-      <div className="mt-4 flex items-center gap-3 min-[900px]:mt-5 min-[900px]:gap-3.5">
+      <div
+        ref={botones}
+        className="mt-4 flex items-center gap-3 min-[900px]:mt-5 min-[900px]:gap-3.5"
+        style={{ scrollMarginBottom: "calc(var(--dock-dialogo, 0px) + var(--nav-inferior, 0px) + 12px)" }}
+      >
         <FlechaAtras t={t} alPulsar={indice > 0 ? () => verEjercicio(indice - 1) : null} />
 
         {pendienteVarias || pendienteEscritura ? (

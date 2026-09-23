@@ -84,7 +84,6 @@ export type TextosEjercicios = {
   variasCorrectas: string;
   placeholderEscritura: string;
   placeholderLibre: string;
-  verPista: string;
   huecoAria: (n: number) => string;
   ayudaHuecos: (n: number) => string;
 
@@ -97,14 +96,9 @@ export type TextosEjercicios = {
   verElResultado: string;
   siguienteEjercicio: string;
 
-  // --- la corrección por defecto ---
-  // La que se pinta cuando el ejercicio no trae veredicto propio: los
-  // 1.492 importados de LearnDash no lo traen NUNCA, así que para ellos
-  // esto no es un respaldo, es toda la corrección que hay.
-  esoEs: string;
-  huecosCorrectos: (n: number) => string;
-  casi: (solucion: string) => string;
-  noEraEsa: (solucion: string) => string;
+  // --- la respuesta buena, en el cuadro de la mascota ---
+  // La frase del veredicto la dice la mascota (lib/textos/mascota-feedback.ts);
+  // esto es lo que va debajo cuando no se acertó.
   respuestaEra: (respuestas: string[]) => string;
   unaVersionCorrecta: (respuesta: string) => string;
 
@@ -172,7 +166,6 @@ const ES: TextosEjercicios = {
   variasCorrectas: "Puede haber más de una correcta.",
   placeholderEscritura: "Escribe tu versión…",
   placeholderLibre: "Escribe aquí…",
-  verPista: "Ver pista",
   huecoAria: (n) => `Hueco ${n}`,
   ayudaHuecos: (n) =>
     `Escribe y sal del hueco para corregirlo. ${conMayuscula(enLetras("es", n))} ${n === 1 ? "hueco" : "huecos"}.`,
@@ -185,11 +178,6 @@ const ES: TextosEjercicios = {
   verElResultado: "Ver el resultado →",
   siguienteEjercicio: "Siguiente ejercicio →",
 
-  esoEs: "Eso es.",
-  huecosCorrectos: (n) =>
-    n === 1 ? "El hueco, correcto." : `Los ${enLetras("es", n)} huecos, correctos.`,
-  casi: (solucion) => `Casi. ${solucion}`,
-  noEraEsa: (solucion) => `No era esa. La correcta es la ${solucion}`,
   respuestaEra: (respuestas) =>
     `${respuestas.length === 1 ? "La respuesta era" : "Las respuestas eran"} ${enumerar(
       "es",
@@ -282,7 +270,6 @@ const EN: TextosEjercicios = {
   variasCorrectas: "More than one answer can be right.",
   placeholderEscritura: "Write your version…",
   placeholderLibre: "Write here…",
-  verPista: "Show hint",
   huecoAria: (n) => `Gap ${n}`,
   ayudaHuecos: (n) =>
     `Write in the gap and click outside it to check. ${conMayuscula(enLetras("en", n))} ${
@@ -297,11 +284,6 @@ const EN: TextosEjercicios = {
   verElResultado: "See your result →",
   siguienteEjercicio: "Next exercise →",
 
-  esoEs: "That's it.",
-  huecosCorrectos: (n) =>
-    n === 1 ? "The gap is right." : `All ${enLetras("en", n)} gaps are right.`,
-  casi: (solucion) => `Close. ${solucion}`,
-  noEraEsa: (solucion) => `Not that one. The right answer is ${solucion}`,
   respuestaEra: (respuestas) =>
     `${respuestas.length === 1 ? "The answer was" : "The answers were"} ${enumerar(
       "en",

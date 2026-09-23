@@ -35,9 +35,9 @@ const Geckonoid = dynamic(() => import("@/components/mascota/Geckonoid"), { ssr:
  * SIN ANCLA VISIBLE, A LA PERCHA: abajo a la derecha, chica y sentada,
  * por encima de lo que haya fijo en esa esquina —la navegación inferior,
  * la barra del banner, el botón de Ayuda— y del safe-area. Con un cajón
- * abierto (el panel del bloque por debajo de 1200 px, que marca
- * `data-cajon-mascota`) también va a la percha, y la capa sube por
- * encima del velo para no quedar tapada.
+ * abierto (el panel del bloque o del curso por debajo de 1200 px) se
+ * queda donde está, debajo del velo como el resto de la página: desde
+ * que va al pie del ejercicio, el cajón ya no le quita el sitio.
  *
  * SI EL ANCLA QUE MANDA DESAPARECE —se desmonta y se vuelve a montar,
  * como la de la ruta al cambiar de parada, o se sale de la vista—, la
@@ -101,7 +101,6 @@ const PROPORCION = parchesJson.lienzo.proporcion;
 /** Los pies, en fracción del ancho: de ahí salen el estiramiento y el aplastamiento. */
 const PIES_X = 0.414;
 const MOVIL_PX = 900;
-const CAJON_PX = 1200;
 const PERCHA = { alto: 72, altoMovil: 50, margen: 20, aire: 12 };
 /** Media altura dentro para entrar; la activa aguanta hasta un cuarto. */
 const VISIBLE_ENTRA = 0.5;
@@ -221,7 +220,6 @@ export default function CapaMascota() {
   const estirar = useRef<HTMLDivElement>(null);
   const safeArea = useRef<HTMLDivElement>(null);
   const [enVuelo, setEnVuelo] = useState(false);
-  const [conCajon, setConCajon] = useState(false);
   const [mirada, setMirada] = useState<MiradaMascota>();
   const [inclinacion, setInclinacion] = useState(0);
   const movimiento = useStoreMascota((e) => e.movimiento);
@@ -263,7 +261,6 @@ export default function CapaMascota() {
     let vez = 0;
     let evitar: Element[] = [];
     let inferior = 0;
-    let cajon = false;
     /** Dónde está posada: el ancla (null, la percha; undefined, todavía en ningún sitio). */
     let posada: string | null | undefined = undefined;
     let apagadaHasta = 0;
@@ -371,23 +368,16 @@ export default function CapaMascota() {
       if (vez++ % 30 === 0) {
         evitar = Array.from(document.querySelectorAll(EVITAR));
         inferior = parseFloat(safeArea.current ? getComputedStyle(safeArea.current).paddingBottom : "0") || 0;
-        const hayCajon = ancho < CAJON_PX && document.querySelector("[data-cajon-mascota]") !== null;
-        if (hayCajon !== cajon) {
-          cajon = hayCajon;
-          setConCajon(hayCajon);
-        }
       }
       const { anclas, activa: actual } = storeMascota.leer();
       let mejor: { ancla: Ancla; rect: DOMRect } | null = null;
-      if (!cajon) {
-        for (const ancla of Object.values(anclas)) {
-          if (!ancla.activa || !ancla.el || !ancla.el.isConnected) continue;
-          const rect = ancla.el.getBoundingClientRect();
-          const umbral = ancla.id === actual ? VISIBLE_AGUANTA : VISIBLE_ENTRA;
-          if (fraccionVisible(rect, alto, ancho) < umbral) continue;
-          if (!mejor || ancla.prioridad > mejor.ancla.prioridad || (ancla.prioridad === mejor.ancla.prioridad && ancla.orden > mejor.ancla.orden)) {
-            mejor = { ancla, rect };
-          }
+      for (const ancla of Object.values(anclas)) {
+        if (!ancla.activa || !ancla.el || !ancla.el.isConnected) continue;
+        const rect = ancla.el.getBoundingClientRect();
+        const umbral = ancla.id === actual ? VISIBLE_AGUANTA : VISIBLE_ENTRA;
+        if (fraccionVisible(rect, alto, ancho) < umbral) continue;
+        if (!mejor || ancla.prioridad > mejor.ancla.prioridad || (ancla.prioridad === mejor.ancla.prioridad && ancla.orden > mejor.ancla.orden)) {
+          mejor = { ancla, rect };
         }
       }
 
@@ -807,7 +797,7 @@ export default function CapaMascota() {
   return (
     <>
     {/* La burbuja: fuera de la capa, que es aria-hidden, porque dice algo. */}
-    <div className={`pointer-events-none fixed inset-0 overflow-hidden ${conCajon ? "z-[56]" : "z-[39]"}`}>
+    <div className="pointer-events-none fixed inset-0 z-[39] overflow-hidden">
       <div
         ref={burbujaEl}
         role="status"
@@ -819,7 +809,7 @@ export default function CapaMascota() {
         {burbuja?.texto}
       </div>
     </div>
-    <div aria-hidden className={`pointer-events-none fixed inset-0 overflow-hidden ${conCajon ? "z-[55]" : "z-[38]"}`}>
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-[38] overflow-hidden">
       {/* Para leer el safe-area de abajo, que solo sabe CSS. */}
       <div ref={safeArea} className="invisible absolute" style={{ paddingBottom: "env(safe-area-inset-bottom)" }} />
       <div

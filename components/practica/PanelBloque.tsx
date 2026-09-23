@@ -4,7 +4,6 @@ import Link from "next/link";
 import type { EjercicioUnificado, Fase } from "@/lib/ejercicio-unificado";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { Anillo, Barra, FilaSub, Marca } from "@/components/leccion/PiezasPanel";
-import AnclaMascota from "@/components/mascota/AnclaMascota";
 
 /**
  * EL PANEL DEL BLOQUE, a la izquierda del ejercicio.
@@ -26,12 +25,9 @@ import AnclaMascota from "@/components/mascota/AnclaMascota";
  * única puerta es la de arriba, a «Para ti», donde el curso pone la del
  * temario.
  *
- * LA MASCOTA va en la cabecera de la tarjeta de progreso, al lado del
- * título del bloque, y reacciona a cada respuesta —la pantalla del
- * bloque le manda el estado—. Solo mientras hay ejercicio: en el
- * cierre la pinta el cierre, más grande, y dos iguales en la misma
- * pantalla sobran. Es lo único en que este panel se aparta del curso,
- * que no la lleva porque la lección no celebra (ver lib/gamificacion).
+ * LA MASCOTA YA NO ESTÁ AQUÍ: mientras hay ejercicio va al pie de su
+ * tarjeta, con el cuadro de lo que dice (components/ejercicios/
+ * DialogoMascota), igual que en la lección.
  */
 
 const NUMERO_FASE: Record<Fase, number> = { reconocer: 1, transformar: 2, producir: 3 };
@@ -48,7 +44,6 @@ export default function PanelBloque({
   profesor,
   hrefParaTi,
   alElegir,
-  conMascota = false,
 }: {
   titulo: string;
   /** «Gramática · B1»: de qué va y para qué nivel. */
@@ -65,11 +60,6 @@ export default function PanelBloque({
   hrefParaTi: string;
   /** Al pulsar la puerta: cierra el cajón en móvil. */
   alElegir?: () => void;
-  /**
-   * Un sitio para la mascota en la cabecera (ancla de prioridad 2),
-   * mientras no se ha terminado: al terminar se va al cierre.
-   */
-  conMascota?: boolean;
 }) {
   const { t: todos } = usarIdioma();
   const t = todos.ejercicios;
@@ -117,7 +107,6 @@ export default function PanelBloque({
               {titulo}
             </span>
           </div>
-          {conMascota && !terminado && <AnclaMascota id="bloque-panel" prioridad={2} tamaño={88} />}
         </div>
 
         <div className="px-2.5 pb-2.5">

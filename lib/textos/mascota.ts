@@ -17,6 +17,7 @@
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
+import { MASCOTA_FEEDBACK, type TextosMascotaFeedback } from "@/lib/textos/mascota-feedback";
 
 /**
  * EL BUCLE AL PROFESOR. Las burbujas del cierre que nombran al profesor
@@ -43,6 +44,8 @@ export type TextosMascota = {
     /** Lo mismo, con BUCLE_PROFESOR. */
     cierreSigamosProfesor: (profesor: string) => string;
   };
+  /** El cuadro de diálogo de los ejercicios: en su propio archivo, mascota-feedback.ts. */
+  feedback: TextosMascotaFeedback;
 };
 
 export type ClaveBurbuja = keyof TextosMascota["burbujas"];
@@ -57,6 +60,7 @@ export const MASCOTA: Record<Idioma, TextosMascota> = {
       cierreSigamos: "Buen trabajo, sigamos",
       cierreSigamosProfesor: (profesor) => `Buen trabajo, sigamos. Se lo contaré a ${profesor}`,
     },
+    feedback: MASCOTA_FEEDBACK.es,
   },
   en: {
     burbujas: {
@@ -67,5 +71,6 @@ export const MASCOTA: Record<Idioma, TextosMascota> = {
       cierreSigamos: "Good work, let's keep going",
       cierreSigamosProfesor: (profesor) => `Good work, let's keep going. I'll tell ${profesor}`,
     },
+    feedback: MASCOTA_FEEDBACK.en,
   },
 };

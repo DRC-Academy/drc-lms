@@ -159,8 +159,9 @@ Los ids son únicos entre las anclas montadas a la vez. Las de la app:
 | Para ti | `parati-saludo` (cabecera, solo sin curso) | 1 | idle |
 | | `parati-ruta` (parada «Estás aquí») | 2 | idle, o el diploma con todo hecho |
 | | `parati-espera` (bajo la ruta, mientras genera) | 3 | estudiando |
-| Bloque | `bloque-panel` (cabecera del panel) | 2 | idle |
-| | `bloque-cierre` (CierreEjercicios) | 3 | idle |
+| Ejercicios (bloque y lección) | `ejercicio` (pie de la tarjeta, DialogoMascota) | 10 | idle, mirando al enunciado |
+| | `ejercicio-dock` (dock del cuadro en móvil, mientras habla) | 11 | idle |
+| Bloque | `bloque-cierre` (CierreEjercicios) | 3 | idle |
 | `/dev/mascota` | `dev-a` … `dev-d` | 1–4 | el que elija el tablero |
 
 La franja del inicio (`franja`) y el saludo de «Para ti» (`saludo`) salen

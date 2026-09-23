@@ -98,9 +98,6 @@ export default function PantallaConPanel({
       )}
       <aside
         aria-label={panelAria}
-        // Abierto como cajón, tapa el ancla de la mascota: ella se va a la
-        // percha mientras tanto (ver CapaMascota).
-        data-cajon-mascota={panelAbierto || undefined}
         className={`shrink-0 border-r border-marca-borde bg-white min-[1200px]:sticky min-[1200px]:top-0 min-[1200px]:h-dvh min-[1200px]:w-[330px] ${
           panelAbierto
             ? "aparece fixed inset-y-0 left-0 z-50 w-[min(330px,100%)] shadow-[0_18px_44px_-16px_rgba(18,33,26,0.35)] min-[1200px]:inset-auto min-[1200px]:z-auto min-[1200px]:shadow-none"

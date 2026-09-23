@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Bloque } from "@/lib/data";
 import { conFoco } from "@/lib/foco";
@@ -10,6 +10,7 @@ import { conTraduccion } from "@/lib/traduccion-bloque";
 import { formatearFecha } from "@/lib/perfil";
 import { UMBRAL_DOMINADO } from "@/lib/progreso";
 import VisorEjercicios, { type EstadoVisor, type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
+import { reaccionarEnPractica } from "@/components/ejercicios/reaccionesMascota";
 import CierreEjercicios from "@/components/ejercicios/CierreEjercicios";
 import PantallaConPanel from "@/components/leccion/PantallaConPanel";
 import PasoAPaso, { type Paso } from "@/components/leccion/PasoAPaso";
@@ -53,9 +54,10 @@ import { usarTraduccion } from "@/components/ejercicios/usarTraduccion";
  * veintiséis veces por curso y es un acuse: si queda dominado
  * (`UMBRAL_DOMINADO`) hace «éxito», el salto con estrellas, una vez; si
  * no, «ánimo». Nunca cara triste por un resultado: eso queda para la
- * racha, cuando exista. El estado vive aquí porque aquí llegan los
- * sucesos del visor; la pintan el panel, mientras hay ejercicio, y el
- * cierre.
+ * racha, cuando exista. Lo que DICE en cada ejercicio, y dónde está
+ * mientras tanto (el cuadro al pie de la tarjeta), lo pone el visor; lo
+ * que HACE se decide aquí, porque aquí llegan los sucesos. En el
+ * cierre la pinta el cierre.
  */
 
 const ORDEN: Fase[] = ["reconocer", "transformar", "producir"];
@@ -112,51 +114,6 @@ export default function VistaBloque({
 
   const mascota = useMascota();
 
-  // LA MASCOTA DURANTE EL BLOQUE. Mientras se lee el enunciado, mira
-  // hacia él (hacia donde esté: en escritorio queda a su derecha, en
-  // móvil, desde la percha, a su izquierda); al tocar la respuesta
-  // vuelve a mirar al alumno. Y lleva la cuenta de los aciertos
-  // seguidos para ir subiendo sin celebrar: el éxito es del cierre.
-  const zonaVisor = useRef<HTMLDivElement>(null);
-  const racha = useRef({ seguidos: 0, trasFallo: false });
-  useEffect(() => {
-    const zona = zonaVisor.current;
-    storeMascota.mirarA(zona);
-    if (!zona) return;
-    const alResponder = () => storeMascota.mirarA(null);
-    const eventos = ["pointerdown", "keydown", "input"] as const;
-    eventos.forEach((e) => zona.addEventListener(e, alResponder, { passive: true }));
-    return () => {
-      eventos.forEach((e) => zona.removeEventListener(e, alResponder));
-      storeMascota.mirarA(null);
-    };
-  }, []);
-
-  /**
-   * Un acierto: tras un fallo, asombro y ánimo; a los 3 seguidos, ánimo
-   * con un rebote más alto; a los 5 (y cada 5), un salto en el sitio,
-   * sin estrellas. Un fallo, duda.
-   */
-  function reaccionarAlIntento(correcto: boolean) {
-    storeMascota.mirarA(null);
-    if (!correcto) {
-      racha.current = { seguidos: 0, trasFallo: true };
-      mascota.dispara("duda");
-      return;
-    }
-    const trasFallo = racha.current.trasFallo;
-    const seguidos = racha.current.seguidos + 1;
-    racha.current = { seguidos, trasFallo: false };
-    if (trasFallo) {
-      storeMascota.gesto("asombro", { duracion: 450 });
-      setTimeout(() => mascota.dispara("animo"), 450);
-      return;
-    }
-    mascota.dispara("animo");
-    if (seguidos % 5 === 0) storeMascota.moverse("salto_sitio");
-    else if (seguidos === 3) storeMascota.moverse("rebote");
-  }
-
   // LAS FASES, como pasos. Solo las que tiene el bloque: hay bloques sin
   // producir, y una fase vacía no es un paso.
   const fases = ORDEN.filter((fase) => unificados.some((e) => e.fase === fase));
@@ -204,8 +161,6 @@ export default function VistaBloque({
       // Deja constancia de por dónde iba: el bloque queda "en progreso".
       case "avance":
         guardar({ tipo: "avance", indice: suceso.indice, total: suceso.total });
-        // Un ejercicio nuevo: a leer el enunciado.
-        storeMascota.mirarA(zonaVisor.current);
         break;
 
       // El texto libre de la fase de producir, que es lo que llega al
@@ -235,7 +190,6 @@ export default function VistaBloque({
           mascota.dispara("animo");
           storeMascota.decir(conProfesor ? "cierreSigamosProfesor" : "cierreSigamos", { profesor });
         }
-        storeMascota.mirarA(null);
         break;
       }
 
@@ -243,17 +197,15 @@ export default function VistaBloque({
       // cuenta es el resultado del bloque, que va en "final". La
       // mascota sí se entera.
       case "intento":
-        reaccionarAlIntento(suceso.correcto);
+        reaccionarEnPractica(suceso);
         break;
 
       // Al volver a un ejercicio desde el cierre, o al repetir el
-      // bloque, la mascota del panel se vuelve a montar: en reposo, no
+      // bloque, la mascota vuelve al pie del ejercicio: en reposo, no
       // repitiendo el último gesto.
       case "salto":
       case "reinicio":
-        racha.current = { seguidos: 0, trasFallo: false };
         mascota.dispara("idle");
-        storeMascota.mirarA(zonaVisor.current);
         break;
     }
   }
@@ -274,7 +226,6 @@ export default function VistaBloque({
           profesor={profesor}
           hrefParaTi={hrefParaTi}
           alElegir={cerrarPanel}
-          conMascota
         />
       }
       panelAria={todos.navegacion.paraTi}
@@ -326,7 +277,7 @@ export default function VistaBloque({
         ) : null
       }
     >
-      <div ref={zonaVisor} className="mt-5 min-[900px]:mt-7">
+      <div className="mt-5 min-[900px]:mt-7">
         <VisorEjercicios
           ejercicios={unificados}
           alSuceso={alSuceso}

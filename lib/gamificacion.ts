@@ -122,6 +122,20 @@ export function hitos(meses: MesTemario[]): Hito[] {
 }
 
 // ---------------------------------------------------------------
+// Y LA MASCOTA EN CADA EJERCICIO
+//
+// Un ejercicio es lo más frecuente que hay, así que la mascota ahí
+// habla más de lo que celebra: dice el veredicto en su cuadro
+// (components/ejercicios/DialogoMascota) y el gesto es pequeño.
+//
+//   · Práctica generada — ánimo al acertar, duda al fallar, asombro leve
+//     y ánimo en un casi. La única escalada es la de la racha: un rebote
+//     a los 3 seguidos y un salto en el sitio cada 5, nunca estrellas.
+//   · Lección del curso — solo ánimo, duda y piensa. Sin saltos ni
+//     escalada: la lección pasa 187 veces por curso.
+// ---------------------------------------------------------------
+
+// ---------------------------------------------------------------
 // LAS TRES QUE FALTAN, Y QUÉ HACE FALTA PARA CADA UNA
 //
 // Racha, puntos e insignias están decididas pero NO implementadas, y no

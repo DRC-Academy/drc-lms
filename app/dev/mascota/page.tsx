@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import AnclaMascota from "@/components/mascota/AnclaMascota";
+import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
+import { reaccionarEnCurso, reaccionarEnPractica } from "@/components/ejercicios/reaccionesMascota";
+import type { EjercicioUnificado } from "@/lib/ejercicio-unificado";
 import { ESTADOS_MASCOTA, GESTOS_MASCOTA, type EstadoMascota, type GestoMascota } from "@/components/mascota/estados";
 import { INTENSIDADES, estadoVisible, storeMascota, useStoreMascota, type Intensidad } from "@/components/mascota/store";
 
@@ -19,6 +22,13 @@ import { INTENSIDADES, estadoVisible, storeMascota, useStoreMascota, type Intens
  * queda en el repo a propósito: es donde se prueba cada gesto sin
  * tener que provocarlo en el producto. El fondo oscuro es el del banner
  * (banner.fondo): sobre blanco un filete claro no se nota.
+ *
+ * AL FINAL, UN EJERCICIO FALSO DE CADA FORMA, con el visor de verdad:
+ * para ver el cuadro de diálogo (DialogoMascota) sin generar un bloque.
+ * «Práctica» los pinta con fases, veredictos del modelo, explicación y
+ * pista, y reacciona como un bloque; «Curso», como una lección: sin nada
+ * de eso y sin escalada. El ancla del ejercicio es de prioridad 10: con
+ * el visor a la vista, la mascota se va ahí.
  */
 
 const NOMBRES_ESTADO: Record<EstadoMascota, string> = {
@@ -59,6 +69,93 @@ const ANCLAS = [
 const DE_BASE: readonly EstadoMascota[] = ["idle", "estudiando", "nivel_superado"];
 const DE_PASO = ESTADOS_MASCOTA.filter((e) => !DE_BASE.includes(e));
 const VELOCIDADES = [0.5, 1, 2] as const;
+
+/** Lo que el visor pide y un ejercicio de prueba no trae. */
+const VACIO: Omit<EjercicioUnificado, "id" | "forma" | "enunciado"> = {
+  fase: null,
+  apoyo: null,
+  opciones: [],
+  correctas: [],
+  variasCorrectas: false,
+  huecos: [],
+  respuestas: [],
+  pista: null,
+  criterios: [],
+  modelo: null,
+  explicacion: null,
+  veredictoAcierto: null,
+  veredictoFallo: null,
+};
+
+/** Uno de cada forma, como vendrían de un bloque generado. */
+const DE_PRACTICA: EjercicioUnificado[] = [
+  {
+    ...VACIO,
+    id: "dev-opciones",
+    forma: "opciones",
+    fase: "reconocer",
+    enunciado: "I've lived here ___ 2019.",
+    opciones: ["for", "since", "during", "from"],
+    correctas: [1],
+    explicacion: "«Since» va con el momento en que empezó algo (2019); «for», con cuánto dura (for five years).",
+    veredictoAcierto: "«Since» marca el punto de partida, y 2019 lo es.",
+    veredictoFallo: "2019 es un momento, no una duración: ahí va «since».",
+  },
+  {
+    ...VACIO,
+    id: "dev-varias",
+    forma: "opciones",
+    fase: "reconocer",
+    enunciado: "¿Cuáles de estas frases están en present perfect?",
+    opciones: ["I have finished", "I finished", "She has gone", "They were going"],
+    correctas: [0, 2],
+    variasCorrectas: true,
+    explicacion: "El present perfect se forma con have/has + participio: «have finished», «has gone».",
+  },
+  {
+    ...VACIO,
+    id: "dev-huecos",
+    forma: "huecos",
+    fase: "transformar",
+    enunciado: "Yesterday I {{1}} (go) to the cinema and {{2}} (see) a great film.",
+    huecos: [["went"], ["saw"]],
+    explicacion: "«Yesterday» pide pasado simple: go → went, see → saw. Los dos son irregulares.",
+  },
+  {
+    ...VACIO,
+    id: "dev-escritura",
+    forma: "escritura",
+    fase: "transformar",
+    enunciado: "Reescribe la frase en pasiva.",
+    apoyo: "They built this bridge in 1890.",
+    respuestas: ["This bridge was built in 1890", "This bridge was built in 1890."],
+    pista: "Empieza por «This bridge» y usa was + participio.",
+    explicacion: "En pasiva, el objeto pasa a sujeto y el verbo va con «be» en el mismo tiempo: built → was built.",
+    veredictoFallo: "El sujeto nuevo es el puente, y el verbo lleva «was».",
+  },
+  {
+    ...VACIO,
+    id: "dev-libre",
+    forma: "libre",
+    fase: "producir",
+    enunciado: "Cuéntale a un amigo algo que has hecho esta semana.",
+    apoyo: "Dos o tres frases, en present perfect o past simple.",
+    criterios: ["Usa al menos un verbo en pasado", "Dice cuándo pasó"],
+    modelo: "I've started a new course this week. On Monday I went to my first class.",
+  },
+];
+
+/** Los mismos, como vendrían del curso: sin fases, veredictos, explicación ni pista. */
+const DE_CURSO: EjercicioUnificado[] = DE_PRACTICA.filter((e) => e.forma !== "escritura").map((e) => ({
+  ...e,
+  id: `${e.id}-curso`,
+  fase: null,
+  apoyo: e.forma === "libre" ? null : e.apoyo,
+  pista: null,
+  explicacion: null,
+  veredictoAcierto: null,
+  veredictoFallo: null,
+}));
 
 const boton = "rounded-full border border-marca-borde bg-white px-3 py-1.5 text-[13px] font-semibold text-marca-tinta hover:bg-marca-niebla";
 const botonElegido = (si: boolean) =>
@@ -180,10 +277,56 @@ export default function TableroMascota() {
         </div>
       </section>
 
+      <EjerciciosDePrueba />
+
       {/* Para bajar hasta que las anclas dejen de verse y probar la percha. */}
       <div className="flex h-[140vh] items-start justify-center rounded-[24px] border border-dashed border-marca-borde pt-10 text-[13px] text-marca-grisSuave">
         Sin anclas a la vista: la mascota se va a la percha, abajo a la derecha.
       </div>
     </main>
+  );
+}
+
+/** El visor con los ejercicios falsos, como bloque o como lección. */
+function EjerciciosDePrueba() {
+  const [modo, setModo] = useState<"practica" | "curso">("practica");
+  const [vuelta, setVuelta] = useState(0);
+  const reaccionar = modo === "practica" ? reaccionarEnPractica : reaccionarEnCurso;
+  const alSuceso = (s: SucesoVisor) => {
+    if (s.tipo === "intento") reaccionar(s);
+  };
+  return (
+    <section id="ejercicios" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2 text-[13.5px] text-marca-gris">
+        <h2 className="mr-2 text-[13px] font-bold uppercase tracking-[0.1em] text-marca-grisSuave">Ejercicios de prueba</h2>
+        {(["practica", "curso"] as const).map((m) => (
+          <button key={m} type="button" aria-pressed={modo === m} onClick={() => { setModo(m); setVuelta((v) => v + 1); }} className={botonElegido(modo === m)}>
+            {m === "practica" ? "Práctica" : "Curso"}
+          </button>
+        ))}
+        <button type="button" onClick={() => setVuelta((v) => v + 1)} className={boton}>
+          Empezar de nuevo
+        </button>
+      </div>
+      <div className="rounded-[24px] bg-marca-niebla px-4 py-6 min-[900px]:px-8">
+        <div className="mx-auto max-w-[696px]">
+          <VisorEjercicios
+            key={`${modo}-${vuelta}`}
+            ejercicios={modo === "practica" ? DE_PRACTICA : DE_CURSO}
+            alSuceso={alSuceso}
+            cierre={({ aciertos, total, repetir }) => (
+              <div className="flex flex-col items-start gap-3">
+                <p className="text-[15px] text-marca-tinta">
+                  {aciertos} de {total}
+                </p>
+                <button type="button" onClick={repetir} className={boton}>
+                  Repetir
+                </button>
+              </div>
+            )}
+          />
+        </div>
+      </div>
+    </section>
   );
 }

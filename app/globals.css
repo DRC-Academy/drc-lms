@@ -502,6 +502,13 @@
     body:has(nav[data-nav-inferior]):has([data-barra-inferior]) .zona-ayuda {
       bottom: calc(162px + env(safe-area-inset-bottom));
     }
+
+    /* Con el cuadro de la mascota abierto (el dock de DialogoMascota),
+       por encima de él: el dock escribe su alto en `--dock-dialogo`. La
+       clase repetida gana a las dos reglas de arriba sin `!important`. */
+    body:has([data-dock-dialogo]) .zona-ayuda.zona-ayuda {
+      bottom: calc(max(var(--nav-inferior, 0px), env(safe-area-inset-bottom)) + var(--dock-dialogo, 0px) + 12px);
+    }
   }
 }
 
