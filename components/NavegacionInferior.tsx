@@ -42,6 +42,7 @@ export default function NavegacionInferior({
     <nav
       aria-label={secciones}
       data-nav-inferior
+      data-tour="navegacion"
       className="fixed inset-x-0 bottom-0 z-40 grid border-t border-marca-borde bg-white/[0.96] px-1 pt-2 backdrop-blur-md min-[900px]:hidden"
       style={{
         gridTemplateColumns: `repeat(${celdas}, minmax(0, 1fr))`,

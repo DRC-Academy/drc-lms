@@ -145,7 +145,7 @@ function UltimaClase({ clase, profesores, t }: { clase: ClaseDelRecorrido; profe
 /** Sin horario: dónde van a salir las clases, y la práctica mientras tanto. */
 function SinClases({ t, hrefPractica }: { t: Textos["clases"]; hrefPractica: string }) {
   return (
-    <section className="entra flex flex-col items-start gap-5 rounded-[16px] border border-marca-borde bg-white p-5 shadow-[0_10px_24px_rgba(18,33,26,0.07)] min-[700px]:flex-row min-[700px]:items-center min-[900px]:rounded-[20px] min-[900px]:p-8">
+    <section data-tour="clases-vacio" className="entra flex flex-col items-start gap-5 rounded-[16px] border border-marca-borde bg-white p-5 shadow-[0_10px_24px_rgba(18,33,26,0.07)] min-[700px]:flex-row min-[700px]:items-center min-[900px]:rounded-[20px] min-[900px]:p-8">
       <AnclaMascota id="clases-vacio" prioridad={1} tamaño={130} />
       <div className="flex min-w-0 flex-col gap-2">
         <h2 className="font-display text-[20px] font-bold leading-tight text-marca-tinta min-[900px]:text-[24px]">{t.vacioTitulo}</h2>

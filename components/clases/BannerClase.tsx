@@ -78,6 +78,7 @@ export default function BannerClase({
 
   return (
     <section
+      data-tour="proxima-clase"
       className={`relative overflow-hidden rounded-[22px] border px-5 pb-6 pt-5 shadow-[0_18px_40px_-26px_rgba(18,33,26,0.45)] sm:px-7 sm:pb-7 sm:pt-6 ${
         abierta ? "border-marca-verde bg-marca-verdeFondo" : "border-marca-borde bg-white"
       }`}
@@ -223,7 +224,11 @@ export function BotonClase({
 
   if (!enlace) {
     return (
-      <p className="inline-flex rounded-[14px] border border-marca-bordeSuave bg-white/70 px-4 py-3 text-[15px] font-semibold text-marca-tintaMedia">
+      <p
+        data-tour="unirse"
+        data-tour-estado="sin-enlace"
+        className="inline-flex rounded-[14px] border border-marca-bordeSuave bg-white/70 px-4 py-3 text-[15px] font-semibold text-marca-tintaMedia"
+      >
         {t.sinEnlace}
       </p>
     );
@@ -232,6 +237,8 @@ export function BotonClase({
   if (ventanaAbierta(proxima, ahora)) {
     return (
       <a
+        data-tour="unirse"
+        data-tour-estado="abierta"
         href={enlace}
         target="_blank"
         // `noopener` no es ceremonia: sin él, la pestaña que se abre puede
@@ -245,7 +252,7 @@ export function BotonClase({
   }
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+    <div data-tour="unirse" data-tour-estado="cerrada" className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
       <button
         type="button"
         disabled
@@ -333,7 +340,7 @@ export function cuando(proxima: ProximaClase, t: TextosClases, ahora: Date): str
 /** La línea neutra que sustituye al banner cuando no hay próxima clase. */
 export function SinProxima({ t }: { t: TextosClases }) {
   return (
-    <p className="rounded-[22px] border border-marca-borde bg-white px-5 py-4 text-[15px] text-marca-tintaMedia">
+    <p data-tour="clases-vacio" className="rounded-[22px] border border-marca-borde bg-white px-5 py-4 text-[15px] text-marca-tintaMedia">
       {t.sinProxima}
     </p>
   );

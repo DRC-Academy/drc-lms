@@ -32,6 +32,7 @@ import BarraLateral, { BarraLateralCargando } from "@/components/leccion/BarraLa
 import MenuPerfil from "@/components/leccion/MenuPerfil";
 import { ProveedorMarco } from "@/components/leccion/MarcoCurso";
 import NavegacionInferior from "@/components/NavegacionInferior";
+import Tutorial from "@/components/tutorial/Tutorial";
 
 export type { SeccionActiva, EnlaceSeccion } from "@/components/IconoSeccion";
 
@@ -115,6 +116,17 @@ export default function MarcoApp({ datos, children }: { datos: DatosNavegacion; 
           escritorio la abre el icono de la barra; el botón flotante, solo
           en móvil. */}
       {enlaces.length > 0 && <ChatAyuda nombre={nombre} botonFlotante="movil" />}
+      {/* El recorrido guiado: uno para toda la app, aquí para que
+          sobreviva a la navegación entre pantallas. */}
+      {enlaces.length > 0 && (
+        <Tutorial
+          rutas={{
+            inicio: inicioHref,
+            clases: conFoco("/clases", datos.foco),
+            practica: conFoco("/practica", datos.foco),
+          }}
+        />
+      )}
     </ProveedorMarco>
   );
 }

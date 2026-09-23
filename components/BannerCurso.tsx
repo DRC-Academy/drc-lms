@@ -154,7 +154,7 @@ export default function BannerCurso({
       : curso.titulo;
 
   return (
-    <section>
+    <section data-tour="curso">
       <Banner
         eyebrow={etiqueta}
         title={titulo}

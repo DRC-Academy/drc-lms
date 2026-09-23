@@ -68,7 +68,7 @@ export default function BarraLateral({
         <Image src="/simbolo-drc.png" alt="DRC Academy" width={40} height={40} priority className="h-10 w-10" />
       </Link>
 
-      <nav className="flex flex-col gap-1.5">
+      <nav data-tour="navegacion" className="flex flex-col gap-1.5">
         {enlaces.map((enlace) => {
           const activo = enlace.clave === seccion;
           return (

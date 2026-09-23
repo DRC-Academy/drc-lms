@@ -74,6 +74,17 @@ export type TextosMascota = {
     /** No hay un enlace utilizable: no hay botón que pulsar. */
     sinEnlace: FraseClase[];
   };
+  /** Los mandos del recorrido guiado. Lo que dice cada paso está en lib/tutorial/pasos.ts. */
+  tutorial: {
+    /** El nombre del cuadro para el lector de pantalla. */
+    aria: string;
+    siguiente: string;
+    atras: string;
+    /** El último paso: cierra el recorrido. */
+    terminar: string;
+    saltar: string;
+    pasoDe: (n: number, total: number) => string;
+  };
 };
 
 export type ClaveBurbuja = keyof TextosMascota["burbujas"];
@@ -89,6 +100,14 @@ export const MASCOTA: Record<Idioma, TextosMascota> = {
       cierreSigamosProfesor: (profesor) => `Buen trabajo, sigamos. Se lo contaré a ${profesor}`,
     },
     feedback: MASCOTA_FEEDBACK.es,
+    tutorial: {
+      aria: "Recorrido guiado",
+      siguiente: "Siguiente",
+      atras: "Atrás",
+      terminar: "Terminar",
+      saltar: "Saltar el recorrido",
+      pasoDe: (n, total) => `${n} de ${total}`,
+    },
     clase: {
       cerrada: [
         (d) => (d.profesor ? `Aquí entrarás a tu clase con ${d.profesor}` : "Aquí entrarás a tu clase"),
@@ -124,6 +143,14 @@ export const MASCOTA: Record<Idioma, TextosMascota> = {
       cierreSigamosProfesor: (profesor) => `Good work, let's keep going. I'll tell ${profesor}`,
     },
     feedback: MASCOTA_FEEDBACK.en,
+    tutorial: {
+      aria: "Guided tour",
+      siguiente: "Next",
+      atras: "Back",
+      terminar: "Finish",
+      saltar: "Skip the tour",
+      pasoDe: (n, total) => `${n} of ${total}`,
+    },
     clase: {
       cerrada: [
         (d) => (d.profesor ? `This is where you'll join your class with ${d.profesor}` : "This is where you'll join your class"),

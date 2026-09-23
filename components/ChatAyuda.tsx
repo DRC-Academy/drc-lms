@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { lanzarTutorial } from "@/components/tutorial/eventos";
 import { usePathname } from "next/navigation";
 import { FAQ, buscar, enlaceSoporte, preguntaPorId } from "@/lib/faq";
 import { usarIdioma } from "@/components/ProveedorIdioma";
@@ -271,6 +272,8 @@ export default function ChatAyuda({
         <section
           role="dialog"
           aria-label={t.dialogo}
+          // Lo mira el onboarding: con la Ayuda abierta no se lanza.
+          data-ayuda-abierta
           className="fixed inset-0 flex flex-col overflow-hidden bg-marca-niebla min-[640px]:static min-[640px]:h-[min(620px,calc(100vh-150px))] min-[640px]:w-[380px] min-[640px]:rounded-[16px] min-[640px]:border min-[640px]:border-marca-borde min-[640px]:shadow-[0_18px_44px_-16px_rgba(18,33,26,0.35)]"
         >
           {/* ------------------------------ CABECERA ------------------------------ */}
@@ -422,6 +425,18 @@ export default function ChatAyuda({
               className="text-[13.5px] font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
             >
               {t.prefieresSoporte}
+            </button>
+            {/* El recorrido guiado, cuando se quiera: cierra la Ayuda y
+                empieza desde el primer paso. No lo marca como visto. */}
+            <button
+              type="button"
+              onClick={() => {
+                cerrar();
+                lanzarTutorial("manual");
+              }}
+              className="mt-1 flex min-h-[44px] items-center text-[13.5px] font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
+            >
+              {t.verRecorrido}
             </button>
           </div>
         </section>

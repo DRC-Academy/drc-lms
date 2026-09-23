@@ -22,6 +22,8 @@ import PanelAlumno from "@/components/PanelAlumno";
 import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
 import { FranjaClase, LineaClase } from "@/components/clases/BannerClase";
 import RefrescoEnCortes from "@/components/clases/RefrescoEnCortes";
+import ArranqueTutorial from "@/components/tutorial/ArranqueTutorial";
+import { tutorialPendiente } from "@/lib/tutorial/estado";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
 // prerenderizar y los datos cambian en cuanto se analiza una clase nueva.
@@ -47,6 +49,10 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   const revisando = sesion.rol === "admin";
   const foco = revisando ? params.id : null;
 
+  // Si toca el recorrido guiado. Se pide a la vez que lo demás; ante
+  // cualquier fallo dice que no (ver lib/tutorial/estado.ts).
+  const pendienteTutorial = sesion.rol === "alumno" ? tutorialPendiente(params.id) : Promise.resolve(false);
+
   // Gestión primero: de su `plan` y su `nivel` sale qué cursos le tocan,
   // así que la consulta de cursos no puede ir en el mismo lote.
   const [datos, progreso, generadosCrudos, ultimaGeneracion, calendario, quitas] = await Promise.all([
@@ -60,7 +66,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
     obtenerCalendario(params.id),
     obtenerQuitas(params.id),
   ]);
-
+  const onboarding = await pendienteTutorial;
 
   // LOS BLOQUES, EN EL IDIOMA EN EL QUE SE ESTÁ LEYENDO.
   //
@@ -273,7 +279,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
             o tres líneas según el ancho, y con el avatar centrado contra
             el bloque entero flotaría a media altura en unos anchos sí y
             en otros no. */}
-        <div className="entra mb-4 flex items-start gap-3.5 min-[900px]:mb-[22px] min-[900px]:gap-4">
+        <div data-tour="saludo" className="entra mb-4 flex items-start gap-3.5 min-[900px]:mb-[22px] min-[900px]:gap-4">
           {profesor && <AvatarProfesor nombre={profesor} />}
 
           <div className="min-w-0">
@@ -339,6 +345,10 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
         />
 
         {proxima && <RefrescoEnCortes cortes={[proxima.abreEn.getTime(), proxima.terminaEn.getTime()]} />}
+
+        {/* EL ONBOARDING: el recorrido guiado, la primera vez. Solo el
+            propio alumno; el equipo revisando la ficha no lo dispara. */}
+        {onboarding && <ArranqueTutorial />}
 
       </main>
     </div>

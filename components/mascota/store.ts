@@ -89,6 +89,8 @@ type Estado = {
   movimiento: { nombre: MovimientoMascota; n: number } | undefined;
   burbuja: { clave: ClaveBurbuja; profesor?: string; n: number } | undefined;
   mirarA: HTMLElement | null;
+  /** El recorrido guiado está en marcha: la capa sube por encima de su velo. */
+  alFrente: boolean;
   escena: { nombre: EscenaMascota; n: number } | undefined;
   intensidad: Intensidad;
   velocidad: number;
@@ -118,6 +120,7 @@ let estado: Estado = {
   movimiento: undefined,
   burbuja: undefined,
   mirarA: null,
+  alFrente: false,
   escena: undefined,
   intensidad: "normal",
   velocidad: 1,
@@ -227,6 +230,12 @@ export const storeMascota = {
   },
 
   /** Mirar hacia un elemento (null: dejar de mirarlo). Manda sobre el cursor. */
+  /** El recorrido guiado (components/tutorial) la pone delante de su velo, y la devuelve. */
+  fijarAlFrente(alFrente: boolean) {
+    if (estado.alFrente === alFrente) return;
+    cambiar({ alFrente }, { tipo: "escena", detalle: alFrente ? "recorrido guiado" : "fin del recorrido" });
+  },
+
   mirarA(el: HTMLElement | null) {
     if (estado.mirarA === el) return;
     cambiar({ mirarA: el });

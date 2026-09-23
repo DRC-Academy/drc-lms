@@ -225,6 +225,8 @@ export default function CapaMascota() {
   const movimiento = useStoreMascota((e) => e.movimiento);
   const burbujaPedida = useStoreMascota((e) => e.burbuja);
   const escena = useStoreMascota((e) => e.escena);
+  // Durante el recorrido guiado, por encima de su velo (z-60).
+  const alFrente = useStoreMascota((e) => e.alFrente);
   const [miradaPagina, setMiradaPagina] = useState<MiradaMascota>();
   const [burbuja, setBurbuja] = useState<{ texto: string; n: number }>();
   const burbujaEl = useRef<HTMLDivElement>(null);
@@ -703,7 +705,8 @@ export default function CapaMascota() {
   // pantalla que la de llegada, y dos seguidas sobran.
   const burbujaEnPantalla = useRef<string | null>(null);
   useEffect(() => {
-    if (!burbujaPedida || enVuelo) return;
+    // Durante el recorrido guiado habla el recorrido, no las burbujas.
+    if (!burbujaPedida || enVuelo || storeMascota.leer().alFrente) return;
     const reloj = setTimeout(() => {
       const dichas = (leerSesion(CLAVE_BURBUJAS) ?? "").split(",").filter(Boolean);
       const sobra = burbujaPedida.clave === "bloqueListo" && dichas.length > 0;
@@ -797,7 +800,7 @@ export default function CapaMascota() {
   return (
     <>
     {/* La burbuja: fuera de la capa, que es aria-hidden, porque dice algo. */}
-    <div className="pointer-events-none fixed inset-0 z-[39] overflow-hidden">
+    <div className={`pointer-events-none fixed inset-0 overflow-hidden ${alFrente ? "z-[63]" : "z-[39]"}`}>
       <div
         ref={burbujaEl}
         role="status"
@@ -809,7 +812,7 @@ export default function CapaMascota() {
         {burbuja?.texto}
       </div>
     </div>
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-[38] overflow-hidden">
+    <div aria-hidden className={`pointer-events-none fixed inset-0 overflow-hidden ${alFrente ? "z-[62]" : "z-[38]"}`}>
       {/* Para leer el safe-area de abajo, que solo sabe CSS. */}
       <div ref={safeArea} className="invisible absolute" style={{ paddingBottom: "env(safe-area-inset-bottom)" }} />
       <div

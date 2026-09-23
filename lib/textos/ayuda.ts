@@ -38,6 +38,8 @@ export type TextosAyuda = {
   puedeQueSeaAlguna: string;
   escribirPorWhatsApp: string;
   prefieresSoporte: string;
+  /** El botón del pie que lanza el recorrido guiado. */
+  verRecorrido: string;
   respuestaNoDisponible: string;
 
   teHaServido: string;
@@ -73,6 +75,7 @@ const ES: TextosAyuda = {
   puedeQueSeaAlguna: "Puede que sea alguna de estas:",
   escribirPorWhatsApp: "Escribir por WhatsApp",
   prefieresSoporte: "¿Prefieres hablar con soporte?",
+  verRecorrido: "Ver el recorrido guiado",
   respuestaNoDisponible: "Esta respuesta ya no está disponible.",
 
   teHaServido: "¿Te ha servido?",
@@ -107,6 +110,7 @@ const EN: TextosAyuda = {
   puedeQueSeaAlguna: "It might be one of these:",
   escribirPorWhatsApp: "Message us on WhatsApp",
   prefieresSoporte: "Would you rather talk to support?",
+  verRecorrido: "Take the guided tour",
   respuestaNoDisponible: "This answer is no longer available.",
 
   teHaServido: "Did that help?",

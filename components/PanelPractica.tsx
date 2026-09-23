@@ -175,7 +175,12 @@ export default function PanelPractica({
       {/* ================================ LA RUTA ================================
           Sin ninguna parada todavía no hay camino que pintar: manda la
           invitación, que es lo único que el alumno puede hacer. */}
-      <div ref={zonaNuevos} className="mt-5 scroll-mt-20 min-[900px]:mt-[26px]">
+      <div
+        ref={zonaNuevos}
+        data-tour="ruta"
+        data-tour-estado={paradas.length > 0 ? "con-paradas" : "vacia"}
+        className="mt-5 scroll-mt-20 min-[900px]:mt-[26px]"
+      >
         {paradas.length > 0 ? (
           <Ruta
             paradas={paradas}
