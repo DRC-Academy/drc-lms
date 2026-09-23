@@ -145,8 +145,19 @@ const DE_PRACTICA: EjercicioUnificado[] = [
   },
 ];
 
-/** Los mismos, como vendrían del curso: sin fases, veredictos, explicación ni pista. */
-const DE_CURSO: EjercicioUnificado[] = DE_PRACTICA.filter((e) => e.forma !== "escritura").map((e) => ({
+/**
+ * Los mismos, como vendrían del curso: sin fases, veredictos, explicación
+ * ni pista. Con dos de opciones más, para poder encadenar tres aciertos
+ * después de un fallo.
+ */
+const MAS_DEL_CURSO: EjercicioUnificado[] = [
+  { ...VACIO, id: "dev-curso-a", forma: "opciones", enunciado: "She ___ to work every day.", opciones: ["go", "goes", "going", "gone"], correctas: [1] },
+  { ...VACIO, id: "dev-curso-b", forma: "opciones", enunciado: "There isn't ___ milk left.", opciones: ["some", "any", "many", "a"], correctas: [1] },
+];
+const DE_CURSO: EjercicioUnificado[] = [
+  ...DE_PRACTICA.filter((e) => e.forma === "opciones" || e.forma === "huecos"),
+  ...MAS_DEL_CURSO,
+].map((e) => ({
   ...e,
   id: `${e.id}-curso`,
   fase: null,

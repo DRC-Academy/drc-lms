@@ -7,9 +7,10 @@
 // respuesta y la explicación. Son las mismas en la práctica generada y
 // en el curso.
 //
-// SEIS POR TIPO, y rotan sin repetir la anterior: en un bloque de diez
-// ejercicios, una sola frase por tipo se leería como un sonido de
-// máquina a la tercera.
+// DOCE POR TIPO, y rotan sin repetir ninguna de las tres últimas de ese
+// tipo: en un bloque de diez ejercicios, pocas frases se leen como un
+// sonido de máquina a la tercera. Es lo mismo en el curso y en la
+// práctica, encadenadas y recuperación incluidas.
 //
 //   correcto      acierto suelto
 //   casi          un solo hueco mal, o los fallos a una o dos letras de
@@ -22,7 +23,13 @@
 //
 // EL TONO. Español de España y tuteo, cálido y corto. La mascota NUNCA
 // dice «incorrecto», «error» ni «mal»: un fallo es algo que mirar
-// juntos, no una nota.
+// juntos, no una nota. Y nunca «racha»: el producto no tiene rachas.
+//
+// SIN GÉNERO. No sabemos quién lee, así que ninguna frase concuerda con
+// el alumno: nada de «lanzado», «atento», «listo» o «seguro»; si hace
+// falta un adjetivo, que sea invariable («imparable», «impecable») o
+// que hable de la respuesta, no de la persona («esta te ha salido
+// redonda»). En inglés no hay problema, pero vale la misma idea.
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
@@ -49,6 +56,12 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "¡Bien! Esa era",
         "Perfecto, sigue así",
         "Lo has clavado",
+        "¡Justo esa!",
+        "Así me gusta",
+        "Impecable",
+        "¡Toma ya!",
+        "Eso está hecho",
+        "Qué buen ojo tienes",
       ],
       casi: [
         "Casi, fíjate en esto",
@@ -57,6 +70,12 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "Casi lo tienes",
         "Muy cerca. Un detalle",
         "Te has quedado a un paso",
+        "Rozándolo, mira aquí",
+        "Solo falta un retoque",
+        "A nada de tenerlo",
+        "Casi casi. Mira esto",
+        "Ya casi está, un detallito",
+        "Te ha faltado un pelín",
       ],
       incorrecto: [
         "Vamos a verlo",
@@ -65,6 +84,12 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "Esta cuesta, vamos a verla",
         "Te cuento cómo va",
         "Esta es de las que engañan",
+        "Sin prisa, lo vemos juntos",
+        "A esta hay que darle una vuelta",
+        "Esta pilla a mucha gente",
+        "Buena para repasar, mira",
+        "Fíjate, que tiene su gracia",
+        "Así se aprende, mira",
       ],
       pistaIntro: [
         "A ver, te doy una pista",
@@ -73,6 +98,12 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "Te echo una mano",
         "Piensa en esto",
         "Mira esto, te ayudará",
+        "Un empujoncito",
+        "Esto te puede servir",
+        "Te chivo algo",
+        "Una idea para empezar",
+        "Por aquí van los tiros",
+        "Mira por dónde empezar",
       ],
       encadenadas: [
         "¡Qué bien vas!",
@@ -80,7 +111,13 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "No hay quien te pare",
         "Se te está dando genial",
         "¡Otra más! Sigue así",
-        "Vas lanzado",
+        "Vas a toda máquina",
+        "¡Menudo ritmo!",
+        "Esto fluye, ¡sigue!",
+        "Acierto tras acierto, ¡bien!",
+        "Así da gusto",
+        "¡Imparable!",
+        "Qué buena mano tienes hoy",
       ],
       recuperacion: [
         "¡Ahora sí!",
@@ -89,6 +126,12 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "¿Ves? Ya te sale",
         "Esa sí, ¡genial!",
         "Lo has pillado",
+        "Ya está, ¡así se hace!",
+        "Lo de antes ya queda atrás",
+        "¡Bien! Has vuelto con fuerza",
+        "Esta te ha salido redonda",
+        "Vuelta a la carga, ¡bien!",
+        "Eso es, ya lo ves claro",
       ],
     },
     pista: "Pista",
@@ -104,6 +147,12 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "Yes! That's the one",
         "Perfect, keep going",
         "Nailed it",
+        "Spot on",
+        "Just right",
+        "Flawless",
+        "Great eye",
+        "You got it",
+        "Well done, that's it",
       ],
       casi: [
         "So close, look at this",
@@ -112,6 +161,12 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "Nearly! One detail",
         "You're one step away",
         "Very close, check this",
+        "Nearly had it",
+        "Just one small tweak",
+        "So nearly right",
+        "A hair away, look",
+        "Almost! One little thing",
+        "Close, look here",
       ],
       incorrecto: [
         "Let's take a look",
@@ -120,6 +175,12 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "Tough one, let's see",
         "Let me walk you through it",
         "This one catches lots of people",
+        "Let's look at it together",
+        "This one needs a second look",
+        "No rush, let's see",
+        "Good one to review",
+        "Here's the trick",
+        "This is how we learn, look",
       ],
       pistaIntro: [
         "Here's a hint",
@@ -128,6 +189,12 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "Let me give you a hand",
         "Think about this",
         "Look at this, it'll help",
+        "A little nudge",
+        "This might help",
+        "Here's a tip",
+        "Start from here",
+        "Here's where to look",
+        "An idea to get going",
       ],
       encadenadas: [
         "You're doing so well!",
@@ -135,7 +202,13 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "Nothing's stopping you",
         "You're doing great",
         "Another one! Keep going",
-        "You're on a roll",
+        "Full steam ahead",
+        "What a pace!",
+        "It's flowing, keep going",
+        "Right after right!",
+        "A joy to watch",
+        "Unstoppable!",
+        "You're in great form today",
       ],
       recuperacion: [
         "Now you've got it!",
@@ -144,6 +217,12 @@ export const MASCOTA_FEEDBACK: Record<Idioma, TextosMascotaFeedback> = {
         "See? You've got it now",
         "That's the one, great!",
         "You figured it out",
+        "That's how it's done",
+        "Back on track, nice!",
+        "Got it this time",
+        "Great comeback!",
+        "You worked it out",
+        "Spot on this time",
       ],
     },
     pista: "Hint",

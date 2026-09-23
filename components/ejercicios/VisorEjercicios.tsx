@@ -572,20 +572,27 @@ export default function VisorEjercicios({
   // debajo, el del modelo si lo hay, cuál era la buena (si falló) y la
   // explicación; antes, la pista si la pidió. `libre` no se corrige: no
   // dice nada.
+  // Solo lo que haya: sin veredicto del modelo ni explicación —todo el
+  // curso—, un acierto se queda en la frase y un fallo en la frase y la
+  // respuesta. null, y no un fragmento vacío, para que el cuadro no
+  // reserve sitio para nada.
+  const partes = [
+    veredicto && (
+      <p key="veredicto" className="font-medium text-marca-tinta">
+        {veredicto}
+      </p>
+    ),
+    !yaAcertado && <p key="respuesta">{solucionEscrita ?? tm.laRespuestaEs(solucion)}</p>,
+    ejercicio.explicacion && <p key="explicacion">{ejercicio.explicacion}</p>,
+  ].filter(Boolean);
+  const cuerpoDelVeredicto = partes.length > 0 ? partes : null;
+
   const dialogo: { clave: string; frase: string | null; cuerpo: ReactNode } =
     yaRespondido && estado.dicho && !esLibre
       ? {
           clave: `v:${estado.dicho.tipo}:${estado.dicho.i}`,
           frase: tm.frases[estado.dicho.tipo][estado.dicho.i] ?? null,
-          cuerpo: (
-            <>
-              {veredicto && <p className="font-medium text-marca-tinta">{veredicto}</p>}
-              {!yaAcertado && (
-                <p>{solucionEscrita ?? tm.laRespuestaEs(solucion)}</p>
-              )}
-              {ejercicio.explicacion && <p>{ejercicio.explicacion}</p>}
-            </>
-          ),
+          cuerpo: cuerpoDelVeredicto,
         }
       : !yaRespondido && estado.pista !== null && ejercicio.pista
         ? {

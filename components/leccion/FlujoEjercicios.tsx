@@ -25,8 +25,9 @@ import { reaccionarEnCurso } from "@/components/ejercicios/reaccionesMascota";
  * palabras que en el visor— se fue a `lib/textos-ejercicios.ts`.
  *
  * LA MASCOTA, SIN ESCALADA. El cuadro de diálogo es el mismo que en la
- * práctica (lo pone el visor), pero lo que hace con cada respuesta es
- * menos: ánimo o duda, nunca saltos ni rebotes por racha. La lección
+ * práctica (lo pone el visor), con las mismas frases —las de aciertos
+ * encadenados y las de recuperación incluidas—, pero lo que hace con
+ * cada respuesta es menos: ánimo o duda, nunca saltos ni rebotes por racha. La lección
  * pasa 187 veces por curso y no celebra (ver lib/gamificacion).
  */
 

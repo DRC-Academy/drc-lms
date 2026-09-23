@@ -49,17 +49,18 @@ const TAMAÑO = 100;
 const CARACTERES_POR_SEGUNDO = 40;
 
 /**
- * Cuál de las frases de un tipo toca: al azar, sin repetir la anterior
- * de ese tipo. La memoria es del módulo, así que vale para todos los
- * ejercicios de la visita.
+ * Cuál de las frases de un tipo toca: al azar, sin repetir ninguna de
+ * las SIN_REPETIR últimas de ese tipo (menos, si hay pocas frases). La
+ * memoria es del módulo, así que vale para todos los ejercicios de la
+ * visita.
  */
-const ultimas: Partial<Record<TipoFrase, number>> = {};
+const SIN_REPETIR = 3;
+const ultimas: Partial<Record<TipoFrase, number[]>> = {};
 export function elegirFrase(tipo: TipoFrase, cuantas: number): number {
-  if (cuantas <= 1) return 0;
-  const anterior = ultimas[tipo];
-  let i = Math.floor(Math.random() * (anterior === undefined ? cuantas : cuantas - 1));
-  if (anterior !== undefined && i >= anterior) i += 1;
-  ultimas[tipo] = i;
+  const recientes = (ultimas[tipo] ?? []).slice(-Math.min(SIN_REPETIR, cuantas - 1));
+  const libres = Array.from({ length: cuantas }, (_, i) => i).filter((i) => !recientes.includes(i));
+  const i = libres[Math.floor(Math.random() * libres.length)] ?? 0;
+  ultimas[tipo] = [...recientes, i];
   return i;
 }
 
