@@ -5,8 +5,10 @@
 @tailwind utilities;
 
 @layer base {
+  /* El niebla de marca, el mismo fondo que las pantallas: si algo deja
+     asomar el body, no se nota. */
   body {
-    background: #F4F3EF;
+    background: theme("colors.marca.niebla");
     color: #1F2A24;
     font-weight: 400;
   }
@@ -112,30 +114,37 @@
     body.con-pie-ruta {
       padding-bottom: calc(var(--nav-inferior) + 76px);
     }
-
-    /* Y el botón de ayuda, que flota sobre la navegación: 64px de alto
-       más 12 por debajo y 12 de aire por encima. Sin esto, lo último de
-       la página —a menudo un botón— quedaba bajo él. La clase repetida
-       gana a las dos reglas de arriba. Con la barra de continuar el
-       botón sube por encima de ella (ver «La esquina de la ayuda»). */
-    body:has(nav[data-nav-inferior]):has(.zona-ayuda).con-pie-ruta,
-    body:has(nav[data-nav-inferior]):has(.zona-ayuda) {
-      padding-bottom: calc(var(--nav-inferior) + 88px);
-    }
-    body:has(nav[data-nav-inferior]):has(.zona-ayuda):has([data-barra-inferior]) {
-      padding-bottom: calc(var(--nav-inferior) + 160px);
-    }
   }
 
-  /* En escritorio el botón también flota abajo a la derecha: 24px de
-     suelo, 64 de botón y 12 de aire. Con la barra de continuar, encima
-     de ella (a 96px). */
-  @media (min-width: 900px) {
-    body:has(.zona-ayuda) {
-      padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  /* ---------------------------------------------------------------
+     HUECO PARA EL BOTÓN DE AYUDA
+
+     El botón flota abajo a la derecha y taparía lo último de cada
+     pantalla —a menudo un botón—. La reserva NO va en el `body`: el
+     `body` es más alto que la aplicación y las barras laterales, que son
+     `sticky` de `h-dvh`, se quedaban cortas y asomaba una franja de fondo
+     debajo. Va DENTRO de la zona que hace scroll, el `main` de cada
+     pantalla, como un espaciador al final (`.contenido-app main::after`,
+     más abajo), así que lleva el fondo de la pantalla y no el del body.
+
+     `--hueco-ayuda` es lo que ocupa el botón medido desde el borde de la
+     zona de scroll: su distancia al suelo, sus 64px y 12 de aire. En
+     móvil el suelo es la navegación, cuyo hueco ya reserva el `body`
+     (`--nav-inferior`, arriba). Con la barra de continuar el botón sube
+     por encima de ella (ver «La esquina de la ayuda»).
+     --------------------------------------------------------------- */
+  body:has(.zona-ayuda) {
+    --hueco-ayuda: calc(100px + env(safe-area-inset-bottom));
+  }
+  body:has(.zona-ayuda):has([data-barra-inferior]) {
+    --hueco-ayuda: 172px;
+  }
+  @media (max-width: 899px) {
+    body:has(nav[data-nav-inferior]):has(.zona-ayuda) {
+      --hueco-ayuda: 88px;
     }
-    body:has(.zona-ayuda):has([data-barra-inferior]) {
-      padding-bottom: 172px;
+    body:has(nav[data-nav-inferior]):has(.zona-ayuda):has([data-barra-inferior]) {
+      --hueco-ayuda: 160px;
     }
   }
 
@@ -511,6 +520,16 @@
     .zona-ayuda {
       right: calc(24px + env(safe-area-inset-right));
     }
+  }
+
+  /* El espaciador del hueco de la ayuda (ver «Hueco para el botón de
+     ayuda», arriba): al final del `main` de cada pantalla del marco, con
+     su fondo. En flex no encoge. */
+  .contenido-app main::after {
+    content: "";
+    display: block;
+    flex-shrink: 0;
+    height: var(--hueco-ayuda, 0px);
   }
 
   /* Durante el recorrido guiado el botón no se ve: el recorrido tiene

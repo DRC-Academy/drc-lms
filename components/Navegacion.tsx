@@ -105,7 +105,9 @@ export default function MarcoApp({ datos, children }: { datos: DatosNavegacion; 
       {datos.revisando && <TiraRevision nombre={nombre || undefined} t={t} />}
       <div className="flex min-h-dvh flex-1 items-stretch">
         <BarraLateral enlaces={enlaces} nombre={nombre} inicioHref={inicioHref} />
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        {/* `contenido-app`: aquí dentro, el `main` de cada pantalla deja
+            al final el hueco del botón de ayuda (`globals.css`). */}
+        <div className="contenido-app flex min-w-0 flex-1 flex-col">{children}</div>
       </div>
       <NavegacionInferior
         enlaces={enlaces}
@@ -136,7 +138,7 @@ export function MarcoAppCargando({ children }: { children: ReactNode }) {
     <ProveedorMarco>
       <div className="flex min-h-dvh flex-1 items-stretch">
         <BarraLateralCargando />
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        <div className="contenido-app flex min-w-0 flex-1 flex-col">{children}</div>
       </div>
     </ProveedorMarco>
   );
