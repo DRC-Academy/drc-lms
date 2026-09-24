@@ -112,6 +112,19 @@
     body.con-pie-ruta {
       padding-bottom: calc(var(--nav-inferior) + 76px);
     }
+
+    /* Y el botón de ayuda, que flota sobre la navegación: 64px de alto
+       más 12 por debajo y 12 de aire por encima. Sin esto, lo último de
+       la página —a menudo un botón— quedaba bajo él. La clase repetida
+       gana a las dos reglas de arriba. Con la barra de continuar el
+       botón sube por encima de ella (ver «La esquina de la ayuda»). */
+    body:has(nav[data-nav-inferior]):has(.zona-ayuda).con-pie-ruta,
+    body:has(nav[data-nav-inferior]):has(.zona-ayuda) {
+      padding-bottom: calc(var(--nav-inferior) + 88px);
+    }
+    body:has(nav[data-nav-inferior]):has(.zona-ayuda):has([data-barra-inferior]) {
+      padding-bottom: calc(var(--nav-inferior) + 160px);
+    }
   }
 
   /* ---------------------------------------------------------------
@@ -474,15 +487,39 @@
      la variante `bar` de `Banner`. Mismo truco que el hueco del final de
      la página, unas líneas más arriba.
      --------------------------------------------------------------- */
+  /* Las zonas seguras del iPhone: la barra de inicio abajo y, en
+     horizontal, la muesca a la derecha. */
   .zona-ayuda {
     position: fixed;
-    right: 16px;
-    bottom: 24px;
+    right: calc(16px + env(safe-area-inset-right));
+    bottom: calc(24px + env(safe-area-inset-bottom));
   }
 
   @media (min-width: 640px) {
     .zona-ayuda {
-      right: 24px;
+      right: calc(24px + env(safe-area-inset-right));
+    }
+  }
+
+  /* Durante el recorrido guiado el botón no se ve: el recorrido tiene
+     sus propios botones y la ayuda flotando encima los confundiría. Lo
+     marca el velo de `Tutorial`; al terminar o saltar, vuelve solo. */
+  body:has([data-tutorial-activo]) .zona-ayuda {
+    display: none;
+  }
+
+  /* El menú «Tutorial / Chat»: aparece, sin más. Con movimiento
+     reducido, ni eso. */
+  @media (prefers-reduced-motion: no-preference) {
+    .menu-ayuda {
+      animation: menu-ayuda-entra var(--dur-estado) var(--ease-salida) both;
+    }
+  }
+
+  @keyframes menu-ayuda-entra {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.98);
     }
   }
 

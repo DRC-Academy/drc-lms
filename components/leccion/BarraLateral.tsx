@@ -1,10 +1,13 @@
 "use client";
 
+import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icono, panelDeRuta, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSeccion";
 import { abrirAyuda } from "@/components/ChatAyuda";
+import MenuAyuda from "@/components/MenuAyuda";
+import { lanzarTutorial } from "@/components/tutorial/eventos";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import MenuPerfil, { Globo } from "@/components/leccion/MenuPerfil";
 import { usarMarco } from "@/components/leccion/MarcoCurso";
@@ -42,6 +45,14 @@ export default function BarraLateral({
 }) {
   const { t } = usarIdioma();
   const { abrirPanel } = usarMarco();
+  // El menú «Tutorial / Chat» del icono de ayuda: el mismo del botón
+  // flotante de móvil (`MenuAyuda`), aquí a la derecha del icono.
+  const [menuAyuda, setMenuAyuda] = useState(false);
+  const botonAyuda = useRef<HTMLButtonElement>(null);
+  const cerrarMenuAyuda = useCallback((devolverFoco: boolean) => {
+    setMenuAyuda(false);
+    if (devolverFoco) botonAyuda.current?.focus();
+  }, []);
   const ruta = usePathname() ?? "/";
   const seccion = seccionDeRuta(ruta);
   const tipoPanel = panelDeRuta(ruta);
@@ -103,15 +114,38 @@ export default function BarraLateral({
       </nav>
 
       <div className="mt-auto flex flex-col items-center gap-2.5">
-        <button
-          type="button"
-          onClick={abrirAyuda}
-          aria-label={t.navegacion.ayuda}
-          className="group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors hover:bg-marca-niebla focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc"
-        >
-          <IconoAyuda />
-          <Globo>{t.navegacion.ayuda}</Globo>
-        </button>
+        <div className="relative">
+          <button
+            ref={botonAyuda}
+            type="button"
+            data-boton-ayuda
+            onClick={() => (menuAyuda ? cerrarMenuAyuda(true) : setMenuAyuda(true))}
+            aria-label={t.navegacion.ayuda}
+            aria-expanded={menuAyuda}
+            aria-haspopup="menu"
+            className={`group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors hover:bg-marca-niebla focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verde ${
+              menuAyuda ? "bg-marca-niebla" : ""
+            }`}
+          >
+            <IconoAyuda />
+            {!menuAyuda && <Globo>{t.navegacion.ayuda}</Globo>}
+          </button>
+          {menuAyuda && (
+            <MenuAyuda
+              lado="derecha"
+              disparador={botonAyuda}
+              onCerrar={cerrarMenuAyuda}
+              onTutorial={() => {
+                setMenuAyuda(false);
+                lanzarTutorial("manual");
+              }}
+              onChat={() => {
+                setMenuAyuda(false);
+                abrirAyuda();
+              }}
+            />
+          )}
+        </div>
 
         <MenuPerfil nombre={nombre} variante="barra" />
       </div>

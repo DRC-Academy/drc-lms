@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { lanzarTutorial } from "@/components/tutorial/eventos";
+import MenuAyuda from "@/components/MenuAyuda";
 import { usePathname } from "next/navigation";
 import { FAQ, buscar, enlaceSoporte, preguntaPorId } from "@/lib/faq";
 import { usarIdioma } from "@/components/ProveedorIdioma";
@@ -91,6 +92,8 @@ export default function ChatAyuda({
   const t = textos.ayuda;
 
   const [abierto, setAbierto] = useState(false);
+  // El menú «Tutorial / Chat» del botón flotante. El chat se abre desde él.
+  const [menu, setMenu] = useState(false);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const lanzadorSoloMovil = botonFlotante === "movil";
   const [consulta, setConsulta] = useState("");
@@ -125,13 +128,27 @@ export default function ChatAyuda({
   const cerrar = useCallback(() => {
     setAbierto(false);
     // El foco vuelve de donde salió: si no, quien navega con teclado
-    // acaba al principio de la página después de cerrar.
-    lanzador.current?.focus();
+    // acaba al principio de la página después de cerrar. Tras pintar,
+    // porque con el chat abierto el botón está oculto (en móvil) y un
+    // `focus()` sobre algo oculto no hace nada; y al botón de ayuda que
+    // se vea, que en escritorio es el icono de la barra lateral.
+    requestAnimationFrame(() => {
+      const visible = Array.from(document.querySelectorAll<HTMLElement>("[data-boton-ayuda]")).find(
+        (boton) => boton.offsetParent !== null
+      );
+      visible?.focus();
+    });
+  }, []);
+
+  const cerrarMenu = useCallback((devolverFoco: boolean) => {
+    setMenu(false);
+    if (devolverFoco) lanzador.current?.focus();
   }, []);
 
   // Alguien de fuera —el icono de la barra de la lección— pide abrir.
   useEffect(() => {
     function alPedir() {
+      setMenu(false);
       setAbierto(true);
       setMensajes((previos) =>
         previos.length === 0
@@ -445,19 +462,43 @@ export default function ChatAyuda({
       {/* ------------------------------ LANZADOR ------------------------------ */}
       {/* Se esconde con el panel abierto en móvil, donde el panel ocupa
           toda la pantalla y el botón quedaría flotando encima de su
-          propio contenido. */}
+          propio contenido.
+
+          CERRADO EL CHAT, ABRE UN MENÚ: «Tutorial» o «Chat». Con el chat
+          abierto (desde 640px sigue a la vista) lo cierra, como antes.
+          64px de alto: lo pulsan adultos, algunos con el pulgar y gafas
+          de cerca. Durante el recorrido guiado no se ve (`globals.css`,
+          `[data-tutorial-activo]`). */}
       <button
         ref={lanzador}
         type="button"
-        onClick={() => (abierto ? cerrar() : abrir())}
-        aria-expanded={abierto}
-        className={`btn-verde inline-flex min-h-[48px] items-center gap-2 rounded-full px-5 text-[15px] font-semibold ${
+        data-boton-ayuda
+        onClick={() => (abierto ? cerrar() : menu ? cerrarMenu(true) : setMenu(true))}
+        aria-expanded={abierto || menu}
+        aria-haspopup="menu"
+        className={`btn-verde inline-flex min-h-[64px] items-center gap-2.5 rounded-full px-6 text-[17px] font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verde ${
           abierto ? "hidden min-[640px]:inline-flex" : ""
         } ${lanzadorSoloMovil && !abierto ? "min-[900px]:hidden" : ""}`}
       >
-        <IconoAyuda className="h-[19px] w-[19px]" />
-        {abierto ? t.cerrar : t.ayuda}
+        {menu ? <IconoCerrar className="h-6 w-6" /> : <IconoAyuda className="h-6 w-6" />}
+        {abierto || menu ? t.cerrar : t.ayuda}
       </button>
+
+      {menu && (
+        <MenuAyuda
+          lado="arriba"
+          disparador={lanzador}
+          onCerrar={cerrarMenu}
+          onTutorial={() => {
+            setMenu(false);
+            lanzarTutorial("manual");
+          }}
+          onChat={() => {
+            setMenu(false);
+            abrir();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -557,6 +598,14 @@ function IconoAyuda({ className }: { className: string }) {
       <path d="M17 9.6c0 3.4-3.1 6.1-7 6.1-.7 0-1.4-.1-2-.3L4 16.6l.9-2.5A5.8 5.8 0 0 1 3 9.6c0-3.4 3.1-6.1 7-6.1s7 2.7 7 6.1Z" stroke="currentColor" />
       <path d="M8.4 8.2a1.7 1.7 0 1 1 2.4 1.6c-.5.2-.8.7-.8 1.2" stroke="currentColor" />
       <path d="M10 13.1h.01" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function IconoCerrar({ className }: { className: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M5 5l10 10M15 5 5 15" />
     </svg>
   );
 }

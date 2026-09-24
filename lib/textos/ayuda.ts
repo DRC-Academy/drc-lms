@@ -40,6 +40,12 @@ export type TextosAyuda = {
   prefieresSoporte: string;
   /** El botón del pie que lanza el recorrido guiado. */
   verRecorrido: string;
+  /** El menú del botón de ayuda: `aria-label` y sus dos opciones. */
+  menuAyuda: string;
+  opcionTutorial: string;
+  opcionTutorialDetalle: string;
+  opcionChat: string;
+  opcionChatDetalle: string;
   respuestaNoDisponible: string;
 
   teHaServido: string;
@@ -76,6 +82,11 @@ const ES: TextosAyuda = {
   escribirPorWhatsApp: "Escribir por WhatsApp",
   prefieresSoporte: "¿Prefieres hablar con soporte?",
   verRecorrido: "Ver el recorrido guiado",
+  menuAyuda: "Ayuda",
+  opcionTutorial: "Tutorial",
+  opcionTutorialDetalle: "Te enseño dónde está cada cosa",
+  opcionChat: "Chat",
+  opcionChatDetalle: "Pregúntanos lo que necesites",
   respuestaNoDisponible: "Esta respuesta ya no está disponible.",
 
   teHaServido: "¿Te ha servido?",
@@ -111,6 +122,11 @@ const EN: TextosAyuda = {
   escribirPorWhatsApp: "Message us on WhatsApp",
   prefieresSoporte: "Would you rather talk to support?",
   verRecorrido: "Take the guided tour",
+  menuAyuda: "Help",
+  opcionTutorial: "Tutorial",
+  opcionTutorialDetalle: "I'll show you around",
+  opcionChat: "Chat",
+  opcionChatDetalle: "Ask us anything",
   respuestaNoDisponible: "This answer is no longer available.",
 
   teHaServido: "Did that help?",

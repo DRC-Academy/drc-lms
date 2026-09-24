@@ -283,8 +283,10 @@ export default function Tutorial({ rutas }: { rutas: Record<Exclude<RutaTutorial
 
   return (
     <>
-      {/* EL VELO, con el recorte. Sin paso resuelto (navegando), sin recorte. */}
-      <svg aria-hidden className="fixed inset-0 z-[60] h-full w-full" style={{ pointerEvents: "auto" }}>
+      {/* EL VELO, con el recorte. Sin paso resuelto (navegando), sin recorte.
+          `data-tutorial-activo` esconde el botón de ayuda mientras dura
+          (`globals.css`). */}
+      <svg aria-hidden data-tutorial-activo className="fixed inset-0 z-[60] h-full w-full" style={{ pointerEvents: "auto" }}>
         <defs>
           <mask id="recorte-tutorial">
             <rect x="0" y="0" width="100%" height="100%" fill="white" />
