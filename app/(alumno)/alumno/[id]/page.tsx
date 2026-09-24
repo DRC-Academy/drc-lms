@@ -1,7 +1,9 @@
 import { nivelDelAlumno } from "@/lib/estimacion";
 import { notFound } from "next/navigation";
-import { obtenerAlumno, obtenerCalendario, obtenerQuitas } from "@/lib/gestion";
-import { proximaDelAlumno, ventanaAbierta } from "@/lib/clases";
+import { obtenerAlumno, obtenerCalendario, obtenerExcepciones, obtenerQuitas } from "@/lib/gestion";
+import { proximaDelAlumno, semanasDelAlumno, ventanaAbierta } from "@/lib/clases";
+import { conFoco } from "@/lib/foco";
+import { estadisticasDelAlumno } from "@/lib/estadisticas-servidor";
 import { formatearFecha } from "@/lib/perfil";
 import { calcularTarjeta } from "@/lib/modos";
 import { idiomaActual, textosActuales } from "@/lib/idioma-servidor";
@@ -23,13 +25,22 @@ import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
 import { FranjaClase, LineaClase } from "@/components/clases/BannerClase";
 import RefrescoEnCortes from "@/components/clases/RefrescoEnCortes";
 import ArranqueTutorial from "@/components/tutorial/ArranqueTutorial";
+import FilaEstadisticas from "@/components/estadisticas/FilaEstadisticas";
+import SemanaCompacta from "@/components/clases/SemanaCompacta";
 import { tutorialPendiente } from "@/lib/tutorial/estado";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
 // prerenderizar y los datos cambian en cuanto se analiza una clase nueva.
 export const dynamic = "force-dynamic";
 
-export default async function PerfilAlumno({ params }: { params: { id: string } }) {
+export default async function PerfilAlumno({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  /** `semana`: la del calendario, 0 la actual. Como en «Mis clases». */
+  searchParams: { semana?: string };
+}) {
   // Antes de leer nada: un alumno solo abre su propia ficha, aunque
   // escriba otro id en la barra de direcciones. El equipo, cualquiera.
   const sesion = await exigirAccesoAFicha(params.id);
@@ -55,7 +66,7 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
 
   // Gestión primero: de su `plan` y su `nivel` sale qué cursos le tocan,
   // así que la consulta de cursos no puede ir en el mismo lote.
-  const [datos, progreso, generadosCrudos, ultimaGeneracion, calendario, quitas] = await Promise.all([
+  const [datos, progreso, generadosCrudos, ultimaGeneracion, calendario, quitas, excepciones] = await Promise.all([
     obtenerAlumno(params.id),
     leerProgresoAlumno(params.id),
     // Con el rol: los bloques que el equipo genera para revisar solo
@@ -65,6 +76,9 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
     // Las clases, del calendario de Gestión. Ver «LA PRÓXIMA CLASE» abajo.
     obtenerCalendario(params.id),
     obtenerQuitas(params.id),
+    // Todas las excepciones —'quita' y 'añade'—, para el calendario de
+    // abajo: las mismas que lee «Mis clases».
+    obtenerExcepciones(params.id),
   ]);
   const onboarding = await pendienteTutorial;
 
@@ -208,6 +222,24 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
   // que es lo que evita que se reencuentre trabajo ya terminado.
   const idsTerminados = Object.keys(progreso);
 
+  // ---------------------------------------------------------------
+  // DEBAJO DE LA REJILLA: LAS ESTADÍSTICAS (SOLO MÓVIL) Y EL CALENDARIO
+  //
+  // Las estadísticas son las de la barra lateral de escritorio, con el
+  // mismo perfil y el mismo curso principal; en escritorio ya están en
+  // la barra y aquí no se pintan.
+  //
+  // El calendario es el de «Mis clases» en pequeño (`SemanaCompacta`):
+  // las mismas semanas, calculadas igual, y cada clase lleva a su día
+  // allí, que es donde está el botón de entrar.
+  // ---------------------------------------------------------------
+  const estadisticas = await estadisticasDelAlumno(params.id, perfil, principal);
+  const semanas = semanasDelAlumno(calendario, excepciones, ahora, undefined, { conPasadas: true });
+  const pedida = Number.parseInt(searchParams.semana ?? "0", 10);
+  const indiceSemana = Math.min(Math.max(0, Number.isFinite(pedida) ? pedida : 0), semanas.length - 1);
+  const sinHorario =
+    calendario.length === 0 || (!proxima && semanas.every((s) => s.dias.every((d) => d.clases.length === 0)));
+
   // AQUÍ NO VA EL NIVEL MCER. Estuvo de chip junto al saludo —«B2 ·
   // Intermedio alto»— y era la tercera cosa que leer antes de llegar a
   // lo que se viene a hacer. No es un dato que el alumno necesite: no
@@ -322,6 +354,33 @@ export default async function PerfilAlumno({ params }: { params: { id: string } 
           generadosIniciales={generados}
           idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}
+          entreMedias={
+            <>
+              <div
+                className="entra mt-5 min-[900px]:hidden"
+                style={{ animationDelay: "calc(var(--paso-escalonado) * 3)" }}
+              >
+                <FilaEstadisticas estadisticas={estadisticas} t={textosActuales()} />
+              </div>
+              <div
+                className="entra mt-[26px] min-[900px]:mt-9"
+                style={{ animationDelay: "calc(var(--paso-escalonado) * 3)" }}
+              >
+                <SemanaCompacta
+                  semanas={semanas}
+                  indice={indiceSemana}
+                  sinHorario={sinHorario}
+                  hrefSemana={(i) => conFoco(i === 0 ? `/alumno/${params.id}` : `/alumno/${params.id}?semana=${i}`, foco)}
+                  hrefDia={(fecha) =>
+                    conFoco(`/clases${indiceSemana === 0 ? "" : `?semana=${indiceSemana}`}#dia-${fecha}`, foco)
+                  }
+                  hrefTodas={conFoco("/clases", foco)}
+                  t={tc}
+                  ahora={ahora}
+                />
+              </div>
+            </>
+          }
           banner={
             proxima && enVentana ? (
               <FranjaClase

@@ -118,6 +118,14 @@ export type TextosClases = {
   vacioTexto: string;
   /** El enlace del estado vacío, a la práctica. */
   vacioAccion: string;
+
+  // --- el calendario del inicio ---
+  /** El enlace de la cabecera del calendario compacto a «Mis clases». */
+  verTodasMisClases: string;
+  /** Sin horario, en el inicio: no promete entrar desde allí, porque se entra desde «Mis clases». */
+  vacioInicio: string;
+  /** El estado de una clase movida en la semana de escritorio del inicio, donde no cabe la frase entera. */
+  reprogramadaCorta: string;
 };
 
 const DIAS_ES: Record<DiaSemana, string> = {
@@ -221,6 +229,9 @@ export const CLASES: Record<Idioma, TextosClases> = {
     vacioTitulo: "Aquí aparecerán tus clases",
     vacioTexto: "En cuanto fijes tu horario con tu profesor, verás aquí cuándo es cada clase y podrás entrar desde esta página. Mientras tanto, tu práctica te espera.",
     vacioAccion: "Ir a mi práctica",
+    verTodasMisClases: "Ver todas mis clases",
+    vacioInicio: "En cuanto fijes tu horario con tu profesor, verás aquí tu semana de clases.",
+    reprogramadaCorta: "Reprogramada",
   },
 
   en: {
@@ -286,5 +297,8 @@ export const CLASES: Record<Idioma, TextosClases> = {
     vacioTitulo: "Your classes will show up here",
     vacioTexto: "As soon as you agree your schedule with your teacher, you'll see here when each class is and you'll be able to join from this page. In the meantime, your practice is waiting for you.",
     vacioAccion: "Go to my practice",
+    verTodasMisClases: "See all my classes",
+    vacioInicio: "As soon as you agree your schedule with your teacher, you'll see your week of classes here.",
+    reprogramadaCorta: "Rescheduled",
   },
 };

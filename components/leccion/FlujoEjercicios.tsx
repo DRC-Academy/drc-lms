@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { desdeCurso } from "@/lib/ejercicio-unificado";
 import type { EjercicioVista } from "@/lib/ejercicios";
 import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
@@ -36,17 +37,40 @@ import { reaccionarEnCurso } from "@/components/ejercicios/reaccionesMascota";
  * está pintada cuando esto sale. `keepalive` para que sobreviva si
  * responde el último y sigue en el mismo gesto. Que falle no se le
  * cuenta a nadie: perder un intento no puede cortar la lección.
+ *
+ * Devuelve si el servidor lo guardó, para saber si hay algo que refrescar.
  */
-function registrarIntento(ejercicioId: string, correcto: boolean) {
-  void fetch("/api/intento-ejercicio", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ ejercicioId, correcto }),
-    keepalive: true,
-  }).catch((error) => {
+async function registrarIntento(ejercicioId: string, correcto: boolean): Promise<boolean> {
+  try {
+    const respuesta = await fetch("/api/intento-ejercicio", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ejercicioId, correcto }),
+      keepalive: true,
+    });
+    return respuesta.ok;
+  } catch (error) {
     console.error("[leccion] No se pudo registrar el intento:", error);
-  });
+    return false;
+  }
 }
+
+/**
+ * Cuánto se espera, desde el último intento guardado, antes de refrescar.
+ *
+ * EL REFRESCO ES PARA LA BARRA LATERAL: cuenta los ejercicios hechos y
+ * vive en el layout, que no se vuelve a renderizar al navegar. Sin él,
+ * el alumno respondería cinco ejercicios, saltaría a otra sección y
+ * seguiría leyendo la cifra de antes.
+ *
+ * Uno por racimo de respuestas y no uno por respuesta: cada refresco
+ * vuelve a pintar la lección en el servidor. El estado del visor no se
+ * pierde —`router.refresh()` conserva el de cliente, y el visor fija el
+ * suyo al montarse—. Y el temporizador no se cancela al salir: el router
+ * es de toda la aplicación, y si el alumno ya se ha ido, lo que se
+ * refresca es la pantalla nueva con su barra.
+ */
+const ESPERA_REFRESCO = 1500;
 
 export default function FlujoEjercicios({
   ejercicios,
@@ -82,12 +106,23 @@ export default function FlujoEjercicios({
   foco?: string | null;
 }) {
   const unificados = useMemo(() => ejercicios.map(desdeCurso), [ejercicios]);
+  const router = useRouter();
+  const refresco = useRef<number | null>(null);
 
   function alSuceso(suceso: SucesoVisor) {
     // El curso solo guarda intentos. Ni avance ni producción: la lección
     // no lleva un "iba por la mitad", y su cierre es marcarla completada.
     if (suceso.tipo !== "intento") return;
-    if (registrarIntentos) registrarIntento(suceso.ejercicio.id, suceso.correcto);
+    if (registrarIntentos) {
+      void registrarIntento(suceso.ejercicio.id, suceso.correcto).then((guardado) => {
+        if (!guardado) return;
+        if (refresco.current !== null) window.clearTimeout(refresco.current);
+        refresco.current = window.setTimeout(() => {
+          refresco.current = null;
+          router.refresh();
+        }, ESPERA_REFRESCO);
+      });
+    }
     reaccionarEnCurso(suceso);
   }
 

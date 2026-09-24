@@ -33,6 +33,7 @@ import MenuPerfil from "@/components/leccion/MenuPerfil";
 import { ProveedorMarco } from "@/components/leccion/MarcoCurso";
 import NavegacionInferior from "@/components/NavegacionInferior";
 import Tutorial from "@/components/tutorial/Tutorial";
+import type { EstadisticasAlumno } from "@/lib/estadisticas";
 
 export type { SeccionActiva, EnlaceSeccion } from "@/components/IconoSeccion";
 
@@ -83,6 +84,11 @@ export type DatosNavegacion = {
   /** El contexto de revisión que conservan los enlaces. Ver `lib/foco.ts`. */
   foco: string | null;
   revisando: boolean;
+  /**
+   * Las estadísticas de la barra lateral, ya calculadas en el servidor
+   * (`lib/estadisticas-servidor.ts`). Sin alumno no hay.
+   */
+  estadisticas?: EstadisticasAlumno | null;
 };
 
 /**
@@ -104,7 +110,7 @@ export default function MarcoApp({ datos, children }: { datos: DatosNavegacion; 
     <ProveedorMarco>
       {datos.revisando && <TiraRevision nombre={nombre || undefined} t={t} />}
       <div className="flex min-h-dvh flex-1 items-stretch">
-        <BarraLateral enlaces={enlaces} nombre={nombre} inicioHref={inicioHref} />
+        <BarraLateral enlaces={enlaces} nombre={nombre} inicioHref={inicioHref} estadisticas={datos.estadisticas ?? null} />
         {/* `contenido-app`: aquí dentro, el `main` de cada pantalla deja
             al final el hueco del botón de ayuda (`globals.css`). */}
         <div className="contenido-app flex min-w-0 flex-1 flex-col">{children}</div>

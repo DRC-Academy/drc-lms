@@ -60,6 +60,11 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // el nombre: nada de correos, notas ni nóminas.
 // `supabase/gestion-vista-profesores.sql`.
 //
+// `vista_clases_contadas` entró con las estadísticas del inicio y de la
+// barra: cuántas clases lleva el alumno, con la regla de «Mi progreso»,
+// sin leer nada más de `class_analyses` que el número.
+// `supabase/gestion-vista-clases-contadas.sql`.
+//
 // Añadir algo a esta lista es ampliar lo que el LMS ve de una base con
 // datos de alumnos, profesores y nóminas. Solo con un motivo escrito,
 // como este.
@@ -70,6 +75,7 @@ export const VISTAS = [
   "vista_excepciones_clase",
   "vista_calendario_alumno",
   "vista_profesores",
+  "vista_clases_contadas",
 ] as const;
 export type Vista = (typeof VISTAS)[number];
 

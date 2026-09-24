@@ -315,6 +315,29 @@ export const obtenerNombresProfesor = cache(async (): Promise<Map<string, string
   return nombres;
 });
 
+/**
+ * Cuántas clases lleva el alumno: la cifra de «Mi progreso»
+ * (`clasesContadas`), leída ya hecha de `vista_clases_contadas`.
+ *
+ * Sin fila es 0: el alumno todavía no tiene ninguna clase analizada. Si
+ * la lectura falla es null, y quien la pinta la omite en vez de enseñar
+ * un cero que no es verdad.
+ */
+export const obtenerClasesContadas = cache(async (alumnoId: string): Promise<number | null> => {
+  const { data, error } = await soloLectura("vista_clases_contadas")
+    .select("clases_contadas")
+    .eq("alumno_id", alumnoId)
+    .limit(1)
+    .returns<Fila[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo leer vista_clases_contadas:", error.message);
+    return null;
+  }
+  const n = Number(data?.[0]?.clases_contadas ?? 0);
+  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
+});
+
 export async function obtenerUltimaClase(alumnoId: string): Promise<UltimaClase | null> {
   const { data, error } = await soloLectura("class_analyses")
     .select(ULTIMA_CLASE)

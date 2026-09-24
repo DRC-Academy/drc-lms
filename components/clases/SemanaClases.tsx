@@ -131,7 +131,18 @@ export default function SemanaClases({
  * sin clase no se pulsa. Cabe en 375 px: la inicial del día a 14 px y el
  * número dentro del disco.
  */
-function TiraSemana({ semana, hoy, t }: { semana: SemanaCalendario; hoy: string; t: TextosClases }) {
+export function TiraSemana({
+  semana,
+  hoy,
+  t,
+  hrefDia = (fecha) => `#dia-${fecha}`,
+}: {
+  semana: SemanaCalendario;
+  hoy: string;
+  t: TextosClases;
+  /** A dónde lleva un día con clase. Aquí, a su tarjeta; en el inicio, a «Mis clases». */
+  hrefDia?: (fecha: string) => string;
+}) {
   return (
     <ol className="grid grid-cols-7 gap-1 rounded-[16px] border border-marca-borde bg-white px-1.5 py-3 shadow-[0_10px_24px_rgba(18,33,26,0.07)] min-[900px]:gap-2 min-[900px]:rounded-[20px] min-[900px]:px-4 min-[900px]:py-4">
       {semana.dias.map((dia) => {
@@ -140,7 +151,7 @@ function TiraSemana({ semana, hoy, t }: { semana: SemanaCalendario; hoy: string;
           <li key={dia.fecha} className="flex justify-center">
             {dia.clases.length > 0 ? (
               <a
-                href={`#dia-${dia.fecha}`}
+                href={hrefDia(dia.fecha)}
                 aria-label={t.diaAgenda(nombreDia(dia), partes(dia.fecha).dia, partes(dia.fecha).mes)}
                 className="flex min-h-[48px] w-full flex-col items-center rounded-[12px] py-1 transition-colors hover:bg-marca-niebla focus-visible:outline focus-visible:outline-2 focus-visible:outline-marca-verdeOsc"
               >
@@ -157,7 +168,7 @@ function TiraSemana({ semana, hoy, t }: { semana: SemanaCalendario; hoy: string;
 }
 
 /** `pasado`: el día es anterior a hoy. Las fechas son `YYYY-MM-DD` y se comparan como cadenas. */
-function ParadaDia({ dia, pasado: antes, t }: { dia: DiaCalendario; pasado: boolean; t: TextosClases }) {
+export function ParadaDia({ dia, pasado: antes, t }: { dia: DiaCalendario; pasado: boolean; t: TextosClases }) {
   const { dia: numero } = partes(dia.fecha);
   const activas = dia.clases.filter((c) => c.estado !== "cancelada");
   const hechas = activas.length > 0 && activas.every((c) => c.terminada);
@@ -292,7 +303,7 @@ function TarjetaClase({
 }
 
 /** Lo que va arriba a la derecha de la tarjeta. Una clase normal por venir no lleva nada. */
-function Estado({ clase, abierta, t }: { clase: ClaseCalendario; abierta: boolean; t: TextosClases }) {
+export function Estado({ clase, abierta, t }: { clase: ClaseCalendario; abierta: boolean; t: TextosClases }) {
   if (abierta) return <Chapa destacada>{clase.enCurso ? t.enCurso : t.empiezaPronto}</Chapa>;
   if (clase.estado === "cancelada") {
     return (
@@ -316,7 +327,7 @@ function Estado({ clase, abierta, t }: { clase: ClaseCalendario; abierta: boolea
 }
 
 /** Recuperación y reprogramación: una línea debajo de la hora. */
-function Etiqueta({ clase, t }: { clase: ClaseCalendario; t: TextosClases }) {
+export function Etiqueta({ clase, t }: { clase: ClaseCalendario; t: TextosClases }) {
   if (clase.estado === "recuperacion") {
     return (
       <span className="mt-2.5 inline-flex w-fit items-center rounded-full border border-marca-verde/40 bg-marca-verdeFondo px-2.5 py-1 text-[14px] font-semibold text-marca-verdeOsc">
@@ -339,7 +350,7 @@ function Etiqueta({ clase, t }: { clase: ClaseCalendario; t: TextosClases }) {
 // PIEZAS
 // ---------------------------------------------------------------
 
-function FlechaSemana({ href, etiqueta, direccion }: { href: string | null; etiqueta: string; direccion: "atras" | "adelante" }) {
+export function FlechaSemana({ href, etiqueta, direccion }: { href: string | null; etiqueta: string; direccion: "atras" | "adelante" }) {
   const icono = (
     <svg aria-hidden viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d={direccion === "atras" ? "M12.5 4.5 7 10l5.5 5.5" : "M7.5 4.5 13 10l-5.5 5.5"} />
@@ -365,7 +376,7 @@ function FlechaSemana({ href, etiqueta, direccion }: { href: string | null; etiq
   );
 }
 
-function partes(fecha: string): { dia: number; mes: number } {
+export function partes(fecha: string): { dia: number; mes: number } {
   const [, mes, dia] = fecha.split("-").map(Number);
   return { dia, mes: mes - 1 };
 }
@@ -374,6 +385,6 @@ function diaSemana(fecha: string): number {
   return new Date(`${fecha}T00:00:00Z`).getUTCDay();
 }
 
-function nombreDia(dia: DiaCalendario) {
+export function nombreDia(dia: DiaCalendario) {
   return DIAS[diaSemana(dia.fecha)];
 }

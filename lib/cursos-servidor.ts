@@ -903,6 +903,34 @@ export async function guardarIntento(
 }
 
 /**
+ * Cuántos ejercicios distintos del curso ha respondido el alumno, bien o
+ * mal: un ejercicio repetido cuenta una vez. Es la cifra de «Ejercicios
+ * hechos» del inicio y de la barra.
+ *
+ * Por páginas, porque PostgREST corta en 1000 filas sin avisar y cada
+ * intento es una fila. Si una lectura falla es null: mejor omitir la
+ * cifra que enseñar una que se queda corta.
+ */
+export const ejerciciosHechos = cache(async (alumnoId: string): Promise<number | null> => {
+  const PAGINA = 1000;
+  const vistos = new Set<string>();
+
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await baseLms()
+      .from("intentos_ejercicio")
+      .select("ejercicio_id")
+      .eq("alumno_id", alumnoId)
+      .order("id", { ascending: true })
+      .range(desde, desde + PAGINA - 1)
+      .returns<{ ejercicio_id: string }[]>();
+
+    if (!registrar("No se pudieron contar los ejercicios hechos", error)) return null;
+    for (const fila of data ?? []) vistos.add(fila.ejercicio_id);
+    if ((data ?? []).length < PAGINA) return vistos.size;
+  }
+});
+
+/**
  * El estado de todos los cursos del alumno, con el que va en el banner
  * primero.
  *

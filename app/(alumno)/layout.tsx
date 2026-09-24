@@ -8,6 +8,7 @@ import { rutaDeMiCurso } from "@/lib/cursos";
 import { nivelDelAlumno } from "@/lib/estimacion";
 import { comoFecha } from "@/lib/fechas";
 import { CABECERA_URL } from "@/lib/foco";
+import { estadisticasDelAlumno } from "@/lib/estadisticas-servidor";
 import MarcoApp, { MarcoAppCargando, type DatosNavegacion } from "@/components/Navegacion";
 
 /**
@@ -88,11 +89,20 @@ async function datosDeNavegacion(): Promise<DatosNavegacion | null> {
       )[0]
     : undefined;
 
+  // LAS ESTADÍSTICAS DE LA BARRA, con el perfil y el curso que ya se
+  // han leído aquí arriba. Se quedarían viejas al navegar —el layout no
+  // se vuelve a renderizar entre páginas— si no fuera porque lo que las
+  // mueve refresca la ruta: completar una lección es un formulario que
+  // recarga el documento, y cada intento de ejercicio pide un
+  // `router.refresh()` (`FlujoEjercicios`).
+  const estadisticas = alumnoId ? await estadisticasDelAlumno(alumnoId, perfil, principal) : null;
+
   return {
     alumnoId,
     nombre: perfil?.nombre.trim() ?? "",
     miCurso: principal ? rutaDeMiCurso(principal) : null,
     foco: revisando ? alumnoId : null,
     revisando,
+    estadisticas,
   };
 }

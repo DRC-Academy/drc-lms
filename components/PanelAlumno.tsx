@@ -34,6 +34,7 @@ export default function PanelAlumno({
   idsTerminados,
   esAdministrador,
   banner,
+  entreMedias,
 }: {
   alumnoId: string;
   /** La tarjeta de generación, o null si no hay de dónde tirar. */
@@ -45,6 +46,12 @@ export default function PanelAlumno({
   esAdministrador: boolean;
   /** La franja del curso, renderizada en el servidor. */
   banner: ReactNode;
+  /**
+   * Lo que va entre la rejilla y los bloques —las estadísticas de móvil y
+   * el calendario—, renderizado en el servidor como `banner`. Esto solo
+   * le hace sitio: no sabe qué es ni lo toca.
+   */
+  entreMedias?: ReactNode;
 }) {
   const router = useRouter();
   const {
@@ -156,6 +163,8 @@ export default function PanelAlumno({
           />
         )}
       </div>
+
+      {entreMedias}
 
       <div
         className="entra mt-[26px] min-[900px]:mt-9"
