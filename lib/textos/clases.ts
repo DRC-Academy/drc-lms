@@ -86,6 +86,8 @@ export type TextosClases = {
   historial: string;
   historialAyuda: string;
   historialVacio: string;
+  /** El desplegable del historial, con las clases que quedan dentro. */
+  verMasClases: (n: number) => string;
   /** El rótulo de los temas de cada clase. */
   temasYVocabulario: string;
 
@@ -200,6 +202,7 @@ export const CLASES: Record<Idioma, TextosClases> = {
     historial: "Tus clases anteriores",
     historialAyuda: "Lo que trabajaste en cada una, de la más reciente a la primera.",
     historialVacio: "Cuando hayas tenido tu primera clase, aquí verás lo que trabajaste en ella.",
+    verMasClases: (n) => `Ver más clases (${n})`,
     temasYVocabulario: "Temas y vocabulario",
 
     tuHorario: "Tu horario",
@@ -264,6 +267,7 @@ export const CLASES: Record<Idioma, TextosClases> = {
     historial: "Your past classes",
     historialAyuda: "What you worked on in each one, from the most recent to the first.",
     historialVacio: "Once you've had your first class, you'll see here what you worked on.",
+    verMasClases: (n) => `See more classes (${n})`,
     temasYVocabulario: "Topics and vocabulary",
 
     tuHorario: "Your schedule",

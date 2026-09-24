@@ -34,6 +34,10 @@ import { esHito } from "@/lib/recorrido";
  * meterlo por esto costaría el arranque de React. El `<summary>` lleva la
  * misma clase `pg-more`, así que se ve igual, y al abrirlo se oculta y
  * quedan todas las clases a la vista.
+ *
+ * Cuántas se ven antes del «ver más» lo decide cada pantalla: la ficha
+ * enseña seis; el historial de «Clases», solo la última, porque encima
+ * ya tiene el calendario y la tarjeta de la última clase.
  */
 const VISIBLES = 6;
 
@@ -53,6 +57,8 @@ export default function Recorrido({
   detalle,
   retraso = "360ms",
   anclas = false,
+  visibles = VISIBLES,
+  verMas,
 }: {
   /** Las clases, de la más reciente a la más antigua. */
   clases: ClaseDelRecorrido[];
@@ -72,10 +78,14 @@ export default function Recorrido({
    * que se trabajó en ella.
    */
   anclas?: boolean;
+  /** Las clases a la vista antes del «ver más». */
+  visibles?: number;
+  /** El rótulo del «ver más», con las que quedan dentro. Sin él, "Ver las N clases". */
+  verMas?: (restantes: number) => string;
 }) {
   const t = textosActuales().progreso;
-  const primeras = clases.slice(0, VISIBLES);
-  const resto = clases.slice(VISIBLES);
+  const primeras = clases.slice(0, visibles);
+  const resto = clases.slice(visibles);
   const tarjeta = (clase: ClaseDelRecorrido) => (
     <Tarjeta key={clase.id} clase={clase} rotuloTemas={rotuloTemas} detalle={detalle} ancla={anclas} />
   );
@@ -92,7 +102,7 @@ export default function Recorrido({
 
           {resto.length > 0 && (
             <details className="pg-more-wrap">
-              <summary className="pg-more">{t.verLasClases(clases.length)}</summary>
+              <summary className="pg-more">{verMas ? verMas(resto.length) : t.verLasClases(clases.length)}</summary>
               <ol className="pg-timeline pg-timeline-resto">{resto.map(tarjeta)}</ol>
             </details>
           )}

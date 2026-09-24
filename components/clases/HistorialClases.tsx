@@ -8,6 +8,11 @@
 // TODAS las clases, también las que no tienen análisis: esas salen con su
 // fecha y su profesor, sin contenido inventado.
 //
+// SOLO LA ÚLTIMA A LA VISTA. El resto, en el «Ver más clases»: encima ya
+// están el banner, la última clase y el calendario, y seis tarjetas más
+// eran demasiado. `AbrirClaseDelAncla` abre el desplegable cuando se
+// llega a una clase de dentro por su enlace.
+//
 // Todo se lee en el servidor (`obtenerRecorrido`, `obtenerNombresProfesor`)
 // y nada de lo que se pinta es el transcript ni los errores del alumno.
 // ---------------------------------------------------------------
@@ -16,6 +21,7 @@ import type { ClaseDelRecorrido } from "@/lib/gestion";
 import type { TextosClases } from "@/lib/textos/clases";
 import Recorrido from "@/components/progreso/Recorrido";
 import { EstilosFicha } from "@/components/progreso/estilos";
+import AbrirClaseDelAncla from "@/components/clases/AbrirClaseDelAncla";
 
 export default function HistorialClases({
   clases,
@@ -50,7 +56,10 @@ export default function HistorialClases({
           rotuloTemas={t.temasYVocabulario}
           detalle={{ profesores, conProfesor: t.conProfesor }}
           anclas={anclas}
+          visibles={1}
+          verMas={t.verMasClases}
         />
+        {anclas && <AbrirClaseDelAncla />}
       </div>
     </section>
   );

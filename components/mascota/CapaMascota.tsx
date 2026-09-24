@@ -34,7 +34,10 @@ const Geckonoid = dynamic(() => import("@/components/mascota/Geckonoid"), { ssr:
  *
  * SIN ANCLA VISIBLE, A LA PERCHA: abajo a la derecha, chica y sentada,
  * por encima de lo que haya fijo en esa esquina —la navegación inferior,
- * la barra del banner, el botón de Ayuda— y del safe-area. Con un cajón
+ * la barra del banner— y del safe-area. CON EL BOTÓN DE AYUDA A LA VISTA,
+ * A SU LADO y no encima: a su izquierda, con los pies a la altura de su
+ * base. Subida al botón parecía parte de él y estorbaba al usarlo; como
+ * el botón ya esquiva todo lo que hay fijo abajo, a su lado también. Con un cajón
  * abierto (el panel del bloque o del curso por debajo de 1200 px) se
  * queda donde está, debajo del velo como el resto de la página: desde
  * que va al pie del ejercicio, el cajón ya no le quita el sitio.
@@ -262,6 +265,7 @@ export default function CapaMascota() {
     let frame = 0;
     let vez = 0;
     let evitar: Element[] = [];
+    let botonAyuda: Element | null = null;
     let inferior = 0;
     /** Dónde está posada: el ancla (null, la percha; undefined, todavía en ningún sitio). */
     let posada: string | null | undefined = undefined;
@@ -285,9 +289,16 @@ export default function CapaMascota() {
     const cajaDePercha = (ancho: number, alto: number): Caja => {
       const h = ancho < MOVIL_PX ? PERCHA.altoMovil : PERCHA.alto;
       const w = h * PROPORCION;
-      const x = ancho - PERCHA.margen - w;
-      let suelo = alto - PERCHA.margen - inferior;
+      // Junto al botón de Ayuda si se ve (durante el recorrido guiado, por
+      // ejemplo, no): a su izquierda y apoyada en su base.
+      const boton = botonAyuda?.getBoundingClientRect();
+      const junto = boton !== undefined && boton.width > 0 && boton.height > 0;
+      const x = junto ? boton.left - PERCHA.aire - w : ancho - PERCHA.margen - w;
+      let suelo = junto ? boton.bottom : alto - PERCHA.margen - inferior;
       for (const e of evitar) {
+        // Al lado del botón, su zona no cuenta: el menú y el chat se abren
+        // por encima de él, no a su izquierda.
+        if (junto && e.matches(".zona-ayuda")) continue;
         const r = e.getBoundingClientRect();
         if (r.height <= 0 || r.bottom <= 0 || r.top >= alto) continue;
         if (r.right < x || r.left > x + w) continue;
@@ -369,6 +380,7 @@ export default function CapaMascota() {
       // 1. LEER. Todas las anclas, y lo que la percha tiene que esquivar.
       if (vez++ % 30 === 0) {
         evitar = Array.from(document.querySelectorAll(EVITAR));
+        botonAyuda = document.querySelector(".zona-ayuda > button[aria-haspopup]");
         inferior = parseFloat(safeArea.current ? getComputedStyle(safeArea.current).paddingBottom : "0") || 0;
       }
       const { anclas, activa: actual } = storeMascota.leer();

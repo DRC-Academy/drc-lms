@@ -514,6 +514,7 @@
     position: fixed;
     right: calc(16px + env(safe-area-inset-right));
     bottom: calc(24px + env(safe-area-inset-bottom));
+    transition: bottom var(--dur-estado) var(--ease-salida);
   }
 
   @media (min-width: 640px) {
@@ -569,6 +570,17 @@
        navegación, y la ayuda sobre la barra. */
     body:has(nav[data-nav-inferior]):has([data-barra-inferior]) .zona-ayuda {
       bottom: calc(162px + env(safe-area-inset-bottom));
+    }
+
+    /* Con el pie de la ruta de «Para ti», por encima de él: el pie se
+       apoya en la navegación y ocupa los mismos 76px que le reserva el
+       `body` (`.con-pie-ruta`, arriba). Sin esto el botón le tapaba la
+       mitad derecha. El pie entra y sale al hacer scroll, así que el
+       botón sube y baja con él (la transición está en `.zona-ayuda`).
+       Misma fuerza que la regla del dock de la mascota, que va después
+       y gana si coinciden. */
+    body.con-pie-ruta .zona-ayuda.zona-ayuda {
+      bottom: calc(var(--nav-inferior) + 76px + 12px);
     }
 
     /* Con el cuadro de la mascota abierto (el dock de DialogoMascota),
