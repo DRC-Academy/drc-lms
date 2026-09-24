@@ -6,15 +6,12 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
 /**
  * EL MENÚ DEL BOTÓN DE AYUDA: «Tutorial» y «Chat».
  *
- * Lo abren dos botones, uno por anchura, y nunca los dos a la vez: el
- * flotante de móvil (`ChatAyuda`) y el icono de la barra lateral de
- * escritorio (`BarraLateral`). Cada uno pone su estado y su sitio; el
- * menú es el mismo.
+ * Sale encima del botón verde flotante (`ChatAyuda`), que es la única
+ * entrada a la ayuda en todas las anchuras.
  *
  * NO HACE NADA POR SU CUENTA. Quien lo monta dice qué pasa con cada
- * opción: el tutorial es siempre `lanzarTutorial("manual")`, que empieza
- * en el paso 1 y no toca «visto»; el chat, el mecanismo que ya tuviera
- * ese botón —`abrir()` dentro del chat, `abrirAyuda()` desde fuera—.
+ * opción: el tutorial es `lanzarTutorial("manual")`, que empieza en el
+ * paso 1 y no toca «visto»; el chat, el `abrir()` de siempre.
  *
  * TECLADO. Al abrir, el foco va a la primera opción. Flechas, Inicio y
  * Fin se mueven entre las dos; el Tab también, y al salir del menú con él
@@ -22,14 +19,11 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
  * igual que pulsar fuera o pulsar el botón otra vez.
  */
 export default function MenuAyuda({
-  lado,
   disparador,
   onCerrar,
   onTutorial,
   onChat,
 }: {
-  /** Encima del botón (el flotante) o a su derecha (la barra lateral). */
-  lado: "arriba" | "derecha";
   /** El botón que lo abre: pulsarlo no cuenta como «fuera». */
   disparador: RefObject<HTMLElement>;
   /** `devolverFoco`: false cuando el foco ya se ha ido a otro sitio. */
@@ -94,9 +88,7 @@ export default function MenuAyuda({
         if (menu.current?.contains(siguiente) || disparador.current?.contains(siguiente)) return;
         onCerrar(false);
       }}
-      className={`menu-ayuda absolute z-50 flex w-[min(300px,calc(100vw-32px))] flex-col gap-1.5 rounded-[16px] border border-marca-borde bg-white p-2 shadow-[0_18px_44px_-16px_rgba(18,33,26,0.35)] ${
-        lado === "arriba" ? "bottom-full right-0 mb-3 origin-bottom-right" : "bottom-0 left-full ml-3 origin-bottom-left"
-      }`}
+      className="menu-ayuda absolute bottom-full right-0 z-50 mb-3 flex w-[min(300px,calc(100vw-32px))] origin-bottom-right flex-col gap-1.5 rounded-[16px] border border-marca-borde bg-white p-2 shadow-[0_18px_44px_-16px_rgba(18,33,26,0.35)]"
     >
       <Opcion titulo={ta.opcionTutorial} detalle={ta.opcionTutorialDetalle} onClick={onTutorial} icono={<IconoTutorial />} />
       <Opcion titulo={ta.opcionChat} detalle={ta.opcionChatDetalle} onClick={onChat} icono={<IconoChat />} />

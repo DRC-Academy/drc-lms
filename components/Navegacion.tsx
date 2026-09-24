@@ -112,10 +112,9 @@ export default function MarcoApp({ datos, children }: { datos: DatosNavegacion; 
         secciones={t.secciones}
         extra={<MenuPerfil nombre={nombre} variante="movil" />}
       />
-      {/* La ayuda es para el alumno: el equipo en su buscador no la usa. En
-          escritorio la abre el icono de la barra; el botón flotante, solo
-          en móvil. */}
-      {enlaces.length > 0 && <ChatAyuda nombre={nombre} botonFlotante="movil" />}
+      {/* La ayuda es para el alumno: el equipo en su buscador no la usa.
+          El botón flotante, abajo a la derecha, en todas las anchuras. */}
+      {enlaces.length > 0 && <ChatAyuda nombre={nombre} />}
       {/* El recorrido guiado: uno para toda la app, aquí para que
           sobreviva a la navegación entre pantallas. */}
       {enlaces.length > 0 && (

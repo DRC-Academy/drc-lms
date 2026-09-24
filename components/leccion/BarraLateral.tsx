@@ -1,13 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icono, panelDeRuta, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSeccion";
-import { abrirAyuda } from "@/components/ChatAyuda";
-import MenuAyuda from "@/components/MenuAyuda";
-import { lanzarTutorial } from "@/components/tutorial/eventos";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import MenuPerfil, { Globo } from "@/components/leccion/MenuPerfil";
 import { usarMarco } from "@/components/leccion/MarcoCurso";
@@ -16,9 +12,13 @@ import { usarMarco } from "@/components/leccion/MarcoCurso";
  * La barra de iconos: la navegación de toda la aplicación en escritorio.
  *
  * Ochenta píxeles, fija a la izquierda, sin una sola palabra a la vista:
- * el símbolo arriba, las secciones debajo, y al pie la ayuda y el
- * perfil (idioma y salida). Los nombres salen al pasar por encima o al
- * llegar con el teclado. Nació en la lección y ahora la monta el marco
+ * el símbolo arriba, las secciones debajo, y al pie el perfil (idioma
+ * y salida). Los nombres salen al pasar por encima o al llegar con el
+ * teclado.
+ *
+ * LA AYUDA NO ESTÁ AQUÍ: es el botón verde flotante de abajo a la
+ * derecha (`ChatAyuda`), en todas las anchuras. Un icono gris de 22px en
+ * la esquina izquierda se veía poco. Nació en la lección y ahora la monta el marco
  * común (`components/Navegacion.tsx`) en todas las pantallas.
  *
  * SOLO A PARTIR DE 900px, el mismo corte que el resto de la aplicación:
@@ -45,14 +45,6 @@ export default function BarraLateral({
 }) {
   const { t } = usarIdioma();
   const { abrirPanel } = usarMarco();
-  // El menú «Tutorial / Chat» del icono de ayuda: el mismo del botón
-  // flotante de móvil (`MenuAyuda`), aquí a la derecha del icono.
-  const [menuAyuda, setMenuAyuda] = useState(false);
-  const botonAyuda = useRef<HTMLButtonElement>(null);
-  const cerrarMenuAyuda = useCallback((devolverFoco: boolean) => {
-    setMenuAyuda(false);
-    if (devolverFoco) botonAyuda.current?.focus();
-  }, []);
   const ruta = usePathname() ?? "/";
   const seccion = seccionDeRuta(ruta);
   const tipoPanel = panelDeRuta(ruta);
@@ -114,39 +106,6 @@ export default function BarraLateral({
       </nav>
 
       <div className="mt-auto flex flex-col items-center gap-2.5">
-        <div className="relative">
-          <button
-            ref={botonAyuda}
-            type="button"
-            data-boton-ayuda
-            onClick={() => (menuAyuda ? cerrarMenuAyuda(true) : setMenuAyuda(true))}
-            aria-label={t.navegacion.ayuda}
-            aria-expanded={menuAyuda}
-            aria-haspopup="menu"
-            className={`group relative grid h-11 w-11 place-items-center rounded-[12px] transition-colors hover:bg-marca-niebla focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verde ${
-              menuAyuda ? "bg-marca-niebla" : ""
-            }`}
-          >
-            <IconoAyuda />
-            {!menuAyuda && <Globo>{t.navegacion.ayuda}</Globo>}
-          </button>
-          {menuAyuda && (
-            <MenuAyuda
-              lado="derecha"
-              disparador={botonAyuda}
-              onCerrar={cerrarMenuAyuda}
-              onTutorial={() => {
-                setMenuAyuda(false);
-                lanzarTutorial("manual");
-              }}
-              onChat={() => {
-                setMenuAyuda(false);
-                abrirAyuda();
-              }}
-            />
-          )}
-        </div>
-
         <MenuPerfil nombre={nombre} variante="barra" />
       </div>
     </aside>
@@ -188,25 +147,6 @@ function IconoLista() {
       <circle cx="3" cy="4.5" r="1" fill="#B7C4BC" stroke="none" />
       <circle cx="3" cy="9" r="1" fill="#B7C4BC" stroke="none" />
       <circle cx="3" cy="13.5" r="1" fill="#B7C4BC" stroke="none" />
-    </svg>
-  );
-}
-
-function IconoAyuda() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 18 18"
-      className="h-[22px] w-[22px]"
-      fill="none"
-      stroke="#B7C4BC"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 4.5A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5v6a1.5 1.5 0 0 1-1.5 1.5H7.2L4 14.6V12h-.5A1.5 1.5 0 0 1 3 10.5v-6Z" />
-      <path d="M7.4 6.6a1.7 1.7 0 0 1 3.3.5c0 1.1-1.6 1.3-1.6 2.3" />
-      <circle cx="9.1" cy="10.7" r="0.4" fill="#B7C4BC" stroke="none" />
     </svg>
   );
 }

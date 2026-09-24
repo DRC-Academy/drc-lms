@@ -75,18 +75,7 @@ export function abrirAyuda() {
   window.dispatchEvent(new Event(SUCESO_ABRIR_AYUDA));
 }
 
-export default function ChatAyuda({
-  nombre,
-  botonFlotante = "siempre",
-}: {
-  nombre: string;
-  /**
-   * Cuándo se ve el botón flotante. La barra de iconos ya tiene uno de
-   * «Ayuda» a partir de 900px, y dos botones para lo mismo en la misma
-   * pantalla sobran: con la barra, el flotante solo sale en móvil.
-   */
-  botonFlotante?: "siempre" | "movil";
-}) {
+export default function ChatAyuda({ nombre }: { nombre: string }) {
   const ruta = usePathname() ?? "/";
   const { idioma, t: textos } = usarIdioma();
   const t = textos.ayuda;
@@ -95,7 +84,6 @@ export default function ChatAyuda({
   // El menú «Tutorial / Chat» del botón flotante. El chat se abre desde él.
   const [menu, setMenu] = useState(false);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
-  const lanzadorSoloMovil = botonFlotante === "movil";
   const [consulta, setConsulta] = useState("");
 
   const lanzador = useRef<HTMLButtonElement>(null);
@@ -128,16 +116,10 @@ export default function ChatAyuda({
   const cerrar = useCallback(() => {
     setAbierto(false);
     // El foco vuelve de donde salió: si no, quien navega con teclado
-    // acaba al principio de la página después de cerrar. Tras pintar,
-    // porque con el chat abierto el botón está oculto (en móvil) y un
-    // `focus()` sobre algo oculto no hace nada; y al botón de ayuda que
-    // se vea, que en escritorio es el icono de la barra lateral.
-    requestAnimationFrame(() => {
-      const visible = Array.from(document.querySelectorAll<HTMLElement>("[data-boton-ayuda]")).find(
-        (boton) => boton.offsetParent !== null
-      );
-      visible?.focus();
-    });
+    // acaba al principio de la página después de cerrar. Tras pintar:
+    // con el chat abierto el botón está oculto en móvil, y un `focus()`
+    // sobre algo oculto no hace nada.
+    requestAnimationFrame(() => lanzador.current?.focus());
   }, []);
 
   const cerrarMenu = useCallback((devolverFoco: boolean) => {
@@ -472,13 +454,12 @@ export default function ChatAyuda({
       <button
         ref={lanzador}
         type="button"
-        data-boton-ayuda
         onClick={() => (abierto ? cerrar() : menu ? cerrarMenu(true) : setMenu(true))}
         aria-expanded={abierto || menu}
         aria-haspopup="menu"
         className={`btn-verde inline-flex min-h-[64px] items-center gap-2.5 rounded-full px-6 text-[17px] font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verde ${
           abierto ? "hidden min-[640px]:inline-flex" : ""
-        } ${lanzadorSoloMovil && !abierto ? "min-[900px]:hidden" : ""}`}
+        }`}
       >
         {menu ? <IconoCerrar className="h-6 w-6" /> : <IconoAyuda className="h-6 w-6" />}
         {abierto || menu ? t.cerrar : t.ayuda}
@@ -486,7 +467,6 @@ export default function ChatAyuda({
 
       {menu && (
         <MenuAyuda
-          lado="arriba"
           disparador={lanzador}
           onCerrar={cerrarMenu}
           onTutorial={() => {

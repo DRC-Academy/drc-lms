@@ -127,6 +127,18 @@
     }
   }
 
+  /* En escritorio el botón también flota abajo a la derecha: 24px de
+     suelo, 64 de botón y 12 de aire. Con la barra de continuar, encima
+     de ella (a 96px). */
+  @media (min-width: 900px) {
+    body:has(.zona-ayuda) {
+      padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    }
+    body:has(.zona-ayuda):has([data-barra-inferior]) {
+      padding-bottom: 172px;
+    }
+  }
+
   /* ---------------------------------------------------------------
      MOVIMIENTO REDUCIDO: TODO QUIETO, Y GRATIS
 
