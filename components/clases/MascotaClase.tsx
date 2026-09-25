@@ -18,8 +18,11 @@ import { storeMascota } from "@/components/mascota/store";
  * fila de la chapa, con la frase elegida con la misma `ventanaAbierta` que
  * decide el botón. Aquí no se mira la hora.
  *
- * La mascota es decorativa. En móvil, más chica, junto a la chapa; desde
- * 768 px, a la derecha del bocadillo y por encima del horario.
+ * La mascota es decorativa. El banner decide dónde va este hueco: en
+ * móvil, 80 px de alto a la izquierda del bocadillo; desde 768 px, 200 px
+ * de alto al pie de su columna. El lienzo de la mascota trae un 4,6 % de
+ * aire debajo de los pies (21 de 458 px): el margen negativo lo
+ * compensa, para que los pies pisen el mismo suelo que el botón.
  */
 
 const ANCLA = "clases-banner";
@@ -39,8 +42,10 @@ export default function MascotaClase({ idHora }: { idHora: string }) {
   }, [idHora]);
 
   return (
-    <div className="absolute right-2 top-2 md:right-6 md:top-4">
-      <AnclaMascota id={ANCLA} prioridad={2} lado="der" className="h-[84px] w-[65px] md:h-[160px] md:w-[124px]" />
-    </div>
+    <AnclaMascota
+      id={ANCLA}
+      prioridad={2}
+      className="-mb-[4px] h-[80px] w-[62px] shrink-0 md:-mb-[9px] md:h-[200px] md:w-[155px]"
+    />
   );
 }

@@ -52,8 +52,9 @@ import MascotaClase from "@/components/clases/MascotaClase";
  * del botón. `refresco` monta los dos cortes de la ventana; el inicio los
  * monta él mismo, así que ahí va apagado.
  *
- * `conMascota` la pone arriba a la derecha con su bocadillo (ver
- * `MascotaClase`). No va con `ilustracion`: son dos formas de lo mismo.
+ * `conMascota` le da su columna a la derecha, con su bocadillo encima
+ * (ver `MascotaClase`); en móvil, su fila encima del botón. No va con
+ * `ilustracion`: son dos formas de lo mismo.
  */
 export default function BannerClase({
   proxima,
@@ -76,27 +77,89 @@ export default function BannerClase({
   const frase = conMascota && !ilustracion ? fraseDeLaMascota(proxima, abierta, ahora, t) : null;
   const chapa = abierta ? (proxima.enCurso ? t.claseEnCurso : t.empiezaPronto) : t.proximaClase;
 
-  return (
-    <section
-      data-tour="proxima-clase"
-      className={`relative overflow-hidden rounded-[22px] border px-5 pb-6 pt-5 shadow-[0_18px_40px_-26px_rgba(18,33,26,0.45)] sm:px-7 sm:pb-7 sm:pt-6 ${
-        abierta ? "border-marca-verde bg-marca-verdeFondo" : "border-marca-borde bg-white"
-      }`}
-    >
-      {/* LA PARADA: el disco y la chapa colgando de él. Sin el tramo de
-          sendero que llevaba detrás: una línea que no llevaba a ningún
-          sitio se leía como decoración suelta. */}
-      <div
-        className={`relative flex items-center gap-4 ${ilustracion ? "pr-[92px] sm:pr-0" : ""} ${
-          frase ? "flex-wrap gap-x-3 gap-y-3 pr-[50px] md:flex-nowrap md:gap-x-4 md:pr-[136px]" : ""
-        }`}
-      >
-        <DiscoClase abierta={abierta} />
-        <Chapa destacada={abierta}>{chapa}</Chapa>
-        {frase && <Bocadillo frase={frase} />}
-      </div>
+  const marco = `rounded-[22px] border px-5 pb-6 pt-5 shadow-[0_18px_40px_-26px_rgba(18,33,26,0.45)] sm:px-7 sm:pb-7 sm:pt-6 ${
+    abierta ? "border-marca-verde bg-marca-verdeFondo" : "border-marca-borde bg-white"
+  }`;
 
-      {frase && <MascotaClase idHora={ID_HORA} />}
+  /* LA PARADA: el disco y la chapa colgando de él. Sin el tramo de
+     sendero que llevaba detrás: una línea que no llevaba a ningún sitio
+     se leía como decoración suelta. */
+  const parada = (
+    <>
+      <DiscoClase abierta={abierta} />
+      <Chapa destacada={abierta}>{chapa}</Chapa>
+    </>
+  );
+
+  /* LA HORA, LO MÁS GRANDE. Es la respuesta a la pregunta con la que se
+     abre esta pantalla. Luego el día y el profesor. */
+  const detalle = (
+    <>
+      <p
+        id={frase ? ID_HORA : undefined}
+        className="font-display text-[40px] font-extrabold leading-[1.02] tracking-[-0.02em] text-marca-tinta sm:text-[52px]"
+      >
+        {t.franja(proxima.desde, proxima.hasta)}
+      </p>
+
+      <p className="mt-2 text-[16px] leading-snug text-marca-tintaMedia sm:text-[17px]">
+        <span className="font-semibold text-marca-tinta first-letter:uppercase inline-block">
+          {cuando(proxima, t, ahora)}
+        </span>{" "}
+        <span className="text-[13.5px] text-marca-grisSuave">{t.horaDeMadrid}</span>
+      </p>
+
+      {proxima.profesor && (
+        <div className="mt-4 flex items-center gap-3">
+          <AvatarProfesor nombre={proxima.profesor} />
+          <p className="text-[16px] text-marca-tintaMedia">
+            {t.con} <span className="font-display text-[18px] font-bold text-marca-tinta">{proxima.profesor}</span>
+          </p>
+        </div>
+      )}
+    </>
+  );
+
+  const pie = (
+    <>
+      <BotonClase proxima={proxima} t={t} ahora={ahora} />
+      {secundario && <p className="mt-3 text-[14px] text-marca-gris">{secundario}</p>}
+    </>
+  );
+
+  const cortes = refresco && <RefrescoEnCortes cortes={[proxima.abreEn.getTime(), proxima.terminaEn.getTime()]} />;
+
+  /* CON LA MASCOTA («Mis clases»): dos columnas desde 768 px, el texto a
+     la izquierda y la mascota en la suya, de pie sobre el mismo suelo que
+     el botón y con el bocadillo encima de la cabeza. En móvil, una sola
+     columna, y la mascota con su bocadillo en una fila justo encima del
+     botón. Mismo orden en el DOM para los dos: parada, detalle, mascota,
+     botón. */
+  if (frase) {
+    return (
+      <section
+        data-tour="proxima-clase"
+        className={`relative grid grid-cols-1 overflow-hidden md:grid-cols-[minmax(0,1fr)_240px] md:gap-x-6 ${marco}`}
+      >
+        <div className="flex items-center gap-4 md:col-start-1 md:row-start-1">{parada}</div>
+
+        <div className="mt-4 md:col-start-1 md:row-start-2">{detalle}</div>
+
+        <div className="mt-5 flex flex-row-reverse items-end gap-3 md:col-start-2 md:row-span-3 md:row-start-1 md:mt-0 md:flex-col md:items-center md:justify-end md:gap-2">
+          <Bocadillo frase={frase} />
+          <MascotaClase idHora={ID_HORA} />
+        </div>
+
+        <div className="mt-4 md:col-start-1 md:row-start-3 md:mt-6 md:self-end">{pie}</div>
+
+        {cortes}
+      </section>
+    );
+  }
+
+  return (
+    <section data-tour="proxima-clase" className={`relative overflow-hidden ${marco}`}>
+      <div className={`relative flex items-center gap-4 ${ilustracion ? "pr-[92px] sm:pr-0" : ""}`}>{parada}</div>
 
       {/* LA MASCOTA, EN LA ESQUINA. Su hueco (`MascotaBienvenida`) mide 90px
           en móvil, 150 entre 900 y 1199 y 200 a partir de ahí: dentro de
@@ -112,59 +175,30 @@ export default function BannerClase({
           ilustracion ? "sm:pr-[110px] min-[900px]:pr-[170px] min-[1200px]:pr-[220px]" : ""
         }`}
       >
-        {/* LA HORA, LO MÁS GRANDE. Es la respuesta a la pregunta con la
-            que se abre esta pantalla. */}
-        <p
-          id={frase ? ID_HORA : undefined}
-          className="font-display text-[40px] font-extrabold leading-[1.02] tracking-[-0.02em] text-marca-tinta sm:text-[52px]"
-        >
-          {t.franja(proxima.desde, proxima.hasta)}
-        </p>
-
-        <p className="mt-2 text-[16px] leading-snug text-marca-tintaMedia sm:text-[17px]">
-          <span className="font-semibold text-marca-tinta first-letter:uppercase inline-block">
-            {cuando(proxima, t, ahora)}
-          </span>{" "}
-          <span className="text-[13.5px] text-marca-grisSuave">{t.horaDeMadrid}</span>
-        </p>
-
-        {proxima.profesor && (
-          <div className="mt-4 flex items-center gap-3">
-            <AvatarProfesor nombre={proxima.profesor} />
-            <p className="text-[16px] text-marca-tintaMedia">
-              {t.con} <span className="font-display text-[18px] font-bold text-marca-tinta">{proxima.profesor}</span>
-            </p>
-          </div>
-        )}
-
-        <div className="mt-6">
-          <BotonClase proxima={proxima} t={t} ahora={ahora} />
-        </div>
-
-        {secundario && <p className="mt-3 text-[14px] text-marca-gris">{secundario}</p>}
+        {detalle}
+        <div className="mt-6">{pie}</div>
       </div>
 
-      {refresco && <RefrescoEnCortes cortes={[proxima.abreEn.getTime(), proxima.terminaEn.getTime()]} />}
+      {cortes}
     </section>
   );
 }
 
 /**
- * El bocadillo de la mascota, en la fila de la chapa. En móvil baja a su
- * propia línea, con el pico hacia arriba, a la mascota; desde 768 px va a
- * la derecha de la chapa, con el pico a la derecha, y encoge antes de
- * pisarla. Aparece un poco después, cuando la mascota ya ha llegado.
- * Texto normal: lo lee el lector de pantalla.
+ * El bocadillo de la mascota. En móvil, a su derecha y ocupando el resto
+ * de la fila, con el pico a la izquierda, hacia ella; desde 768 px, encima
+ * de su cabeza, con el pico abajo. Aparece un poco después, cuando la
+ * mascota ya ha llegado. Texto normal: lo lee el lector de pantalla.
  */
 function Bocadillo({ frase }: { frase: string }) {
   return (
     <p
-      className="aparece relative basis-full rounded-[14px] border border-marca-borde bg-white px-3.5 py-2.5 text-pretty text-[15px] font-semibold leading-[1.35] text-marca-tinta shadow-[0_10px_24px_-12px_rgba(18,33,26,0.35)] md:ml-auto md:min-w-0 md:max-w-[300px] md:flex-1 md:basis-auto"
+      className="aparece relative min-w-0 flex-1 rounded-[14px] border border-marca-borde bg-white px-3.5 py-2.5 text-pretty text-[15px] font-semibold leading-[1.35] text-marca-tinta shadow-[0_10px_24px_-12px_rgba(18,33,26,0.35)] md:max-w-[220px] md:flex-none"
       style={{ animationDelay: "700ms" }}
     >
       <span
         aria-hidden
-        className="absolute -top-[7px] right-5 h-3 w-3 rotate-45 border-l border-t border-marca-borde bg-white md:-right-[7px] md:top-1/2 md:-translate-y-1/2 md:border-l-0 md:border-r"
+        className="absolute -left-[7px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 border-b border-l border-marca-borde bg-white md:-bottom-[7px] md:left-1/2 md:top-auto md:-translate-x-1/2 md:translate-y-0 md:border-l-0 md:border-r"
       />
       <span className="relative">{frase}</span>
     </p>
@@ -220,7 +254,7 @@ export function BotonClase({
   ahora: Date;
 }) {
   const enlace = enlaceDeClase(proxima.meetLink);
-  const medida = "min-h-[54px] w-full px-8 sm:w-auto";
+  const medida = "min-h-[54px] w-full whitespace-nowrap px-8 sm:w-auto";
 
   if (!enlace) {
     return (
@@ -256,7 +290,7 @@ export function BotonClase({
       <button
         type="button"
         disabled
-        className="inline-flex min-h-[54px] w-full cursor-not-allowed items-center justify-center rounded-full bg-marca-pista px-8 text-[19px] font-bold text-marca-grisInactivo sm:w-auto"
+        className="inline-flex min-h-[54px] w-full cursor-not-allowed items-center whitespace-nowrap justify-center rounded-full bg-marca-pista px-8 text-[19px] font-bold text-marca-grisInactivo sm:w-auto"
       >
         {t.unirse}
       </button>
