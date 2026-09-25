@@ -27,7 +27,11 @@ export const metadata: Metadata = {
  *
  *   caducado · sinficha · error  — `lib/entrada.ts`, que es la puerta de
  *              `/entrar` y `/entrar/woo`. Son los tres de `MotivoRechazo`.
- *   salida   — `app/salir`.
+ *   salida   — `app/salir`, antes. Desde que «Salir» acaba en WordPress
+ *              (`SALIR_WP`) el flujo normal ya no llega aquí. Se deja
+ *              para poder volver atrás cambiando una línea; se puede
+ *              borrar —el caso y `avisoSalida`— cuando se haya probado el
+ *              cierre con WordPress en producción.
  *   sesion   — `app/api/progreso-leccion`.
  *
  * Es un `switch` y no un objeto indexado a propósito: el motivo lo
@@ -48,6 +52,7 @@ function avisoDe(motivo: unknown, t: TextosEntrada): string | null {
       // hablar con nadie, se le dice que reintente.
       return t.avisoError;
     case "salida":
+      // Sin uso en el flujo normal desde `SALIR_WP`: ver la lista de arriba.
       return t.avisoSalida;
     case "sesion":
       // ESTE NO LO PUEDE PONER EL MIDDLEWARE, aunque manda aquí a mucha

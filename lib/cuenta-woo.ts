@@ -23,3 +23,10 @@ export const PERFIL_WOO = "https://drcacademy.com/mi-cuenta/perfil/";
  * así que no rebota al LMS—.
  */
 export const AMPLIAR_PLAN_WOO = "https://drcacademy.com/mi-cuenta/?drc-ampliar-plan=1";
+
+/**
+ * El final de «Salir». Cierra la sesión de WordPress y redirige al login
+ * de Mi cuenta; sin sesión en la web, solo redirige. Lo usa `app/salir`
+ * después de cerrar la del LMS.
+ */
+export const SALIR_WP = "https://drcacademy.com/wp-admin/admin-post.php?action=drc_salir";

@@ -54,10 +54,16 @@ import { CABECERA_URL } from "@/lib/foco";
  *     de la cabecera `x-gestion-secret`, que comprueba cada ruta antes
  *     de leer nada (`lib/secreto-externo.ts`). Detrás de la cookie,
  *     Gestión recibiría un 401 en cada llamada.
+ *
+ *   · `/salir` — cerrar sesión. Con la cookie caducada o manipulada,
+ *     esta puerta mandaba a `/acceso` antes de llegar a la ruta, y la
+ *     sesión de WordPress (`SALIR_WP`) se quedaba abierta. La ruta lee
+ *     la cookie por su cuenta y solo sabe cerrar: no enseña nada.
  */
 const PUBLICAS = [
   "/acceso",
   "/entrar",
+  "/salir",
   "/avisos",
   "/api/avisos",
   "/api/avisos-apertura",
