@@ -599,7 +599,9 @@
      contenido. Nada de la pantalla se mueve al abrirla.
 
      Se abre al pasar el ratón y al entrar con el teclado
-     (`:focus-within`), sin JavaScript. Al abrirse espera 120ms, para que
+     (`:has(:focus-visible)`), sin JavaScript. NO CON `:focus-within`:
+     el clic deja el foco en el icono y la barra se quedaba abierta al
+     sacar el ratón, hasta hacer clic fuera. Al abrirse espera 120ms, para que
      cruzarla camino del contenido no la despliegue; al cerrarse, no
      espera.
 
@@ -631,7 +633,7 @@
       box-shadow 220ms ease;
   }
   .barra-app:not(.barra-fija):hover .barra-panel,
-  .barra-app:not(.barra-fija):focus-within .barra-panel,
+  .barra-app:not(.barra-fija):has(:focus-visible) .barra-panel,
   html[data-tutorial-puente] .barra-app:not(.barra-fija) .barra-panel {
     width: 272px;
     box-shadow: 18px 0 44px -26px rgba(18, 33, 26, 0.35);
@@ -645,7 +647,7 @@
       visibility 0s linear 120ms;
   }
   .barra-app:not(.barra-fija):hover .barra-rotulo,
-  .barra-app:not(.barra-fija):focus-within .barra-rotulo,
+  .barra-app:not(.barra-fija):has(:focus-visible) .barra-rotulo,
   html[data-tutorial-puente] .barra-app:not(.barra-fija) .barra-rotulo {
     visibility: visible;
     opacity: 1;
@@ -656,7 +658,7 @@
   /* Plegada, la etiqueta corta del anillo; abierta sobra, porque al lado
      está el texto entero. */
   .barra-app:not(.barra-fija):hover .barra-solo-plegada,
-  .barra-app:not(.barra-fija):focus-within .barra-solo-plegada,
+  .barra-app:not(.barra-fija):has(:focus-visible) .barra-solo-plegada,
   html[data-tutorial-puente] .barra-app:not(.barra-fija) .barra-solo-plegada {
     opacity: 0;
   }
