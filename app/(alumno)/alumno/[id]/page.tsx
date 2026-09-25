@@ -1,4 +1,6 @@
-import { nivelDelAlumno } from "@/lib/estimacion";
+import { calcularEstimacion, nivelDelAlumno } from "@/lib/estimacion";
+import { nivelMcer } from "@/lib/recorrido";
+import { urlAmpliarPlan } from "@/lib/ampliar-plan";
 import { notFound } from "next/navigation";
 import { obtenerAlumno, obtenerCalendario, obtenerExcepciones, obtenerQuitas } from "@/lib/gestion";
 import { proximaDelAlumno, semanasDelAlumno, ventanaAbierta } from "@/lib/clases";
@@ -21,6 +23,7 @@ import AvatarProfesor from "@/components/AvatarProfesor";
 import BannerCurso, { cursoTerminado } from "@/components/BannerCurso";
 import BannerDiploma from "@/components/BannerDiploma";
 import PanelAlumno from "@/components/PanelAlumno";
+import ComparativaRitmo, { datosDeRitmo } from "@/components/ComparativaRitmo";
 import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
 import { FranjaClase, LineaClase } from "@/components/clases/BannerClase";
 import RefrescoEnCortes from "@/components/clases/RefrescoEnCortes";
@@ -234,6 +237,20 @@ export default async function PerfilAlumno({
   // allí, que es donde está el botón de entrar.
   // ---------------------------------------------------------------
   const estadisticas = await estadisticasDelAlumno(params.id, perfil, principal);
+
+  // «AHORA PUEDES LLEGAR MÁS RÁPIDO»: la misma estimación que el banner
+  // de «Mi progreso», con los mismos datos (ver `app/(alumno)/progreso`).
+  // Null si ya va al plan más alto o no hay datos: entonces no se pinta.
+  const ritmo = perfil
+    ? datosDeRitmo(
+        calcularEstimacion({
+          nivelActual: nivelMcer(nivelDelAlumno(params.id, perfil)),
+          horasSemanales: perfil.horasSemanales,
+          textosDelPlan: [perfil.planContratado, perfil.objetivoSetter, perfil.objetivoPerfil],
+          t: textosActuales().banners,
+        })
+      )
+    : null;
   const semanas = semanasDelAlumno(calendario, excepciones, ahora, undefined, { conPasadas: true });
   const pedida = Number.parseInt(searchParams.semana ?? "0", 10);
   const indiceSemana = Math.min(Math.max(0, Number.isFinite(pedida) ? pedida : 0), semanas.length - 1);
@@ -354,6 +371,7 @@ export default async function PerfilAlumno({
           generadosIniciales={generados}
           idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}
+          ritmo={ritmo && <ComparativaRitmo datos={ritmo} href={urlAmpliarPlan()} />}
           entreMedias={
             <>
               <div

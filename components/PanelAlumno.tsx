@@ -35,6 +35,7 @@ export default function PanelAlumno({
   esAdministrador,
   banner,
   entreMedias,
+  ritmo = null,
 }: {
   alumnoId: string;
   /** La tarjeta de generación, o null si no hay de dónde tirar. */
@@ -52,6 +53,12 @@ export default function PanelAlumno({
    * le hace sitio: no sabe qué es ni lo toca.
    */
   entreMedias?: ReactNode;
+  /**
+   * «Ahora puedes llegar más rápido», renderizado en el servidor: ocupa el
+   * sitio de los bloques cuando no hay ninguno pendiente. Null si no hay
+   * nada que recomendar. Ver `BloquesGenerados`.
+   */
+  ritmo?: ReactNode;
 }) {
   const router = useRouter();
   const {
@@ -166,8 +173,10 @@ export default function PanelAlumno({
 
       {entreMedias}
 
+      {/* `empty:hidden`: sin bloque y sin comparativa no queda nada dentro,
+          y el margen de arriba sobraría —la página se cierra sin hueco—. */}
       <div
-        className="entra mt-[26px] min-[900px]:mt-9"
+        className="entra mt-[26px] empty:hidden min-[900px]:mt-9"
         style={{ animationDelay: "calc(var(--paso-escalonado) * 3)" }}
       >
         <BloquesGenerados
@@ -180,10 +189,8 @@ export default function PanelAlumno({
           // prop nueva, y para el alumno es null como en todas partes.
           foco={esAdministrador ? alumnoId : null}
           generando={generando}
-          // El botón de arriba se puede pulsar: decide si el hueco vacío
-          // lo señala o cuenta de qué depende.
-          puedeGenerar={tarjeta !== null && tarjeta.espera === null}
           totalPractica={todos.length}
+          ritmo={ritmo}
           zonaRef={zonaNuevos}
         />
       </div>

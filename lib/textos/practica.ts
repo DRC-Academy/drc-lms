@@ -151,21 +151,12 @@ export type TextosPractica = {
   pendiente: string;
   aquiApareceElQuePrepares: string;
   nuevo: string;
-  estaAhiArriba: string;
   empezar: string;
   yMasEn: (restantes: number) => string;
-  todaviaNinguno: string;
-  losHasHechoTodos: string;
-  huecoPuedeGenerar: string;
-  huecoSinPrimeraClase: string;
-  huecoPreparaOtro: string;
-  huecoEsperaSiguiente: string;
 
   // --- las paradas hechas ---
   paradasHechas: (n: number) => string;
   puedesRepetirCualquiera: string;
-  /** "Puedes repetir cualquiera desde <Para ti>." El enlace va detrás. */
-  puedesRepetirCualquieraDesde: string;
   deAciertos: string;
   repetir: string;
 
@@ -264,22 +255,11 @@ const ES: TextosPractica = {
   pendiente: "Pendiente",
   aquiApareceElQuePrepares: "Aquí aparece el que prepares, listo para empezarlo.",
   nuevo: "Nuevo",
-  estaAhiArriba: "Está ahí arriba",
   empezar: "Empezar",
   yMasEn: (restantes) => `y ${restantes} más en`,
-  todaviaNinguno: "Todavía no has preparado ninguno",
-  losHasHechoTodos: "Los has hecho todos",
-  huecoPuedeGenerar:
-    "Pulsa «Preparar mi bloque» y en menos de un minuto tienes diez ejercicios hechos con tu última clase, con lo que se te repite y con tu examen. Aparecerán aquí.",
-  huecoSinPrimeraClase:
-    "En cuanto tu profesor analice tu primera clase, preparamos aquí tu primer bloque de diez ejercicios.",
-  huecoPreparaOtro:
-    "Prepara otro cuando quieras: sale de tu última clase, de lo que se te repite y de tu examen.",
-  huecoEsperaSiguiente: "En cuanto tengas tu próxima clase, aquí aparece el siguiente.",
 
   paradasHechas: (n) => `${n} ${n === 1 ? "parada hecha" : "paradas hechas"}`,
   puedesRepetirCualquiera: "Puedes repetir cualquiera",
-  puedesRepetirCualquieraDesde: "Puedes repetir cualquiera desde",
   deAciertos: "de aciertos",
   repetir: "Repetir",
 
@@ -380,22 +360,11 @@ const EN: TextosPractica = {
   pendiente: "Waiting for you",
   aquiApareceElQuePrepares: "The one you build shows up here, ready to start.",
   nuevo: "New",
-  estaAhiArriba: "It's up there",
   empezar: "Start",
   yMasEn: (restantes) => `and ${restantes} more in`,
-  todaviaNinguno: "You haven't built one yet",
-  losHasHechoTodos: "You've done them all",
-  huecoPuedeGenerar:
-    "Press «Build my block» and in under a minute you'll have ten exercises built from your last class, from what keeps coming back and from your exam. They'll show up here.",
-  huecoSinPrimeraClase:
-    "As soon as your teacher reviews your first class, we'll build your first block of ten exercises here.",
-  huecoPreparaOtro:
-    "Build another whenever you like: it comes from your last class, from what keeps coming back and from your exam.",
-  huecoEsperaSiguiente: "Once you have your next class, the next one shows up here.",
 
   paradasHechas: (n) => `${n} ${n === 1 ? "stop done" : "stops done"}`,
   puedesRepetirCualquiera: "You can redo any of them",
-  puedesRepetirCualquieraDesde: "You can redo any of them from",
   deAciertos: "correct",
   repetir: "Redo",
 

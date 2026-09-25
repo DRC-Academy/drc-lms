@@ -4,7 +4,7 @@ import Link from "next/link";
 import { conFoco } from "@/lib/foco";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import type { TextosPractica } from "@/lib/textos/practica";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import type { Bloque } from "@/lib/data";
 
 /**
@@ -24,11 +24,12 @@ import type { Bloque } from "@/lib/data";
  * tiene a medias, el inicio se lo recuerda, que es justo lo que hacía
  * falta.
  *
- * EL HUECO VACÍO TAMBIÉN ES DISEÑO. Sin bloque pendiente esto no se
- * queda en blanco ni se rellena con contenido de adorno: dice qué falta,
- * quién lo hace y cuánto tarda, y apunta al único botón que lo llena.
- * Es el estado que ve un alumno nuevo —86 de los 168 no tienen ningún
- * bloque generado— así que es el que decide si entiende la aplicación.
+ * SIN BLOQUE PENDIENTE, EL SITIO ES DE LA COMPARATIVA DE RITMO
+ * («Ahora puedes llegar más rápido», `ComparativaRitmo`), que llega hecha
+ * del servidor en `ritmo`. Sin ella —ya va al plan más alto, o no hay
+ * datos— no se pinta nada: la página se cierra con lo de arriba, sin un
+ * hueco. Antes aquí iba un hueco vacío que explicaba el botón de arriba;
+ * esa explicación ya la da la propia tarjeta de generación.
  */
 
 
@@ -70,8 +71,8 @@ export default function BloquesGenerados({
   alumnoId,
   foco = null,
   generando,
-  puedeGenerar,
   totalPractica,
+  ritmo = null,
   zonaRef,
 }: {
   /** Todos los generados del alumno, el más reciente primero. */
@@ -85,14 +86,10 @@ export default function BloquesGenerados({
   foco?: string | null;
   /** Con true se enseña el hueco animado del que está en camino. */
   generando: boolean;
-  /**
-   * Si el botón de arriba se puede pulsar ahora mismo. Decide si el
-   * estado vacío señala el botón o cuenta de qué depende: mandar a
-   * pulsar algo que está apagado es peor que no decir nada.
-   */
-  puedeGenerar: boolean;
   /** Cuántos bloques le esperan en «Para ti», generados y de su nivel. */
   totalPractica: number;
+  /** Lo que ocupa este sitio sin bloque pendiente: la comparativa de ritmo, o nada. */
+  ritmo?: ReactNode;
   /**
    * Adónde llevar la vista al terminar. Tras casi un minuto de espera el
    * alumno puede haber bajado la página: sin esto el bloque aparece
@@ -109,6 +106,17 @@ export default function BloquesGenerados({
   const esNuevo = pendiente !== null && idsNuevos.includes(pendiente.id);
 
   const restantes = Math.max(0, totalPractica - (pendiente ? 1 : 0));
+
+  // Sin bloque que enseñar ni uno en camino, el sitio es de la
+  // comparativa. `zonaRef` va con ella: es donde aparecerá el bloque
+  // cuando se genere, y ahí tiene que llevar la vista.
+  if (!generando && !pendiente) {
+    return ritmo ? (
+      <div ref={zonaRef} className="scroll-mt-24">
+        {ritmo}
+      </div>
+    ) : null;
+  }
 
   return (
     <section ref={zonaRef} aria-labelledby="titulo-bloques" className="scroll-mt-24">
@@ -151,15 +159,7 @@ export default function BloquesGenerados({
             foco={foco}
             restantes={restantes}
           />
-        ) : (
-          <HuecoVacio
-            t={t}
-            sinNinguno={bloques.length === 0}
-            puedeGenerar={puedeGenerar}
-            totalPractica={totalPractica}
-            foco={foco}
-          />
-        )}
+        ) : null}
       </div>
     </section>
   );
@@ -272,179 +272,5 @@ function TarjetaPendiente({
         )}
       </div>
     </article>
-  );
-}
-
-/**
- * El mismo sitio, sin bloque pendiente.
- *
- * Tres situaciones distintas y ninguna es "no hay nada": no ha preparado
- * ninguno todavía, los ha hecho todos, o le toca esperar a su próxima
- * clase. La flecha solo aparece cuando de verdad hay un botón que
- * pulsar; señalar uno apagado sería mandar a chocarse contra él.
- */
-function HuecoVacio({
-  t,
-  sinNinguno,
-  puedeGenerar,
-  totalPractica,
-  foco,
-}: {
-  t: TextosPractica;
-  sinNinguno: boolean;
-  puedeGenerar: boolean;
-  totalPractica: number;
-  foco: string | null;
-}) {
-  const titulo = sinNinguno ? t.todaviaNinguno : t.losHasHechoTodos;
-
-  const cuerpo = sinNinguno
-    ? puedeGenerar
-      ? t.huecoPuedeGenerar
-      : t.huecoSinPrimeraClase
-    : puedeGenerar
-      ? t.huecoPreparaOtro
-      : t.huecoEsperaSiguiente;
-
-  return (
-    <div className="flex flex-col items-start gap-6 rounded-[16px] border-[1.5px] border-dashed border-marca-puntoPendiente bg-marca-casiBlanco p-6 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-10 min-[900px]:px-11 min-[900px]:py-10 min-[900px]:rounded-[18px]">
-      <DibujoDeClase />
-
-      <div className="min-w-0 flex-1">
-        <h3 className="text-pretty font-display text-[19px] font-bold leading-[1.2] text-marca-tinta min-[900px]:text-[22px]">
-          {titulo}
-        </h3>
-        <p className="mt-2.5 max-w-[62ch] text-pretty text-[14.5px] leading-[1.55] text-marca-tintaMedia min-[900px]:text-[15.5px]">
-          {cuerpo}
-        </p>
-
-        {!sinNinguno && totalPractica > 0 && (
-          <p className="mt-3 text-[13.5px] leading-[1.45] text-marca-gris">
-            {t.puedesRepetirCualquieraDesde}{" "}
-            <Link
-              href={conFoco("/practica", foco)}
-              className="font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
-            >
-              {usarIdioma().t.navegacion.paraTi}
-            </Link>
-            .
-          </p>
-        )}
-      </div>
-
-      {/* La flecha apunta al botón que llena esto: arriba a la derecha en
-          escritorio, arriba a secas en móvil. Solo cuando se puede
-          pulsar. */}
-      {puedeGenerar && (
-        <div className="hidden shrink-0 flex-col items-center gap-2.5 pr-2 min-[900px]:flex">
-          <svg
-            aria-hidden
-            viewBox="0 0 60 80"
-            className="h-20 w-[60px]"
-            fill="none"
-            stroke="#1E9E3A"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M8 74 C 8 40, 22 12, 50 8" strokeDasharray="5 7" />
-            <path d="M39 6 L 51 7.5 L 47 19" />
-          </svg>
-          <span className="max-w-[130px] text-center text-[13.5px] font-semibold leading-[1.4] text-marca-verdeOsc">
-            {t.estaAhiArriba}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * DE DÓNDE SALE UN BLOQUE: DE UNA CONVERSACIÓN.
- *
- * Aquí había una estrella de cinco puntas dentro de un círculo verde.
- * Una estrella significa «nuevo», que es exactamente lo que ya dice el
- * sello ámbar de la tarjeta de arriba, así que el único dibujo de la
- * pantalla estaba gastado en repetir una palabra. Y es el dibujo que
- * más gente ve: 86 de 168 alumnos no tienen ningún bloque generado, o
- * sea que para la mitad de la academia esta es la única ilustración del
- * producto.
- *
- * Ahora dibuja lo que un bloque ES: dos bocadillos, uno del profesor y
- * otro del alumno, y de ellos sale la hoja de ejercicios. Es literal
- * —el bloque se genera de la última clase— y es lo que separa a esta
- * academia de una aplicación de autoestudio: detrás de cada ejercicio
- * hubo una persona hablando contigo.
- *
- * ---------------------------------------------------------------
- * POR QUÉ NO ES UN ICONO, Y POR QUÉ NO ES UN EMOJI
- *
- * Los trazos no cierran del todo y las líneas no son rectas perfectas:
- * las esquinas quedan abiertas y los bocadillos están ligeramente
- * torcidos y a distinta altura. Eso es lo que separa un dibujo de un
- * pictograma —un icono de set es geométricamente perfecto, y la
- * perfección se lee como sistema, no como mano—.
- *
- * Un emoji habría sido más rápido y habría dado lo contrario: se dibuja
- * distinto en cada sistema operativo, no hereda el color de la marca, y
- * al lado de los SVG a mano de esta aplicación se ve pegado. Con un
- * público que llega a los sesenta, además, la carita es la frontera
- * exacta entre cálido e infantil.
- * ---------------------------------------------------------------
- *
- * En cálido y no en verde: el verde es el color de «pulsa aquí» y esto
- * no se pulsa. La única nota verde es la hoja, que es lo que el alumno
- * va a recibir.
- */
-function DibujoDeClase() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 132 108"
-      className="h-[92px] w-[112px] shrink-0 min-[900px]:h-28 min-[900px]:w-[132px]"
-      fill="none"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {/* EL BOCADILLO DEL PROFESOR. El más grande y el que habla
-          primero, arriba a la izquierda. Relleno cálido: es quien pone
-          el contexto. */}
-      <path
-        d="M8 14 q0-6 6-6 h44 q6 0 6 6 v22 q0 6-6 6 h-30 l-10 9 v-9 h-4 q-6 0-6-6 z"
-        fill="#FBF7EF"
-        stroke="#C0A97A"
-        strokeWidth="2.2"
-      />
-      <path d="M20 21h30M20 29h20" stroke="#C0A97A" strokeWidth="2" opacity="0.75" />
-
-      {/* EL DEL ALUMNO. Más pequeño, a la derecha y un poco más abajo:
-          responde. La cola mira al otro lado para que se lean como una
-          conversación y no como dos avisos. */}
-      <path
-        d="M74 34 q0-5 5-5 h40 q5 0 5 5 v18 q0 5-5 5 h-26 l-9 8 v-8 h-5 q-5 0-5-5 z"
-        fill="#FFFFFF"
-        stroke="#C0A97A"
-        strokeWidth="2.2"
-        opacity="0.9"
-      />
-      <path d="M85 40h24M85 47h15" stroke="#C0A97A" strokeWidth="2" opacity="0.6" />
-
-      {/* LA HOJA QUE SALE DE LOS DOS. Verde, porque es lo único de este
-          dibujo que el alumno va a poder hacer. Ligeramente girada: sale
-          de una conversación, no de una imprenta. */}
-      <g transform="rotate(-4 56 86)">
-        <path
-          d="M32 68 h48 q4 0 4 4 v30 q0 4-4 4 h-48 q-4 0-4-4 v-30 q0-4 4-4 z"
-          fill="#F0FAF2"
-          stroke="#1E9E3A"
-          strokeWidth="2.2"
-        />
-        <path d="M40 78h32M40 86h32M40 94h20" stroke="#1E9E3A" strokeWidth="2" opacity="0.55" />
-      </g>
-
-      {/* Los dos puntos que bajan del bocadillo a la hoja: el hilo entre
-          lo que se habló y lo que se practica. */}
-      <path d="M96 64 v3M92 71 v3" stroke="#C0A97A" strokeWidth="2.4" opacity="0.5" />
-    </svg>
   );
 }

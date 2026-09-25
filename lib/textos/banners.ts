@@ -113,6 +113,23 @@ export type TextosBanners = {
   horasALaSemana: (horas: number) => string;
   horasExtraCadaSemana: (horas: number) => string;
 
+  // --- «Ahora puedes llegar más rápido», en el inicio ---
+  // La comparativa de dos ritmos hacia la misma meta: el suyo y el plan
+  // recomendado (components/ComparativaRitmo). Sale de la misma
+  // estimación que el banner de ampliar.
+  haciaTuMeta: (nivel: string) => string;
+  ahoraPuedesLlegarMasRapido: string;
+  /** "Con 2 h más a la semana, llegas a Nivel B2 unos 3 meses antes." */
+  ritmoEntradilla: (horasExtra: number, nivel: string, meses: number) => string;
+  tuRitmoActual: string;
+  conHorasALaSemana: (horas: number) => string;
+  unosMeses: (cantidad: number) => string;
+  estasAqui: string;
+  tuMeta: string;
+  quieroIrMasRapido: string;
+  /** Todo lo que dice el dibujo, para el lector de pantalla. */
+  ritmoLector: (nivel: string, horasActual: number, mesesActual: number, horasMas: number, mesesMas: number) => string;
+
   // --- posición dentro del temario ---
   posicion: (mes: number, semana: number, modulo: number) => string;
 };
@@ -180,6 +197,19 @@ const ES: TextosBanners = {
   horasALaSemana: (horas) => `${horas} h a la semana`,
   horasExtraCadaSemana: (horas) => `+${horas} h cada semana`,
 
+  haciaTuMeta: (nivel) => `Hacia tu meta · Nivel ${nivel}`,
+  ahoraPuedesLlegarMasRapido: "Ahora puedes llegar más rápido",
+  ritmoEntradilla: (horasExtra, nivel, meses) =>
+    `Con ${horasExtra} h más a la semana, llegas a Nivel ${nivel} unos ${meses} ${meses === 1 ? "mes" : "meses"} antes.`,
+  tuRitmoActual: "Tu ritmo actual",
+  conHorasALaSemana: (horas) => `Con ${horas} h a la semana`,
+  unosMeses: (cantidad) => `unos ${cantidad} ${cantidad === 1 ? "mes" : "meses"}`,
+  estasAqui: "Estás aquí",
+  tuMeta: "Tu meta",
+  quieroIrMasRapido: "Quiero ir más rápido",
+  ritmoLector: (nivel, horasActual, mesesActual, horasMas, mesesMas) =>
+    `Hacia Nivel ${nivel}: a tu ritmo actual, ${horasActual} h a la semana, unos ${mesesActual} meses. Con ${horasMas} h a la semana, unos ${mesesMas} meses.`,
+
   posicion: (mes, semana, modulo) => `Mes ${mes} · Semana ${semana} · Módulo ${modulo}`,
 };
 
@@ -241,6 +271,19 @@ const EN: TextosBanners = {
   mesesAntes: (cantidad) => `${cantidad} ${cantidad === 1 ? "month" : "months"} sooner`,
   horasALaSemana: (horas) => `${horas} h a week`,
   horasExtraCadaSemana: (horas) => `+${horas} h every week`,
+
+  haciaTuMeta: (nivel) => `Towards your goal · Level ${nivel}`,
+  ahoraPuedesLlegarMasRapido: "Now you can get there faster",
+  ritmoEntradilla: (horasExtra, nivel, meses) =>
+    `With ${horasExtra} more ${horasExtra === 1 ? "hour" : "hours"} a week, you reach Level ${nivel} about ${meses} ${meses === 1 ? "month" : "months"} sooner.`,
+  tuRitmoActual: "Your current pace",
+  conHorasALaSemana: (horas) => `With ${horas} h a week`,
+  unosMeses: (cantidad) => `about ${cantidad} ${cantidad === 1 ? "month" : "months"}`,
+  estasAqui: "You are here",
+  tuMeta: "Your goal",
+  quieroIrMasRapido: "I want to go faster",
+  ritmoLector: (nivel, horasActual, mesesActual, horasMas, mesesMas) =>
+    `Towards Level ${nivel}: at your current pace, ${horasActual} h a week, about ${mesesActual} months. With ${horasMas} h a week, about ${mesesMas} months.`,
 
   posicion: (mes, semana, modulo) => `Month ${mes} · Week ${semana} · Module ${modulo}`,
 };
