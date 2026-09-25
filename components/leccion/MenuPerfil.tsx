@@ -3,10 +3,16 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usarIdioma } from "@/components/ProveedorIdioma";
+import { PERFIL_WOO } from "@/lib/cuenta-woo";
 
 /**
- * El perfil: quién es y por dónde sale. El idioma ya no está aquí: va
- * siempre a la vista, arriba a la derecha (`CabeceraIdioma`).
+ * El perfil: quién es, su cuenta en la web y por dónde sale. El idioma
+ * ya no está aquí: va siempre a la vista, arriba a la derecha
+ * (`CabeceraIdioma`).
+ *
+ * LA CUENTA ES DE LA WEB. Suscripción, pagos, facturas y datos viven en
+ * Mi cuenta de drcacademy.com: aquí solo hay un enlace (`PERFIL_WOO`), en
+ * la misma pestaña. Es navegación, no una acción: sin verde de relleno.
  *
  * Desde que no hay cabecera, esas tres cosas van detrás del avatar en
  * toda la aplicación: al pie de la barra de iconos en escritorio y como
@@ -69,7 +75,11 @@ export default function MenuPerfil({
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-end gap-3 border-t border-marca-nieblaOscura pt-4">
+      <div className="mt-3 border-t border-marca-nieblaOscura pt-2">
+        <EnlacePerfilWeb />
+      </div>
+
+      <div className="mt-2 flex items-center justify-end gap-3 border-t border-marca-nieblaOscura pt-4">
         <form action="/salir" method="post">
           <button
             type="submit"
@@ -151,12 +161,59 @@ export default function MenuPerfil({
           id={idPanel}
           role="dialog"
           aria-label={t.navegacion.perfil}
-          className="aparece absolute bottom-0 left-full z-50 ml-3 w-[240px] rounded-[14px] border border-marca-borde bg-white p-4 shadow-[0_18px_44px_-16px_rgba(18,33,26,0.35)]"
+          // `data-menu-perfil`: mientras está abierto, la barra esconde
+          // «Cómo vas», que quedaba a medias detrás (`globals.css`).
+          data-menu-perfil
+          className="aparece absolute bottom-0 left-full z-50 ml-3 w-[264px] rounded-[14px] border border-marca-borde bg-white p-4 shadow-[0_18px_44px_-16px_rgba(18,33,26,0.35)]"
         >
           {contenido}
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * «Perfil»: a la cuenta del alumno en la web. Toda la fila es el enlace,
+ * de 44px o más; a la izquierda una persona y a la derecha la flecha de
+ * «sale a otra web». `-mx-2` para que el fondo del hover llegue hasta
+ * los bordes del menú sin mover el texto.
+ */
+function EnlacePerfilWeb() {
+  const { t } = usarIdioma();
+  const tp = t.navegacion.perfilWeb;
+  return (
+    <a
+      href={PERFIL_WOO}
+      className="-mx-2 flex min-h-[48px] items-center gap-3 rounded-[10px] px-2 py-1.5 text-marca-tintaMedia transition-colors hover:bg-marca-niebla focus-visible:bg-marca-niebla focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-marca-verdeOsc"
+    >
+      <IconoPersona />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14.5px] font-semibold leading-tight text-marca-tinta">{tp.titulo}</span>
+        <span className="mt-0.5 block text-[12.5px] leading-snug text-marca-gris">{tp.apoyo}</span>
+        <span className="sr-only"> {tp.enOtraWeb}</span>
+      </span>
+      <IconoOtraWeb />
+    </a>
+  );
+}
+
+function IconoPersona() {
+  return (
+    <svg aria-hidden viewBox="0 0 18 18" className="h-[18px] w-[18px] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="6.3" r="3" />
+      <path d="M3.4 15.2c.6-2.9 2.9-4.4 5.6-4.4s5 1.5 5.6 4.4" />
+    </svg>
+  );
+}
+
+/** Una flecha que sale de una caja: el enlace lleva a otra web. */
+function IconoOtraWeb() {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" className="h-[14px] w-[14px] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.5 2.5h4v4M13.5 2.5 7.5 8.5" />
+      <path d="M12 9.5v3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3" />
+    </svg>
   );
 }
 

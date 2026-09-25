@@ -680,6 +680,12 @@
   html[data-tutorial-puente] .barra-app:not(.barra-fija) .barra-solo-plegada {
     opacity: 0;
   }
+  /* Con el menú del avatar abierto, «Cómo vas» se aparta: el menú sale
+     a su lado y lo dejaba a medias por detrás. Las clases repetidas
+     ganan a la regla que enseña los rótulos al pasar el ratón. */
+  .barra-app.barra-app:has([data-menu-perfil]) .barra-detalle.barra-detalle {
+    visibility: hidden;
+  }
   @media (prefers-reduced-motion: reduce) {
     .barra-app .barra-panel,
     .barra-app .barra-rotulo {

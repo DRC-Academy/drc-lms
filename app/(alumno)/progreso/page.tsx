@@ -15,6 +15,7 @@ import { calcularDiploma } from "@/lib/diploma";
 import { conFoco } from "@/lib/foco";
 import { comoFecha } from "@/lib/fechas";
 import { textosActuales } from "@/lib/idioma-servidor";
+import { AMPLIAR_PLAN_WOO } from "@/lib/cuenta-woo";
 import Ficha from "@/components/progreso/Ficha";
 
 export const dynamic = "force-dynamic";
@@ -29,8 +30,10 @@ export const dynamic = "force-dynamic";
  * logueado, así que aquí no se construye ni se adivina: el botón apunta
  * a Mi cuenta con el parámetro `drc-ampliar-plan`, y el snippet
  * `wordpress/drc-ampliar-plan.php` la convierte en el switch al vuelo,
- * en el servidor de WordPress. Sin ese snippet activo, la URL se queda
- * en /mi-cuenta/ a secas.
+ * en el servidor de WordPress. Sin ese snippet activo, el alumno se
+ * queda en Mi cuenta, y no rebota al LMS: la redirección de /mi-cuenta/
+ * al LMS no actúa cuando lleva parámetros (resuelto en WordPress). El
+ * valor por defecto vive con el resto de la cuenta, en `lib/cuenta-woo`.
  *
  * Es el mismo sitio al que lleva el botón de la ficha de DRC Gestión.
  * Allí se resuelve por otro camino —un postMessage al iframe de Mi
@@ -42,7 +45,7 @@ export const dynamic = "force-dynamic";
  * servidor. Una URL no es un secreto, pero si no hace falta cruzar al
  * navegador, no cruza.
  */
-const URL_AMPLIAR = process.env.URL_AMPLIAR_PLAN || "https://drcacademy.com/mi-cuenta/?drc-ampliar-plan=1";
+const URL_AMPLIAR = process.env.URL_AMPLIAR_PLAN || AMPLIAR_PLAN_WOO;
 
 /**
  * El progreso del alumno, como cuarta sección.

@@ -57,6 +57,8 @@ export type TextosNavegacion = {
   ayuda: string;
   perfil: string;
   cerrarElMenu: string;
+  /** La fila «Perfil» del menú del avatar, que lleva a la cuenta de la web. */
+  perfilWeb: { titulo: string; apoyo: string; enOtraWeb: string };
 
   // --- identidad ---
   salir: string;
@@ -90,6 +92,7 @@ const ES: TextosNavegacion = {
   ayuda: "Ayuda",
   perfil: "Perfil",
   cerrarElMenu: "Cerrar el menú",
+  perfilWeb: { titulo: "Perfil", apoyo: "Suscripción, pagos y datos", enOtraWeb: "(en drcacademy.com)" },
 
   salir: "Salir",
   practicandoComo: (nombre) => `Practicando como ${nombre}`,
@@ -119,6 +122,7 @@ const EN: TextosNavegacion = {
   ayuda: "Help",
   perfil: "Profile",
   cerrarElMenu: "Close the menu",
+  perfilWeb: { titulo: "Profile", apoyo: "Subscription, payments and details", enOtraWeb: "(on drcacademy.com)" },
 
   salir: "Log out",
   practicandoComo: (nombre) => `Practising as ${nombre}`,

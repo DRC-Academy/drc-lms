@@ -397,6 +397,26 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
                     </ListaOpciones>
                   )}
 
+                  {/* El atajo de la respuesta, si lo tiene: hoy, la cuenta de la
+                      web. Misma pestaña, como el «Perfil» del menú del avatar.
+                      Contorno y no relleno: el verde lleno es de WhatsApp. */}
+                  {mensaje.tipo === "respuesta" &&
+                    (() => {
+                      const enlace = preguntaPorId(mensaje.idPregunta)?.enlace;
+                      return enlace ? (
+                        <a
+                          href={enlace.href}
+                          className="btn-verde-linea inline-flex min-h-[44px] items-center justify-center gap-2 self-start rounded-full px-5 text-[14.5px] font-semibold"
+                        >
+                          {enlace.texto[idioma]}
+                          <svg aria-hidden viewBox="0 0 16 16" className="h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9.5 2.5h4v4M13.5 2.5 7.5 8.5" />
+                            <path d="M12 9.5v3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3" />
+                          </svg>
+                        </a>
+                      ) : null;
+                    })()}
+
                   {mensaje.tipo === "respuesta" && (
                     <Valoracion
                       util={mensaje.util}

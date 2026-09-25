@@ -26,6 +26,7 @@
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
+import { PERFIL_WOO } from "@/lib/cuenta-woo";
 
 /** Un texto en los dos idiomas. */
 export type Bilingue = Record<Idioma, string>;
@@ -47,6 +48,18 @@ export type Pregunta = {
    * separarlas no ganaría nada y obligaría a mantener dos listas.
    */
   claves?: string[];
+  /**
+   * Un enlace debajo de la respuesta, si lo que se pregunta se resuelve
+   * en otro sitio —la cuenta de la web—. El texto de la respuesta sigue
+   * diciendo cómo llegar a mano: el enlace es el atajo, no la respuesta.
+   */
+  enlace?: { texto: Bilingue; href: string };
+};
+
+/** «Ir a mi perfil»: la cuenta del alumno en la web (`lib/cuenta-woo`). */
+const A_MI_PERFIL: Pregunta["enlace"] = {
+  texto: { es: "Ir a mi perfil", en: "Go to my profile" },
+  href: PERFIL_WOO,
 };
 
 export type CategoriaFaq = {
@@ -479,10 +492,11 @@ export const FAQ: CategoriaFaq[] = [
           en: "My subscription shows as \"on hold\". What does that mean?",
         },
         respuesta: {
-          es: "Suele deberse a un pago pendiente. Mientras esté en espera no podrás tomar clases. Revisa tu método de pago o escríbenos para regularizarlo.",
-          en: "It's usually because of a pending payment. While it's on hold you won't be able to take classes. Check your payment method or write to us to sort it out.",
+          es: "Suele deberse a un pago pendiente. Mientras esté en espera no podrás tomar clases. Revisa tu método de pago en tu cuenta de la web: pulsa tu foto de perfil (en el móvil, la pestaña Perfil de abajo) → Perfil. Si no se arregla, escríbenos.",
+          en: "It's usually because of a pending payment. While it's on hold you won't be able to take classes. Check your payment method in your account on the website: tap your profile picture (on mobile, the Profile tab at the bottom) → Profile. If that doesn't sort it, write to us.",
         },
         claves: ["suscripcion", "en espera", "pago", "pendiente", "cobro", "tarjeta", "subscription", "on hold", "payment", "pending", "card"],
+        enlace: A_MI_PERFIL,
       },
       {
         id: "clases-cancelar",
@@ -491,10 +505,37 @@ export const FAQ: CategoriaFaq[] = [
           en: "What happens if I cancel my subscription?",
         },
         respuesta: {
-          es: "Puedes seguir dando tus clases hasta que termine el periodo que ya has pagado.",
-          en: "You can keep taking your classes until the period you've already paid for ends.",
+          es: "Puedes seguir dando tus clases hasta que termine el periodo que ya has pagado. La suscripción la gestionas en tu cuenta de la web: pulsa tu foto de perfil (en el móvil, la pestaña Perfil de abajo) → Perfil.",
+          en: "You can keep taking your classes until the period you've already paid for ends. You manage your subscription in your account on the website: tap your profile picture (on mobile, the Profile tab at the bottom) → Profile.",
         },
         claves: ["cancelar", "baja", "suscripcion", "devolucion", "reembolso", "cancel", "subscription", "refund"],
+        enlace: A_MI_PERFIL,
+      },
+      // --- Tu cuenta en la web ---
+      {
+        id: "clases-facturas-datos",
+        pregunta: {
+          es: "¿Dónde veo mis facturas o cambio mi tarjeta o mis datos?",
+          en: "Where can I see my invoices or change my card or details?",
+        },
+        respuesta: {
+          es: "En tu cuenta de la web: pulsa tu foto de perfil (en el móvil, la pestaña Perfil de abajo) → Perfil. Ahí tienes tu suscripción, los pagos, las facturas y tus datos. Si necesitas cambiar tu email, escríbenos: lo cambiamos nosotros para que no pierdas el acceso.",
+          en: "In your account on the website: tap your profile picture (on mobile, the Profile tab at the bottom) → Profile. You'll find your subscription, payments, invoices and details there. If you need to change your email, write to us: we'll change it for you so you don't lose access.",
+        },
+        claves: [
+          "factura", "recibo", "tarjeta", "cambiar tarjeta", "metodo de pago", "renovar", "renovacion", "datos", "direccion",
+          "invoice", "receipt", "card", "payment method", "renew", "details", "address",
+        ],
+        enlace: A_MI_PERFIL,
+      },
+      {
+        id: "clases-cambiar-email",
+        pregunta: { es: "¿Cómo cambio mi email?", en: "How do I change my email?" },
+        respuesta: {
+          es: "Escríbenos y lo cambiamos nosotros. Tu email es lo que conecta tu cuenta de la web con la plataforma y con tu profesor, así que no conviene cambiarlo por tu cuenta.",
+          en: "Write to us and we'll change it for you. Your email is what connects your website account with the platform and your teacher, so it's best not to change it yourself.",
+        },
+        claves: ["email", "correo", "cambiar email", "cambiar correo", "change email"],
       },
     ],
   },

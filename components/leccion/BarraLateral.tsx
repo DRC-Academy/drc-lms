@@ -242,7 +242,7 @@ function DetalleDeLaBarra({ estadisticas }: { estadisticas: EstadisticasAlumno }
       </ul>
       <div
         aria-hidden
-        className="barra-rotulo absolute bottom-[84px] left-[18px] w-[236px] rounded-[14px] border border-marca-borde bg-marca-niebla px-4 py-3.5 [@media(max-height:680px)]:hidden"
+        className="barra-rotulo barra-detalle absolute bottom-[84px] left-[18px] w-[236px] rounded-[14px] border border-marca-borde bg-marca-niebla px-4 py-3.5 [@media(max-height:680px)]:hidden"
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-marca-grisSuave">{te.titulo}</p>
         <dl className="mt-2.5 flex flex-col gap-3">
