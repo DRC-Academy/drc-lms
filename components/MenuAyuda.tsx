@@ -19,11 +19,14 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
  * igual que pulsar fuera o pulsar el botón otra vez.
  */
 export default function MenuAyuda({
+  id,
   disparador,
   onCerrar,
   onTutorial,
   onChat,
 }: {
+  /** Para el `aria-controls` del botón. */
+  id?: string;
   /** El botón que lo abre: pulsarlo no cuenta como «fuera». */
   disparador: RefObject<HTMLElement>;
   /** `devolverFoco`: false cuando el foco ya se ha ido a otro sitio. */
@@ -77,6 +80,7 @@ export default function MenuAyuda({
   return (
     <div
       ref={menu}
+      id={id}
       role="menu"
       aria-label={ta.menuAyuda}
       onKeyDown={alMoverse}
@@ -88,9 +92,10 @@ export default function MenuAyuda({
         if (menu.current?.contains(siguiente) || disparador.current?.contains(siguiente)) return;
         onCerrar(false);
       }}
-      className="menu-ayuda absolute bottom-full right-0 z-50 mb-3 flex w-[min(300px,calc(100vw-32px))] origin-bottom-right flex-col gap-1.5 rounded-[16px] border border-marca-borde bg-white p-2 shadow-[0_18px_44px_-16px_rgba(18,33,26,0.35)]"
+      className="menu-ayuda absolute bottom-full right-0 z-50 mb-3 flex flex-col"
     >
       <Opcion titulo={ta.opcionTutorial} detalle={ta.opcionTutorialDetalle} onClick={onTutorial} icono={<IconoTutorial />} />
+      <span aria-hidden className="menu-ayuda-separador" />
       <Opcion titulo={ta.opcionChat} detalle={ta.opcionChatDetalle} onClick={onChat} icono={<IconoChat />} />
     </div>
   );
@@ -112,15 +117,18 @@ function Opcion({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex min-h-[64px] w-full items-center gap-3 rounded-[12px] bg-marca-verde px-4 py-2.5 text-left text-white transition-colors hover:bg-marca-verdeOsc focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verde"
+      className="menu-ayuda-opcion flex w-full items-center gap-3 text-left"
     >
-      <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/15">
+      <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[rgba(30,158,58,0.10)] text-[#1E9E3A]">
         {icono}
       </span>
-      <span className="min-w-0">
-        <span className="block text-[17px] font-bold leading-tight">{titulo}</span>
-        <span className="mt-0.5 block text-[14px] leading-snug text-white/90">{detalle}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-display text-[14px] font-semibold leading-tight text-[#12211A]">{titulo}</span>
+        <span className="mt-0.5 block text-[12px] leading-[1.4] text-[#5B6B62]">{detalle}</span>
       </span>
+      <svg aria-hidden viewBox="0 0 16 16" className="h-4 w-4 shrink-0 text-[#9AA8A0]" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m6 3.5 4.5 4.5L6 12.5" />
+      </svg>
     </button>
   );
 }
@@ -128,7 +136,7 @@ function Opcion({
 /** Una brújula: el recorrido que enseña dónde está cada cosa. */
 function IconoTutorial() {
   return (
-    <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9" />
       <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
     </svg>
@@ -138,7 +146,7 @@ function IconoTutorial() {
 /** Dos bocadillos: la conversación con la ayuda. */
 function IconoChat() {
   return (
-    <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5v6a1.5 1.5 0 0 1-1.5 1.5H9l-3.5 3v-3h0A1.5 1.5 0 0 1 4 11.5v-6Z" />
       <path d="M19 9h.5A1.5 1.5 0 0 1 21 10.5v6a1.5 1.5 0 0 1-1.5 1.5H19v2.5L15.5 18H12a1.5 1.5 0 0 1-1.5-1.5V16" />
     </svg>

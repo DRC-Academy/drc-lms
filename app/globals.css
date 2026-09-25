@@ -512,14 +512,15 @@
      horizontal, la muesca a la derecha. */
   .zona-ayuda {
     position: fixed;
-    right: calc(16px + env(safe-area-inset-right));
-    bottom: calc(24px + env(safe-area-inset-bottom));
+    right: calc(20px + env(safe-area-inset-right));
+    bottom: calc(20px + env(safe-area-inset-bottom));
     transition: bottom var(--dur-estado) var(--ease-salida);
   }
 
-  @media (min-width: 640px) {
+  @media (max-width: 399px) {
     .zona-ayuda {
-      right: calc(24px + env(safe-area-inset-right));
+      right: calc(16px + env(safe-area-inset-right));
+      bottom: calc(16px + env(safe-area-inset-bottom));
     }
   }
 
@@ -540,18 +541,84 @@
     display: none;
   }
 
-  /* El menú «Tutorial / Chat»: aparece, sin más. Con movimiento
-     reducido, ni eso. */
-  @media (prefers-reduced-motion: no-preference) {
+  /* EL BOTÓN DE AYUDA. Cerrado, verde; con el menú o el chat abiertos,
+     blanco con «Cerrar». Mismo alto y mismo relleno en los dos, para que
+     el cambio no mueva nada. */
+  .boton-ayuda {
+    height: 44px;
+    padding: 0 16px 0 12px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: #1E9E3A;
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(18, 33, 26, 0.14);
+    transition: background-color 0.16s ease, box-shadow 0.16s ease;
+  }
+  .boton-ayuda:hover {
+    background: #14722A;
+  }
+  .boton-ayuda[data-abierto] {
+    background: #FFFFFF;
+    border-color: #E2E8E4;
+    color: #12211A;
+    box-shadow: 0 4px 12px rgba(18, 33, 26, 0.08);
+  }
+  .boton-ayuda[data-abierto]:hover {
+    background: #F4F7F4;
+  }
+  .boton-ayuda:focus-visible,
+  .menu-ayuda-opcion:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(30, 158, 58, 0.35);
+  }
+
+  /* El menú «Tutorial / Chat»: un solo panel blanco con filas, no
+     tarjetas. 12px por encima del botón (`mb-3`), alineado a la derecha. */
+  .menu-ayuda {
+    width: min(260px, calc(100vw - 32px));
+    padding: 6px;
+    background: #FFFFFF;
+    border: 1px solid #E2E8E4;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(18, 33, 26, 0.10);
+  }
+  .menu-ayuda-opcion {
+    min-height: 56px;
+    padding: 10px;
+    border-radius: 10px;
+    transition: background-color 0.16s ease;
+  }
+  .menu-ayuda-opcion:hover,
+  .menu-ayuda-opcion:focus-visible {
+    background: #F4F7F4;
+  }
+  .menu-ayuda-separador {
+    display: block;
+    height: 1px;
+    margin: 0 10px;
+    background: #E2E8E4;
+  }
+
+  /* Entra subiendo 6px; con movimiento reducido, solo la opacidad (la
+     regla general de arriba la deja en un instante). */
+  .menu-ayuda {
+    animation: menu-ayuda-entra 160ms ease-out both;
+  }
+  @media (prefers-reduced-motion: reduce) {
     .menu-ayuda {
-      animation: menu-ayuda-entra var(--dur-estado) var(--ease-salida) both;
+      animation-name: menu-ayuda-aparece;
     }
   }
 
   @keyframes menu-ayuda-entra {
     from {
       opacity: 0;
-      transform: translateY(6px) scale(0.98);
+      transform: translateY(6px);
+    }
+  }
+  @keyframes menu-ayuda-aparece {
+    from {
+      opacity: 0;
     }
   }
 

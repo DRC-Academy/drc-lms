@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { lanzarTutorial } from "@/components/tutorial/eventos";
 import MenuAyuda from "@/components/MenuAyuda";
 import { usePathname } from "next/navigation";
@@ -114,6 +114,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
   const [consulta, setConsulta] = useState("");
 
   const lanzador = useRef<HTMLButtonElement>(null);
+  const idMenu = useId();
   const campo = useRef<HTMLInputElement>(null);
   const fin = useRef<HTMLDivElement>(null);
   const siguienteId = useRef(0);
@@ -482,25 +483,28 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
 
           CERRADO EL CHAT, ABRE UN MENÚ: «Tutorial» o «Chat». Con el chat
           abierto (desde 640px sigue a la vista) lo cierra, como antes.
-          64px de alto: lo pulsan adultos, algunos con el pulgar y gafas
-          de cerca. Durante el recorrido guiado no se ve (`globals.css`,
-          `[data-tutorial-activo]`). */}
+          Abierto cualquiera de los dos, pasa a blanco con «Cerrar», del
+          mismo tamaño para que no salte (`.boton-ayuda`, `globals.css`).
+          Durante el recorrido guiado no se ve (`[data-tutorial-activo]`). */}
       <button
         ref={lanzador}
         type="button"
         onClick={() => (abierto ? cerrar() : menu ? cerrarMenu(true) : setMenu(true))}
         aria-expanded={abierto || menu}
         aria-haspopup="menu"
-        className={`btn-verde inline-flex min-h-[64px] items-center gap-2.5 rounded-full px-6 text-[17px] font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verde ${
+        aria-controls={menu ? idMenu : undefined}
+        data-abierto={abierto || menu ? "" : undefined}
+        className={`boton-ayuda inline-flex items-center gap-2 font-sans text-[14px] font-semibold ${
           abierto ? "hidden min-[640px]:inline-flex" : ""
         }`}
       >
-        {menu ? <IconoCerrar className="h-6 w-6" /> : <IconoAyuda className="h-6 w-6" />}
+        {abierto || menu ? <IconoCerrar className="h-[18px] w-[18px]" /> : <IconoAyuda className="h-[18px] w-[18px]" />}
         {abierto || menu ? t.cerrar : t.ayuda}
       </button>
 
       {menu && (
         <MenuAyuda
+          id={idMenu}
           disparador={lanzador}
           onCerrar={cerrarMenu}
           onTutorial={() => {
