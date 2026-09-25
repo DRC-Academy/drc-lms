@@ -139,7 +139,7 @@ export function normalizarRespuesta(texto: string): string {
     .replace(/…/g, "...")
     .replace(ESPACIOS, " ")
     .toLowerCase()
-    .replace(/[.,;!?]/g, "")
+    .replace(/[.,;:!?]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }

@@ -112,6 +112,11 @@ export default function FlujoEjercicios({
   function alSuceso(suceso: SucesoVisor) {
     // El curso solo guarda intentos. Ni avance ni producción: la lección
     // no lleva un "iba por la mitad", y su cierre es marcarla completada.
+    // La reacción de los huecos arreglados es solo para la mascota.
+    if (suceso.tipo === "reaccion") {
+      reaccionarEnCurso(suceso);
+      return;
+    }
     if (suceso.tipo !== "intento") return;
     if (registrarIntentos) {
       void registrarIntento(suceso.ejercicio.id, suceso.correcto).then((guardado) => {

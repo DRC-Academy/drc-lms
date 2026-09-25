@@ -197,6 +197,8 @@ export default function VistaBloque({
       // cuenta es el resultado del bloque, que va en "final". La
       // mascota sí se entera.
       case "intento":
+      // Los huecos arreglados después: la mascota lo celebra, no se guarda.
+      case "reaccion":
         reaccionarEnPractica(suceso);
         break;
 

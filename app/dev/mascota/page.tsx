@@ -310,7 +310,7 @@ function EjerciciosDePrueba() {
   const [vuelta, setVuelta] = useState(0);
   const reaccionar = modo === "practica" ? reaccionarEnPractica : reaccionarEnCurso;
   const alSuceso = (s: SucesoVisor) => {
-    if (s.tipo === "intento") reaccionar(s);
+    if (s.tipo === "intento" || s.tipo === "reaccion") reaccionar(s);
   };
   return (
     <section id="ejercicios" className="flex flex-col gap-3">

@@ -84,14 +84,25 @@ export type TextosEjercicios = {
   variasCorrectas: string;
   placeholderEscritura: string;
   placeholderLibre: string;
-  huecoAria: (n: number) => string;
+  /** «Hueco 2 de 4»: el nombre del campo para el lector de pantalla. */
+  huecoAria: (n: number, total: number) => string;
+  /** Lo que se añade al nombre del hueco una vez corregido. */
+  huecoBien: string;
+  huecoARevisar: string;
   ayudaHuecos: (n: number) => string;
+  /**
+   * Al pulsar «Comprobar» con algún hueco en blanco. No corrige nada:
+   * lleva al primero y lo dice sin tono de reproche.
+   */
+  huecosEnBlanco: string;
+  /** El nombre de los dos campos de redacción, que el placeholder no da. */
+  ariaEscritura: string;
+  ariaLibre: string;
 
   // --- el botón principal, con sus cuatro estados en espera ---
   comprobar: string;
   esperaEscritura: string;
   esperaOpciones: string;
-  esperaHuecos: string;
   esperaLibre: string;
   verElResultado: string;
   siguienteEjercicio: string;
@@ -166,14 +177,20 @@ const ES: TextosEjercicios = {
   variasCorrectas: "Puede haber más de una correcta.",
   placeholderEscritura: "Escribe tu versión…",
   placeholderLibre: "Escribe aquí…",
-  huecoAria: (n) => `Hueco ${n}`,
+  huecoAria: (n, total) => `Hueco ${n} de ${total}`,
+  huecoBien: "correcto",
+  huecoARevisar: "revísalo y vuelve a comprobar",
   ayudaHuecos: (n) =>
-    `Escribe y sal del hueco para corregirlo. ${conMayuscula(enLetras("es", n))} ${n === 1 ? "hueco" : "huecos"}.`,
+    n === 1
+      ? "Escribe en el hueco y pulsa «Comprobar»."
+      : `${conMayuscula(enLetras("es", n))} huecos. Con Intro pasas al siguiente; cuando acabes, pulsa «Comprobar».`,
+  huecosEnBlanco: "Aún te queda algún hueco en blanco. Te llevo al primero.",
+  ariaEscritura: "Tu versión de la frase",
+  ariaLibre: "Tu respuesta",
 
   comprobar: "Comprobar",
   esperaEscritura: "Escribe tu versión",
   esperaOpciones: "Elige una opción",
-  esperaHuecos: "Rellena los huecos",
   esperaLibre: "Escribe tu respuesta",
   verElResultado: "Ver el resultado →",
   siguienteEjercicio: "Siguiente ejercicio →",
@@ -270,16 +287,20 @@ const EN: TextosEjercicios = {
   variasCorrectas: "More than one answer can be right.",
   placeholderEscritura: "Write your version…",
   placeholderLibre: "Write here…",
-  huecoAria: (n) => `Gap ${n}`,
+  huecoAria: (n, total) => `Gap ${n} of ${total}`,
+  huecoBien: "correct",
+  huecoARevisar: "have another look and check again",
   ayudaHuecos: (n) =>
-    `Write in the gap and click outside it to check. ${conMayuscula(enLetras("en", n))} ${
-      n === 1 ? "gap" : "gaps"
-    }.`,
+    n === 1
+      ? "Write in the gap and press “Check”."
+      : `${conMayuscula(enLetras("en", n))} gaps. Enter takes you to the next one; when you're done, press “Check”.`,
+  huecosEnBlanco: "There's still a blank gap. Here's the first one.",
+  ariaEscritura: "Your version of the sentence",
+  ariaLibre: "Your answer",
 
   comprobar: "Check",
   esperaEscritura: "Write your version",
   esperaOpciones: "Pick an answer",
-  esperaHuecos: "Fill in the gaps",
   esperaLibre: "Write your answer",
   verElResultado: "See your result →",
   siguienteEjercicio: "Next exercise →",

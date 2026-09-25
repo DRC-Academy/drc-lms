@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { normalizarRespuesta } from "@/lib/validarBloque";
 import type { EjercicioUnificado } from "@/lib/ejercicio-unificado";
 import type { TextosEjercicios } from "@/lib/textos/ejercicios";
@@ -101,6 +102,13 @@ function distancia(a: string, b: string): number {
   return fila[b.length];
 }
 
+/** Los huecos en el orden en que salen en el enunciado ({{1}}, {{2}}…). */
+function ordenHuecos(ejercicio: EjercicioUnificado): number[] {
+  return (ejercicio.enunciado.match(/\{\{\d+\}\}/g) ?? [])
+    .map((m) => Number(m.slice(2, -2)) - 1)
+    .filter((i) => i >= 0 && i < ejercicio.huecos.length);
+}
+
 /**
  * Cómo salió una respuesta. «casi» cuenta como fallo en todo lo que se
  * guarda; solo cambia lo que dice y hace la mascota.
@@ -129,6 +137,12 @@ export type SucesoVisor =
   | { tipo: "avance"; indice: number; total: number }
   | { tipo: "produccion"; ejercicio: EjercicioUnificado; texto: string }
   | { tipo: "final"; aciertos: number; total: number }
+  /**
+   * Solo para la mascota, NO SE GUARDA: el alumno ha arreglado los
+   * huecos que tenía mal y ya están todos bien. El intento se registró
+   * con la primera corrección y esto no lo cambia.
+   */
+  | { tipo: "reaccion"; resultado: Resultado; seguidos: number; trasFallo: boolean }
   // Los dos de abajo no guardan nada: son para quien pinta el estado
   // del visor desde fuera —el panel del curso, en la lección—.
   | { tipo: "salto"; indice: number }
@@ -155,8 +169,19 @@ type Estado = {
   resuelto: boolean;
   /** Lo escrito en cada hueco. */
   huecos: string[];
-  /** Corregido por hueco: null mientras no ha salido del campo. */
+  /**
+   * Cómo está cada hueco AHORA: null sin corregir (o retocado después de
+   * corregirlo mal), true bien —y bloqueado—, false a revisar.
+   */
   huecosOk: (boolean | null)[];
+  /**
+   * La PRIMERA corrección de cada hueco, que es la que cuenta: con ella se
+   * registra el intento y se decide si el ejercicio está acertado. Las
+   * siguientes son para aprender. «casi» es mal, pero a una o dos letras.
+   */
+  huecosPrimera: (Resultado | null)[];
+  /** Pulsó «Comprobar» con algún hueco en blanco. */
+  avisoHuecos: boolean;
   /** El texto de `escritura` y de `libre`. */
   texto: string;
   /** `escritura`: si la respuesta coincidía. null hasta comprobar. */
@@ -176,6 +201,8 @@ const VACIO = (ejercicio: EjercicioUnificado): Estado => ({
   resuelto: false,
   huecos: ejercicio.huecos.map(() => ""),
   huecosOk: ejercicio.huecos.map(() => null),
+  huecosPrimera: ejercicio.huecos.map(() => null),
+  avisoHuecos: false,
   texto: "",
   textoOk: null,
   verModelo: false,
@@ -263,7 +290,9 @@ export default function VisorEjercicios({
     const e = estados[i];
     const ej = ejercicios[i];
     if (!e || !ej) return false;
-    if (ej.forma === "huecos") return e.huecosOk.length > 0 && e.huecosOk.every((v) => v !== null);
+    // Respondido cuando TODOS los huecos se han corregido al menos una vez
+    // —la regla de siempre—, aunque alguno siga a revisar.
+    if (ej.forma === "huecos") return e.huecosPrimera.length > 0 && e.huecosPrimera.every((v) => v !== null);
     // En `libre` no hay corrección: responder es haber pedido el modelo.
     if (ej.forma === "libre") return e.verModelo;
     return e.resuelto;
@@ -273,7 +302,7 @@ export default function VisorEjercicios({
     const e = estados[i];
     const ej = ejercicios[i];
     if (!e || !ej) return false;
-    if (ej.forma === "huecos") return e.huecosOk.length > 0 && e.huecosOk.every((v) => v === true);
+    if (ej.forma === "huecos") return e.huecosPrimera.length > 0 && e.huecosPrimera.every((v) => v === "correcto");
     if (ej.forma === "escritura") return e.textoOk === true;
     // La autoevaluación: cuenta como acertado si se marcó todo. Sin
     // criterios no hay nada que marcar y no se puede acertar —es el caso
@@ -341,34 +370,96 @@ export default function VisorEjercicios({
     cambiar({ resuelto: true, dicho });
   }
 
-  /** Corrige un hueco al salir del campo. Sin espacios ni mayúsculas. */
-  function corregirHueco(i: number) {
-    const dada = normalizarRespuesta(estado.huecos[i] ?? "");
-    if (dada === "") return;
+  /**
+   * Corrige los huecos `cuales` que estén rellenos y sin corregir. Sin
+   * espacios ni mayúsculas (`normalizarRespuesta`).
+   *
+   * SALIR DEL CAMPO YA NO CORRIGE. Se corrige con Intro (ese hueco) o con
+   * «Comprobar» (todos). Antes se corregía —y se bloqueaba— al perder el
+   * foco: tocar fuera a mitad de palabra dejaba el hueco mal para siempre,
+   * y escribir en el último y pulsar el botón no hacía nada.
+   *
+   * Devuelve true si con esto quedan todos corregidos por primera vez.
+   */
+  function corregirHuecos(cuales: number[]): boolean {
+    const huecosOk = [...estado.huecosOk];
+    const primera = [...estado.huecosPrimera];
+    let alguno = false;
 
-    const bien = (ejercicio.huecos[i] ?? []).some((v) => normalizarRespuesta(v) === dada);
-    const nuevos = estado.huecosOk.map((v, j) => (j === i ? bien : v));
+    for (const i of cuales) {
+      if (huecosOk[i] !== null) continue;
+      const dada = normalizarRespuesta(estado.huecos[i] ?? "");
+      if (dada === "") continue;
+      const aceptadas = ejercicio.huecos[i] ?? [];
+      const bien = aceptadas.some((v) => normalizarRespuesta(v) === dada);
+      huecosOk[i] = bien;
+      if (primera[i] === null) primera[i] = bien ? "correcto" : cerca(dada, aceptadas) ? "casi" : "incorrecto";
+      alguno = true;
+    }
+    if (!alguno) return false;
 
-    // El intento se registra cuando ya están todos: es un ejercicio, no
-    // un hueco. Casi: con dos o más, uno solo mal; o cada hueco que
-    // falla, a una o dos letras de una respuesta aceptada. Con la mitad
-    // bien no basta.
-    if (nuevos.every((v) => v !== null)) {
-      const acertados = nuevos.filter((v) => v === true).length;
-      const todosCerca = nuevos.every(
-        (v, j) => v === true || cerca(normalizarRespuesta(estado.huecos[j] ?? ""), ejercicio.huecos[j] ?? [])
-      );
+    const parcial: Partial<Estado> = { huecosOk, huecosPrimera: primera, avisoHuecos: false };
+    const antes = estado.huecosPrimera.every((v) => v !== null);
+    const ahora = primera.every((v) => v !== null);
+
+    if (!antes && ahora) {
+      // El intento se registra cuando ya están todos, UNA vez: es un
+      // ejercicio, no un hueco. Con la primera corrección de cada uno.
+      // Casi: con dos o más, uno solo mal; o cada hueco que falla, a una
+      // o dos letras de una respuesta aceptada. Con la mitad bien no basta.
+      const acertados = primera.filter((v) => v === "correcto").length;
       const resultado: Resultado =
-        acertados === nuevos.length
+        acertados === primera.length
           ? "correcto"
-          : todosCerca || (nuevos.length >= 2 && acertados === nuevos.length - 1)
+          : primera.every((v) => v !== "incorrecto") || (primera.length >= 2 && acertados === primera.length - 1)
             ? "casi"
             : "incorrecto";
-      cambiar({ huecosOk: nuevos, dicho: responder(resultado) });
-    } else {
-      cambiar({ huecosOk: nuevos });
+      parcial.dicho = responder(resultado);
+    } else if (antes && huecosOk.every((v) => v === true) && !estado.huecosOk.every((v) => v === true)) {
+      // Ya contaba lo primero, y ahora ha dejado todos bien: la mascota lo
+      // celebra como una recuperación. No se registra nada.
+      anunciar({ tipo: "reaccion", resultado: "correcto", seguidos: 1, trasFallo: true });
+      parcial.dicho = { tipo: "recuperacion", i: elegirFrase("recuperacion", tm.frases.recuperacion.length) };
     }
+
+    cambiar(parcial);
+    return !antes && ahora;
   }
+
+  /**
+   * «Comprobar» en huecos, y también Intro en el último. Con algún hueco
+   * en blanco no corrige nada: lleva al primero y lo dice.
+   *
+   * Si con esto quedan todos corregidos, el foco sale del campo: en móvil
+   * se cierra el teclado y se ve lo que dice la mascota, y en escritorio
+   * Intro ya pasa al siguiente ejercicio.
+   */
+  function comprobarHuecos() {
+    const orden = ordenHuecos(ejercicio);
+    const vacio = orden.find(
+      (i) => estado.huecosOk[i] !== true && normalizarRespuesta(estado.huecos[i] ?? "") === ""
+    );
+    if (vacio !== undefined) {
+      cambiar({ avisoHuecos: true });
+      camposHuecos.current[vacio]?.focus();
+      return;
+    }
+    if (corregirHuecos(orden)) (document.activeElement as HTMLElement | null)?.blur();
+  }
+
+  /** Intro en un hueco: corrige ese y pasa al siguiente; en el último, comprueba. */
+  function introEnHueco(i: number) {
+    const orden = ordenHuecos(ejercicio);
+    const pos = orden.indexOf(i);
+    if (pos === orden.length - 1) {
+      comprobarHuecos();
+      return;
+    }
+    corregirHuecos([i]);
+    camposHuecos.current[orden[pos + 1]]?.focus();
+  }
+
+  const camposHuecos = useRef<(HTMLInputElement | null)[]>([]);
 
   function comprobarEscritura() {
     if (yaRespondido || estado.texto.trim() === "") return;
@@ -376,6 +467,14 @@ export default function VisorEjercicios({
     const bien = ejercicio.respuestas.some((r) => normalizarRespuesta(r) === dada);
     const dicho = responder(bien ? "correcto" : cerca(dada, ejercicio.respuestas) ? "casi" : "incorrecto");
     cambiar({ resuelto: true, textoOk: bien, dicho });
+    // El campo se desactiva; que el foco no se quede en él (y en móvil,
+    // que se cierre el teclado y se lea la corrección).
+    (document.activeElement as HTMLElement | null)?.blur();
+  }
+
+  function pedirModelo() {
+    if (estado.texto.trim() === "") return;
+    cambiar({ verModelo: true });
   }
 
   /**
@@ -476,6 +575,95 @@ export default function VisorEjercicios({
   }
 
   /**
+   * MÓVIL CON EL TECLADO ABIERTO. Mientras hay un campo del ejercicio
+   * enfocado (por debajo de 900px):
+   *
+   *   · <html data-escribiendo>, y `globals.css` esconde lo fijo de
+   *     abajo —las pestañas, la ayuda, el cuadro de la mascota—, que con
+   *     el teclado se quedaba flotando o tapando;
+   *   · el botón principal se copia en una barra fija que va justo
+   *     encima del teclado (`flotante`), para comprobar sin cerrarlo.
+   *
+   * EL TECLADO NO ENCOGE LA PÁGINA en iOS (ni en Chrome desde la 108):
+   * encoge el `visualViewport`. La barra se coloca con él —su borde de
+   * abajo es `offsetTop + height`— y se recoloca con cada `resize` y
+   * `scroll` suyo. Donde no existe, se queda abajo del todo.
+   *
+   * Se mira el foco un tic después del evento: al pasar de un hueco a
+   * otro llega un `focusout` antes del `focusin`, y así la barra no
+   * parpadea.
+   */
+  const [escribiendo, setEscribiendo] = useState(false);
+  const flotante = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const zona = zonaEjercicio.current;
+    if (!zona) return;
+    const movil = window.matchMedia("(max-width: 899px)");
+    let tic: number | undefined;
+    const revisar = () => {
+      window.clearTimeout(tic);
+      tic = window.setTimeout(() => {
+        const activo = document.activeElement;
+        const campo =
+          (activo instanceof HTMLInputElement || activo instanceof HTMLTextAreaElement) &&
+          !activo.disabled &&
+          zona.contains(activo);
+        setEscribiendo(movil.matches && campo);
+      }, 0);
+    };
+    revisar();
+    zona.addEventListener("focusin", revisar);
+    zona.addEventListener("focusout", revisar);
+    return () => {
+      window.clearTimeout(tic);
+      zona.removeEventListener("focusin", revisar);
+      zona.removeEventListener("focusout", revisar);
+      setEscribiendo(false);
+    };
+    // `yaRespondido`: al comprobar, el campo puede desactivarse sin que
+    // llegue ningún `focusout`.
+  }, [indice, cerrado, yaRespondido]);
+
+  useEffect(() => {
+    if (!escribiendo) return;
+    const raiz = document.documentElement;
+    raiz.setAttribute("data-escribiendo", "");
+
+    const vv = window.visualViewport;
+    const colocar = (asomar: boolean) => {
+      const barra = flotante.current;
+      if (!barra) return;
+      const alto = barra.offsetHeight;
+      const suelo = vv ? vv.offsetTop + vv.height : window.innerHeight;
+      barra.style.transform = `translateY(${Math.round(suelo - alto)}px)`;
+      // Que el campo no quede debajo de la barra. Solo al abrirse el
+      // teclado o cambiar de campo, no en cada scroll: el alumno manda.
+      if (!asomar) return;
+      const campo = document.activeElement;
+      if (!(campo instanceof HTMLElement)) return;
+      const limite = suelo - alto - 12;
+      const abajo = campo.getBoundingClientRect().bottom;
+      if (abajo > limite) window.scrollBy({ top: abajo - limite });
+    };
+    const alCambiar = () => colocar(true);
+    const alMover = () => colocar(false);
+
+    colocar(true);
+    vv?.addEventListener("resize", alCambiar);
+    vv?.addEventListener("scroll", alMover);
+    window.addEventListener("resize", alCambiar);
+    document.addEventListener("focusin", alCambiar);
+    return () => {
+      raiz.removeAttribute("data-escribiendo");
+      vv?.removeEventListener("resize", alCambiar);
+      vv?.removeEventListener("scroll", alMover);
+      window.removeEventListener("resize", alCambiar);
+      document.removeEventListener("focusin", alCambiar);
+    };
+  }, [escribiendo]);
+
+  /**
    * Teclado: 1–8 eligen opción y Enter avanza.
    *
    * Sin lista de dependencias a propósito: se vuelve a registrar en cada
@@ -568,6 +756,9 @@ export default function VisorEjercicios({
       : null;
 
   const veredicto = yaAcertado ? ejercicio.veredictoAcierto : ejercicio.veredictoFallo;
+  // La solución sobra si ya los tiene todos bien, aunque no a la primera:
+  // se ve en los huecos. Lo que cuenta sigue siendo `yaAcertado`.
+  const mostrarSolucion = esHuecos ? !estado.huecosOk.every((v) => v === true) : !yaAcertado;
 
   // Lo que dice la mascota: tras responder, la frase del veredicto y,
   // debajo, el del modelo si lo hay, cuál era la buena (si falló) y la
@@ -583,7 +774,7 @@ export default function VisorEjercicios({
         {veredicto}
       </p>
     ),
-    !yaAcertado && <p key="respuesta">{solucionEscrita ?? tm.laRespuestaEs(solucion)}</p>,
+    mostrarSolucion && <p key="respuesta">{solucionEscrita ?? tm.laRespuestaEs(solucion)}</p>,
     ejercicio.explicacion && <p key="explicacion">{ejercicio.explicacion}</p>,
   ].filter(Boolean);
   const cuerpoDelVeredicto = partes.length > 0 ? partes : null;
@@ -607,6 +798,40 @@ export default function VisorEjercicios({
   const puedeComprobarVarias = pendienteVarias && estado.elegidas.length > 0;
   const pendienteEscritura = esEscritura && !estado.resuelto;
   const puedeComprobarEscritura = pendienteEscritura && estado.texto.trim() !== "";
+  // En huecos, «Comprobar» está siempre activo: con algún hueco en blanco
+  // no corrige, lleva a él y lo explica (`comprobarHuecos`).
+  const pendienteHuecos = esHuecos && !yaRespondido;
+
+  /** El botón de abajo: el de su sitio y el de encima del teclado. */
+  const principal: { texto: string; activo: boolean; accion: () => void } = pendienteHuecos
+    ? { texto: t.comprobar, activo: true, accion: comprobarHuecos }
+    : pendienteVarias || pendienteEscritura
+      ? {
+          texto:
+            puedeComprobarVarias || puedeComprobarEscritura
+              ? t.comprobar
+              : pendienteEscritura
+                ? t.esperaEscritura
+                : t.esperaOpciones,
+          activo: puedeComprobarVarias || puedeComprobarEscritura,
+          accion: pendienteVarias ? comprobarVarias : comprobarEscritura,
+        }
+      : {
+          texto: !yaRespondido
+            ? esLibre
+              ? t.esperaLibre
+              : t.esperaOpciones
+            : indice + 1 >= ejercicios.length
+              ? t.verElResultado
+              : t.siguienteEjercicio,
+          activo: yaRespondido,
+          accion: avanzar,
+        };
+  // Escribiendo en `libre`, lo que toca es comparar con el modelo.
+  const encimaDelTeclado =
+    esLibre && !estado.verModelo
+      ? { texto: t.compararConElModelo, activo: estado.texto.trim() !== "", accion: pedirModelo }
+      : principal;
 
   return (
     // En móvil, sitio debajo de los botones para el dock del cuadro.
@@ -675,10 +900,17 @@ export default function VisorEjercicios({
               ejercicio={ejercicio}
               estado={estado}
               t={t}
+              campos={camposHuecos}
+              // Retocar un hueco que estaba a revisar lo devuelve a «sin
+              // corregir»: lo que se ve ya no es lo que se corrigió.
               alEscribir={(i, v) =>
-                cambiar({ huecos: estado.huecos.map((x, j) => (j === i ? v : x)) })
+                cambiar({
+                  huecos: estado.huecos.map((x, j) => (j === i ? v : x)),
+                  huecosOk: estado.huecosOk.map((x, j) => (j === i && x === false ? null : x)),
+                  avisoHuecos: false,
+                })
               }
-              alCorregir={corregirHueco}
+              alIntro={introEnHueco}
             />
           )}
 
@@ -712,6 +944,8 @@ export default function VisorEjercicios({
               <textarea
                 value={estado.texto}
                 onChange={(e) => cambiar({ texto: e.target.value })}
+                // Es una frase: Intro comprueba (y Cmd/Ctrl+Intro también).
+                // Mayús+Intro, salto de línea.
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -721,6 +955,12 @@ export default function VisorEjercicios({
                 disabled={yaRespondido}
                 rows={3}
                 placeholder={t.placeholderEscritura}
+                aria-label={t.ariaEscritura}
+                autoCorrect="off"
+                autoCapitalize="sentences"
+                autoComplete="off"
+                spellCheck={false}
+                enterKeyHint="done"
                 className="mt-5 w-full resize-none rounded-[14px] border-[1.5px] border-marca-borde bg-white px-5 py-4 text-[16.5px] leading-[1.5] text-marca-tinta outline-none transition-colors focus:border-marca-verde disabled:opacity-70"
               />
           )}
@@ -731,7 +971,7 @@ export default function VisorEjercicios({
               estado={estado}
               t={t}
               alEscribir={(v) => cambiar({ texto: v })}
-              alPedirModelo={() => cambiar({ verModelo: true })}
+              alPedirModelo={pedirModelo}
               alMarcar={(k) =>
                 cambiar({
                   marcados: estado.marcados.includes(k)
@@ -780,52 +1020,71 @@ export default function VisorEjercicios({
           principal de sitio al pasar del primero al segundo. */}
       <div
         ref={botones}
-        className="mt-4 flex items-center gap-3 min-[900px]:mt-5 min-[900px]:gap-3.5"
+        // Con el teclado abierto el botón está en la barra de encima; aquí
+        // se queda su sitio, para que nada salte al cerrarlo.
+        className={`mt-4 flex items-center gap-3 min-[900px]:mt-5 min-[900px]:gap-3.5 ${escribiendo ? "invisible" : ""}`}
         style={{ scrollMarginBottom: "calc(var(--dock-dialogo, 0px) + var(--nav-inferior, 0px) + 12px)" }}
       >
         <FlechaAtras t={t} alPulsar={indice > 0 ? () => verEjercicio(indice - 1) : null} />
 
-        {pendienteVarias || pendienteEscritura ? (
-          <button
-            type="button"
-            onClick={pendienteVarias ? comprobarVarias : comprobarEscritura}
-            disabled={!(puedeComprobarVarias || puedeComprobarEscritura)}
-            className={`flex-1 rounded-full px-6 py-[14px] text-center text-[15px] font-semibold transition-colors min-[900px]:py-[15px] min-[900px]:text-[15.5px] ${
-              puedeComprobarVarias || puedeComprobarEscritura
-                ? "btn-verde"
-                : "cursor-not-allowed bg-marca-pista text-marca-grisInactivo"
-            }`}
-          >
-            {puedeComprobarVarias || puedeComprobarEscritura
-              ? t.comprobar
-              : pendienteEscritura
-                ? t.esperaEscritura
-                : t.esperaOpciones}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={avanzar}
-            disabled={!yaRespondido}
-            className={`flex-1 rounded-full px-6 py-[14px] text-center text-[15px] font-semibold transition-colors min-[900px]:py-[15px] min-[900px]:text-[15.5px] ${
-              yaRespondido
-                ? "btn-verde"
-                : "cursor-not-allowed bg-marca-pista text-marca-grisInactivo"
-            }`}
-          >
-            {!yaRespondido
-              ? esHuecos
-                ? t.esperaHuecos
-                : esLibre
-                  ? t.esperaLibre
-                  : t.esperaOpciones
-              : indice + 1 >= ejercicios.length
-                ? t.verElResultado
-                : t.siguienteEjercicio}
-          </button>
-        )}
+        <BotonPrincipal {...principal} />
       </div>
+
+      {/* ------------------------ ENCIMA DEL TECLADO ------------------------
+          Solo en móvil y con un campo enfocado. La coloca el efecto de
+          `escribiendo`. Al tocarla, el foco no sale del campo
+          (`preventDefault` en el `mousedown`): comprobar no cierra el
+          teclado. En <body>, como el dock de la mascota: un antepasado con
+          transform convertiría el `fixed` en relativo. */}
+      {escribiendo &&
+        createPortal(
+        <div
+          ref={flotante}
+          className="fixed inset-x-0 top-0 z-[60] border-t border-marca-borde bg-white px-5 py-2.5 min-[900px]:hidden"
+          style={{ transform: "translateY(-200%)" }}
+        >
+          <div className="flex" onMouseDown={(e) => e.preventDefault()}>
+            <BotonPrincipal {...encimaDelTeclado} />
+          </div>
+        </div>,
+          document.body
+        )}
     </div>
+  );
+}
+
+/** El botón verde de abajo, o gris y quieto mientras no se puede pulsar. */
+function BotonPrincipal({ texto, activo, accion }: { texto: string; activo: boolean; accion: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={accion}
+      disabled={!activo}
+      className={`flex-1 rounded-full px-6 py-[14px] text-center text-[15px] font-semibold transition-colors min-[900px]:py-[15px] min-[900px]:text-[15.5px] ${
+        activo ? "btn-verde" : "cursor-not-allowed bg-marca-pista text-marca-grisInactivo"
+      }`}
+    >
+      {texto}
+    </button>
+  );
+}
+
+/** Hueco bien: la marca. */
+function IconoBien() {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.5 8.5l3 3 6-7" />
+    </svg>
+  );
+}
+
+/** Hueco a revisar: la flecha de volver a intentarlo, no una cruz. */
+function IconoRevisar() {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12.6 6A5 5 0 1 0 13 9.5" />
+      <path d="M13 2.8V6H9.8" />
+    </svg>
   );
 }
 
@@ -931,24 +1190,39 @@ function Opcion({
  * texto, así que aquí el enunciado ES el ejercicio: se parte por ellos y
  * se intercala un campo.
  *
- * SE CORRIGE HUECO A HUECO al salir del campo. Hay lecciones con
- * dieciocho huecos: esperar al final para saber si el primero estaba
- * bien es esperar demasiado.
+ * SE CORRIGE CON INTRO O CON «COMPROBAR», nunca al salir del campo (ver
+ * `corregirHuecos`). Intro corrige ese hueco y pasa al siguiente; en el
+ * último, comprueba. Un hueco bien se bloquea; uno a revisar se puede
+ * retocar y volver a corregir.
+ *
+ * EL HUECO CRECE CON LO QUE SE ESCRIBE. Un gemelo invisible con el mismo
+ * texto, la misma letra y el mismo relleno da el ancho, y el campo lo
+ * cubre entero: sin medir nada en JavaScript. Mínimo, los 100px de
+ * siempre; máximo, la línea (`max-w-full`), y a partir de ahí el texto se
+ * desplaza dentro del campo en vez de cortarse.
+ *
+ * NO SOLO COLOR: bien lleva una marca y a revisar una flecha de volver a
+ * intentarlo, y el lector de pantalla lo oye en el nombre del campo.
  */
 function Huecos({
   ejercicio,
   estado,
   t,
+  campos,
   alEscribir,
-  alCorregir,
+  alIntro,
 }: {
   ejercicio: EjercicioUnificado;
   estado: Estado;
   t: TextosEjercicios;
+  campos: { current: (HTMLInputElement | null)[] };
   alEscribir: (i: number, valor: string) => void;
-  alCorregir: (i: number) => void;
+  alIntro: (i: number) => void;
 }) {
   const trozos = ejercicio.enunciado.split(/(\{\{\d+\}\})/g);
+  const orden = ordenHuecos(ejercicio);
+  const ultimo = orden[orden.length - 1];
+  const total = ejercicio.huecos.length;
 
   return (
     <>
@@ -965,37 +1239,72 @@ function Huecos({
 
           const indice = Number(hueco[1]) - 1;
           const ok = estado.huecosOk[indice];
+          const valor = estado.huecos[indice] ?? "";
+          // El mismo relleno en el gemelo y en el campo: si no, el ancho
+          // no cuadra con lo escrito. A la derecha, sitio para el icono.
+          const relleno = `px-2.5 py-[7px] text-[17px] leading-none ${ok !== null ? "pr-8" : ""}`;
 
           return (
-            <input
-              key={i}
-              type="text"
-              value={estado.huecos[indice] ?? ""}
-              onChange={(e) => alEscribir(indice, e.target.value)}
-              onBlur={() => alCorregir(indice)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  alCorregir(indice);
-                }
-              }}
-              readOnly={ok !== null}
-              placeholder="…"
-              aria-label={t.huecoAria(indice + 1)}
-              className={`mx-1 inline-block w-[100px] rounded-[9px] border-[1.5px] px-2.5 py-[7px] text-center text-[17px] leading-none outline-none transition-colors ${
-                ok === null
-                  ? "border-marca-bordeSuave bg-marca-huecoFondo text-marca-tinta focus:border-marca-verde"
-                  : ok
-                    ? "border-marca-verde bg-marca-verdeFondo text-marca-tinta"
-                    : "border-marca-calido bg-marca-calidoFondo text-marca-tinta"
-              }`}
-            />
+            <span key={i} className="relative mx-1 inline-block max-w-full align-middle">
+              <span
+                aria-hidden
+                className={`invisible block min-w-[100px] max-w-full overflow-hidden whitespace-pre border-[1.5px] border-transparent ${relleno}`}
+              >
+                {/* El espacio de más deja sitio al cursor. */}
+                {(valor || "…") + " "}
+              </span>
+              <input
+                ref={(el) => {
+                  campos.current[indice] = el;
+                }}
+                type="text"
+                value={valor}
+                onChange={(e) => alEscribir(indice, e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    alIntro(indice);
+                  }
+                }}
+                readOnly={ok === true}
+                placeholder="…"
+                aria-label={`${t.huecoAria(indice + 1, total)}${
+                  ok === true ? `, ${t.huecoBien}` : ok === false ? `, ${t.huecoARevisar}` : ""
+                }`}
+                autoCorrect="off"
+                autoCapitalize="off"
+                autoComplete="off"
+                spellCheck={false}
+                enterKeyHint={indice === ultimo ? "done" : "next"}
+                className={`absolute inset-0 h-full w-full min-w-0 rounded-[9px] border-[1.5px] text-center outline-none transition-colors ${relleno} ${
+                  ok === null
+                    ? "border-marca-bordeSuave bg-marca-huecoFondo text-marca-tinta focus:border-marca-verde"
+                    : ok
+                      ? "border-marca-verde bg-marca-verdeFondo text-marca-tinta"
+                      : "border-marca-calido bg-marca-calidoFondo text-marca-tinta focus:border-marca-verde"
+                }`}
+              />
+              {ok !== null && (
+                <span
+                  className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 ${
+                    ok ? "text-marca-verde" : "text-marca-amarilloTexto"
+                  }`}
+                >
+                  {ok ? <IconoBien /> : <IconoRevisar />}
+                </span>
+              )}
+            </span>
           );
         })}
       </div>
 
-      <p className="mt-3 text-[13.5px] text-marca-grisTenue">
-        {t.ayudaHuecos(ejercicio.huecos.length)}
+      {/* El aviso de los huecos en blanco sustituye a la ayuda mientras
+          dura: los dos en el mismo sitio, y se va en cuanto escribe. */}
+      <p
+        role="status"
+        className={`mt-3 text-[13.5px] ${estado.avisoHuecos ? "font-medium text-marca-tinta" : "text-marca-grisTenue"}`}
+      >
+        {estado.avisoHuecos ? t.huecosEnBlanco : t.ayudaHuecos(total)}
       </p>
     </>
   );
@@ -1032,8 +1341,21 @@ function Produccion({
       <textarea
         value={estado.texto}
         onChange={(e) => alEscribir(e.target.value)}
+        // Redacción libre: Intro es salto de línea; Cmd/Ctrl+Intro compara
+        // con el modelo.
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !estado.verModelo) {
+            e.preventDefault();
+            alPedirModelo();
+          }
+        }}
         rows={6}
         placeholder={t.placeholderLibre}
+        aria-label={t.ariaLibre}
+        autoCorrect="off"
+        autoCapitalize="sentences"
+        autoComplete="off"
+        spellCheck={false}
         className="mt-5 w-full resize-none rounded-[14px] border-[1.5px] border-marca-borde bg-white px-5 py-4 text-[16.5px] leading-[1.55] text-marca-tinta outline-none transition-colors focus:border-marca-verde"
       />
 

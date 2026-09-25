@@ -589,6 +589,18 @@
     body:has([data-dock-dialogo]) .zona-ayuda.zona-ayuda {
       bottom: calc(max(var(--nav-inferior, 0px), env(safe-area-inset-bottom)) + var(--dock-dialogo, 0px) + 12px);
     }
+
+    /* ESCRIBIENDO EN UN EJERCICIO, con el teclado abierto: fuera todo lo
+       fijo de abajo. Con el teclado, iOS deja lo fijo pegado al fondo de
+       la página —detrás del teclado, o flotando a media pantalla al hacer
+       scroll—. El botón del ejercicio va en su propia barra, encima del
+       teclado. Lo pone `VisorEjercicios` mientras un campo tiene el foco;
+       la mascota y la ayuda vuelven al salir del campo. */
+    html[data-escribiendo] nav[data-nav-inferior],
+    html[data-escribiendo] .zona-ayuda,
+    html[data-escribiendo] [data-dock-dialogo] {
+      display: none;
+    }
   }
 
   /* ---------------------------------------------------------------
