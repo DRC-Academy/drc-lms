@@ -2,11 +2,11 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import BotonIdioma from "@/components/BotonIdioma";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 
 /**
- * El perfil: quién es, en qué idioma lee y por dónde sale.
+ * El perfil: quién es y por dónde sale. El idioma ya no está aquí: va
+ * siempre a la vista, arriba a la derecha (`CabeceraIdioma`).
  *
  * Desde que no hay cabecera, esas tres cosas van detrás del avatar en
  * toda la aplicación: al pie de la barra de iconos en escritorio y como
@@ -14,7 +14,7 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
  * de dónde sale —un globo junto al avatar, o una hoja desde abajo—.
  *
  * SIN NOMBRE TAMBIÉN EXISTE. El equipo que repasa un curso sin ficha no
- * tiene alumno del que hablar, pero sí idioma y sí salida.
+ * tiene alumno del que hablar, pero sí salida.
  */
 export default function MenuPerfil({
   nombre,
@@ -69,8 +69,7 @@ export default function MenuPerfil({
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-marca-nieblaOscura pt-4">
-        <BotonIdioma />
+      <div className="mt-4 flex items-center justify-end gap-3 border-t border-marca-nieblaOscura pt-4">
         <form action="/salir" method="post">
           <button
             type="submit"

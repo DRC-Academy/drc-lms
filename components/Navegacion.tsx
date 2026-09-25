@@ -12,8 +12,10 @@
 //
 //   · el logotipo → el símbolo de arriba de la barra, que lleva al inicio;
 //   · las cinco secciones → la barra, y las pestañas en móvil;
-//   · el idioma, el nombre y «Salir» → el perfil: el avatar al pie de la
-//     barra, y la última pestaña en móvil (`MenuPerfil`);
+//   · el idioma → arriba a la derecha de cada pantalla, siempre a la
+//     vista (`CabeceraIdioma`); dentro del perfil se encontraba mal;
+//   · el nombre y «Salir» → el perfil: el avatar al pie de la barra, y
+//     la última pestaña en móvil (`MenuPerfil`);
 //   · la ayuda → el icono de la barra; en móvil, el botón flotante;
 //   · «Revisando la ficha de…» → la tira de revisión, encima de todo.
 //
@@ -24,6 +26,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import ChatAyuda from "@/components/ChatAyuda";
+import CabeceraIdioma from "@/components/CabeceraIdioma";
 import { conFoco } from "@/lib/foco";
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { TextosNavegacion } from "@/lib/textos/navegacion";
@@ -113,7 +116,10 @@ export default function MarcoApp({ datos, children }: { datos: DatosNavegacion; 
         <BarraLateral enlaces={enlaces} nombre={nombre} inicioHref={inicioHref} estadisticas={datos.estadisticas ?? null} />
         {/* `contenido-app`: aquí dentro, el `main` de cada pantalla deja
             al final el hueco del botón de ayuda (`globals.css`). */}
-        <div className="contenido-app flex min-w-0 flex-1 flex-col">{children}</div>
+        <div className="contenido-app flex min-w-0 flex-1 flex-col">
+          <CabeceraIdioma />
+          {children}
+        </div>
       </div>
       <NavegacionInferior
         enlaces={enlaces}
@@ -144,7 +150,10 @@ export function MarcoAppCargando({ children }: { children: ReactNode }) {
     <ProveedorMarco>
       <div className="flex min-h-dvh flex-1 items-stretch">
         <BarraLateralCargando />
-        <div className="contenido-app flex min-w-0 flex-1 flex-col">{children}</div>
+        <div className="contenido-app flex min-w-0 flex-1 flex-col">
+          <CabeceraIdioma />
+          {children}
+        </div>
       </div>
     </ProveedorMarco>
   );

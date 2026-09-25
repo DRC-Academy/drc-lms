@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { sesionActual } from "@/lib/sesion-servidor";
 import FormularioAcceso from "@/components/FormularioAcceso";
 import { textosActuales } from "@/lib/idioma-servidor";
+import { IdiomaEnEsquina } from "@/components/CabeceraIdioma";
 import type { TextosEntrada } from "@/lib/textos/entrada";
 
 // Lee la cookie, así que no hay nada que prerenderizar.
@@ -74,6 +75,7 @@ export default async function Acceso({ searchParams }: { searchParams: { motivo?
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[440px] flex-col justify-center px-6 py-16">
+      <IdiomaEnEsquina />
       {/* Aquí el logotipo no está dentro de una cabecera con altura fija:
           es lo primero de la pantalla de entrar, sobre el fondo #F4F3EF
           del body. El verde del archivo da 4,74:1 contra ese fondo. */}

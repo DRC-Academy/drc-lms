@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { abrirTokenBaja } from "@/lib/sesion";
 import { guardarPreferenciaAvisos, recibeAvisos } from "@/lib/avisos-servidor";
 import { textosActuales } from "@/lib/idioma-servidor";
+import { IdiomaEnEsquina } from "@/components/CabeceraIdioma";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +104,7 @@ export default async function BajaDeAvisos({
 function Marco({ children }: { children: React.ReactNode }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-marca-niebla px-4 py-12">
+      <IdiomaEnEsquina />
       <div className="w-full max-w-[520px] rounded-[20px] border border-marca-borde bg-white px-7 py-9 sm:px-9 sm:py-10">
         {children}
       </div>

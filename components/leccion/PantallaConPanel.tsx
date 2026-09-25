@@ -118,7 +118,9 @@ export default function PantallaConPanel({
       </aside>
 
       {/* ---------------------------- EL CONTENIDO ---------------------------- */}
-      <main className="relative flex min-w-0 flex-1 flex-col">
+      {/* `data-esquina-idioma`: aquí el idioma va en la esquina y la fila
+          del marco (`CabeceraIdioma`) no se pinta. */}
+      <main data-esquina-idioma className="relative flex min-w-0 flex-1 flex-col">
         {/* LA ESQUINA, EN ESCRITORIO. Discreta: es lo que la cabecera
             decía arriba y aquí no hay cabecera. */}
         <div className="absolute right-6 top-5 hidden items-center gap-3.5 min-[900px]:flex min-[1200px]:right-10">

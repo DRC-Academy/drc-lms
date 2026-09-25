@@ -603,6 +603,12 @@
     }
   }
 
+  /* La fila del idioma (`CabeceraIdioma`) sobra donde la pantalla ya
+     lo pone en su esquina: la lección y el bloque (`PantallaConPanel`). */
+  .contenido-app:has([data-esquina-idioma]) > .cabecera-idioma {
+    display: none;
+  }
+
   /* ---------------------------------------------------------------
      LA BARRA LATERAL QUE SE ABRE (`BarraLateral`)
 
