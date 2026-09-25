@@ -4,6 +4,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { PERFIL_WOO } from "@/lib/cuenta-woo";
+import ComoVas from "@/components/estadisticas/ComoVas";
+import type { EstadisticasAlumno } from "@/lib/estadisticas";
 
 /**
  * El perfil: quién es, su cuenta en la web y por dónde sale. El idioma
@@ -25,10 +27,16 @@ import { PERFIL_WOO } from "@/lib/cuenta-woo";
 export default function MenuPerfil({
   nombre,
   variante,
+  estadisticas = null,
 }: {
   nombre: string;
   /** `barra`: el avatar de la barra de iconos. `movil`: la pestaña de abajo. */
   variante: "barra" | "movil";
+  /**
+   * «Cómo vas», solo en la hoja de móvil: ahí no hay barra lateral que
+   * lo enseñe al abrirse. En escritorio lo pinta la barra.
+   */
+  estadisticas?: EstadisticasAlumno | null;
 }) {
   const { t } = usarIdioma();
   const [abierto, setAbierto] = useState(false);
@@ -124,10 +132,17 @@ export default function MenuPerfil({
                 id={idPanel}
                 role="dialog"
                 aria-label={t.navegacion.perfil}
-                className="aparece rounded-t-[20px] bg-white px-5 pt-4"
+                // Con «Cómo vas» encima puede no caber en un móvil bajo: la
+                // hoja se queda en el 90 % de la pantalla y hace scroll.
+                className="aparece max-h-[90dvh] overflow-y-auto rounded-t-[20px] bg-white px-5 pt-4"
                 style={{ paddingBottom: "calc(32px + env(safe-area-inset-bottom))" }}
               >
                 <span aria-hidden className="mx-auto mb-4 block h-1 w-9 rounded-full bg-marca-bordeSuave" />
+                {estadisticas && (
+                  <div className="mb-5">
+                    <ComoVas estadisticas={estadisticas} variante="movil" />
+                  </div>
+                )}
                 {contenido}
               </div>
             </div>,

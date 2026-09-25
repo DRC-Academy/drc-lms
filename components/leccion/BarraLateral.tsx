@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,6 +9,7 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
 import MenuPerfil from "@/components/leccion/MenuPerfil";
 import { usarMarco } from "@/components/leccion/MarcoCurso";
 import AnilloCurso from "@/components/estadisticas/AnilloCurso";
+import ComoVas, { celdasComoVas } from "@/components/estadisticas/ComoVas";
 import type { EstadisticasAlumno } from "@/lib/estadisticas";
 
 /**
@@ -187,83 +188,63 @@ function AnilloDeLaBarra({ curso }: { curso: NonNullable<EstadisticasAlumno["cur
 }
 
 /**
- * El resto de las estadísticas, solo con la barra abierta: el nivel, las
- * clases y los ejercicios. En el hueco entre las secciones y el perfil,
- * absolutas y de ancho fijo por lo mismo que el texto del anillo. En
- * pantallas bajas no caben sin pisar las secciones y no se pintan; el
- * lector de pantalla las tiene igual en el `sr-only`.
+ * «Cómo vas», solo con la barra abierta: el nivel y los cuatro anillos
+ * (`ComoVas`). En el hueco entre las secciones y el perfil, absoluta y
+ * de ancho fijo por lo mismo que el texto del anillo.
+ *
+ * SI NO CABE, NO SE PINTA. En una pantalla baja pisaría las secciones.
+ * No es un corte fijo por altura: se mide, porque en la lección el menú
+ * lleva un icono más (el del panel). Se esconde con `visibility` en
+ * línea —gana a la regla que la enseña al abrir la barra— y no con
+ * `display`, para poder seguir midiéndola. El lector de pantalla la
+ * tiene igual en el `sr-only`, que no depende de nada de esto.
  */
 function DetalleDeLaBarra({ estadisticas }: { estadisticas: EstadisticasAlumno }) {
   const { t } = usarIdioma();
   const te = t.estadisticas;
-  const tp = t.progreso;
-  const { nivel, clases, ejercicios } = estadisticas;
+  const caja = useRef<HTMLDivElement>(null);
+  const [cabe, setCabe] = useState(true);
 
-  const filas: { clave: string; etiqueta: string; valor: ReactNode; texto: string }[] = [];
-  if (nivel) {
-    filas.push({
-      clave: "nivel",
-      etiqueta: tp.nivelActual,
-      valor: (
-        <>
-          <span className="inline-flex w-fit items-center rounded-full border border-marca-verde/30 bg-white px-2.5 py-[3px] font-display text-[15px] font-bold leading-none text-marca-verdeOsc">
-            {nivel.valor}
-          </span>
-          {!nivel.fiable && <span className="mt-1 block text-[12px] leading-snug text-marca-grisSuave">{tp.nivelEstimado}</span>}
-        </>
-      ),
-      texto: `${tp.nivelActual}: ${nivel.valor}${nivel.fiable ? "" : ` (${tp.nivelEstimado})`}`,
-    });
-  }
-  if (clases !== null) {
-    filas.push({
-      clave: "clases",
-      etiqueta: tp.clasesHechas(clases),
-      valor: clases > 0 ? <Cifra n={clases} /> : <Vacio>{te.clasesVacio}</Vacio>,
-      texto: clases > 0 ? `${tp.clasesHechas(clases)}: ${clases}` : te.clasesVacio,
-    });
-  }
-  if (ejercicios !== null) {
-    filas.push({
-      clave: "ejercicios",
-      etiqueta: te.ejercicios(ejercicios),
-      valor: ejercicios > 0 ? <Cifra n={ejercicios} /> : <Vacio>{te.ejerciciosVacio}</Vacio>,
-      texto: ejercicios > 0 ? `${te.ejercicios(ejercicios)}: ${ejercicios}` : te.ejerciciosVacio,
-    });
-  }
-  if (filas.length === 0) return null;
+  useEffect(() => {
+    const el = caja.current;
+    const nav = el?.closest(".barra-panel")?.querySelector("nav");
+    if (!el || !nav) return;
+    const medir = () => setCabe(el.getBoundingClientRect().top >= nav.getBoundingClientRect().bottom + 12);
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(el);
+    observador.observe(nav);
+    window.addEventListener("resize", medir);
+    return () => {
+      observador.disconnect();
+      window.removeEventListener("resize", medir);
+    };
+  }, []);
+
+  const { nivel } = estadisticas;
+  const lecturas = [
+    ...(nivel ? [`${te.nivel}: ${nivel.valor}${nivel.fiable ? "" : ` (${te.nivelEstimado})`}`] : []),
+    ...celdasComoVas(estadisticas, te).map((c) => c.lector),
+  ];
+  if (lecturas.length === 0) return null;
 
   return (
     <>
       <ul className="sr-only" aria-label={te.titulo}>
-        {filas.map((f) => (
-          <li key={f.clave}>{f.texto}</li>
+        {lecturas.map((l) => (
+          <li key={l}>{l}</li>
         ))}
       </ul>
       <div
+        ref={caja}
         aria-hidden
-        className="barra-rotulo barra-detalle absolute bottom-[84px] left-[18px] w-[236px] rounded-[14px] border border-marca-borde bg-marca-niebla px-4 py-3.5 [@media(max-height:680px)]:hidden"
+        className="barra-rotulo barra-detalle absolute bottom-[84px] left-[18px]"
+        style={cabe ? undefined : { visibility: "hidden" }}
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-marca-grisSuave">{te.titulo}</p>
-        <dl className="mt-2.5 flex flex-col gap-3">
-          {filas.map((f) => (
-            <div key={f.clave}>
-              <dt className="text-[12.5px] font-semibold leading-tight text-marca-gris">{f.etiqueta}</dt>
-              <dd className="mt-1">{f.valor}</dd>
-            </div>
-          ))}
-        </dl>
+        <ComoVas estadisticas={estadisticas} variante="barra" />
       </div>
     </>
   );
-}
-
-function Cifra({ n }: { n: number }) {
-  return <span className="font-display text-[20px] font-bold leading-none tabular-nums text-marca-tinta">{n}</span>;
-}
-
-function Vacio({ children }: { children: ReactNode }) {
-  return <span className="block text-[12.5px] leading-snug text-marca-tintaMedia">{children}</span>;
 }
 
 /**

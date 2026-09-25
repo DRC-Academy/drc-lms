@@ -23,8 +23,22 @@ export type EstadisticasAlumno = {
     titulo: string;
     completadas: number;
     total: number;
+    /** Del curso entero: el anillo de la barra plegada y el diploma. */
     porcentaje: number;
+    /**
+     * De lo que el drip ya ha abierto: el anillo «Curso» de «Cómo vas».
+     * 100 cuando ha hecho todo lo que tiene abierto.
+     */
+    porcentajeDesbloqueado: number;
   } | null;
+  /**
+   * El tiempo de curso: semanas que quedan de las 24 del temario,
+   * contadas desde que empezó con la academia. Null sin fecha de inicio
+   * o con el tiempo ya cumplido: entonces no hay nada que contar.
+   */
+  tiempo: { semanasRestantes: number; semanasTotales: number } | null;
+  /** El nombre de pila del profesor, para «con Sebastian». */
+  profesor: string | null;
   /**
    * El nivel, como lo enseña «Mi progreso». `fiable` falso añade la nota
    * de «estimado»: el nivel viene de la casilla del alta y nadie lo ha

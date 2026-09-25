@@ -34,6 +34,39 @@ export type TextosEstadisticas = {
   clasesVacio: string;
   ejercicios: (n: number) => string;
   ejerciciosVacio: string;
+
+  // --- «Cómo vas»: los cuatro anillos ---
+  nivel: string;
+  nivelEstimado: string;
+  nivelConfirmado: string;
+  anillos: {
+    curso: string;
+    deLoDesbloqueado: string;
+    todoLoDesbloqueado: string;
+    cursoInvita: string;
+    tiempo: string;
+    paraCompletar: string;
+    /** La unidad bajo el número: «sem.» / «semana». */
+    semanas: (n: number) => string;
+    clases: string;
+    conProfesor: (profesor: string) => string;
+    /** Sin nombre de profesor. */
+    clasesHechas: string;
+    clasesInvita: string;
+    practica: string;
+    ejerciciosHechos: string;
+    practicaInvita: string;
+  };
+  /** Lo que oye el lector de pantalla en cada anillo. */
+  lector: {
+    curso: (porcentaje: number) => string;
+    cursoVacio: string;
+    tiempo: (restantes: number, total: number) => string;
+    clases: (n: number, profesor: string | null) => string;
+    clasesVacio: string;
+    practica: (n: number) => string;
+    practicaVacio: string;
+  };
 };
 
 const ES: TextosEstadisticas = {
@@ -49,6 +82,36 @@ const ES: TextosEstadisticas = {
   clasesVacio: "Aquí irán sumando tus clases.",
   ejercicios: (n) => (n === 1 ? "Ejercicio hecho" : "Ejercicios hechos"),
   ejerciciosVacio: "Los ejercicios de cada lección se irán contando aquí.",
+
+  nivel: "Nivel",
+  nivelEstimado: "Estimado · confírmalo con tu profesor",
+  nivelConfirmado: "confirmado",
+  anillos: {
+    curso: "Curso",
+    deLoDesbloqueado: "de lo desbloqueado",
+    todoLoDesbloqueado: "todo lo desbloqueado",
+    cursoInvita: "Empieza tu primera lección",
+    tiempo: "Tiempo de curso",
+    paraCompletar: "para completar tu curso",
+    semanas: (n) => (n === 1 ? "semana" : "sem."),
+    clases: "Clases",
+    conProfesor: (profesor) => `con ${profesor}`,
+    clasesHechas: "hechas",
+    clasesInvita: "Tu primera clase sumará aquí",
+    practica: "Práctica",
+    ejerciciosHechos: "ejercicios hechos",
+    practicaInvita: "Tu práctica empieza aquí",
+  },
+  lector: {
+    curso: (porcentaje) => `Curso: ${porcentaje} % de lo desbloqueado.`,
+    cursoVacio: "Curso: empieza tu primera lección.",
+    tiempo: (restantes, total) =>
+      `Tiempo de curso: ${restantes} ${restantes === 1 ? "semana" : "semanas"} para completar tu curso, de ${total}.`,
+    clases: (n, profesor) => `Clases: ${n}${profesor ? ` con ${profesor}` : ""}.`,
+    clasesVacio: "Clases: tu primera clase sumará aquí.",
+    practica: (n) => `Práctica: ${n} ${n === 1 ? "ejercicio hecho" : "ejercicios hechos"}.`,
+    practicaVacio: "Práctica: empieza aquí.",
+  },
 };
 
 const EN: TextosEstadisticas = {
@@ -64,6 +127,36 @@ const EN: TextosEstadisticas = {
   clasesVacio: "Your classes will add up here.",
   ejercicios: (n) => (n === 1 ? "Exercise done" : "Exercises done"),
   ejerciciosVacio: "The exercises in each lesson will be counted here.",
+
+  nivel: "Level",
+  nivelEstimado: "Estimated · confirm it with your teacher",
+  nivelConfirmado: "confirmed",
+  anillos: {
+    curso: "Course",
+    deLoDesbloqueado: "of what's unlocked",
+    todoLoDesbloqueado: "all that's unlocked",
+    cursoInvita: "Start your first lesson",
+    tiempo: "Course time",
+    paraCompletar: "to complete your course",
+    semanas: (n) => (n === 1 ? "week" : "wks"),
+    clases: "Classes",
+    conProfesor: (profesor) => `with ${profesor}`,
+    clasesHechas: "done",
+    clasesInvita: "Your first class will count here",
+    practica: "Practice",
+    ejerciciosHechos: "exercises done",
+    practicaInvita: "Your practice starts here",
+  },
+  lector: {
+    curso: (porcentaje) => `Course: ${porcentaje}% of what's unlocked.`,
+    cursoVacio: "Course: start your first lesson.",
+    tiempo: (restantes, total) =>
+      `Course time: ${restantes} ${restantes === 1 ? "week" : "weeks"} to complete your course, out of ${total}.`,
+    clases: (n, profesor) => `Classes: ${n}${profesor ? ` with ${profesor}` : ""}.`,
+    clasesVacio: "Classes: your first class will count here.",
+    practica: (n) => `Practice: ${n} ${n === 1 ? "exercise done" : "exercises done"}.`,
+    practicaVacio: "Practice: starts here.",
+  },
 };
 
 export const ESTADISTICAS: Record<Idioma, TextosEstadisticas> = { en: EN, es: ES };
