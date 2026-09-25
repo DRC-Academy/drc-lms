@@ -23,13 +23,7 @@ export type EstadisticasAlumno = {
     titulo: string;
     completadas: number;
     total: number;
-    /** Del curso entero: el anillo de la barra plegada y el diploma. */
     porcentaje: number;
-    /**
-     * De lo que el drip ya ha abierto: el anillo «Curso» de «Cómo vas».
-     * 100 cuando ha hecho todo lo que tiene abierto.
-     */
-    porcentajeDesbloqueado: number;
   } | null;
   /**
    * El tiempo de curso: semanas que quedan de las 24 del temario,
@@ -47,6 +41,11 @@ export type EstadisticasAlumno = {
   nivel: { valor: string; fiable: boolean } | null;
   /** `clasesContadas`, de `vista_clases_contadas`. */
   clases: number | null;
+  /**
+   * Bloques de «Para ti» terminados, uno por bloque aunque se repita
+   * (`progreso_bloques`). El anillo «Práctica» de «Cómo vas».
+   */
+  bloques: number | null;
   /** Ejercicios distintos del curso respondidos. */
   ejercicios: number | null;
 };

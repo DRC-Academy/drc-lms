@@ -17,6 +17,7 @@
 // ---------------------------------------------------------------
 
 import "server-only";
+import { cache } from "react";
 import { baseLms } from "@/lib/supabase-lms";
 import { validarBloque } from "@/lib/validarBloque";
 import type { Bloque } from "@/lib/data";
@@ -109,6 +110,22 @@ export async function leerProgresoAlumno(
 
   return mejor;
 }
+
+/**
+ * Cuántos bloques de «Para ti» ha terminado el alumno, contados una vez
+ * aunque los repita. Es la cifra del anillo «Práctica» de «Cómo vas».
+ * Null si la lectura falla: mejor no pintar el anillo que pintar un cero
+ * que no es verdad.
+ */
+export const bloquesTerminados = cache(async (alumnoId: string): Promise<number | null> => {
+  const { data, error } = await baseLms()
+    .from("progreso_bloques")
+    .select("bloque_clave")
+    .eq("alumno_id", alumnoId)
+    .returns<{ bloque_clave: string }[]>();
+  if (!registrar("No se pudieron contar los bloques terminados", error)) return null;
+  return new Set((data ?? []).map((f) => f.bloque_clave)).size;
+});
 
 /** Por dónde va cada bloque empezado y sin terminar. */
 export async function leerAvanceAlumno(

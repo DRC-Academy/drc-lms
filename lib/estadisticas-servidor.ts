@@ -10,6 +10,7 @@
 //                `perfil.fechaInicio`.
 //   clases       `vista_clases_contadas` (Gestión).
 //   ejercicios   `intentos_ejercicio` (LMS), ejercicios distintos.
+//   bloques      `progreso_bloques` (LMS), bloques de «Para ti» terminados.
 //
 // Quien llama pasa el perfil y el curso principal que ya ha leído: el
 // layout y el inicio los tienen, y pedirlos otra vez aquí sería repetir
@@ -20,6 +21,7 @@
 import "server-only";
 import { obtenerClasesContadas } from "@/lib/gestion";
 import { ejerciciosHechos, type EstadoCurso } from "@/lib/cursos-servidor";
+import { bloquesTerminados } from "@/lib/progreso-servidor";
 import { calcularDiploma } from "@/lib/diploma";
 import { nivelDelAlumno, nivelEsFiable, origenDelNivel } from "@/lib/estimacion";
 import { nivelMcer } from "@/lib/recorrido";
@@ -33,7 +35,11 @@ export async function estadisticasDelAlumno(
   perfil: PerfilAlumno | null,
   principal: EstadoCurso | undefined
 ): Promise<EstadisticasAlumno> {
-  const [clases, ejercicios] = await Promise.all([obtenerClasesContadas(alumnoId), ejerciciosHechos(alumnoId)]);
+  const [clases, ejercicios, bloques] = await Promise.all([
+    obtenerClasesContadas(alumnoId),
+    ejerciciosHechos(alumnoId),
+    bloquesTerminados(alumnoId),
+  ]);
 
   const diploma = calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0);
   const curso =
@@ -43,7 +49,6 @@ export async function estadisticasDelAlumno(
           completadas: diploma.estado === "conseguido" ? diploma.total : diploma.completadas,
           total: diploma.total,
           porcentaje: diploma.estado === "conseguido" ? 100 : diploma.porcentaje,
-          porcentajeDesbloqueado: porcentajeDeLoAbierto(principal.completadas, principal.desbloqueadas ?? principal.total),
         }
       : null;
 
@@ -60,13 +65,7 @@ export async function estadisticasDelAlumno(
 
   const profesor = perfil?.profesor.trim().split(/\s+/)[0] || null;
 
-  return { curso, nivel, clases, ejercicios, tiempo: tiempoDeCurso(perfil?.fechaInicio), profesor };
-}
-
-/** Hechas sobre abiertas, redondeado hacia abajo: el 100 solo cuando es todo. */
-function porcentajeDeLoAbierto(hechas: number, abiertas: number): number {
-  if (abiertas <= 0) return 0;
-  return Math.min(100, Math.floor((hechas / abiertas) * 100));
+  return { curso, nivel, clases, ejercicios, bloques, tiempo: tiempoDeCurso(perfil?.fechaInicio), profesor };
 }
 
 /**

@@ -8,19 +8,23 @@ import type { TextosEstadisticas } from "@/lib/textos/estadisticas";
 /**
  * «CÓMO VAS»: el nivel y cuatro anillos en 2×2.
  *
- *   Curso             lo hecho de lo que el drip ya ha abierto (%).
+ *   Ejercicios        los del curso, distintos, hechos.
  *   Tiempo de curso   el anillo es lo recorrido de las 24 semanas; el
  *                     número, lo que queda. Verde oscuro: el tiempo pasa
  *                     solo y no es un logro.
  *   Clases            cuántas lleva, con su profesor.
- *   Práctica          ejercicios hechos.
+ *   Práctica          bloques de «Para ti» terminados.
  *
- * CLASES Y PRÁCTICA NO TIENEN TOTAL, así que su anillo va cerrado, en
- * verde claro: se lee como un contador, no como algo a medias. Sin hitos
- * ni «próximo»: nada que alcanzar.
+ * NINGÚN PORCENTAJE DEL CURSO. La cabecera de la barra ya lo enseña
+ * («61 de 168 lecciones»); un segundo porcentaje con otro denominador
+ * era el mismo curso contado de dos maneras.
  *
- * SIN «0 %» NI «0». Lo que no ha empezado va punteado, con un icono y
- * una invitación. Un dato que no se pudo leer (null) no se pinta.
+ * LOS CONTADORES NO TIENEN TOTAL, así que su anillo va cerrado, en verde
+ * claro: se lee como una cuenta, no como algo a medias. Sin hitos ni
+ * «próximo»: nada que alcanzar.
+ *
+ * SIN «0». Lo que no ha empezado va punteado, con una invitación. Un dato
+ * que no se pudo leer (null) no se pinta.
  *
  * Lo pintan la barra lateral de escritorio, al abrirse, y la hoja del
  * perfil en móvil (`variante`). Sin estado: se dibuja igual en los dos.
@@ -33,7 +37,7 @@ const TAMAÑO = { barra: 62, movil: 74 };
 type Celda = {
   clave: string;
   lector: string;
-  anillo: { tipo: "vacio"; icono: ReactNode } | { tipo: "progreso"; p: number; color: string } | { tipo: "contador" } | { tipo: "completo" };
+  anillo: { tipo: "vacio"; icono: ReactNode } | { tipo: "progreso"; p: number; color: string } | { tipo: "contador" };
   /** Lo de dentro cuando hay número. */
   cifra?: ReactNode;
   rotulo: string;
@@ -44,27 +48,12 @@ export function celdasComoVas(e: EstadisticasAlumno, te: TextosEstadisticas): Ce
   const ta = te.anillos;
   const celdas: Celda[] = [];
 
-  if (e.curso) {
-    const p = e.curso.porcentajeDesbloqueado;
-    if (e.curso.completadas === 0) {
-      celdas.push({ clave: "curso", lector: te.lector.cursoVacio, anillo: { tipo: "vacio", icono: <IconoLibro /> }, rotulo: ta.curso, detalle: ta.cursoInvita });
-    } else if (p >= 100) {
-      celdas.push({ clave: "curso", lector: te.lector.curso(100), anillo: { tipo: "completo" }, rotulo: ta.curso, detalle: ta.todoLoDesbloqueado });
-    } else {
-      celdas.push({
-        clave: "curso",
-        lector: te.lector.curso(p),
-        anillo: { tipo: "progreso", p: p / 100, color: "#1E9E3A" },
-        cifra: (
-          <>
-            {p}
-            <small>%</small>
-          </>
-        ),
-        rotulo: ta.curso,
-        detalle: ta.deLoDesbloqueado,
-      });
-    }
+  if (e.ejercicios !== null) {
+    celdas.push(
+      e.ejercicios === 0
+        ? { clave: "ejercicios", lector: te.lector.ejerciciosVacio, anillo: { tipo: "vacio", icono: <Raya /> }, rotulo: ta.ejercicios, detalle: ta.ejerciciosInvita }
+        : { clave: "ejercicios", lector: te.lector.ejercicios(e.ejercicios), anillo: { tipo: "contador" }, cifra: e.ejercicios, rotulo: ta.ejercicios, detalle: ta.ejerciciosHechos }
+    );
   }
 
   if (e.tiempo) {
@@ -93,11 +82,11 @@ export function celdasComoVas(e: EstadisticasAlumno, te: TextosEstadisticas): Ce
     );
   }
 
-  if (e.ejercicios !== null) {
+  if (e.bloques !== null) {
     celdas.push(
-      e.ejercicios === 0
+      e.bloques === 0
         ? { clave: "practica", lector: te.lector.practicaVacio, anillo: { tipo: "vacio", icono: <IconoLapiz /> }, rotulo: ta.practica, detalle: ta.practicaInvita }
-        : { clave: "practica", lector: te.lector.practica(e.ejercicios), anillo: { tipo: "contador" }, cifra: e.ejercicios, rotulo: ta.practica, detalle: ta.ejerciciosHechos }
+        : { clave: "practica", lector: te.lector.practica(e.bloques), anillo: { tipo: "contador" }, cifra: e.bloques, rotulo: ta.practica, detalle: ta.bloquesHechos(e.bloques) }
     );
   }
 
@@ -196,9 +185,8 @@ function Anillo({ celda, variante }: { celda: Celda; variante: "barra" | "movil"
     // Cerrado y claro: un contador, no un progreso.
     pista = <circle cx={c} cy={c} r={r} fill="none" stroke="#A9DFB7" strokeWidth={trazo} />;
   } else {
-    pista = <circle cx={c} cy={c} r={r} fill={a.tipo === "completo" ? "#E7F5EA" : "none"} stroke="#E2E8E4" strokeWidth={trazo} />;
-    const p = a.tipo === "completo" ? 1 : a.p;
-    const color = a.tipo === "completo" ? "#1E9E3A" : a.color;
+    pista = <circle cx={c} cy={c} r={r} fill="none" stroke="#E2E8E4" strokeWidth={trazo} />;
+    const { p, color } = a;
     // Un avance real nunca es un punto invisible.
     const largo = p <= 0 ? 0 : Math.max(p, 0.04) * C;
     if (largo > 0) {
@@ -221,12 +209,6 @@ function Anillo({ celda, variante }: { celda: Celda; variante: "barra" | "movil"
   let centro: ReactNode;
   if (a.tipo === "vacio") {
     centro = <span className="text-marca-tintaMedia">{a.icono}</span>;
-  } else if (a.tipo === "completo") {
-    centro = (
-      <svg viewBox="0 0 20 20" className={movil ? "h-6 w-6" : "h-[22px] w-[22px]"} fill="none" stroke="#14722A" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4.5 10.5l3.5 3.5 7.5-8" />
-      </svg>
-    );
   } else {
     centro = (
       <span
@@ -252,13 +234,9 @@ function Anillo({ celda, variante }: { celda: Celda; variante: "barra" | "movil"
   );
 }
 
-function IconoLibro() {
-  return (
-    <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 5.5C8.5 4.3 6.4 3.8 3.5 4v11c2.9-.2 5 .3 6.5 1.5 1.5-1.2 3.6-1.7 6.5-1.5V4c-2.9-.2-5 .3-6.5 1.5z" />
-      <path d="M10 5.5v11" />
-    </svg>
-  );
+/** El vacío de «Ejercicios»: una raya, no un cero. */
+function Raya() {
+  return <span className="font-display text-[20px] font-bold leading-none">—</span>;
 }
 
 function IconoCalendario() {

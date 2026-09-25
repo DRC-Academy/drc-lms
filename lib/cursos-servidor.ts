@@ -63,13 +63,6 @@ export type EstadoCurso = {
   total: number;
   completadas: number;
   /**
-   * Lecciones a las que el alumno puede entrar hoy: las hechas más las
-   * que el drip ya ha abierto. Es el «de lo desbloqueado» de «Cómo vas».
-   * Opcional para que los estados de prueba escritos a mano sigan
-   * valiendo; sin él, quien lo lea usa `total`.
-   */
-  desbloqueadas?: number;
-  /**
    * La primera sin completar A LA QUE SE PUEDE ENTRAR.
    *
    * Null significa dos cosas distintas y quien lo pinte tiene que
@@ -356,7 +349,6 @@ export async function estadoDelCurso(
     curso,
     total: 0,
     completadas: 0,
-    desbloqueadas: 0,
     siguiente: null,
     diasParaAbrir: null,
     abreEl: null,
@@ -392,7 +384,6 @@ export async function estadoDelCurso(
   const ordenadas = ordenarLecciones(modulos, lecciones);
 
   let completadas = 0;
-  let desbloqueadas = 0;
   let siguiente: SiguienteLeccion | null = null;
   let diasParaAbrir: number | null = null;
   let abreEl: string | null = null;
@@ -405,15 +396,9 @@ export async function estadoDelCurso(
 
     if (cuando !== undefined) {
       completadas++;
-      desbloqueadas++;
       if (ultimaActividad === null || cuando > ultimaActividad) ultimaActividad = cuando;
       return;
     }
-
-    // Abierta hoy o no: cuenta para «de lo desbloqueado» aunque ya
-    // tengamos la siguiente. Misma regla que el resto de este bucle.
-    const abierta = aperturaDeLeccion(esperaModulo.get(leccion.modulo_id) ?? 0, fechaInicio, false, ahora).abierto;
-    if (abierta) desbloqueadas++;
 
     // Ya la tenemos: el resto de las pendientes no cambia nada.
     if (siguiente !== null) return;
@@ -457,7 +442,6 @@ export async function estadoDelCurso(
     curso,
     total: ordenadas.length,
     completadas,
-    desbloqueadas,
     siguiente,
     // Si hay a dónde ir hoy, lo que tarde el módulo de más allá no le
     // interesa a nadie.
