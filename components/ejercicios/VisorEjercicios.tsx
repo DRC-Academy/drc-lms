@@ -682,7 +682,9 @@ export default function VisorEjercicios({
       if (evento.key === "Enter" && !escribiendo) {
         if (yaRespondido) {
           evento.preventDefault();
-          avanzar();
+          // Lo mismo que el botón: con huecos retocados, comprueba.
+          if (esHuecos && estado.huecosOk.some((v) => v === null)) comprobarHuecos();
+          else avanzar();
         } else if (esOpciones && ejercicio.variasCorrectas && estado.elegidas.length > 0) {
           evento.preventDefault();
           comprobarVarias();
@@ -800,7 +802,13 @@ export default function VisorEjercicios({
   const puedeComprobarEscritura = pendienteEscritura && estado.texto.trim() !== "";
   // En huecos, «Comprobar» está siempre activo: con algún hueco en blanco
   // no corrige, lleva a él y lo explica (`comprobarHuecos`).
-  const pendienteHuecos = esHuecos && !yaRespondido;
+  //
+  // Y VUELVE después de la primera comprobación si hay algún hueco
+  // retocado sin corregir (a revisar y tocado: `huecosOk` null). Corrige
+  // esos, como Intro; lo que cuenta sigue siendo la primera corrección
+  // (`huecosPrimera`), y la recuperación la dispara `corregirHuecos`.
+  const retocados = esHuecos && yaRespondido && estado.huecosOk.some((v) => v === null);
+  const pendienteHuecos = (esHuecos && !yaRespondido) || retocados;
 
   /** El botón de abajo: el de su sitio y el de encima del teclado. */
   const principal: { texto: string; activo: boolean; accion: () => void } = pendienteHuecos
