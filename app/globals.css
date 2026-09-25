@@ -618,6 +618,9 @@
   .barra-app:focus-within {
     z-index: 45;
   }
+  /* El paso puente del recorrido guiado la abre igual que el hover
+     (`data-tutorial-puente` en <html>, lo pone components/tutorial):
+     el botón destacado se lee con su nombre. */
   .barra-app .barra-panel {
     width: 80px;
     transition:
@@ -625,7 +628,8 @@
       box-shadow 220ms ease;
   }
   .barra-app:hover .barra-panel,
-  .barra-app:focus-within .barra-panel {
+  .barra-app:focus-within .barra-panel,
+  html[data-tutorial-puente] .barra-app .barra-panel {
     width: 272px;
     box-shadow: 18px 0 44px -26px rgba(18, 33, 26, 0.35);
     transition-delay: 120ms;
@@ -638,7 +642,8 @@
       visibility 0s linear 120ms;
   }
   .barra-app:hover .barra-rotulo,
-  .barra-app:focus-within .barra-rotulo {
+  .barra-app:focus-within .barra-rotulo,
+  html[data-tutorial-puente] .barra-app .barra-rotulo {
     visibility: visible;
     opacity: 1;
     transition:
@@ -648,13 +653,44 @@
   /* Plegada, la etiqueta corta del anillo; abierta sobra, porque al lado
      está el texto entero. */
   .barra-app:hover .barra-solo-plegada,
-  .barra-app:focus-within .barra-solo-plegada {
+  .barra-app:focus-within .barra-solo-plegada,
+  html[data-tutorial-puente] .barra-app .barra-solo-plegada {
     opacity: 0;
   }
   @media (prefers-reduced-motion: reduce) {
     .barra-app .barra-panel,
     .barra-app .barra-rotulo {
       transition: none !important;
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     EL HALO DEL PASO PUENTE (components/tutorial/Tutorial.tsx)
+
+     Verde de acción alrededor del botón que lleva a la pantalla
+     siguiente, con un pulso suave hacia fuera: es lo que se pide pulsar.
+     Sin amarillo: el botón no cambia de color, solo se rodea. Con
+     movimiento reducido, el mismo halo quieto.
+     --------------------------------------------------------------- */
+  .halo-tutorial {
+    border: 3px solid #1e9e3a;
+    border-radius: 16px;
+    box-shadow: 0 0 0 0 rgba(30, 158, 58, 0.5);
+    animation: halo-tutorial 1.6s ease-out infinite;
+  }
+  @keyframes halo-tutorial {
+    0% {
+      box-shadow: 0 0 0 0 rgba(30, 158, 58, 0.5);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 12px rgba(30, 158, 58, 0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .halo-tutorial {
+      animation: none !important;
+      box-shadow: 0 0 0 4px rgba(30, 158, 58, 0.35);
     }
   }
 }

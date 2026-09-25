@@ -232,6 +232,7 @@ export default function Geckonoid({
   movimiento,
   vidaPropia = true,
   quieta = false,
+  espejo = false,
   className = "",
   etiqueta = "Geckonoid",
 }: {
@@ -285,6 +286,17 @@ export default function Geckonoid({
    * Respirar, la cola y los micro-gestos siguen.
    */
   quieta?: boolean;
+  /**
+   * Señalar a la DERECHA. El render de «senala» señala a la izquierda; a
+   * la derecha es la misma figura volteada (`scaleX(-1)`), con el eje en
+   * los pies para que no se desplace. Solo se voltea mientras el gesto que
+   * se ve es «senala»: en cualquier otro, la mascota es la de siempre.
+   * Nada de fuera de la figura —la burbuja, el cuadro del recorrido— está
+   * aquí dentro, así que el texto no se voltea nunca.
+   *
+   * Lo decide `calcularPoseMascota` (pose.ts); nadie lo pone a mano.
+   */
+  espejo?: boolean;
   className?: string;
   /** Para el lector de pantalla: qué es esto. `null` si es decorativa y no hay que anunciarla. */
   etiqueta?: string | null;
@@ -375,6 +387,8 @@ export default function Geckonoid({
 
   // El gesto que se ve: el pedido si hay, si no el sostenido.
   const gesto = useMemo(() => gestoVivo ?? (sostenida ? { nombre: sostenida, n: -1 } : null), [gestoVivo, sostenida]);
+  // Volteada solo mientras lo que se ve es «senala» (ver `espejo`).
+  const volteada = espejo && gesto?.nombre === "senala";
   // La mirada, debajo de todo: solo sin gesto y con los ojos del estado libres.
   const parchesMirada = useMemo(() => {
     if (!mirada || gesto) return SIN_PARCHES;
@@ -869,6 +883,10 @@ export default function Geckonoid({
       onPointerLeave={soltarCursor}
       onClick={tocar}
     >
+      <div
+        className="absolute inset-0"
+        style={volteada ? { transform: "scaleX(-1)", transformOrigin: `${PIES_X * 100}% 50%` } : undefined}
+      >
       <motion.div className="absolute inset-0" style={{ rotate: inclinacionSuave, transformOrigin: origenPies }}>
         {/* La respiración va en un contenedor propio: si fuera con los
             gestos, cada cambio de estado la reiniciaría a mitad de ciclo. */}
@@ -1074,7 +1092,8 @@ export default function Geckonoid({
                 </motion.svg>
               )}
 
-              {vivo === "duda" && (
+              {/* El «?» es texto: volteado se leería al revés, y no se pinta. */}
+              {vivo === "duda" && !volteada && (
                 <motion.svg
                   key={`signo-${vez}`}
                   viewBox="0 0 24 32"
@@ -1108,6 +1127,7 @@ export default function Geckonoid({
           </div>
         </motion.div>
       </motion.div>
+      </div>
     </div>
   );
 }

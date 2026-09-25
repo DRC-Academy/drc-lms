@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { DURACION_ESTADO_MS, type EstadoMascota, type GestoMascota } from "@/components/mascota/estados";
+import { DURACION_ESTADO_MS, DURACION_GESTO_MS, type EstadoMascota, type GestoMascota } from "@/components/mascota/estados";
 import type { MovimientoMascota } from "@/components/mascota/Geckonoid";
 import type { ClaveBurbuja } from "@/lib/textos/mascota";
 
@@ -30,7 +30,12 @@ import type { ClaveBurbuja } from "@/lib/textos/mascota";
  *   burbuja       la última línea pedida (lib/textos/mascota.ts); la capa
  *                 decide si se dice (una por pantalla, ninguna repetida).
  *   mirarA        un elemento hacia el que mirar (el enunciado del
- *                 ejercicio); manda sobre el cursor.
+ *                 ejercicio); manda sobre el cursor. Solo los ojos.
+ *   senal         un elemento al que señalar. NADIE MÁS ORIENTA LA
+ *                 MASCOTA: se pide `senalar(el)` y la capa decide en
+ *                 cada frame, con `calcularPoseMascota` (pose.ts), si
+ *                 señala a la izquierda, a la derecha o no señala. Por
+ *                 eso `gesto()` no acepta «senala».
  *   escena        algo que pasó y que la capa escenifica («bloque_listo»).
  *   velocidad     el ritmo de todo (1 normal), solo para revisar en el
  *                 tablero de /dev/mascota.
@@ -47,6 +52,9 @@ export type Intensidad = "tranquila" | "normal" | "juguetona";
 /** Lo que la capa escenifica cuando pasa. */
 export type EscenaMascota = "bloque_listo";
 export const INTENSIDADES: readonly Intensidad[] = ["tranquila", "normal", "juguetona"];
+
+/** Los gestos que se piden a secas. «senala» no: ver `senalar`. */
+export type GestoLibre = Exclude<GestoMascota, "senala">;
 
 /** Hacia dónde se alinea la mascota dentro de su hueco, si el hueco es más ancho que ella. */
 export type LadoAncla = "izq" | "centro" | "der";
@@ -89,6 +97,12 @@ type Estado = {
   movimiento: { nombre: MovimientoMascota; n: number } | undefined;
   burbuja: { clave: ClaveBurbuja; profesor?: string; n: number } | undefined;
   mirarA: HTMLElement | null;
+  /**
+   * A qué señalar, desde cuándo y hasta cuándo (`hasta` en ms de
+   * `Date.now()`; Infinity: hasta `dejarDeSenalar`). Con `desde`, solo
+   * mientras ese ancla sea la activa.
+   */
+  senal: { el: HTMLElement; n: number; hasta: number; desde?: string } | undefined;
   /** El recorrido guiado está en marcha: la capa sube por encima de su velo. */
   alFrente: boolean;
   escena: { nombre: EscenaMascota; n: number } | undefined;
@@ -120,6 +134,7 @@ let estado: Estado = {
   movimiento: undefined,
   burbuja: undefined,
   mirarA: null,
+  senal: undefined,
   alFrente: false,
   escena: undefined,
   intensidad: "normal",
@@ -210,10 +225,38 @@ export const storeMascota = {
     relojTransitorio = setTimeout(() => cambiar({ transitorio: null }), DURACION_ESTADO_MS);
   },
 
-  /** Un gesto encima de lo que haya. `duracion` en ms, si no la suya (DURACION_GESTO_MS). */
-  gesto(nombre: GestoMascota, opciones: { desde?: string; duracion?: number } = {}) {
+  /**
+   * Un gesto encima de lo que haya. `duracion` en ms, si no la suya
+   * (DURACION_GESTO_MS). Todos menos «senala»: señalar tiene objetivo, y
+   * se pide con `senalar`.
+   */
+  gesto(nombre: GestoLibre, opciones: { desde?: string; duracion?: number } = {}) {
     if (opciones.desde !== undefined && opciones.desde !== estado.activa) return;
     cambiar({ pose: { nombre, n: (estado.pose?.n ?? 0) + 1, duracion: opciones.duracion } }, { tipo: "gesto", detalle: nombre });
+  },
+
+  /**
+   * Señalar un elemento. La mascota lo señala si está a un lado y bien
+   * separado de ella; si está encima, debajo, pegado o no se ve, se
+   * queda en su pose neutra (ver `calcularPoseMascota`). Sin elemento no
+   * se señala nada: la regla es que sin objetivo no hay flecha.
+   *
+   * `duracion` en ms (la del gesto, si no); `Infinity` la sostiene hasta
+   * `dejarDeSenalar`. Con `desde`, solo si ese ancla es la activa.
+   */
+  senalar(el: HTMLElement | null, opciones: { desde?: string; duracion?: number } = {}) {
+    if (!el) return;
+    if (opciones.desde !== undefined && opciones.desde !== estado.activa) return;
+    const duracion = opciones.duracion ?? DURACION_GESTO_MS.senala;
+    cambiar(
+      { senal: { el, n: (estado.senal?.n ?? 0) + 1, hasta: Date.now() + duracion, desde: opciones.desde } },
+      { tipo: "gesto", detalle: `senala → ${el.dataset.tour ?? el.dataset.tourNav ?? el.id ?? el.tagName.toLowerCase()}` }
+    );
+  },
+
+  dejarDeSenalar() {
+    if (!estado.senal) return;
+    cambiar({ senal: undefined });
   },
 
   /** Un movimiento del cuerpo entero, sin parche: vuelta, salto en el sitio, rebote. */

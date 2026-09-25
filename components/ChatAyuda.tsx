@@ -36,22 +36,49 @@ import type { TextosAyuda } from "@/lib/textos/ayuda";
  * vuelve a ser un panel flotante, que ahí sí hay sitio para las dos
  * cosas a la vez.
  *
- * EN EL IDIOMA DE LA PANTALLA, como todo lo demás. Lo que dice el
- * widget sale de `lib/textos/ayuda.ts`; lo que contesta, de `lib/faq.ts`
- * en su par `{ es, en }`. Los mensajes ya escritos en la conversación
- * guardan su texto tal cual —cambiar de idioma no reescribe lo que el
- * alumno ya leyó—, pero las respuestas y las listas de opciones se
- * pintan al vuelo por `id`, así que sí cambian.
+ * EN EL IDIOMA DE LA PANTALLA, como todo lo demás, HISTORIAL INCLUIDO.
+ * Lo que dice el widget sale de `lib/textos/ayuda.ts`; lo que contesta,
+ * de `lib/faq.ts` en su par `{ es, en }`. Cada mensaje guarda QUÉ decir
+ * —una clave del diccionario o el `id` de una categoría o pregunta—, no
+ * el texto ya traducido, y se traduce al pintarse. Antes se guardaba el
+ * texto: como la aplicación arranca en inglés, quien abría la ayuda y
+ * luego pasaba a español se quedaba con el saludo en inglés.
+ *
+ * Lo único que se guarda tal cual es lo que ESCRIBE el alumno en el
+ * buscador: eso no se traduce.
  */
+
+/** Lo que dice el alumno: un botón (por clave o por id) o lo que escribió. */
+type DichoAlumno =
+  | { tipo: "fijo"; clave: "siGracias" | "noDelTodo" | "quieroHablarConSoporte" }
+  | { tipo: "categoria"; idCategoria: string }
+  | { tipo: "pregunta"; idPregunta: string }
+  | { tipo: "escrito"; texto: string };
+
+/**
+ * Por qué se deriva a soporte, y de qué iba. De ahí sale el asunto del
+ * mensaje de WhatsApp: la pregunta que no le sirvió (por id, para que
+ * salga en el idioma de ahora) o lo que escribió y no se encontró.
+ */
+type Derivacion =
+  | { motivo: "noResuelto"; idPregunta: string }
+  | { motivo: "pedido" }
+  | { motivo: "sinRespuesta"; escrito: string };
 
 /** El contenido de un mensaje. La conversación es una lista de estos. */
 type Mensaje =
-  | { id: number; de: "alumno"; texto: string }
-  | { id: number; de: "bot"; tipo: "texto"; texto: string }
-  | { id: number; de: "bot"; tipo: "categorias"; texto: string }
-  | { id: number; de: "bot"; tipo: "preguntas"; texto: string; ids: string[] }
+  | { id: number; de: "alumno"; dicho: DichoAlumno }
+  | { id: number; de: "bot"; tipo: "categorias"; clave: "saludo" | "teHaServidoAlgoMas" }
+  | {
+      id: number;
+      de: "bot";
+      tipo: "preguntas";
+      /** Las de una categoría, o el resultado de una búsqueda. */
+      origen: { idCategoria: string } | { busqueda: true };
+      ids: string[];
+    }
   | { id: number; de: "bot"; tipo: "respuesta"; idPregunta: string; util: "si" | "no" | null }
-  | { id: number; de: "bot"; tipo: "soporte"; texto: string; asunto: string };
+  | { id: number; de: "bot"; tipo: "soporte"; derivacion: Derivacion };
 
 /**
  * Un mensaje antes de tener número.
@@ -109,7 +136,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
   function abrir() {
     setAbierto(true);
     if (mensajes.length === 0) {
-      anadir({ de: "bot", tipo: "categorias", texto: t.saludo });
+      anadir({ de: "bot", tipo: "categorias", clave: "saludo" });
     }
   }
 
@@ -134,13 +161,13 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
       setAbierto(true);
       setMensajes((previos) =>
         previos.length === 0
-          ? [{ id: ++siguienteId.current, de: "bot", tipo: "categorias", texto: t.saludo }]
+          ? [{ id: ++siguienteId.current, de: "bot", tipo: "categorias", clave: "saludo" }]
           : previos
       );
     }
     window.addEventListener(SUCESO_ABRIR_AYUDA, alPedir);
     return () => window.removeEventListener(SUCESO_ABRIR_AYUDA, alPedir);
-  }, [t.saludo]);
+  }, []);
 
   // Escape cierra, esté el foco donde esté dentro del panel.
   useEffect(() => {
@@ -177,11 +204,11 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
     if (!categoria) return;
 
     anadir(
-      { de: "alumno", texto: categoria.nombre[idioma] },
+      { de: "alumno", dicho: { tipo: "categoria", idCategoria: id } },
       {
         de: "bot",
         tipo: "preguntas",
-        texto: t.loQueMasSePregunta(categoria.nombre[idioma]),
+        origen: { idCategoria: id },
         ids: categoria.preguntas.map((p) => p.id),
       }
     );
@@ -192,12 +219,12 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
     if (!pregunta) return;
 
     anadir(
-      { de: "alumno", texto: pregunta.pregunta[idioma] },
+      { de: "alumno", dicho: { tipo: "pregunta", idPregunta: id } },
       { de: "bot", tipo: "respuesta", idPregunta: id, util: null }
     );
   }
 
-  function valorar(idMensaje: number, util: "si" | "no", asunto: string) {
+  function valorar(idMensaje: number, util: "si" | "no", idPregunta: string) {
     setMensajes((previos) =>
       previos.map((m) =>
         m.id === idMensaje && m.de === "bot" && m.tipo === "respuesta" ? { ...m, util } : m
@@ -205,29 +232,22 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
     );
 
     if (util === "si") {
-      anadir({ de: "alumno", texto: t.siGracias }, { de: "bot", tipo: "categorias", texto: t.genialAlgoMas });
+      anadir(
+        { de: "alumno", dicho: { tipo: "fijo", clave: "siGracias" } },
+        { de: "bot", tipo: "categorias", clave: "teHaServidoAlgoMas" }
+      );
     } else {
       anadir(
-        { de: "alumno", texto: t.noDelTodo },
-        {
-          de: "bot",
-          tipo: "soporte",
-          texto: t.sientoNoResolverlo,
-          asunto,
-        }
+        { de: "alumno", dicho: { tipo: "fijo", clave: "noDelTodo" } },
+        { de: "bot", tipo: "soporte", derivacion: { motivo: "noResuelto", idPregunta } }
       );
     }
   }
 
   function pedirSoporte() {
     anadir(
-      { de: "alumno", texto: t.quieroHablarConSoporte },
-      {
-        de: "bot",
-        tipo: "soporte",
-        texto: t.teAbrimosWhatsApp,
-        asunto: "",
-      }
+      { de: "alumno", dicho: { tipo: "fijo", clave: "quieroHablarConSoporte" } },
+      { de: "bot", tipo: "soporte", derivacion: { motivo: "pedido" } }
     );
   }
 
@@ -242,28 +262,28 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
 
     if (encontradas.length === 0) {
       anadir(
-        { de: "alumno", texto },
-        {
-          de: "bot",
-          tipo: "soporte",
-          // Es nuestro fallo, no suyo: no encontramos, no "no existe".
-          texto: t.noLoTengoEscrito,
-          asunto: texto,
-        }
+        { de: "alumno", dicho: { tipo: "escrito", texto } },
+        { de: "bot", tipo: "soporte", derivacion: { motivo: "sinRespuesta", escrito: texto } }
       );
       return;
     }
 
     anadir(
-      { de: "alumno", texto },
+      { de: "alumno", dicho: { tipo: "escrito", texto } },
       {
         de: "bot",
         tipo: "preguntas",
-        texto: encontradas.length === 1 ? t.creoQueVaPorAqui : t.puedeQueSeaAlguna,
+        origen: { busqueda: true },
         ids: encontradas.map((r) => r.pregunta.id),
       }
     );
   }
+
+  // Con la conversación ya en soporte —el último mensaje es la
+  // derivación, con su botón de WhatsApp—, el enlace del pie repetiría
+  // lo que el alumno acaba de pedir. Vuelve en cuanto cambia de tema.
+  const ultimo = mensajes[mensajes.length - 1];
+  const enSoporte = ultimo?.de === "bot" && ultimo.tipo === "soporte";
 
   return (
     <div className="zona-ayuda z-50 flex flex-col items-end gap-3">
@@ -347,15 +367,11 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
                   key={mensaje.id}
                   className="max-w-[85%] self-end rounded-[14px] rounded-br-[4px] bg-marca-verdeFondo px-3.5 py-2.5 text-[14px] leading-[1.45] text-marca-tinta"
                 >
-                  {mensaje.texto}
+                  {textoDelAlumno(mensaje.dicho, idioma, t)}
                 </p>
               ) : (
                 <div key={mensaje.id} className="flex max-w-[92%] flex-col gap-2.5 self-start">
-                  <Burbuja>
-                    {mensaje.tipo === "respuesta"
-                      ? textoRespuesta(mensaje.idPregunta, idioma, t)
-                      : mensaje.texto}
-                  </Burbuja>
+                  <Burbuja>{textoDelBot(mensaje, idioma, t)}</Burbuja>
 
                   {mensaje.tipo === "categorias" && (
                     <ListaOpciones>
@@ -386,18 +402,14 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
                       util={mensaje.util}
                       t={t}
                       onValorar={(util) =>
-                        valorar(
-                          mensaje.id,
-                          util,
-                          preguntaPorId(mensaje.idPregunta)?.pregunta[idioma] ?? ""
-                        )
+                        valorar(mensaje.id, util, mensaje.idPregunta)
                       }
                     />
                   )}
 
                   {mensaje.tipo === "soporte" && (
                     <a
-                      href={enlaceSoporte({ nombre, ruta, asunto: mensaje.asunto, idioma })}
+                      href={enlaceSoporte({ nombre, ruta, asunto: asuntoDe(mensaje.derivacion, idioma), idioma })}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-verde inline-flex min-h-[44px] items-center justify-center gap-2 self-start rounded-full px-5 text-[14.5px] font-semibold"
@@ -418,13 +430,15 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
               es suyo y solo suyo —un pago, un horario— no debería tener que
               recorrer una conversación para llegar aquí. */}
           <div className="shrink-0 border-t border-marca-borde bg-white px-4 py-3">
-            <button
-              type="button"
-              onClick={pedirSoporte}
-              className="text-[13.5px] font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
-            >
-              {t.prefieresSoporte}
-            </button>
+            {!enSoporte && (
+              <button
+                type="button"
+                onClick={pedirSoporte}
+                className="text-[13.5px] font-semibold text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
+              >
+                {t.hablarConSoporte}
+              </button>
+            )}
             {/* El recorrido guiado, cuando se quiera: cierra la Ayuda y
                 empieza desde el primer paso. No lo marca como visto. */}
             <button
@@ -483,9 +497,52 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
   );
 }
 
-/** El texto de una respuesta, por si la pregunta desapareciera del FAQ. */
-function textoRespuesta(id: string, idioma: Idioma, t: TextosAyuda): string {
-  return preguntaPorId(id)?.respuesta[idioma] ?? t.respuestaNoDisponible;
+// ---------------------------------------------------------------
+// DEL MENSAJE AL TEXTO, EN EL IDIOMA DE AHORA
+// ---------------------------------------------------------------
+
+function textoDelAlumno(dicho: DichoAlumno, idioma: Idioma, t: TextosAyuda): string {
+  switch (dicho.tipo) {
+    case "fijo":
+      return t[dicho.clave];
+    case "categoria":
+      return FAQ.find((c) => c.id === dicho.idCategoria)?.nombre[idioma] ?? "";
+    case "pregunta":
+      return preguntaPorId(dicho.idPregunta)?.pregunta[idioma] ?? t.respuestaNoDisponible;
+    case "escrito":
+      return dicho.texto;
+  }
+}
+
+function textoDelBot(mensaje: Extract<Mensaje, { de: "bot" }>, idioma: Idioma, t: TextosAyuda): string {
+  switch (mensaje.tipo) {
+    case "categorias":
+      return t[mensaje.clave];
+    case "preguntas": {
+      const origen = mensaje.origen;
+      if ("idCategoria" in origen) {
+        const nombre = FAQ.find((c) => c.id === origen.idCategoria)?.nombre[idioma] ?? "";
+        return t.preguntasSobre(nombre);
+      }
+      return mensaje.ids.length === 1 ? t.unaRespuesta : t.variasRespuestas;
+    }
+    case "respuesta":
+      // Por si la pregunta desapareciera del FAQ.
+      return preguntaPorId(mensaje.idPregunta)?.respuesta[idioma] ?? t.respuestaNoDisponible;
+    case "soporte":
+      return mensaje.derivacion.motivo === "noResuelto"
+        ? t.soporteNoResuelto
+        : mensaje.derivacion.motivo === "pedido"
+          ? t.soportePedido
+          : t.soporteSinRespuesta;
+  }
+}
+
+/** Lo que va entre comillas en el mensaje de WhatsApp. */
+function asuntoDe(derivacion: Derivacion, idioma: Idioma): string {
+  if (derivacion.motivo === "noResuelto") return preguntaPorId(derivacion.idPregunta)?.pregunta[idioma] ?? "";
+  if (derivacion.motivo === "sinRespuesta") return derivacion.escrito;
+  return "";
 }
 
 function Burbuja({ children }: { children: React.ReactNode }) {

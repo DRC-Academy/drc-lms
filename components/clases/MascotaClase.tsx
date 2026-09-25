@@ -9,9 +9,9 @@ import { storeMascota } from "@/components/mascota/store";
  * bocadillo, señalando el horario.
  *
  * No pinta la mascota —es un ancla, ver AnclaMascota—: la única que hay
- * viaja aquí desde la percha. Al posarse señala una vez (el gesto
- * «senala», que apunta a su izquierda: al horario) y se queda mirando los
- * números. Con prefers-reduced-motion la capa no hace el viaje y el
+ * viaja aquí desde la percha. Al posarse señala el horario una vez
+ * —hacia donde quede: lo decide `calcularPoseMascota`, y si el horario
+ * le queda encima o debajo no señala— y se queda mirando los números. Con prefers-reduced-motion la capa no hace el viaje y el
  * bocadillo aparece sin animación (la regla global de globals.css).
  *
  * EL BOCADILLO NO ESTÁ AQUÍ: lo pinta el banner en el servidor, en la
@@ -31,7 +31,7 @@ export default function MascotaClase({ idHora }: { idHora: string }) {
   useEffect(() => {
     const hora = document.getElementById(idHora);
     storeMascota.mirarA(hora);
-    const reloj = setTimeout(() => storeMascota.gesto("senala", { desde: ANCLA, duracion: SENALA_MS }), SENALA_TRAS_MS);
+    const reloj = setTimeout(() => storeMascota.senalar(hora, { desde: ANCLA, duracion: SENALA_MS }), SENALA_TRAS_MS);
     return () => {
       clearTimeout(reloj);
       storeMascota.mirarA(null);

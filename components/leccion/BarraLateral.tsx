@@ -101,6 +101,8 @@ export default function BarraLateral({
                 href={enlace.href}
                 aria-current={activo ? "page" : undefined}
                 aria-label={enlace.texto}
+                // El recorrido guiado busca aquí el botón de cada sección.
+                data-tour-nav={enlace.clave}
                 className={`flex h-11 w-full items-center gap-3 overflow-hidden rounded-[12px] pl-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc ${
                   activo ? "bg-drc-chip-verde" : "hover:bg-marca-niebla"
                 }`}

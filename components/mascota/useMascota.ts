@@ -1,7 +1,7 @@
 "use client";
 
-import type { EstadoMascota, GestoMascota } from "@/components/mascota/estados";
-import { estadoVisible, storeMascota, useStoreMascota } from "@/components/mascota/store";
+import type { EstadoMascota } from "@/components/mascota/estados";
+import { estadoVisible, storeMascota, useStoreMascota, type GestoLibre } from "@/components/mascota/store";
 
 /**
  * El mando de la mascota desde fuera.
@@ -23,7 +23,8 @@ export type MandoMascota = {
   estado: EstadoMascota;
   disparo: number;
   dispara: (nuevo: EstadoMascota) => void;
-  gesto: (nombre: GestoMascota) => void;
+  /** Cualquiera menos «senala», que tiene objetivo: `storeMascota.senalar(el)`. */
+  gesto: (nombre: GestoLibre) => void;
 };
 
 export function useMascota(opciones: { desde?: string } = {}): MandoMascota {

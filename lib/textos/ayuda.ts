@@ -25,19 +25,27 @@ export type TextosAyuda = {
   buscarEnLaAyuda: string;
 
   saludo: string;
-  /** "Esto es lo que más se pregunta sobre <categoría>:". */
-  loQueMasSePregunta: (categoria: string) => string;
+  /** "Preguntas frecuentes sobre <categoría>:". */
+  preguntasSobre: (categoria: string) => string;
   siGracias: string;
-  genialAlgoMas: string;
+  /** Tras «Sí, gracias»: le ha servido. */
+  teHaServidoAlgoMas: string;
   noDelTodo: string;
-  sientoNoResolverlo: string;
+  // LAS TRES DERIVACIONES A SOPORTE. Cada una dice primero qué hacer
+  // —pulsar el botón— y después quién contesta. Nada de cómo va el
+  // mensaje por dentro: eso no le sirve al alumno para nada.
+  /** Tras «No del todo». */
+  soporteNoResuelto: string;
   quieroHablarConSoporte: string;
-  teAbrimosWhatsApp: string;
-  noLoTengoEscrito: string;
-  creoQueVaPorAqui: string;
-  puedeQueSeaAlguna: string;
+  /** Tras «Quiero hablar con soporte». */
+  soportePedido: string;
+  /** Tras una búsqueda sin resultados. Es nuestro fallo, no suyo. */
+  soporteSinRespuesta: string;
+  unaRespuesta: string;
+  variasRespuestas: string;
   escribirPorWhatsApp: string;
-  prefieresSoporte: string;
+  /** El enlace del pie. No sale mientras la conversación ya está en soporte. */
+  hablarConSoporte: string;
   /** El botón del pie que lanza el recorrido guiado. */
   verRecorrido: string;
   /** El menú del botón de ayuda: `aria-label` y sus dos opciones. */
@@ -66,21 +74,20 @@ const ES: TextosAyuda = {
   escribeTuDudaPlaceholder: "Escribe tu duda…",
   buscarEnLaAyuda: "Buscar en la ayuda",
 
-  saludo: "¡Hola! Soy la ayuda de DRC Academy. ¿Sobre qué necesitas una mano?",
-  loQueMasSePregunta: (categoria) =>
-    `Esto es lo que más se pregunta sobre ${categoria.toLowerCase()}:`,
+  saludo: "Hola, ¿en qué podemos ayudarte? Elige un tema o escribe tu pregunta.",
+  preguntasSobre: (categoria) => `Preguntas frecuentes sobre ${categoria.toLowerCase()}:`,
   siGracias: "Sí, gracias",
-  genialAlgoMas: "¡Genial! ¿Te ayudo con algo más?",
+  teHaServidoAlgoMas: "Nos alegra que te haya servido. ¿Necesitas algo más?",
   noDelTodo: "No del todo",
-  sientoNoResolverlo: "Vaya, siento no haberlo resuelto. Escríbenos y te contestamos nosotros.",
+  soporteNoResuelto: "Pulsa el botón para escribirnos por WhatsApp. Una persona del equipo te ayudará con tu caso.",
   quieroHablarConSoporte: "Quiero hablar con soporte",
-  teAbrimosWhatsApp: "Claro. Te abrimos WhatsApp con tu nombre y la pantalla desde la que escribes.",
+  soportePedido: "Pulsa el botón para escribirnos por WhatsApp. Te responderá una persona del equipo.",
   // Es nuestro fallo, no suyo: no encontramos, no "no existe".
-  noLoTengoEscrito: "Esto no lo tengo escrito. Te paso con soporte, que sí sabrá.",
-  creoQueVaPorAqui: "Creo que va por aquí:",
-  puedeQueSeaAlguna: "Puede que sea alguna de estas:",
+  soporteSinRespuesta: "No hemos encontrado una respuesta a esto. Pulsa el botón para escribirnos por WhatsApp y te ayudamos.",
+  unaRespuesta: "Esta respuesta puede servirte:",
+  variasRespuestas: "Estas respuestas pueden servirte:",
   escribirPorWhatsApp: "Escribir por WhatsApp",
-  prefieresSoporte: "¿Prefieres hablar con soporte?",
+  hablarConSoporte: "Hablar con el equipo de soporte",
   verRecorrido: "Ver el recorrido guiado",
   menuAyuda: "Ayuda",
   opcionTutorial: "Tutorial",
@@ -92,8 +99,8 @@ const ES: TextosAyuda = {
   teHaServido: "¿Te ha servido?",
   si: "Sí",
   no: "No",
-  marcasteQueSirvio: "Marcaste que te ha servido.",
-  marcasteQueNoSirvio: "Marcaste que no te ha servido.",
+  marcasteQueSirvio: "Has indicado que te ha servido.",
+  marcasteQueNoSirvio: "Has indicado que no te ha servido.",
 };
 
 const EN: TextosAyuda = {
@@ -102,25 +109,24 @@ const EN: TextosAyuda = {
   dialogo: "DRC Academy help",
   cerrarLaAyuda: "Close help",
   titulo: "Help",
-  subtitulo: "Answers to what people ask most",
+  subtitulo: "Answers to common questions",
   escribeTuDuda: "Type your question",
   escribeTuDudaPlaceholder: "Type your question…",
   buscarEnLaAyuda: "Search the help",
 
-  saludo: "Hi! I'm the DRC Academy help. What do you need a hand with?",
-  loQueMasSePregunta: (categoria) =>
-    `Here's what people ask most about ${categoria.toLowerCase()}:`,
+  saludo: "Hi, how can we help? Choose a topic or type your question.",
+  preguntasSobre: (categoria) => `Common questions about ${categoria.toLowerCase()}:`,
   siGracias: "Yes, thanks",
-  genialAlgoMas: "Great! Anything else I can help with?",
+  teHaServidoAlgoMas: "Glad that helped. Is there anything else you need?",
   noDelTodo: "Not quite",
-  sientoNoResolverlo: "Sorry that didn't sort it. Write to us and we'll answer you ourselves.",
-  quieroHablarConSoporte: "I want to talk to support",
-  teAbrimosWhatsApp: "Sure. We'll open WhatsApp with your name and the screen you're writing from.",
-  noLoTengoEscrito: "I don't have that written down. I'll pass you to support, who will know.",
-  creoQueVaPorAqui: "I think it's this one:",
-  puedeQueSeaAlguna: "It might be one of these:",
+  soporteNoResuelto: "Tap the button to message us on WhatsApp. Someone from our team will help you with it.",
+  quieroHablarConSoporte: "I'd like to talk to support",
+  soportePedido: "Tap the button to message us on WhatsApp. A member of our team will reply.",
+  soporteSinRespuesta: "We couldn't find an answer to that. Tap the button to message us on WhatsApp and we'll help.",
+  unaRespuesta: "This answer may help:",
+  variasRespuestas: "These answers may help:",
   escribirPorWhatsApp: "Message us on WhatsApp",
-  prefieresSoporte: "Would you rather talk to support?",
+  hablarConSoporte: "Talk to our support team",
   verRecorrido: "Take the guided tour",
   menuAyuda: "Help",
   opcionTutorial: "Tutorial",
@@ -132,8 +138,8 @@ const EN: TextosAyuda = {
   teHaServido: "Did that help?",
   si: "Yes",
   no: "No",
-  marcasteQueSirvio: "You marked this as helpful.",
-  marcasteQueNoSirvio: "You marked this as not helpful.",
+  marcasteQueSirvio: "You said this helped.",
+  marcasteQueNoSirvio: "You said this didn't help.",
 };
 
 export const AYUDA: Record<Idioma, TextosAyuda> = { es: ES, en: EN };

@@ -84,6 +84,8 @@ export type TextosMascota = {
     terminar: string;
     saltar: string;
     pasoDe: (n: number, total: number) => string;
+    /** Mientras se busca lo que hay que enseñar (una pantalla que llega, un elemento que se pinta). */
+    unMomento: string;
   };
 };
 
@@ -107,6 +109,7 @@ export const MASCOTA: Record<Idioma, TextosMascota> = {
       terminar: "Terminar",
       saltar: "Saltar el recorrido",
       pasoDe: (n, total) => `${n} de ${total}`,
+      unMomento: "Un momento, que te lo enseño.",
     },
     clase: {
       cerrada: [
@@ -150,6 +153,7 @@ export const MASCOTA: Record<Idioma, TextosMascota> = {
       terminar: "Finish",
       saltar: "Skip the tour",
       pasoDe: (n, total) => `${n} of ${total}`,
+      unMomento: "One moment, I'll show you.",
     },
     clase: {
       cerrada: [

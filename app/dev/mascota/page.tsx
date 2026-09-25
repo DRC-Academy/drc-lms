@@ -242,7 +242,13 @@ export default function TableroMascota() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="w-24">Gesto</span>
           {GESTOS_MASCOTA.map((g) => (
-            <button key={g} type="button" onClick={() => storeMascota.gesto(g)} className={boton}>
+            // «senala» necesita a qué: en el banco, al propio botón.
+            <button
+              key={g}
+              type="button"
+              onClick={(e) => (g === "senala" ? storeMascota.senalar(e.currentTarget) : storeMascota.gesto(g))}
+              className={boton}
+            >
               {NOMBRES_GESTO[g]}
             </button>
           ))}

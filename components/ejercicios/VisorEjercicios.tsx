@@ -394,7 +394,8 @@ export default function VisorEjercicios({
     setTimeout(
       () => {
         setPensando(false);
-        storeMascota.gesto("senala");
+        // Ya no señala al acabar de pensar: la pista no tiene un sitio al
+        // que apuntar, y sin objetivo no hay flecha. Vuelve a su pose.
         const i = elegirFrase("pistaIntro", tm.frases.pistaIntro.length);
         setEstados((previos) => previos.map((e, k) => (k === deCual ? { ...e, pista: i } : e)));
       },

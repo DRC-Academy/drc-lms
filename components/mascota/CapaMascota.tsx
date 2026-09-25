@@ -6,7 +6,8 @@ import { useEffect, useRef, useState, type PointerEvent as PointerEventReact } f
 import parchesJson from "@/components/mascota/parches.json";
 import type { GestoMascota } from "@/components/mascota/estados";
 import type { MicroGesto, MiradaMascota } from "@/components/mascota/Geckonoid";
-import { estadoVisible, storeMascota, useStoreMascota, type Ancla } from "@/components/mascota/store";
+import { calcularPoseMascota, type LadoSenala } from "@/components/mascota/pose";
+import { estadoVisible, storeMascota, useStoreMascota, type Ancla, type GestoLibre } from "@/components/mascota/store";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { BUCLE_PROFESOR, type ClaveBurbuja } from "@/lib/textos/mascota";
 
@@ -117,7 +118,7 @@ const DESPEDIDA_MS = 900;
 /** Lo que hay fijo abajo y la percha no tiene que tapar. */
 const EVITAR = "[data-nav-inferior], [data-barra-inferior] > *, .zona-ayuda";
 /** Los gestos al tocarla en reposo. */
-const AL_TOCAR: readonly GestoMascota[] = ["saludo", "salto", "guino"];
+const AL_TOCAR: readonly GestoLibre[] = ["saludo", "salto", "guino"];
 /** Entre un clic y otro para que cuente como doble. */
 const DOBLE_CLIC_MS = 250;
 const ARRASTRE = { umbral: 5, vuelveMs: 10000 };
@@ -231,6 +232,9 @@ export default function CapaMascota() {
   // Durante el recorrido guiado, por encima de su velo (z-60).
   const alFrente = useStoreMascota((e) => e.alFrente);
   const [miradaPagina, setMiradaPagina] = useState<MiradaMascota>();
+  // Hacia dónde señala ahora, si señala: lo decide `calcularPoseMascota`
+  // en cada frame (ver `acompañar`). Null es la pose neutra.
+  const [ladoSenala, setLadoSenala] = useState<LadoSenala | null>(null);
   const [burbuja, setBurbuja] = useState<{ texto: string; n: number }>();
   const burbujaEl = useRef<HTMLDivElement>(null);
   const t = usarIdioma().t.mascota;
@@ -463,14 +467,37 @@ export default function CapaMascota() {
       else escribir(destino);
     };
 
-    // La mirada que pide la página (el enunciado) y la burbuja, que va
-    // junto a la mascota: a su izquierda si cabe —hacia allí señala—, si
+    // La mirada que pide la página (el enunciado), hacia dónde señala y
+    // la burbuja, que va junto a la mascota: a su izquierda si cabe, si
     // no a la derecha, a la altura de la cabeza.
     let ultimaMiradaPagina: MiradaMascota | undefined;
+    let ultimoLado: LadoSenala | null = null;
     const acompañar = () => {
       const c = dibujada;
       if (!c) return;
       const w = c.alto * PROPORCION;
+
+      // SEÑALAR: la única decisión de dirección de toda la app. Se
+      // recalcula en cada frame, así que sigue al objetivo con el scroll,
+      // la ventana y el paso. En el aire no se señala.
+      const { senal, activa: ahoraActiva } = storeMascota.leer();
+      let lado: LadoSenala | null = null;
+      if (senal) {
+        if (Date.now() >= senal.hasta || !senal.el.isConnected) {
+          storeMascota.dejarDeSenalar();
+        } else if (!vuelo && (senal.desde === undefined || senal.desde === ahoraActiva)) {
+          const pose = calcularPoseMascota(
+            senal.el.getBoundingClientRect(),
+            { left: c.x, top: c.y, width: w, height: c.alto },
+            { ancho: window.innerWidth, alto: window.innerHeight }
+          );
+          if (pose.tipo === "senala") lado = pose.lado;
+        }
+      }
+      if (lado !== ultimoLado) {
+        ultimoLado = lado;
+        setLadoSenala(lado);
+      }
       const objetivo = storeMascota.leer().mirarA;
       let mira: MiradaMascota | undefined;
       if (objetivo?.isConnected) {
@@ -637,7 +664,7 @@ export default function CapaMascota() {
           } else if (elegido === "salto_sitio") {
             storeMascota.moverse("salto_sitio");
           } else {
-            storeMascota.gesto(elegido as GestoMascota);
+            storeMascota.gesto(elegido as GestoLibre);
           }
         }
         programar();
@@ -729,7 +756,10 @@ export default function CapaMascota() {
       escribirSesion(CLAVE_BURBUJAS, [...dichas, burbujaPedida.clave].join(","));
       burbujaEnPantalla.current = ruta;
       setBurbuja({ texto: textoDe(burbujaPedida.clave, burbujaPedida.profesor), n: burbujaPedida.n });
-      storeMascota.gesto("senala", { duracion: 1600 });
+      // Señala la burbuja: a la izquierda o a la derecha, según dónde
+      // haya cabido. Antes era siempre a la izquierda, y con la burbuja a
+      // la derecha señalaba al lado contrario.
+      storeMascota.senalar(burbujaEl.current, { duracion: 1600 });
       storeMascota.anotar("burbuja", `dicha ${burbujaPedida.clave}`);
     }, BURBUJA.espera);
     return () => clearTimeout(reloj);
@@ -803,7 +833,9 @@ export default function CapaMascota() {
 
   const sostenida: GestoMascota | undefined = enVuelo
     ? "salto"
-    : somnolencia === "dormida"
+    : ladoSenala
+      ? "senala"
+      : somnolencia === "dormida"
       ? "dormido"
       : somnolencia === "sentada" || enPercha
         ? "sentado"
@@ -847,6 +879,7 @@ export default function CapaMascota() {
             quieta={(activa?.quieta ?? false) && !transitorio}
             pose={pose}
             sostenida={sostenida}
+            espejo={ladoSenala === "der"}
             mirada={somnolencia === "despierta" ? (miradaPagina ?? mirada) : undefined}
             inclinacion={somnolencia === "despierta" ? inclinacion : 0}
             movimiento={movimiento}

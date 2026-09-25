@@ -124,7 +124,7 @@ export const FAQ: CategoriaFaq[] = [
           en: "I enter my email and nothing happens.",
         },
         respuesta: {
-          es: "Por seguridad siempre mostramos el mismo mensaje, exista o no el correo. Comprueba que sea el mismo email con el que estás dado de alta en la academia. Si no estás seguro, escríbenos.",
+          es: "Por seguridad siempre mostramos el mismo mensaje, exista o no el correo. Comprueba que sea el mismo email con el que estás dado de alta en la academia. Si tienes dudas, escríbenos.",
           en: "For security we always show the same message, whether or not the email exists. Check that it's the same email you registered with at the academy. If you're not sure, write to us.",
         },
         claves: ["no pasa nada", "no responde", "email incorrecto", "no funciona", "nothing happens", "wrong email", "doesnt work"],
@@ -325,8 +325,8 @@ export const FAQ: CategoriaFaq[] = [
           en: "I think this exercise is wrong.",
         },
         respuesta: {
-          es: "Puedes marcarlo desde el propio ejercicio y lo revisamos.",
-          en: "You can flag it from the exercise itself and we'll review it.",
+          es: "Si crees que un ejercicio tiene un error, escríbenos por WhatsApp desde la ayuda e indícanos cuál es. Lo revisaremos.",
+          en: "If you think an exercise has a mistake, message us on WhatsApp from the help and tell us which one. We'll look into it.",
         },
         claves: ["error", "mal", "incorrecto", "fallo", "equivocado", "reportar", "wrong", "mistake", "incorrect", "report", "flag"],
       },
@@ -337,8 +337,8 @@ export const FAQ: CategoriaFaq[] = [
           en: "Does my teacher see what I do in my practice?",
         },
         respuesta: {
-          es: "Lo que escribes en la última parte de cada bloque está pensado para que tu profesor lo tenga en cuenta.",
-          en: "What you write in the last part of each block is meant for your teacher to take into account.",
+          es: "Tu profesor prepara cada clase con lo que trabajáis juntos. Si quieres repasar algo de tu práctica, coméntaselo en tu próxima clase.",
+          en: "Your teacher plans each class around what you work on together. If there's something from your practice you'd like to go over, mention it in your next class.",
         },
         claves: ["profesor", "ve", "privacidad", "corrige", "revisa", "teacher", "see", "privacy", "correct", "review"],
       },
@@ -406,8 +406,8 @@ export const FAQ: CategoriaFaq[] = [
           en: "The page keeps loading.",
         },
         respuesta: {
-          es: "Recarga. Si el problema continúa, dinos desde qué dispositivo y navegador entras.",
-          en: "Reload. If it carries on, tell us which device and browser you're using.",
+          es: "Recarga la página. Si sigue igual, dinos desde qué dispositivo y navegador entras.",
+          en: "Reload the page. If it keeps happening, tell us which device and browser you're using.",
         },
         claves: ["cargando", "lento", "colgada", "no carga", "pantalla en blanco", "loading", "slow", "stuck", "blank screen"],
       },
@@ -430,8 +430,8 @@ export const FAQ: CategoriaFaq[] = [
         id: "clases-como-entro",
         pregunta: { es: "¿Cómo entro a mi clase?", en: "How do I join my class?" },
         respuesta: {
-          es: "A la hora de tu clase, con el enlace de videollamada que te haya facilitado tu profesor.",
-          en: "At the time of your class, with the video call link your teacher gave you.",
+          es: "Entra en Clases y pulsa el botón «Unirse a la clase». Se activa 30 minutos antes de que empiece la clase.",
+          en: "Go to Classes and tap the \"Join the class\" button. It becomes available 30 minutes before your class starts.",
         },
         claves: ["entrar", "clase", "videollamada", "enlace", "zoom", "meet", "join", "class", "video call", "link"],
       },
@@ -466,8 +466,8 @@ export const FAQ: CategoriaFaq[] = [
           en: "Can I change my schedule or my teacher?",
         },
         respuesta: {
-          es: "Escríbenos y vemos las opciones disponibles según la disponibilidad de horarios.",
-          en: "Write to us and we'll look at the options, depending on what times are available.",
+          es: "Escríbenos y vemos contigo las opciones según los horarios libres.",
+          en: "Write to us and we'll look at the options based on the times available.",
         },
         claves: ["cambiar", "horario", "profesor", "cancelar clase", "mover", "change", "schedule", "teacher", "cancel class", "move"],
       },
@@ -708,6 +708,8 @@ export const WHATSAPP = "353899409220";
 function nombreDePantalla(ruta: string, idioma: Idioma): string {
   const es = idioma === "es";
   if (ruta === "/practica") return es ? "mi práctica" : "my practice";
+  if (ruta.startsWith("/clases")) return es ? "mis clases" : "my classes";
+  if (ruta.startsWith("/progreso")) return es ? "mi progreso" : "my progress";
   if (ruta.startsWith("/alumno/")) return es ? "mi inicio" : "my home screen";
   if (/^\/curso\/[^/]+\/[^/]+/.test(ruta)) return es ? "una lección del curso" : "a course lesson";
   if (ruta.startsWith("/curso/")) return es ? "el temario del curso" : "the course syllabus";
@@ -734,11 +736,19 @@ export function enlaceSoporte({
   idioma: Idioma;
 }): string {
   const es = idioma === "es";
-  const quien = nombre.trim() === "" ? (es ? "un alumno" : "a student") : nombre.trim();
+  const quien = nombre.trim();
   const pantalla = nombreDePantalla(ruta, idioma);
 
+  // Sin nombre no se pone ninguno: «soy un alumno» le ponía género a
+  // quien escribe y no le decía nada a quien lo lee.
   const partes = [
-    es ? `Hola, soy ${quien}. Escribo desde ${pantalla}.` : `Hi, I'm ${quien}. I'm writing from ${pantalla}.`,
+    quien
+      ? es
+        ? `Hola, soy ${quien}. Escribo desde ${pantalla}.`
+        : `Hi, I'm ${quien}. I'm writing from ${pantalla}.`
+      : es
+        ? `Hola. Escribo desde ${pantalla}.`
+        : `Hello. I'm writing from ${pantalla}.`,
   ];
   if (asunto && asunto.trim() !== "") {
     partes.push(es ? `Mi duda: «${asunto.trim()}».` : `My question: "${asunto.trim()}".`);

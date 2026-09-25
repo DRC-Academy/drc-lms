@@ -16,9 +16,18 @@
 // EL TONO es el de la mascota (lib/textos/mascota.ts): español de España,
 // tuteo, cálido y corto, sin género gramatical referido al alumno, sin
 // «racha», sin celebración al acabar y sin nada que suene a vigilancia.
+//
+// NINGÚN PASO DICE HACIA DÓNDE SEÑALA LA MASCOTA. El motor le pide que
+// señale el elemento del paso y `calcularPoseMascota`
+// (components/mascota/pose.ts) decide si a la izquierda, a la derecha o
+// nada. `gesto` es solo lo que hace al llegar y no señala (saludar).
+//
+// LOS PASOS PUENTE NO SE ESCRIBEN AQUÍ: los genera `conPuentes` en cada
+// cambio de pantalla entre dos pasos seguidos. Ver más abajo.
 // ---------------------------------------------------------------
 
-import type { EstadoMascota, GestoMascota } from "@/components/mascota/estados";
+import type { EstadoMascota } from "@/components/mascota/estados";
+import type { GestoLibre } from "@/components/mascota/store";
 import type { Idioma } from "@/lib/idioma";
 
 /** Dónde vive un paso. `null`: en cualquier pantalla del alumno. */
@@ -41,8 +50,12 @@ export type SenalTutorial = {
 export type PasoTutorial = SenalTutorial & {
   id: string;
   ruta: RutaTutorial;
-  /** Lo que hace la mascota al llegar. */
-  gesto: GestoMascota | null;
+  /**
+   * Lo que hace la mascota al llegar EN VEZ DE SEÑALAR (saludar al
+   * empezar y al despedirse). Null: señala el elemento, si la pose lo
+   * permite.
+   */
+  gesto: GestoLibre | null;
   /** Su estado mientras está en el paso. */
   estado: EstadoMascota;
   /** Si no está el elemento principal, esto; si tampoco, el paso se salta. */
@@ -67,7 +80,7 @@ export const PASOS_TUTORIAL: readonly PasoTutorial[] = [
     id: "curso",
     ruta: "inicio",
     selector: tour("curso"),
-    gesto: "senala",
+    gesto: null,
     estado: "idle",
     texto: {
       es: "Aquí sigue tu curso, justo donde lo dejaste.",
@@ -78,7 +91,7 @@ export const PASOS_TUTORIAL: readonly PasoTutorial[] = [
     id: "proxima-clase",
     ruta: "clases",
     selector: tour("proxima-clase"),
-    gesto: "senala",
+    gesto: null,
     estado: "idle",
     texto: {
       es: "Aquí tienes tu próxima clase: el día, la hora y con quién.",
@@ -96,7 +109,7 @@ export const PASOS_TUTORIAL: readonly PasoTutorial[] = [
     id: "unirse",
     ruta: "clases",
     selector: tour("unirse"),
-    gesto: "senala",
+    gesto: null,
     estado: "idle",
     texto: {
       es: "Media hora antes de la clase, este botón se activa y te lleva a la videollamada.",
@@ -117,7 +130,7 @@ export const PASOS_TUTORIAL: readonly PasoTutorial[] = [
     id: "ruta",
     ruta: "practica",
     selector: tour("ruta"),
-    gesto: "senala",
+    gesto: null,
     estado: "animo",
     texto: {
       es: "Después de cada clase te preparo ejercicios con lo que visteis. Aquí los tienes, uno detrás de otro.",
@@ -142,3 +155,68 @@ export const PASOS_TUTORIAL: readonly PasoTutorial[] = [
     },
   },
 ];
+
+// ---------------------------------------------------------------
+// LOS PASOS PUENTE
+//
+// Cuando el recorrido pasa a otra pantalla, antes de irse enseña CÓMO se
+// llega: se queda en la pantalla en la que está y destaca el botón de la
+// navegación que lleva a la siguiente. Al pulsar «Siguiente» —o el propio
+// botón— navega.
+//
+// Se generan aquí, de la lista de arriba: uno por cada par de pasos
+// seguidos con pantallas distintas. El primer paso no genera ninguno: si
+// el recorrido se lanza desde otra pantalla, el salto al inicio es el
+// arranque, no un camino que enseñar. Tampoco «Atrás» los recorre (ver
+// el motor).
+//
+// El botón se busca por `data-tour-nav`, que llevan los enlaces de la
+// barra lateral y de las pestañas de abajo: el motor coge el que se vea.
+// ---------------------------------------------------------------
+
+export type DestinoTutorial = Exclude<RutaTutorial, null>;
+
+export type PasoRecorrido = PasoTutorial & {
+  /** Solo en los puentes: la pantalla a la que lleva el botón. */
+  puente?: DestinoTutorial;
+};
+
+const TEXTO_PUENTE: Record<DestinoTutorial, TextoTutorial> = {
+  inicio: {
+    es: "Para volver al inicio, pulsa aquí.",
+    en: "To go back to your home screen, use this button.",
+  },
+  clases: {
+    es: "Para ir a tus clases, pulsa aquí.",
+    en: "To go to your classes, use this button.",
+  },
+  practica: {
+    es: "Tus ejercicios están en «Para ti». Para ir, pulsa aquí.",
+    en: "Your exercises are in \"For you\". To get there, use this button.",
+  },
+};
+
+export const selectorNav = (destino: DestinoTutorial) => `[data-tour-nav="${destino}"]`;
+
+export function conPuentes(pasos: readonly PasoTutorial[]): PasoRecorrido[] {
+  const salida: PasoRecorrido[] = [];
+  pasos.forEach((paso, i) => {
+    const anterior = pasos[i - 1];
+    if (anterior && paso.ruta !== null && paso.ruta !== anterior.ruta) {
+      salida.push({
+        id: `puente-${paso.id}`,
+        ruta: anterior.ruta,
+        selector: selectorNav(paso.ruta),
+        texto: TEXTO_PUENTE[paso.ruta],
+        gesto: null,
+        estado: "idle",
+        puente: paso.ruta,
+      });
+    }
+    salida.push(paso);
+  });
+  return salida;
+}
+
+/** Lo que recorre el motor: los pasos de arriba con sus puentes. */
+export const PASOS_RECORRIDO: readonly PasoRecorrido[] = conPuentes(PASOS_TUTORIAL);

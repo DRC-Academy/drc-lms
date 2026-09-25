@@ -74,6 +74,8 @@ export default function NavegacionInferior({
             aria-current={activo ? "page" : undefined}
             // El nombre entero aunque la etiqueta se recorte.
             aria-label={enlace.texto}
+            // El recorrido guiado busca aquí el botón de cada sección.
+            data-tour-nav={enlace.clave}
             className={`flex min-h-[44px] flex-col items-center justify-center gap-[5px] rounded-[10px] text-[12px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-marca-verdeOsc ${
               // `gris` y no `grisSuave`: a 12px, `grisSuave` da 3,65:1 y AA
               // pide 4,5:1. Es la navegación entera en móvil.
