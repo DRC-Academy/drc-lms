@@ -79,7 +79,8 @@ export default function BarraLateral({
       // pegajosa y eso ya la convierte en contexto de apilamiento; sin un
       // z propio, el panel de al lado —que viene después— pintaría por
       // encima del menú del perfil.
-      className="barra-app sticky top-0 hidden h-dvh w-[80px] shrink-0 min-[900px]:block"
+      // En «Mi curso» no se abre (`barra-fija`): tapaba la lección.
+      className={`barra-app sticky top-0 hidden h-dvh w-[80px] shrink-0 min-[900px]:block ${seccion === "curso" ? "barra-fija" : ""}`}
     >
       <div className="barra-panel absolute inset-y-0 left-0 flex flex-col border-r border-marca-borde bg-white pb-[18px] pt-[18px]">
         <Link

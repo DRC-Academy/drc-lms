@@ -610,6 +610,9 @@
      LO QUE SOLO SE VE ABIERTA (`.barra-rotulo`) va con `visibility` y no
      solo con opacidad: invisible no recibe el ratón, así que el texto
      que sobresale de los 80px no puede abrir la barra desde fuera.
+
+     EN «MI CURSO» NO SE ABRE (`.barra-fija`): abierta tapaba el texto de
+     la lección. Se queda en iconos, con su `aria-label` cada uno.
      --------------------------------------------------------------- */
   .barra-app {
     z-index: 30;
@@ -627,9 +630,9 @@
       width 220ms var(--ease-salida),
       box-shadow 220ms ease;
   }
-  .barra-app:hover .barra-panel,
-  .barra-app:focus-within .barra-panel,
-  html[data-tutorial-puente] .barra-app .barra-panel {
+  .barra-app:not(.barra-fija):hover .barra-panel,
+  .barra-app:not(.barra-fija):focus-within .barra-panel,
+  html[data-tutorial-puente] .barra-app:not(.barra-fija) .barra-panel {
     width: 272px;
     box-shadow: 18px 0 44px -26px rgba(18, 33, 26, 0.35);
     transition-delay: 120ms;
@@ -641,9 +644,9 @@
       opacity 120ms ease,
       visibility 0s linear 120ms;
   }
-  .barra-app:hover .barra-rotulo,
-  .barra-app:focus-within .barra-rotulo,
-  html[data-tutorial-puente] .barra-app .barra-rotulo {
+  .barra-app:not(.barra-fija):hover .barra-rotulo,
+  .barra-app:not(.barra-fija):focus-within .barra-rotulo,
+  html[data-tutorial-puente] .barra-app:not(.barra-fija) .barra-rotulo {
     visibility: visible;
     opacity: 1;
     transition:
@@ -652,9 +655,9 @@
   }
   /* Plegada, la etiqueta corta del anillo; abierta sobra, porque al lado
      está el texto entero. */
-  .barra-app:hover .barra-solo-plegada,
-  .barra-app:focus-within .barra-solo-plegada,
-  html[data-tutorial-puente] .barra-app .barra-solo-plegada {
+  .barra-app:not(.barra-fija):hover .barra-solo-plegada,
+  .barra-app:not(.barra-fija):focus-within .barra-solo-plegada,
+  html[data-tutorial-puente] .barra-app:not(.barra-fija) .barra-solo-plegada {
     opacity: 0;
   }
   @media (prefers-reduced-motion: reduce) {
