@@ -857,6 +857,10 @@ export async function ejerciciosPorLeccion(
 /**
  * Deja una lección por vista.
  *
+ * `en` fija `completada_en`; sin él es la de ahora. Solo lo pasa
+ * `scripts/demo.ts`, igual que en `guardarIntento` (ver la nota de `en`
+ * en `lib/progreso-servidor.ts`).
+ *
  * `origen: 'lms'` la distingue de lo que un día venga migrado de
  * LearnDash, que es lo que permitirá deshacer solo la migración.
  *
@@ -864,11 +868,20 @@ export async function ejerciciosPorLeccion(
  * se ignora en vez de fallar, porque volver a marcar una lección ya
  * hecha es una pulsación de más, no un error.
  */
-export async function completarLeccion(alumnoId: string, leccionId: string): Promise<boolean> {
+export async function completarLeccion(
+  alumnoId: string,
+  leccionId: string,
+  en?: Date
+): Promise<boolean> {
   const { error } = await baseLms()
     .from("progreso_lecciones")
     .upsert(
-      { alumno_id: alumnoId, leccion_id: leccionId, origen: "lms" },
+      {
+        alumno_id: alumnoId,
+        leccion_id: leccionId,
+        origen: "lms",
+        ...(en ? { completada_en: en.toISOString() } : {}),
+      },
       { onConflict: "alumno_id,leccion_id", ignoreDuplicates: true }
     );
 
@@ -890,13 +903,15 @@ export async function completarLeccion(alumnoId: string, leccionId: string): Pro
 export async function guardarIntento(
   alumnoId: string,
   ejercicioId: string,
-  correcto: boolean
+  correcto: boolean,
+  en?: Date
 ): Promise<boolean> {
   const { error } = await baseLms().from("intentos_ejercicio").insert({
     alumno_id: alumnoId,
     ejercicio_id: ejercicioId,
     correcto,
     origen: "lms",
+    ...(en ? { respondido_en: en.toISOString() } : {}),
   });
 
   return registrar("No se pudo guardar el intento", error);

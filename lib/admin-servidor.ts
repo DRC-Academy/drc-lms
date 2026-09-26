@@ -26,6 +26,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { baseLms } from "@/lib/supabase-lms";
 import { alumnosDelPanel, clasesDelPanel, type AlumnoPanel } from "@/lib/gestion";
+import { esIdDemo } from "@/lib/demo/cuenta";
 import { detectarExamen } from "@/lib/perfil";
 import { origenDelNivel, nivelEsFiable, type OrigenNivel } from "@/lib/estimacion";
 import { calcularApertura } from "@/lib/drip";
@@ -256,7 +257,10 @@ async function bloquesDelPeriodo(desde: string | null): Promise<FilaBloque[] | n
     console.error("[panel] No se pudo leer bloques_generados:", error.message);
     return null;
   }
-  return data ?? [];
+  // Sin los de las cuentas de demostración. El resto del panel ya los
+  // deja fuera solo —todo se cruza con las fichas de Gestión, y la demo
+  // no tiene—, pero el recuento de bloques por modo cuenta filas sueltas.
+  return (data ?? []).filter((b) => !esIdDemo(b.alumno_id));
 }
 
 /**

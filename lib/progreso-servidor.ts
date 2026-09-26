@@ -301,12 +301,23 @@ export async function buscarBloqueGenerado(
 // ESCRITURAS
 // ---------------------------------------------------------------
 
+// ---------------------------------------------------------------
+// `en`: FECHAR LO QUE SE ESCRIBE
+//
+// Las escrituras de aquí aceptan un último argumento opcional, `en`, que
+// fija la fecha de la fila en vez de dejar la de ahora. Ninguna ruta lo
+// pasa: existe para `scripts/demo.ts`, que registra la actividad del
+// alumno de demostración con estas mismas funciones pero en los días en
+// que la habría hecho. Sin `en`, la fila es idéntica a la de siempre.
+// ---------------------------------------------------------------
+
 /** Un intento terminado. Nunca pisa el anterior: cada uno es una fila. */
 export async function guardarProgreso(
   alumnoId: string,
   bloqueClave: string,
   aciertos: number,
-  total: number
+  total: number,
+  en?: Date
 ): Promise<boolean> {
   // El CHECK de la tabla rechazaría un recuento imposible con un error
   // de base. Se filtra aquí para que un fallo de la interfaz no acabe
@@ -318,7 +329,13 @@ export async function guardarProgreso(
 
   const { error } = await baseLms()
     .from("progreso_bloques")
-    .insert({ alumno_id: alumnoId, bloque_clave: bloqueClave, aciertos, total });
+    .insert({
+      alumno_id: alumnoId,
+      bloque_clave: bloqueClave,
+      aciertos,
+      total,
+      ...(en ? { completado_en: en.toISOString() } : {}),
+    });
 
   return registrar("No se pudo guardar el intento", error);
 }
@@ -331,7 +348,8 @@ export async function guardarAvance(
   alumnoId: string,
   bloqueClave: string,
   indice: number,
-  total: number
+  total: number,
+  en: Date = new Date()
 ): Promise<boolean> {
   if (total <= 0 || indice < 0 || indice >= total) {
     console.error(`[progreso] Avance incoherente (${indice}/${total}); no se guarda.`);
@@ -346,7 +364,7 @@ export async function guardarAvance(
         bloque_clave: bloqueClave,
         indice,
         total,
-        actualizado_en: new Date().toISOString(),
+        actualizado_en: en.toISOString(),
       },
       { onConflict: "alumno_id,bloque_clave" }
     );
@@ -383,7 +401,8 @@ export async function guardarBloqueGenerado(
   modo: ModoHistorico,
   origen: OrigenBloque,
   revision: unknown = null,
-  porEquipo = false
+  porEquipo = false,
+  en?: Date
 ): Promise<boolean> {
   const { error } = await baseLms()
     .from("bloques_generados")
@@ -397,6 +416,7 @@ export async function guardarBloqueGenerado(
         revision,
         origen,
         generado_por_equipo: porEquipo,
+        ...(en ? { generado_en: en.toISOString() } : {}),
       },
       { onConflict: "bloque_clave", ignoreDuplicates: true }
     );
@@ -414,7 +434,8 @@ export async function guardarRespuestaProduccion(
   alumnoId: string,
   bloqueClave: string,
   ejercicioId: string,
-  texto: string
+  texto: string,
+  en?: Date
 ): Promise<boolean> {
   const limpio = texto.trim();
   // El CHECK de la tabla acota a 20.000. Se recorta antes de enviarlo
@@ -426,6 +447,7 @@ export async function guardarRespuestaProduccion(
     bloque_clave: bloqueClave,
     ejercicio_id: ejercicioId,
     texto: limpio.slice(0, 20000),
+    ...(en ? { enviada_en: en.toISOString() } : {}),
   });
 
   return registrar("No se pudo guardar la respuesta de producción", error);

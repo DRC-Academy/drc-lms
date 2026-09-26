@@ -20,7 +20,12 @@
     "mascota:base": "node mascota/scripts/py.js base.py",
     "mascota:parches": "node mascota/scripts/py.js parches.py",
     "mascota:optimizar": "node mascota/scripts/optimizar.js",
-    "mascota:rehacer": "npm run mascota:variantes && npm run mascota:base && npm run mascota:parches && npm run mascota:optimizar"
+    "mascota:rehacer": "npm run mascota:variantes && npm run mascota:base && npm run mascota:parches && npm run mascota:optimizar",
+    "demo:crear": "npx --yes tsx --require ./scripts/sin-server-only.cjs --require ./scripts/sin-cache-react.cjs scripts/demo.ts crear",
+    "demo:rejuvenecer": "npx --yes tsx --require ./scripts/sin-server-only.cjs --require ./scripts/sin-cache-react.cjs scripts/demo.ts rejuvenecer",
+    "demo:borrar": "npx --yes tsx --require ./scripts/sin-server-only.cjs --require ./scripts/sin-cache-react.cjs scripts/demo.ts borrar",
+    "demo:enlace": "npx --yes tsx --require ./scripts/sin-server-only.cjs --require ./scripts/sin-cache-react.cjs scripts/demo.ts enlace",
+    "demo:estado": "npx --yes tsx --require ./scripts/sin-server-only.cjs --require ./scripts/sin-cache-react.cjs scripts/demo.ts estado"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.0",

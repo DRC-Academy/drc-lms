@@ -10,11 +10,22 @@
 // usar desde cualquier sitio.
 //
 // Solo SELECT: `soloLectura()` no expone ninguna otra operación.
+//
+// LAS CUENTAS DE DEMOSTRACIÓN SE RESUELVEN AQUÍ, y solo aquí. Cada
+// lectura de un alumno pregunta primero `escenarioDe`: si es una cuenta
+// de `cuentas_demo`, las filas salen de `lib/demo/escenario.ts` en vez
+// de Gestión y pasan por los mismos normalizadores y filtros que las de
+// verdad. Ninguna página ni componente sabe que existe el modo demo. Las
+// lecturas de TODOS los alumnos —el panel, el cron de avisos, el
+// buscador— no lo incluyen nunca: salen de Gestión y la demo no está
+// allí, que es lo que la deja fuera de métricas y correos.
 // ---------------------------------------------------------------
 
 import "server-only";
 import { cache } from "react";
 import { soloLectura } from "@/lib/supabase-server";
+import { escenarioDe, escenarioPorEmail, esIdDemo } from "@/lib/demo/cuenta";
+import { PROFESOR_DEMO } from "@/lib/demo/escenario";
 import {
   asGuiaProxima,
   asObject,
@@ -131,6 +142,9 @@ function deduplicar(filas: Fila[]): Fila[] {
  * lo mismo. Sin esto serían dos viajes a Gestión por página.
  */
 export const obtenerPerfil = cache(async (alumnoId: string): Promise<PerfilAlumno | null> => {
+  const demo = await escenarioDe(alumnoId);
+  if (demo) return aPerfil(demo.perfil);
+
   const { data, error } = await soloLectura("vista_perfil_alumno")
     .select("*")
     .eq("alumno_id", alumnoId)
@@ -234,6 +248,9 @@ const CALENDARIO =
 
 /** Las celdas del calendario de Gestión que nombran al alumno. */
 export const obtenerCalendario = cache(async (alumnoId: string): Promise<FilaCalendario[]> => {
+  const demo = await escenarioDe(alumnoId);
+  if (demo) return demo.calendario;
+
   const { data, error } = await soloLectura("vista_calendario_alumno")
     .select(CALENDARIO)
     .eq("alumno_id", alumnoId)
@@ -255,6 +272,9 @@ export const obtenerCalendario = cache(async (alumnoId: string): Promise<FilaCal
  * van a ocurrir. Crudos: los valida `normalizarQuitas`.
  */
 export const obtenerQuitas = cache(async (alumnoId: string): Promise<unknown[]> => {
+  const demo = await escenarioDe(alumnoId);
+  if (demo) return demo.excepciones.filter((f) => f.tipo === "quita");
+
   const { data, error } = await soloLectura("vista_excepciones_clase")
     .select("tipo, fecha, hora")
     .eq("alumno_id", alumnoId)
@@ -277,6 +297,9 @@ export const obtenerQuitas = cache(async (alumnoId: string): Promise<unknown[]> 
  * `normalizarQuitas` y `normalizarReprogramaciones`.
  */
 export const obtenerExcepciones = cache(async (alumnoId: string): Promise<unknown[]> => {
+  const demo = await escenarioDe(alumnoId);
+  if (demo) return demo.excepciones;
+
   const { data, error } = await soloLectura("vista_excepciones_clase")
     .select("tipo, class_type, fecha, hora, original_date")
     .eq("alumno_id", alumnoId)
@@ -302,11 +325,14 @@ export const obtenerNombresProfesor = cache(async (): Promise<Map<string, string
     .order("teacher_id", { ascending: true })
     .returns<Fila[]>();
 
+  // El profesor de la demo va siempre: no está en Gestión y su id
+  // (`demo-t1`) no puede coincidir con ninguno de allí.
+  const nombres = new Map<string, string>([[PROFESOR_DEMO.teacherId, PROFESOR_DEMO.nombre]]);
+
   if (error) {
     console.error("[gestion] No se pudo leer vista_profesores:", error.message);
-    return new Map();
+    return nombres;
   }
-  const nombres = new Map<string, string>();
   for (const fila of data ?? []) {
     const id = comoTexto(fila.teacher_id);
     const nombre = comoTexto(fila.profesor).trim();
@@ -324,6 +350,11 @@ export const obtenerNombresProfesor = cache(async (): Promise<Map<string, string
  * un cero que no es verdad.
  */
 export const obtenerClasesContadas = cache(async (alumnoId: string): Promise<number | null> => {
+  // La regla de la vista es `max(mayor class_number, filas)`; la demo no
+  // numera sus clases, así que son las filas.
+  const demo = await escenarioDe(alumnoId);
+  if (demo) return demo.clases.length;
+
   const { data, error } = await soloLectura("vista_clases_contadas")
     .select("clases_contadas")
     .eq("alumno_id", alumnoId)
@@ -339,6 +370,18 @@ export const obtenerClasesContadas = cache(async (alumnoId: string): Promise<num
 });
 
 export async function obtenerUltimaClase(alumnoId: string): Promise<UltimaClase | null> {
+  // Las filas de la demo ya vienen de la más reciente a la más antigua;
+  // se les aplica el mismo filtro que a la consulta.
+  const demo = await escenarioDe(alumnoId);
+  if (demo) {
+    const fila = demo.clases.find(
+      (f) =>
+        f.analysis_status === "ready" &&
+        (VALIDACION_ACEPTADA as readonly unknown[]).includes(f.validation_status)
+    );
+    return fila ? aUltimaClase(fila) : null;
+  }
+
   const { data, error } = await soloLectura("class_analyses")
     .select(ULTIMA_CLASE)
     .eq("student_id", alumnoId)
@@ -484,14 +527,18 @@ export async function alumnosParaAvisos(): Promise<AlumnoAviso[]> {
     return [];
   }
 
-  return deduplicar(data ?? []).map((fila) => ({
-    alumnoId: comoTexto(fila.alumno_id),
-    nombre: comoTexto(fila.nombre),
-    email: comoTexto(fila.email),
-    plan: comoTexto(fila.plan),
-    nivel: comoTexto(fila.nivel),
-    fechaInicio: comoTextoOpcional(fila.fecha_inicio),
-  }));
+  // Una cuenta de demostración no puede venir de Gestión, pero si algún
+  // día viniera, este es el filtro que le impide recibir correos.
+  return deduplicar(data ?? [])
+    .filter((fila) => !esIdDemo(comoTexto(fila.alumno_id)))
+    .map((fila) => ({
+      alumnoId: comoTexto(fila.alumno_id),
+      nombre: comoTexto(fila.nombre),
+      email: comoTexto(fila.email),
+      plan: comoTexto(fila.plan),
+      nivel: comoTexto(fila.nivel),
+      fechaInicio: comoTextoOpcional(fila.fecha_inicio),
+    }));
 }
 
 export type ClasePanel = {
@@ -619,6 +666,9 @@ export async function buscarAlumnoPorEmail(email: string): Promise<ResumenAlumno
   const limpio = email.trim();
   if (limpio === "") return null;
 
+  const demo = await escenarioPorEmail(limpio);
+  if (demo) return aResumen(demo.perfil);
+
   const { data, error } = await soloLectura("vista_perfil_alumno")
     .select(CAMPOS_RESUMEN)
     .ilike("email", escaparLike(limpio))
@@ -745,6 +795,15 @@ export type ClaseAnalizada = {
  * menos: es material que lo mejora, no material sin el que no haya nada.
  */
 export async function historialDeClases(alumnoId: string): Promise<ClaseAnalizada[]> {
+  const demo = await escenarioDe(alumnoId);
+  if (demo) {
+    return aHistorial(
+      demo.clases
+        .filter((f) => f.analysis_status === "ready" && f.errors_detected != null)
+        .slice(0, CLASES_ANTERIORES + 1)
+    );
+  }
+
   const { data, error } = await soloLectura("class_analyses")
     .select("class_date, class_title, errors_detected, analyzed_at")
     .eq("student_id", alumnoId)
@@ -762,9 +821,14 @@ export async function historialDeClases(alumnoId: string): Promise<ClaseAnalizad
     return [];
   }
 
+  return aHistorial(data ?? []);
+}
+
+/** Las filas del historial, ya en el orden de la consulta, como `ClaseAnalizada`. */
+function aHistorial(filas: Fila[]): ClaseAnalizada[] {
   const salida: ClaseAnalizada[] = [];
 
-  for (const fila of data ?? []) {
+  for (const fila of filas) {
     const errores = comoTexto(fila.errors_detected).trim();
     const fechaClase = comoTexto(fila.class_date);
     if (errores === "" || fechaClase === "") continue;
@@ -907,6 +971,9 @@ const MAXIMO_CLASES = 200;
  * enseña su estado vacío, que es una frase, no un error.
  */
 export async function obtenerRecorrido(alumnoId: string): Promise<Recorrido> {
+  const demo = await escenarioDe(alumnoId);
+  if (demo) return aRecorrido(demo.clases.slice(0, MAXIMO_CLASES));
+
   const { data, error } = await soloLectura("class_analyses")
     .select("id, teacher_id, class_number, class_title, topics_covered, class_date, analyzed_at")
     .eq("student_id", alumnoId)
@@ -922,7 +989,11 @@ export async function obtenerRecorrido(alumnoId: string): Promise<Recorrido> {
     return { clases: [], todas: [], totalClases: 0, clasesContadas: 0 };
   }
 
-  const filas = data ?? [];
+  return aRecorrido(data ?? []);
+}
+
+/** Las filas de `class_analyses`, de la más reciente a la más antigua, como `Recorrido`. */
+function aRecorrido(filas: Fila[]): Recorrido {
   const todas: ClaseDelRecorrido[] = [];
   let mayorNumero = 0;
 

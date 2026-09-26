@@ -84,6 +84,12 @@ export async function crearSesion(datos: {
   emailAdmin: string | null;
   origen: OrigenSesion;
   expiraEn: Date;
+  /**
+   * Cuándo se abrió, si no es ahora. Solo lo pasa `scripts/demo.ts`
+   * (ver la nota de `en` en `lib/progreso-servidor.ts`); la entrada de
+   * verdad nunca lo manda.
+   */
+  en?: Date;
 }): Promise<string | null> {
   const { data, error } = await baseLms()
     .from("sesiones")
@@ -93,6 +99,7 @@ export async function crearSesion(datos: {
       email_admin: datos.emailAdmin,
       origen: datos.origen,
       expira_en: datos.expiraEn.toISOString(),
+      ...(datos.en ? { creada_en: datos.en.toISOString(), ultimo_uso_en: datos.en.toISOString() } : {}),
     })
     .select("id")
     .limit(1)
