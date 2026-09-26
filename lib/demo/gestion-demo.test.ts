@@ -45,6 +45,8 @@ describe("lib/gestion con la cuenta demo", () => {
 
     const historial = await gestion.historialDeClases(ID_DEMO);
     expect(gestion.anterioresA(historial, ultima?.analizadoEn ?? null, reloj.ahora).length).toBe(4);
+    // Recorrido y cifra de clases: las 24.
+    expect(recorrido.todas.length).toBe(24);
 
     expect((await gestion.obtenerCalendario(ID_DEMO)).length).toBe(2);
     expect(await gestion.obtenerQuitas(ID_DEMO)).toEqual([]);

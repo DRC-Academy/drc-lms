@@ -32,7 +32,7 @@
 //     bloque que el revisor da por apto.
 //   · El progreso, con las mismas funciones que llaman las rutas cuando
 //     el alumno responde (`guardarIntento`, `completarLeccion`,
-//     `guardarProgreso`, `guardarAvance`) y las sesiones con
+//     `guardarProgreso`) y las sesiones con
 //     `crearSesion`, pasándoles la fecha en `en`.
 //
 // La excepción es `rejuvenecer`, que actualiza fechas directamente: no
@@ -54,6 +54,7 @@ import {
   CLASES_CON_BLOQUE,
   DIAS_DE_CURSO,
   EMAIL_DEMO,
+  VACACIONES,
   ID_DEMO,
   PREFIJO_DEMO,
   clasesFechadas,
@@ -65,7 +66,6 @@ import { estamparBloque, generarConRevision, prepararGeneracion } from "@/lib/ge
 import { revisarBloque, type Revision } from "@/lib/revisor";
 import { construirSistema, construirUsuario, type IdiomaBloque } from "@/lib/prompt-bloque";
 import {
-  guardarAvance,
   guardarBloqueGenerado,
   guardarProgreso,
   leerBloquesGenerados,
@@ -84,8 +84,13 @@ Object.assign(process.env, { ...leerEnv(resolve(process.cwd(), ".env.local")), .
 
 const DIA_MS = 86_400_000;
 
-/** Presupuesto de una generación: aquí nadie espera, cabe el segundo intento. */
-const PLAZO_GENERACION_MS = 120_000;
+/**
+ * Presupuesto de una generación y tope de cada llamada. Aquí no hay techo
+ * de Vercel: una llamada que tarde más de los 52 s de la ruta —pasa con
+ * la API cargada— se espera en vez de cortarse, y cabe el segundo intento.
+ */
+const PLAZO_GENERACION_MS = 300_000;
+const TOPE_LLAMADA_MS = 140_000;
 
 // ---------------------------------------------------------------
 // UTILIDADES
@@ -220,7 +225,7 @@ async function crear() {
 async function crearBloques(ancla: string, idioma: IdiomaBloque, maxIntentos: number): Promise<boolean> {
   const existentes = await leerBloquesGenerados(ID_DEMO);
   const conBloque = new Set(existentes.map((b) => b.claseOrigen?.fecha));
-  const fechadas = new Map(clasesFechadas(ancla).map((c) => [c.semanasAtras, c]));
+  const fechadas = new Map(clasesFechadas(ancla).map((c) => [c.numero, c]));
   const pendientes = CLASES_CON_BLOQUE.filter((k) => !conBloque.has(fechadas.get(k)!.fecha));
 
   if (pendientes.length === 0) {
@@ -266,7 +271,8 @@ async function crearBloques(ancla: string, idioma: IdiomaBloque, maxIntentos: nu
             if (etapa === "modelo:petición") llamadas.generador++;
             if (etapa === "revisión:inicio") llamadas.revisor++;
           },
-          () => {}
+          () => {},
+          TOPE_LLAMADA_MS
         );
         if (!generado) {
           log(`  intento ${intento}: la generación no dio un bloque válido`);
@@ -336,8 +342,11 @@ async function borrarActividad() {
   log("Actividad anterior borrada (los bloques se quedan).");
 }
 
-/** Aciertos sobre 10 de cada bloque terminado, del más antiguo al más reciente. */
-const NOTAS_BLOQUES: Record<number, number> = { 5: 8, 4: 7, 3: 9, 2: 8 };
+/**
+ * Aciertos sobre 10 de cada parada, en el orden de `CLASES_CON_BLOQUE`:
+ * alrededor del 83 %, con altibajos y mejor al final, como quien mejora.
+ */
+const NOTAS_BLOQUES = [7, 8, 7, 9, 8, 8, 9, 7, 9, 8, 10, 9];
 
 /**
  * Qué parte de un módulo ha hecho, según cuándo se abrió. Las primeras
@@ -345,10 +354,9 @@ const NOTAS_BLOQUES: Record<number, number> = { 5: 8, 4: 7, 3: 9, 2: 8 };
  * que va algo por detrás del drip.
  */
 function proporcionHecha(visibleAfter: number): number {
-  if (visibleAfter <= 35) return 1;
-  if (visibleAfter <= 49) return 0.75;
-  if (visibleAfter <= 63) return 0.5;
-  if (visibleAfter <= 70) return 0.25;
+  if (visibleAfter <= 63) return 1;
+  if (visibleAfter <= 77) return 0.8;
+  if (visibleAfter <= 84) return 0.5;
   return 0;
 }
 
@@ -363,31 +371,24 @@ async function registrarActividad(ancla: string) {
   }
 
   const inicio = sumarDias(ancla, -DIAS_DE_CURSO);
-  const ayer = sumarDias(ancla, -1);
   const rnd = azar(20260925);
 
-  // --- La práctica: los bloques viejos terminados y el último a medias ---
+  // --- La práctica: todas las paradas terminadas, cada una al día
+  // siguiente de su clase, unas horas después de generarla ---
   const bloques = await leerBloquesGenerados(ID_DEMO);
   const porFecha = new Map(bloques.map((b) => [b.claseOrigen?.fecha, b]));
   let aciertosBloques = 0;
   let totalBloques = 0;
 
   for (const clase of clasesFechadas(ancla)) {
-    if (!(CLASES_CON_BLOQUE as readonly number[]).includes(clase.semanasAtras)) continue;
+    const orden = (CLASES_CON_BLOQUE as readonly number[]).indexOf(clase.numero);
+    if (orden === -1) continue;
     const bloque = porFecha.get(clase.fecha);
     if (!bloque) fallar(`No está el bloque de la clase del ${clase.fecha}.`);
     const total = bloque.ejercicios.length;
 
-    if (clase.semanasAtras === 1) {
-      // Por el séptimo de diez, empezado ayer por la noche: la parada
-      // actual de la ruta, a medias.
-      const indice = Math.min(total - 1, Math.round(total * 0.6));
-      if (!(await guardarAvance(ID_DEMO, bloque.id, indice, total, aLas(ayer, "21:10")))) fallar("No se pudo guardar el avance.");
-      continue;
-    }
-
-    const aciertos = Math.round((NOTAS_BLOQUES[clase.semanasAtras] * total) / 10);
-    const en = aLas(sumarDias(clase.fecha, 2), "21:40");
+    const aciertos = Math.round((NOTAS_BLOQUES[orden] * total) / 10);
+    const en = new Date(clase.analizadaEn.getTime() + 26 * 3_600_000);
     if (!(await guardarProgreso(ID_DEMO, bloque.id, aciertos, total, en))) fallar("No se pudo guardar un bloque terminado.");
     aciertosBloques += aciertos;
     totalBloques += total;
@@ -436,12 +437,12 @@ async function registrarActividad(ancla: string) {
 
     const probabilidad = TEMA_RECURRENTE.test(modulo.titulo) ? 0.6 : 0.86;
     // Empieza el día después de que se abra; lo abierto más tarde, con
-    // algo más de retraso. La semana sin clase (días 35–41) no estudió.
-    let base = modulo.visible_after + (modulo.visible_after <= 35 ? 1 : 2);
-    if (base >= 35 && base <= 41) base = 42;
+    // algo más de retraso. La semana de vacaciones no estudió.
+    let base = modulo.visible_after + (modulo.visible_after <= 63 ? 1 : 2);
+    if (base >= VACACIONES.desde && base <= VACACIONES.hasta) base = VACACIONES.hasta + 1;
 
     for (let i = 0; i < hechas.length; i++) {
-      const dia = Math.min(base + Math.floor(i / 3) * 2, DIAS_DE_CURSO - 2);
+      const dia = Math.min(base + Math.floor(i / 3) * 2, DIAS_DE_CURSO - 1);
       const momento = aLas(sumarDias(inicio, dia), "21:40", (i % 3) * 18);
       // Los `essay` no registran intento: no tienen corrección.
       const suyos = (ejercicios ?? []).filter((e) => e.leccion_id === hechas[i].id && e.tipo !== "essay");
@@ -461,17 +462,25 @@ async function registrarActividad(ancla: string) {
   }
 
   const pct = (a: number, t: number) => (t > 0 ? `${Math.round((a / t) * 100)}%` : "—");
-  log(`Práctica: ${bloques.length - 1} bloques terminados (${pct(aciertosBloques, totalBloques)}) y el último a medias.`);
+  log(`Práctica: ${bloques.length} paradas terminadas (${pct(aciertosBloques, totalBloques)}); la de la última clase, abierta para generar.`);
   log(`Curso «${curso.titulo}»: ${leccionesHechas} lecciones hechas, ${intentosCurso} ejercicios (${pct(aciertosCurso, intentosCurso)} de acierto).`);
 }
 
 /**
  * Las entradas al LMS. Una sesión dura 30 días, así que un alumno que
- * entra a menudo abre pocas: la primera, una al caducar cada cookie y la
- * del móvil de anoche.
+ * entra a menudo abre pocas: la primera, una al caducar cada cookie, la
+ * del móvil en una pausa de la comida y la de anoche.
  */
 async function registrarSesiones(ancla: string) {
-  if ((await contar("sesiones")) > 0) {
+  // Solo cuentan las de antes del ancla: las de después son entradas de
+  // verdad —la tuya al ensayar— y no dicen nada de si esto ya se hizo.
+  const { count, error } = await baseLms()
+    .from("sesiones")
+    .select("alumno_id", { count: "exact", head: true })
+    .eq("alumno_id", ID_DEMO)
+    .lt("creada_en", instanteEnMadrid(ancla, "00:00").toISOString());
+  if (error) fallar(`No se pudieron contar las sesiones: ${error.message}`);
+  if ((count ?? 0) > 0) {
     log("Sesiones: ya registradas.");
     return;
   }
@@ -480,6 +489,7 @@ async function registrarSesiones(ancla: string) {
     aLas(sumarDias(inicio, 1), "21:30"),
     aLas(sumarDias(inicio, 31), "21:32"),
     aLas(sumarDias(inicio, 61), "21:35"),
+    aLas(sumarDias(inicio, 88), "13:50"),
     aLas(sumarDias(ancla, -1), "20:55"),
   ];
   for (const en of entradas) {

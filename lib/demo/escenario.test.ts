@@ -10,6 +10,7 @@ import {
   CLASES_CON_BLOQUE,
   DIAS_DE_CURSO,
   ID_DEMO,
+  TOTAL_CLASES,
   clasesFechadas,
   escenarioDemo,
   proximaDemo,
@@ -34,7 +35,7 @@ describe("el escenario de la demo", () => {
       const ahora = new Date(`${ancla}T10:00:00Z`);
       const proxima = proximaDelAlumno(calendario, excepciones, ahora);
       expect(proxima?.fecha).toBe(proximaDemo(ancla).fecha);
-      expect(proxima?.horas).toBe(2);
+      expect(proxima?.horas).toBe(1);
       expect(proxima?.meetLink).toMatch(/^https:\/\/meet\.google\.com\//);
     }
   });
@@ -55,13 +56,22 @@ describe("el escenario de la demo", () => {
     }
   });
 
-  it("entre ocho y diez clases, y la última a pocos días del ancla", () => {
-    const clases = clasesFechadas("2026-09-25");
-    expect(clases.length).toBeGreaterThanOrEqual(8);
-    expect(clases.length).toBeLessThanOrEqual(10);
-    const ultima = clases[clases.length - 1];
-    expect(ultima.semanasAtras).toBe(1);
-    expect(CLASES_CON_BLOQUE).toContain(1);
+  it("veinticuatro clases, dos por semana, la última hace uno o dos días, sea cual sea el ancla", () => {
+    for (const ancla of ANCLAS) {
+      const clases = clasesFechadas(ancla);
+      expect(clases.length).toBe(TOTAL_CLASES);
+      const dias = (Date.parse(ancla) - Date.parse(clases[clases.length - 1].fecha)) / 86_400_000;
+      expect(dias === 1 || dias === 2).toBe(true);
+      // Nunca en domingo, y nunca dos clases el mismo día.
+      expect(clases.every((c) => new Date(`${c.fecha}T00:00:00Z`).getUTCDay() !== 0)).toBe(true);
+      expect(new Set(clases.map((c) => c.fecha)).size).toBe(clases.length);
+    }
+  });
+
+  it("doce paradas, y la última clase sin bloque", () => {
+    expect(CLASES_CON_BLOQUE.length).toBe(12);
+    expect(CLASES_CON_BLOQUE).not.toContain(TOTAL_CLASES);
+    expect(Math.max(...CLASES_CON_BLOQUE)).toBeLessThanOrEqual(TOTAL_CLASES);
   });
 
   it("una clase que aún no se ha analizado no existe", () => {
@@ -112,12 +122,12 @@ describe("el escenario de la demo", () => {
     expect(estimacion?.hayAmpliacion).toBe(true);
   });
 
-  it("once semanas de drip: abre lo de 77 días y nada más", () => {
+  it("trece semanas de drip: abre lo de 91 días y nada más", () => {
     const ancla = "2026-09-25";
     const { perfil } = escenarioDemo(ancla, lejos);
     const inicio = new Date(`${perfil.fecha_inicio as string}T12:00:00Z`);
     const ahora = new Date(`${ancla}T12:00:00Z`);
-    expect(calcularApertura(77, inicio, ahora).abierto).toBe(true);
-    expect(calcularApertura(84, inicio, ahora).abierto).toBe(false);
+    expect(calcularApertura(91, inicio, ahora).abierto).toBe(true);
+    expect(calcularApertura(98, inicio, ahora).abierto).toBe(false);
   });
 });

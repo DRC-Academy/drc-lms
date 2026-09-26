@@ -146,9 +146,10 @@ async function pedirBloqueAlModelo(
   sistema: string,
   usuario: string,
   limiteMs: number,
-  traza: Traza
+  traza: Traza,
+  topeMs: number
 ): Promise<ResultadoModelo> {
-  const plazo = Math.min(limiteMs, TIEMPO_MAXIMO_MS);
+  const plazo = Math.min(limiteMs, topeMs);
   if (plazo < 1_000) {
     return { estado: "definitivo", motivo: `sin margen (${plazo}ms)` };
   }
@@ -250,7 +251,8 @@ async function generarEstructural(
   sistema: string,
   usuario: string,
   plazo: Plazo,
-  traza: Traza
+  traza: Traza,
+  topeMs: number
 ): Promise<Bloque | null> {
   for (let intento = 1; intento <= INTENTOS; intento++) {
     if (plazo.agotado()) {
@@ -262,8 +264,9 @@ async function generarEstructural(
       clave,
       sistema,
       usuario,
-      plazo.hasta(TIEMPO_MAXIMO_MS),
-      traza
+      plazo.hasta(topeMs),
+      traza,
+      topeMs
     );
 
     if (resultado.estado === "ok") {
@@ -326,6 +329,10 @@ function registrarRevision(etiqueta: string, revision: Revision) {
  *
  * La revisión NUNCA deja al alumno sin ejercicios: si falla, expira o no
  * le queda presupuesto, el bloque sale igual con el veredicto que haya.
+ *
+ * `topeLlamadaMs` es el tope de UNA llamada al modelo. La ruta no lo pasa
+ * y se queda con los 52 s que le deja el techo de Vercel; solo
+ * `scripts/demo.ts`, que no tiene ese techo, pide más.
  */
 export async function generarConRevision(
   clave: string,
@@ -334,7 +341,8 @@ export async function generarConRevision(
   examen: TipoExamen | null,
   plazo: Plazo,
   traza: Traza,
-  emitir: (evento: EventoGeneracion) => void
+  emitir: (evento: EventoGeneracion) => void,
+  topeLlamadaMs: number = TIEMPO_MAXIMO_MS
 ): Promise<{ bloque: Bloque; revision: Revision; intentos: number } | null> {
   traza("generación:inicio", `presupuesto ${plazo.restante()}ms`);
 
@@ -342,7 +350,7 @@ export async function generarConRevision(
   // después: es lo que hace que el texto de la pantalla y lo que está
   // ocurriendo aquí dentro sean la misma cosa.
   emitir({ tipo: "etapa", etapa: "escribiendo", ms: plazo.transcurrido() });
-  const bloque = await generarEstructural(clave, sistema, usuario, plazo, traza);
+  const bloque = await generarEstructural(clave, sistema, usuario, plazo, traza, topeLlamadaMs);
   if (!bloque) return null;
 
   // Con lo que sobre. La generación se lleva casi todo el presupuesto y
