@@ -52,8 +52,14 @@ export default function CtaProximaClase({
     <section data-cta-proxima data-tour="proxima-clase" className={`${TARJETA} p-2`}>
       <style dangerouslySetInnerHTML={{ __html: DESPLAZAMIENTO_SUAVE }} />
 
+      {/* EL PASO «UNIRSE» DEL RECORRIDO, FUERA DE LA VENTANA. En móvil no
+          hay botón gris que señalar, así que el paso señala esta fila con
+          su texto de siempre: el botón aparece aquí media hora antes.
+          Dentro de la ventana la marca la lleva el propio `BotonClase`. */}
       <a
         href={`#${ID_CALENDARIO}`}
+        data-tour={abierta ? undefined : "unirse"}
+        data-tour-estado={abierta ? undefined : "cerrada"}
         className="flex min-h-[56px] items-center gap-3 rounded-[12px] px-2 py-1.5 transition-colors hover:bg-marca-niebla focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verde"
       >
         <Iniciales nombre={proxima.profesor} />

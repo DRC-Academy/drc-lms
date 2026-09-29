@@ -15,7 +15,7 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
  *
  * TECLADO. Al abrir, el foco va a la primera opción. Flechas, Inicio y
  * Fin se mueven entre las dos; el Tab también, y al salir del menú con él
- * se cierra sin robar el foco. Esc cierra y devuelve el foco al botón,
+ * se cierra sin robar el foco (solo el Tab: ver el `onBlur`). Esc cierra y devuelve el foco al botón,
  * igual que pulsar fuera o pulsar el botón otra vez.
  */
 export default function MenuAyuda({
@@ -37,6 +37,8 @@ export default function MenuAyuda({
   const { t } = usarIdioma();
   const ta = t.ayuda;
   const menu = useRef<HTMLDivElement>(null);
+  // Si el foco se está yendo por el Tab. Ver el `onBlur`.
+  const saliendoConTab = useRef(false);
 
   // El foco a la primera opción al abrir.
   useEffect(() => {
@@ -65,6 +67,10 @@ export default function MenuAyuda({
   }, [onCerrar, disparador]);
 
   function alMoverse(e: KeyboardEventReact<HTMLDivElement>) {
+    if (e.key === "Tab") {
+      saliendoConTab.current = true;
+      return;
+    }
     const opciones = Array.from(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
     const i = opciones.indexOf(document.activeElement as HTMLElement);
     let destino: number | null = null;
@@ -87,7 +93,15 @@ export default function MenuAyuda({
       // Salir con Tab cierra, también cuando no queda nada detrás y el foco
       // cae al documento (`relatedTarget` null). Volver al botón no
       // cuenta: ese lo cierra él.
+      //
+      // SOLO CON EL TAB. Safari (iPhone y Mac) no enfoca un botón al
+      // tocarlo: el foco se pierde sin destino al empezar el toque, y
+      // este cierre desmontaba el menú antes de que llegara el `click`
+      // —ni «Chat» ni «Tutorial» hacían nada—. El ratón y el toque ya los
+      // cierra «pulsar fuera»; aquí solo queda el teclado.
       onBlur={(e) => {
+        if (!saliendoConTab.current) return;
+        saliendoConTab.current = false;
         const siguiente = e.relatedTarget as Node | null;
         if (menu.current?.contains(siguiente) || disparador.current?.contains(siguiente)) return;
         onCerrar(false);

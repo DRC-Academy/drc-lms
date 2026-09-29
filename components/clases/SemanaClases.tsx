@@ -64,6 +64,11 @@ export default function SemanaClases({
       // El destino del CTA de la próxima clase en móvil. El margen deja
       // el título a la vista por debajo de la cabecera fija.
       id={ID_CALENDARIO}
+      // La alternativa del paso «próxima clase» del recorrido cuando no hay
+      // ninguna. En escritorio la señala antes la línea de «sin próxima
+      // clase», que va delante en el DOM; en móvil esa línea no existe y
+      // el recorrido señala el calendario en vez de esperar en vano.
+      data-tour="clases-vacio"
       className="flex scroll-mt-16 flex-col gap-4 min-[900px]:gap-5"
       aria-labelledby="titulo-calendario"
     >

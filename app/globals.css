@@ -128,23 +128,23 @@
      más abajo), así que lleva el fondo de la pantalla y no el del body.
 
      `--hueco-ayuda` es lo que ocupa el botón medido desde el borde de la
-     zona de scroll: su distancia al suelo, sus 64px y 12 de aire. En
+     zona de scroll: su distancia al suelo, el botón (48px) y el aire. En
      móvil el suelo es la navegación, cuyo hueco ya reserva el `body`
      (`--nav-inferior`, arriba). Con la barra de continuar el botón sube
      por encima de ella (ver «La esquina de la ayuda»).
      --------------------------------------------------------------- */
   body:has(.zona-ayuda) {
-    --hueco-ayuda: calc(100px + env(safe-area-inset-bottom));
+    --hueco-ayuda: calc(104px + env(safe-area-inset-bottom));
   }
   body:has(.zona-ayuda):has([data-barra-inferior]) {
-    --hueco-ayuda: 172px;
+    --hueco-ayuda: 176px;
   }
   @media (max-width: 899px) {
     body:has(nav[data-nav-inferior]):has(.zona-ayuda) {
-      --hueco-ayuda: 88px;
+      --hueco-ayuda: 92px;
     }
     body:has(nav[data-nav-inferior]):has(.zona-ayuda):has([data-barra-inferior]) {
-      --hueco-ayuda: 160px;
+      --hueco-ayuda: 164px;
     }
   }
 
@@ -541,35 +541,32 @@
     display: none;
   }
 
-  /* EL BOTÓN DE AYUDA. Cerrado, verde; con el menú o el chat abiertos,
-     blanco con «Cerrar». Mismo alto y mismo relleno en los dos, para que
-     el cambio no mueva nada. */
+  /* EL BOTÓN DE AYUDA: un círculo de 48px en tinta con el «?» en
+     amarillo, sin la palabra (va en el `aria-label`). Abierto el menú o
+     el chat, el «?» pasa a X en el mismo círculo: nada cambia de tamaño
+     ni de sitio. El amarillo es el «?», no el botón: el botón sigue en
+     tinta. */
   .boton-ayuda {
-    height: 44px;
-    padding: 0 16px 0 12px;
+    width: 48px;
+    height: 48px;
+    padding: 0;
     border-radius: 999px;
-    border: 1px solid transparent;
-    background: #1E9E3A;
-    color: #FFFFFF;
-    box-shadow: 0 4px 12px rgba(18, 33, 26, 0.14);
+    border: 0;
+    background: #12211A;
+    color: #FFC400;
+    box-shadow: 0 6px 16px rgba(18, 33, 26, 0.22);
     transition: background-color 0.16s ease, box-shadow 0.16s ease;
   }
   .boton-ayuda:hover {
-    background: #14722A;
-  }
-  .boton-ayuda[data-abierto] {
-    background: #FFFFFF;
-    border-color: #E2E8E4;
-    color: #12211A;
-    box-shadow: 0 4px 12px rgba(18, 33, 26, 0.08);
-  }
-  .boton-ayuda[data-abierto]:hover {
-    background: #F4F7F4;
+    background: #22352B;
   }
   .boton-ayuda:focus-visible,
   .menu-ayuda-opcion:focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px rgba(30, 158, 58, 0.35);
+  }
+  .boton-ayuda:focus-visible {
+    box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5px #1E9E3A;
   }
 
   /* El menú «Tutorial / Chat»: un solo panel blanco con filas, no

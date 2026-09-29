@@ -70,7 +70,7 @@ export default function BannerCurso({
   // Esto es una tarjeta, no una franja: no lleva verde ni amarillo.
   if (estados.length === 0) {
     return (
-      <section className="rounded-[18px] border border-marca-borde bg-white px-6 py-5 min-[900px]:rounded-[20px]">
+      <section data-tour="curso" data-tour-estado="sin-curso" className="rounded-[18px] border border-marca-borde bg-white px-6 py-5 min-[900px]:rounded-[20px]">
         <p className="text-[15px] leading-[1.55] text-marca-gris">
           {t.sinCursoTitulo} {t.sinCursoCuerpo}
         </p>

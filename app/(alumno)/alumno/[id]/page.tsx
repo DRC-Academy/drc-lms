@@ -415,20 +415,24 @@ export default async function PerfilAlumno({
           }
           banner={
             proxima && enVentana ? (
-              <FranjaClase
-                proxima={proxima}
-                t={tc}
-                tieneCurso={estadosCurso.length > 0}
-                ilustracion={
-                  <MascotaBienvenida
-                    id="inicio-clase"
-                    prioridad={1}
-                    variante="franja"
-                    escena="inicio"
-                    estado={cursoTerminado(estadosCurso) ? "nivel_superado" : "idle"}
-                  />
-                }
-              />
+              // El paso «curso» del recorrido, con la sala abierta: en el
+              // sitio de la franja está la clase, y el paso lo dice.
+              <div data-tour="curso" data-tour-estado="clase" className="min-w-0">
+                <FranjaClase
+                  proxima={proxima}
+                  t={tc}
+                  tieneCurso={estadosCurso.length > 0}
+                  ilustracion={
+                    <MascotaBienvenida
+                      id="inicio-clase"
+                      prioridad={1}
+                      variante="franja"
+                      escena="inicio"
+                      estado={cursoTerminado(estadosCurso) ? "nivel_superado" : "idle"}
+                    />
+                  }
+                />
+              </div>
             ) : (
               <BannerCurso estados={estadosCurso} foco={foco} />
             )

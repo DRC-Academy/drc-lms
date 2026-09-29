@@ -483,8 +483,8 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
 
           CERRADO EL CHAT, ABRE UN MENÚ: «Tutorial» o «Chat». Con el chat
           abierto (desde 640px sigue a la vista) lo cierra, como antes.
-          Abierto cualquiera de los dos, pasa a blanco con «Cerrar», del
-          mismo tamaño para que no salte (`.boton-ayuda`, `globals.css`).
+          Es un círculo con el «?»; abierto cualquiera de los dos, el «?»
+          pasa a X en el mismo círculo (`.boton-ayuda`, `globals.css`).
           Durante el recorrido guiado no se ve (`[data-tutorial-activo]`). */}
       <button
         ref={lanzador}
@@ -494,12 +494,15 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
         aria-haspopup="menu"
         aria-controls={menu ? idMenu : undefined}
         data-abierto={abierto || menu ? "" : undefined}
-        className={`boton-ayuda inline-flex items-center gap-2 font-sans text-[14px] font-semibold ${
-          abierto ? "hidden min-[640px]:inline-flex" : ""
-        }`}
+        // Sin la palabra a la vista: el lector de pantalla la sigue oyendo.
+        aria-label={abierto || menu ? t.cerrar : t.ayuda}
+        className={`boton-ayuda place-items-center ${abierto ? "hidden min-[640px]:grid" : "grid"}`}
       >
-        {abierto || menu ? <IconoCerrar className="h-[18px] w-[18px]" /> : <IconoAyuda className="h-[18px] w-[18px]" />}
-        {abierto || menu ? t.cerrar : t.ayuda}
+        {abierto || menu ? (
+          <IconoCerrar className="h-[22px] w-[22px]" />
+        ) : (
+          <span aria-hidden className="font-display text-[26px] font-extrabold leading-none">?</span>
+        )}
       </button>
 
       {menu && (

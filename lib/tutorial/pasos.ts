@@ -86,6 +86,18 @@ export const PASOS_TUTORIAL: readonly PasoTutorial[] = [
       es: "Aquí sigue tu curso, justo donde lo dejaste.",
       en: "Your course is here, right where you left off.",
     },
+    // Los dos casos en que en ese sitio no está la franja del curso. Sin
+    // marca, el motor esperaba cuatro segundos y saltaba el paso.
+    porEstado: {
+      clase: {
+        es: "Ahora aquí tienes tu clase. Cuando termine, vuelve a estar tu curso, justo donde lo dejaste.",
+        en: "Right now your class is here. When it's over, your course comes back, right where you left off.",
+      },
+      "sin-curso": {
+        es: "Aquí aparecerá tu curso en cuanto tu plan lo tenga. Mientras tanto, tu práctica funciona con normalidad.",
+        en: "Your course will show up here as soon as your plan includes one. In the meantime, your practice works as usual.",
+      },
+    },
   },
   {
     id: "proxima-clase",
@@ -114,6 +126,17 @@ export const PASOS_TUTORIAL: readonly PasoTutorial[] = [
     texto: {
       es: "Media hora antes de la clase, este botón se activa y te lleva a la videollamada.",
       en: "Half an hour before class, this button turns on and takes you to the video call.",
+    },
+    // Sin próxima clase no hay botón que señalar: el paso señala lo mismo
+    // que la alternativa del anterior —el calendario o el aviso de que aún
+    // no hay horario— y dice dónde aparecerá. Sin esto el motor esperaba
+    // cuatro segundos a un botón que no iba a llegar.
+    alternativa: {
+      selector: tour("clases-vacio"),
+      texto: {
+        es: "Cuando tengas una clase programada, media hora antes aparecerá en esta pantalla el botón para entrar a la videollamada.",
+        en: "Once you have a class scheduled, the button to join the video call will appear on this screen half an hour before.",
+      },
     },
     porEstado: {
       abierta: {
