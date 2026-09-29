@@ -216,6 +216,11 @@ export const config = {
     // `/mascota/` SÍ: son las capas de Geckonoid, marca como el
     // logotipo. Detrás de la puerta, cada pantalla con la mascota
     // pasaba una veintena de imágenes por aquí para nada.
-    "/((?!acceso(?:/|$)|entrar(?:/|$)|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|logo-drc\\.png|simbolo-drc\\.png|mascota/).*)",
+    //
+    // `icon.png` y `apple-icon.png` son los iconos de `app/` (el favicon
+    // y el de la pantalla de inicio del iPhone). Los pide el navegador o
+    // el sistema sin sesión: detrás de la puerta recibirían el HTML de
+    // `/acceso` en vez de la imagen.
+    "/((?!acceso(?:/|$)|entrar(?:/|$)|_next/static|_next/image|favicon\\.ico|icon\\.png|apple-icon\\.png|robots\\.txt|sitemap\\.xml|logo-drc\\.png|simbolo-drc\\.png|mascota/).*)",
   ],
 };
