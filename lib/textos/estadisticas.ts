@@ -1,15 +1,11 @@
 // ---------------------------------------------------------------
-// LAS ESTADÍSTICAS: BARRA LATERAL Y FILA DEL INICIO
+// LAS ESTADÍSTICAS: «CÓMO VAS» Y EL ANILLO DEL CURSO
 //
 // EL CERO NO SE ESCRIBE. 136 de 204 alumnos están al 0 % de su curso y
 // casi ninguno ha respondido un ejercicio todavía: para ellos esto es lo
 // primero que ven. Un «0» en grande se lee como una nota, así que cada
 // cifra tiene su estado de bienvenida, que dice qué va a aparecer ahí y
 // no cuánto falta.
-//
-// El nivel y las clases reutilizan las etiquetas de «Mi progreso»
-// (`progreso.nivelActual`, `progreso.nivelEstimado`,
-// `progreso.clasesHechas`): es el mismo dato y se llama igual.
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
@@ -30,35 +26,26 @@ export type TextosEstadisticas = {
   cursoVacioTexto: string;
   cursoCompleto: string;
 
-  // --- las clases y los ejercicios ---
-  clasesVacio: string;
-  ejercicios: (n: number) => string;
-  ejerciciosVacio: string;
-
-  // --- «Cómo vas»: los cuatro anillos ---
+  // --- «Cómo vas»: la tarjeta ---
   nivel: string;
-  nivelEstimado: string;
-  nivelConfirmado: string;
-  anillos: {
-    ejercicios: string;
-    ejerciciosHechos: string;
-    ejerciciosInvita: string;
-    tiempo: string;
-    paraCompletar: string;
-    /** La unidad bajo el número: «sem.» / «semana». */
+  tarjeta: {
+    /** Debajo de la cifra grande: «clases con Silvia». */
+    clases: (n: number, profesor: string | null) => string;
+    /** Sin clases todavía, en lugar de la cifra. */
+    clasesVacio: (profesor: string | null) => string;
+    estimado: string;
+    /** Junto al nivel confirmado, si no hay nombre de profesor. */
+    confirmado: string;
+    ejercicios: (n: number) => string;
+    practicas: (n: number) => string;
     semanas: (n: number) => string;
-    clases: string;
-    conProfesor: (profesor: string) => string;
-    /** Sin nombre de profesor. */
-    clasesHechas: string;
-    clasesInvita: string;
-    practica: string;
-    /** Bajo el número de bloques: «bloques hechos» / «bloque hecho». */
-    bloquesHechos: (n: number) => string;
-    practicaInvita: string;
+    /** El círculo de la práctica a cero, que lleva a «Para ti». */
+    empiezaAqui: string;
+    empiezaPractica: string;
   };
-  /** Lo que oye el lector de pantalla en cada anillo. */
+  /** Lo que oye el lector de pantalla, una frase por dato. */
   lector: {
+    nivel: (valor: string, confirmado: boolean) => string;
     ejercicios: (n: number) => string;
     ejerciciosVacio: string;
     tiempo: (restantes: number, total: number) => string;
@@ -79,29 +66,24 @@ const ES: TextosEstadisticas = {
   cursoVacioTexto: "Empieza por la primera lección cuando quieras.",
   cursoCompleto: "Curso completado",
 
-  clasesVacio: "Aquí irán sumando tus clases.",
-  ejercicios: (n) => (n === 1 ? "Ejercicio hecho" : "Ejercicios hechos"),
-  ejerciciosVacio: "Los ejercicios de cada lección se irán contando aquí.",
-
   nivel: "Nivel",
-  nivelEstimado: "Estimado · confírmalo con tu profesor",
-  nivelConfirmado: "confirmado",
-  anillos: {
-    ejercicios: "Ejercicios",
-    ejerciciosHechos: "hechos",
-    ejerciciosInvita: "Tus ejercicios sumarán aquí",
-    tiempo: "Tiempo de curso",
-    paraCompletar: "para completar tu curso",
-    semanas: (n) => (n === 1 ? "semana" : "sem."),
-    clases: "Clases",
-    conProfesor: (profesor) => `con ${profesor}`,
-    clasesHechas: "hechas",
-    clasesInvita: "Tu primera clase sumará aquí",
-    practica: "Práctica",
-    bloquesHechos: (n) => (n === 1 ? "bloque hecho" : "bloques hechos"),
-    practicaInvita: "Tu práctica empieza aquí",
+  tarjeta: {
+    clases: (n, profesor) => `${n === 1 ? "clase" : "clases"}${profesor ? ` con ${profesor}` : ""}`,
+    clasesVacio: (profesor) =>
+      profesor ? `Tu primera clase con ${profesor} sumará aquí` : "Tu primera clase sumará aquí",
+    estimado: "estimado",
+    confirmado: "confirmado",
+    ejercicios: (n) => (n === 1 ? "ejercicio" : "ejercicios"),
+    practicas: (n) => (n === 1 ? "práctica" : "prácticas"),
+    semanas: (n) => (n === 1 ? "semana para acabar" : "semanas para acabar"),
+    empiezaAqui: "Empieza aquí",
+    empiezaPractica: "Empieza tu primera práctica en «Para ti»",
   },
   lector: {
+    nivel: (valor, confirmado) =>
+      confirmado
+        ? `Nivel ${valor}, confirmado por tu profesor.`
+        : `Nivel ${valor}, estimado: te lo confirmará tu profesor.`,
     ejercicios: (n) => `Ejercicios: ${n} ${n === 1 ? "hecho" : "hechos"}.`,
     ejerciciosVacio: "Ejercicios: tus ejercicios sumarán aquí.",
     tiempo: (restantes, total) =>
@@ -123,29 +105,24 @@ const EN: TextosEstadisticas = {
   cursoVacioTexto: "Start with the first lesson whenever you like.",
   cursoCompleto: "Course complete",
 
-  clasesVacio: "Your classes will add up here.",
-  ejercicios: (n) => (n === 1 ? "Exercise done" : "Exercises done"),
-  ejerciciosVacio: "The exercises in each lesson will be counted here.",
-
   nivel: "Level",
-  nivelEstimado: "Estimated · confirm it with your teacher",
-  nivelConfirmado: "confirmed",
-  anillos: {
-    ejercicios: "Exercises",
-    ejerciciosHechos: "done",
-    ejerciciosInvita: "Your exercises will add up here",
-    tiempo: "Course time",
-    paraCompletar: "to complete your course",
-    semanas: (n) => (n === 1 ? "week" : "wks"),
-    clases: "Classes",
-    conProfesor: (profesor) => `with ${profesor}`,
-    clasesHechas: "done",
-    clasesInvita: "Your first class will count here",
-    practica: "Practice",
-    bloquesHechos: (n) => (n === 1 ? "block done" : "blocks done"),
-    practicaInvita: "Your practice starts here",
+  tarjeta: {
+    clases: (n, profesor) => `${n === 1 ? "class" : "classes"}${profesor ? ` with ${profesor}` : ""}`,
+    clasesVacio: (profesor) =>
+      profesor ? `Your first class with ${profesor} will count here` : "Your first class will count here",
+    estimado: "estimated",
+    confirmado: "confirmed",
+    ejercicios: (n) => (n === 1 ? "exercise" : "exercises"),
+    practicas: (n) => (n === 1 ? "practice" : "practices"),
+    semanas: (n) => (n === 1 ? "week to go" : "weeks to go"),
+    empiezaAqui: "Start here",
+    empiezaPractica: "Start your first practice in “For you”",
   },
   lector: {
+    nivel: (valor, confirmado) =>
+      confirmado
+        ? `Level ${valor}, confirmed by your teacher.`
+        : `Level ${valor}, estimated: your teacher will confirm it.`,
     ejercicios: (n) => `Exercises: ${n} done.`,
     ejerciciosVacio: "Exercises: yours will add up here.",
     tiempo: (restantes, total) =>

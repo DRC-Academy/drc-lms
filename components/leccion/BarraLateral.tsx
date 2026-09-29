@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,15 +8,15 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
 import MenuPerfil from "@/components/leccion/MenuPerfil";
 import { usarMarco } from "@/components/leccion/MarcoCurso";
 import AnilloCurso from "@/components/estadisticas/AnilloCurso";
-import ComoVas, { celdasComoVas } from "@/components/estadisticas/ComoVas";
+import ComoVas, { ComoVasPlegado, lecturasComoVas } from "@/components/estadisticas/ComoVas";
 import type { EstadisticasAlumno } from "@/lib/estadisticas";
 
 /**
  * La barra de iconos: la navegación de toda la aplicación en escritorio.
  *
  * Ochenta píxeles, fija a la izquierda, sin una sola palabra a la vista:
- * el símbolo arriba, el anillo del curso, las secciones debajo, y al pie
- * el perfil (idioma y salida).
+ * el símbolo arriba, «Cómo vas» en su versión estrecha, el anillo del
+ * curso, las secciones debajo, y al pie el perfil (idioma y salida).
  *
  * LA AYUDA NO ESTÁ AQUÍ: es el botón verde flotante de abajo a la
  * derecha (`ChatAyuda`), en todas las anchuras. Un icono gris de 22px en
@@ -38,7 +37,7 @@ import type { EstadisticasAlumno } from "@/lib/estadisticas";
  *
  * SE ABRE SOBRE EL CONTENIDO. Al pasar el ratón o al entrar con el
  * teclado se despliega a 272px POR ENCIMA de la pantalla —sin moverla—
- * con el nombre de cada sección y las estadísticas enteras. Sustituye a
+ * con el nombre de cada sección y «Cómo vas» entero. Sustituye a
  * los globos que salían al pasar por cada icono. Todo el comportamiento
  * está en CSS (`.barra-app` en `globals.css`); aquí solo se marca qué se
  * ve abierta (`.barra-rotulo`).
@@ -92,6 +91,13 @@ export default function BarraLateral({
           <Image src="/simbolo-drc.png" alt="DRC Academy" width={40} height={40} priority className="h-10 w-10" />
         </Link>
 
+        {estadisticas && (
+          <ComoVasDeLaBarra
+            estadisticas={estadisticas}
+            hrefPractica={enlaces.find((e) => e.clave === "practica")?.href}
+          />
+        )}
+
         {estadisticas?.curso && <AnilloDeLaBarra curso={estadisticas.curso} />}
 
         <nav data-tour="navegacion" className="flex flex-col gap-1.5 px-[18px]">
@@ -137,8 +143,6 @@ export default function BarraLateral({
           )}
         </nav>
 
-        {estadisticas && <DetalleDeLaBarra estadisticas={estadisticas} />}
-
         <div className="mt-auto flex flex-col items-start gap-2.5 px-[18px]">
           <MenuPerfil nombre={nombre} variante="barra" />
         </div>
@@ -167,7 +171,9 @@ function AnilloDeLaBarra({ curso }: { curso: NonNullable<EstadisticasAlumno["cur
   const debajo = vacio ? te.cursoVacioTexto : curso.titulo;
 
   return (
-    <div className="relative mb-[18px] px-[18px]">
+    // En pantallas bajas cede su sitio: con «Cómo vas» encima, las
+    // secciones y el perfil ya no cabrían.
+    <div className="relative mb-[18px] px-[18px] [@media(max-height:799px)]:hidden">
       <p className="sr-only">
         {vacio
           ? `${curso.titulo}. ${te.cursoVacioTitulo}`
@@ -188,62 +194,46 @@ function AnilloDeLaBarra({ curso }: { curso: NonNullable<EstadisticasAlumno["cur
 }
 
 /**
- * «Cómo vas», solo con la barra abierta: el nivel y los cuatro anillos
- * (`ComoVas`). En el hueco entre las secciones y el perfil, absoluta y
- * de ancho fijo por lo mismo que el texto del anillo.
+ * «Cómo vas», justo debajo del símbolo: lo primero que se ve.
  *
- * SI NO CABE, NO SE PINTA. En una pantalla baja pisaría las secciones.
- * No es un corte fijo por altura: se mide, porque en la lección el menú
- * lleva un icono más (el del panel). Se esconde con `visibility` en
- * línea —gana a la regla que la enseña al abrir la barra— y no con
- * `display`, para poder seguir midiéndola. El lector de pantalla la
- * tiene igual en el `sr-only`, que no depende de nada de esto.
+ * DOS PIEZAS EN LA MISMA CELDA DE REJILLA: la estrecha (`ComoVasPlegado`),
+ * siempre a la vista, y la tarjeta entera, que solo sale con la barra
+ * abierta (`.barra-rotulo`) y la tapa. La celda mide lo que la más alta,
+ * y las dos se estiran a esa altura: al abrir la barra las secciones de
+ * debajo no se mueven, así que el icono que se iba a pulsar sigue donde
+ * estaba.
+ *
+ * La celda mide 236px aunque la barra plegada tenga 80: lo que sobresale
+ * no recibe el ratón (`pointer-events-none`), y la tarjeta, oculta con
+ * `visibility`, tampoco. Si no, pasar junto a la barra la abriría.
+ *
+ * El lector de pantalla tiene su propia lista, fuera de las dos piezas:
+ * la tarjeta está oculta mientras la barra está plegada.
  */
-function DetalleDeLaBarra({ estadisticas }: { estadisticas: EstadisticasAlumno }) {
+function ComoVasDeLaBarra({ estadisticas, hrefPractica }: { estadisticas: EstadisticasAlumno; hrefPractica?: string }) {
   const { t } = usarIdioma();
   const te = t.estadisticas;
-  const caja = useRef<HTMLDivElement>(null);
-  const [cabe, setCabe] = useState(true);
-
-  useEffect(() => {
-    const el = caja.current;
-    const nav = el?.closest(".barra-panel")?.querySelector("nav");
-    if (!el || !nav) return;
-    const medir = () => setCabe(el.getBoundingClientRect().top >= nav.getBoundingClientRect().bottom + 12);
-    medir();
-    const observador = new ResizeObserver(medir);
-    observador.observe(el);
-    observador.observe(nav);
-    window.addEventListener("resize", medir);
-    return () => {
-      observador.disconnect();
-      window.removeEventListener("resize", medir);
-    };
-  }, []);
-
-  const { nivel } = estadisticas;
-  const lecturas = [
-    ...(nivel ? [`${te.nivel}: ${nivel.valor}${nivel.fiable ? "" : ` (${te.nivelEstimado})`}`] : []),
-    ...celdasComoVas(estadisticas, te).map((c) => c.lector),
-  ];
+  const lecturas = lecturasComoVas(estadisticas, te);
   if (lecturas.length === 0) return null;
 
   return (
-    <>
+    <div className="mb-[18px] px-[18px]">
       <ul className="sr-only" aria-label={te.titulo}>
         {lecturas.map((l) => (
           <li key={l}>{l}</li>
         ))}
       </ul>
-      <div
-        ref={caja}
-        aria-hidden
-        className="barra-rotulo barra-detalle absolute bottom-[84px] left-[18px]"
-        style={cabe ? undefined : { visibility: "hidden" }}
-      >
-        <ComoVas estadisticas={estadisticas} variante="barra" />
+      <div className="pointer-events-none grid w-[236px] [&>*]:pointer-events-auto [&>*]:[grid-area:1/1]">
+        <div className="justify-self-start">
+          <ComoVasPlegado estadisticas={estadisticas} />
+        </div>
+        {/* `relative z-[1]`: los anillos de la estrecha van posicionados y,
+            sin esto, se pintarían por encima de la tarjeta. */}
+        <div className="barra-rotulo relative z-[1] flex">
+          <ComoVas estadisticas={estadisticas} variante="barra" hrefPractica={hrefPractica} lector={false} />
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 

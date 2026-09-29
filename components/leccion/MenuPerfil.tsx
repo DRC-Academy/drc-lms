@@ -28,6 +28,7 @@ export default function MenuPerfil({
   nombre,
   variante,
   estadisticas = null,
+  hrefPractica,
 }: {
   nombre: string;
   /** `barra`: el avatar de la barra de iconos. `movil`: la pestaña de abajo. */
@@ -37,6 +38,8 @@ export default function MenuPerfil({
    * lo enseñe al abrirse. En escritorio lo pinta la barra.
    */
   estadisticas?: EstadisticasAlumno | null;
+  /** A dónde lleva la invitación a practicar de «Cómo vas». */
+  hrefPractica?: string;
 }) {
   const { t } = usarIdioma();
   const [abierto, setAbierto] = useState(false);
@@ -140,7 +143,7 @@ export default function MenuPerfil({
                 <span aria-hidden className="mx-auto mb-4 block h-1 w-9 rounded-full bg-marca-bordeSuave" />
                 {estadisticas && (
                   <div className="mb-5">
-                    <ComoVas estadisticas={estadisticas} variante="movil" />
+                    <ComoVas estadisticas={estadisticas} variante="movil" hrefPractica={hrefPractica} />
                   </div>
                 )}
                 {contenido}
@@ -176,9 +179,6 @@ export default function MenuPerfil({
           id={idPanel}
           role="dialog"
           aria-label={t.navegacion.perfil}
-          // `data-menu-perfil`: mientras está abierto, la barra esconde
-          // «Cómo vas», que quedaba a medias detrás (`globals.css`).
-          data-menu-perfil
           className="aparece absolute bottom-0 left-full z-50 ml-3 w-[264px] rounded-[14px] border border-marca-borde bg-white p-4 shadow-[0_18px_44px_-16px_rgba(18,33,26,0.35)]"
         >
           {contenido}

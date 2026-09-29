@@ -29,7 +29,7 @@ import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
 import { FranjaClase, LineaClase } from "@/components/clases/BannerClase";
 import RefrescoEnCortes from "@/components/clases/RefrescoEnCortes";
 import ArranqueTutorial from "@/components/tutorial/ArranqueTutorial";
-import FilaEstadisticas from "@/components/estadisticas/FilaEstadisticas";
+import ComoVas from "@/components/estadisticas/ComoVas";
 import SemanaCompacta from "@/components/clases/SemanaCompacta";
 import { tutorialPendiente } from "@/lib/tutorial/estado";
 
@@ -343,6 +343,13 @@ export default async function PerfilAlumno({
           </div>
         </div>
 
+        {/* «CÓMO VAS», EN MÓVIL, JUSTO DEBAJO DEL SALUDO: lo primero después
+            de la cara del profesor. En escritorio vive arriba de la barra
+            lateral, y por eso aquí va con `min-[900px]:hidden`. */}
+        <div className="entra mb-4 min-[900px]:hidden">
+          <ComoVas estadisticas={estadisticas} variante="movil" hrefPractica={conFoco("/practica", foco)} />
+        </div>
+
         {/* EL DIPLOMA, LO PRIMERO DEBAJO DEL SALUDO. A ancho completo y
             por encima de la rejilla: es la meta de la que cuelga todo lo
             que viene después, y compartiendo caja con el curso se leía
@@ -388,12 +395,6 @@ export default async function PerfilAlumno({
           ritmo={ritmo && <ComparativaRitmo datos={ritmo} href={RUTA_AMPLIAR} />}
           entreMedias={
             <>
-              <div
-                className="entra mt-5 min-[900px]:hidden"
-                style={{ animationDelay: "calc(var(--paso-escalonado) * 3)" }}
-              >
-                <FilaEstadisticas estadisticas={estadisticas} t={textosActuales()} />
-              </div>
               <div
                 className="entra mt-[26px] min-[900px]:mt-9"
                 style={{ animationDelay: "calc(var(--paso-escalonado) * 3)" }}

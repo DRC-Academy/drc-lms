@@ -124,7 +124,14 @@ export default function MarcoApp({ datos, children }: { datos: DatosNavegacion; 
       <NavegacionInferior
         enlaces={enlaces}
         secciones={t.secciones}
-        extra={<MenuPerfil nombre={nombre} variante="movil" estadisticas={datos.estadisticas ?? null} />}
+        extra={
+          <MenuPerfil
+            nombre={nombre}
+            variante="movil"
+            estadisticas={datos.estadisticas ?? null}
+            hrefPractica={enlaces.find((e) => e.clave === "practica")?.href}
+          />
+        }
       />
       {/* La ayuda es para el alumno: el equipo en su buscador no la usa.
           El botón flotante, abajo a la derecha, en todas las anchuras. */}
