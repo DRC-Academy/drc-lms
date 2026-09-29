@@ -541,24 +541,23 @@
     display: none;
   }
 
-  /* EL BOTÓN DE AYUDA: un círculo de 48px en tinta con el «?» en
-     amarillo, sin la palabra (va en el `aria-label`). Abierto el menú o
-     el chat, el «?» pasa a X en el mismo círculo: nada cambia de tamaño
-     ni de sitio. El amarillo es el «?», no el botón: el botón sigue en
-     tinta. */
+  /* EL BOTÓN DE AYUDA: un círculo verde de 48px con el «?» en blanco, sin
+     la palabra (va en el `aria-label`). Abierto el menú o el chat, el «?»
+     pasa a X en el mismo círculo: nada cambia de tamaño ni de sitio. */
   .boton-ayuda {
     width: 48px;
     height: 48px;
     padding: 0;
     border-radius: 999px;
     border: 0;
-    background: #12211A;
-    color: #FFC400;
+    background: #1E9E3A;
+    color: #FFFFFF;
     box-shadow: 0 6px 16px rgba(18, 33, 26, 0.22);
     transition: background-color 0.16s ease, box-shadow 0.16s ease;
   }
-  .boton-ayuda:hover {
-    background: #22352B;
+  .boton-ayuda:hover,
+  .boton-ayuda:active {
+    background: #14722A;
   }
   .boton-ayuda:focus-visible,
   .menu-ayuda-opcion:focus-visible {
