@@ -25,6 +25,13 @@ export const PERFIL_WOO = "https://drcacademy.com/mi-cuenta/perfil/";
 export const AMPLIAR_PLAN_WOO = "https://drcacademy.com/mi-cuenta/?drc-ampliar-plan=1";
 
 /**
+ * La entrada del puente inverso en WordPress (`wordpress/drc-desde-lms.php`):
+ * recibe el sobre `wp` en `token`, abre la sesión de la tienda y lleva al
+ * cambio de plan. Solo la usa `app/ampliar-plan`.
+ */
+export const PUENTE_WP = "https://drcacademy.com/wp-admin/admin-post.php?action=drc_desde_lms";
+
+/**
  * El final de «Salir». Cierra la sesión de WordPress y redirige al login
  * de Mi cuenta; sin sesión en la web, solo redirige. Lo usa `app/salir`
  * después de cerrar la del LMS.

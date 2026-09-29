@@ -1,6 +1,6 @@
 import { calcularEstimacion, nivelDelAlumno } from "@/lib/estimacion";
 import { nivelMcer } from "@/lib/recorrido";
-import { urlAmpliarPlan } from "@/lib/ampliar-plan";
+import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
 import { notFound } from "next/navigation";
 import { obtenerAlumno, obtenerCalendario, obtenerExcepciones, obtenerQuitas } from "@/lib/gestion";
 import { proximaDelAlumno, semanasDelAlumno, ventanaAbierta } from "@/lib/clases";
@@ -385,7 +385,7 @@ export default async function PerfilAlumno({
           generadosIniciales={generados}
           idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}
-          ritmo={ritmo && <ComparativaRitmo datos={ritmo} href={urlAmpliarPlan()} />}
+          ritmo={ritmo && <ComparativaRitmo datos={ritmo} href={RUTA_AMPLIAR} />}
           entreMedias={
             <>
               <div

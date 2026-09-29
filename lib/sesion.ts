@@ -13,12 +13,16 @@
 //   · sesion  — la cookie. Dura 30 días. Lleva email, rol y alumnoId.
 //   · woo     — el del botón de WooCommerce. Dura 60 segundos y lo firma
 //               WordPress, no el LMS.
+//   · wp      — el del sentido contrario: lo firma el LMS para abrir la
+//               sesión de la tienda en el cambio de plan. Lo verifica
+//               WordPress (ver «El puente hacia la tienda», abajo).
 //
-// La firma incluye el propósito ("enlace.", "sesion." o "woo.") delante
+// La firma incluye el propósito ("enlace.", "sesion.", "woo." o "wp.") delante
 // del cuerpo, así que un sobre no vale nunca en el sitio de otro.
 //
-// `woo` se firma además con OTRA clave, SECRETO_WOO, y esa es la única
-// que sale de aquí: vive también en WordPress. Se separa a propósito.
+// `woo` y `wp` se firman además con OTRAS claves, SECRETO_WOO y
+// SECRETO_PUENTE_WP, una por sentido, y son las únicas que salen de
+// aquí: viven también en WordPress. Se separan a propósito.
 // SECRETO_SESION firma las cookies de 30 días, así que si WordPress se
 // viera comprometido con esa clave dentro, se podrían fabricar sesiones
 // directamente —incluidas las de administrador—. Con la clave aparte,
@@ -172,11 +176,15 @@ function aBytes(texto: string) {
 // FIRMA
 // ---------------------------------------------------------------
 
-type Proposito = "enlace" | "sesion" | "woo" | "baja";
+type Proposito = "enlace" | "sesion" | "woo" | "baja" | "wp";
+
+type NombreSecreto = "SECRETO_SESION" | "SECRETO_WOO" | "SECRETO_PUENTE_WP";
 
 /** Qué clave firma cada sobre. Ver la cabecera del módulo. */
-function nombreDelSecreto(proposito: Proposito): "SECRETO_SESION" | "SECRETO_WOO" {
-  return proposito === "woo" ? "SECRETO_WOO" : "SECRETO_SESION";
+function nombreDelSecreto(proposito: Proposito): NombreSecreto {
+  if (proposito === "woo") return "SECRETO_WOO";
+  if (proposito === "wp") return "SECRETO_PUENTE_WP";
+  return "SECRETO_SESION";
 }
 
 const claves = new Map<string, CryptoKey>();
@@ -199,6 +207,14 @@ async function claveHmac(proposito: Proposito): Promise<CryptoKey> {
     throw new Error(
       `Falta ${nombre} en el entorno, o es demasiado corto. Hacen falta al menos 32 caracteres aleatorios para firmar.`
     );
+  }
+
+  // La del puente hacia WordPress tiene que ser OTRA clave. Si fuera la
+  // de WooCommerce, quien la tiene en WordPress podría fabricar sobres de
+  // los dos sentidos; si fuera la de sesión, WordPress conocería la clave
+  // que firma las cookies del LMS.
+  if (nombre === "SECRETO_PUENTE_WP" && (secreto === process.env.SECRETO_WOO || secreto === process.env.SECRETO_SESION)) {
+    throw new Error("SECRETO_PUENTE_WP no puede ser la misma clave que SECRETO_WOO ni que SECRETO_SESION.");
   }
 
   const clave = await globalThis.crypto.subtle.importKey(
@@ -366,6 +382,47 @@ export async function abrirTokenWoo(token: string): Promise<ContenidoSobre | nul
     console.error("[sesion] No se pudo verificar el sobre de WooCommerce:", error);
     return null;
   }
+}
+
+// ---------------------------------------------------------------
+// EL PUENTE HACIA LA TIENDA (LMS → WordPress)
+//
+// El sentido contrario al sobre `woo`: el LMS firma el email del alumno
+// y WordPress, con `wordpress/drc-desde-lms.php`, abre su sesión en la
+// tienda y lo lleva al cambio de plan. Así «Quiero ir más rápido» no le
+// pide que vuelva a entrar.
+//
+// Esta forma es CONTRATO con ese snippet:
+//
+//   base64url({"e": email, "t": ms, "n": nonce, "d": destino}) . base64url(HMAC-SHA256("wp." + cuerpo))
+//
+// con SECRETO_PUENTE_WP, una clave que solo comparten este sentido y
+// WordPress. `d` es una CLAVE de destino que el snippet traduce con su
+// lista blanca; nunca viaja una URL.
+//
+// LA CADUCIDAD Y EL SOLO USO LOS PONE WORDPRESS (cinco minutos, y el
+// nonce se gasta al entrar), que es quien recibe el sobre. Aquí solo se
+// firma, en el servidor y en el momento del clic: el sobre no se
+// escribe en ningún HTML.
+// ---------------------------------------------------------------
+
+/** Los destinos que entiende el snippet de WordPress. */
+export type DestinoPuenteWp = "cambio-plan";
+
+type SobrePuenteWp = {
+  /** email normalizado */
+  e: string;
+  /** emitido en (ms) */
+  t: number;
+  /** nonce: lo que WordPress gasta para que el sobre sirva una sola vez */
+  n: string;
+  /** clave de destino */
+  d: DestinoPuenteWp;
+};
+
+export function crearTokenPuenteWp(email: string, destino: DestinoPuenteWp): Promise<string> {
+  const sobre: SobrePuenteWp = { e: normalizarEmail(email), t: Date.now(), n: nonce(), d: destino };
+  return cerrar("wp", sobre);
 }
 
 // ---------------------------------------------------------------

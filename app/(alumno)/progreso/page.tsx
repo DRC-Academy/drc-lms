@@ -15,13 +15,19 @@ import { calcularDiploma } from "@/lib/diploma";
 import { conFoco } from "@/lib/foco";
 import { comoFecha } from "@/lib/fechas";
 import { textosActuales } from "@/lib/idioma-servidor";
-import { urlAmpliarPlan } from "@/lib/ampliar-plan";
+import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
 import Ficha from "@/components/progreso/Ficha";
 
 export const dynamic = "force-dynamic";
 
 /**
- * A dónde lleva "Amplía tu plan". Configurable sin tocar código.
+ * A dónde lleva "Amplía tu plan".
+ *
+ * DESDE SEPTIEMBRE DE 2026, A UNA RUTA DEL LMS (`RUTA_AMPLIAR`), que en el
+ * momento del clic decide si abre la sesión de la tienda con el puente
+ * (`app/ampliar-plan`, `wordpress/drc-desde-lms.php`) o manda al enlace
+ * de siempre. Lo que sigue describe ese enlace de siempre, que es
+ * `urlAmpliarPlan()` y sigue siendo configurable sin tocar código.
  *
  * EL DESTINO DE VERDAD ES EL CAMBIO DE PLAN DE WOOCOMMERCE: la misma URL
  * que el botón "Aumentar o Disminuir Plan" de la pestaña Suscripción de
@@ -47,7 +53,7 @@ export const dynamic = "force-dynamic";
  * servidor. Una URL no es un secreto, pero si no hace falta cruzar al
  * navegador, no cruza.
  */
-const URL_AMPLIAR = urlAmpliarPlan();
+const URL_AMPLIAR = RUTA_AMPLIAR;
 
 /**
  * El progreso del alumno, como cuarta sección.
