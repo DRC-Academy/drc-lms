@@ -25,6 +25,9 @@ export default function AbrirClaseDelAncla() {
         if (padre instanceof HTMLDetailsElement) padre.open = true;
         padre = padre.parentElement;
       }
+      // Y los desplegables de la propia clase: quien pulsa «Ver clase
+      // completa» viene a leer los temas, no a volver a abrirlos.
+      destino.querySelectorAll("details").forEach((d) => (d.open = true));
       destino.scrollIntoView({ block: "start" });
     }
 

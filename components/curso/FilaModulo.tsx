@@ -44,6 +44,11 @@ import { IconoCandado, IconoCheck } from "@/components/curso/Iconos";
  *                  días», «Se abre el 26 de sept.». Nada que hacer para
  *                  abrirlo; solo llega.
  *
+ * EN MÓVIL, TÍTULO + UNA LÍNEA + ESTADO (septiembre de 2026). El
+ * código «MÓDULO 3» se queda solo en escritorio, donde va en su columna:
+ * en móvil era un renglón más encima del título que no dice nada que no
+ * diga la semana de arriba.
+ *
  * EN MÓVIL LA FECHA BAJA BAJO EL TÍTULO, donde en las demás filas va «4
  * lecciones · 0 hechas», y la derecha queda vacía. Es lo que le deja al
  * título su ancho a 375px: con la fecha a la derecha, un título largo
@@ -91,7 +96,7 @@ export default function FilaModulo({
 
       <div className="min-w-0 flex-1 min-[900px]:flex min-[900px]:items-center min-[900px]:gap-4">
         <span
-          className={`block text-[12px] font-extrabold uppercase leading-none min-[900px]:w-[78px] min-[900px]:shrink-0 ${
+          className={`hidden text-[12px] font-extrabold uppercase leading-none min-[900px]:block min-[900px]:w-[78px] min-[900px]:shrink-0 ${
             esActual
               ? "text-temario-verdeTexto"
               : !disponible
@@ -109,7 +114,7 @@ export default function FilaModulo({
             en curso, semibold en lo que se puede abrir, medium en lo que
             todavía no. */}
         <span
-          className={`mt-1 block text-pretty text-[14px] leading-[1.3] min-[900px]:mt-0 min-[900px]:flex-1 min-[900px]:text-[15.5px] ${
+          className={`block text-pretty text-[14px] leading-[1.3] min-[900px]:mt-0 min-[900px]:flex-1 min-[900px]:text-[15.5px] ${
             esActual
               ? "font-bold text-temario-tinta"
               : !disponible

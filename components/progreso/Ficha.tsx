@@ -4,13 +4,25 @@ import type { Estimacion } from "@/lib/estimacion";
 import BannerAmpliar from "@/components/BannerAmpliar";
 import BannerDiplomaFicha from "@/components/progreso/BannerDiplomaFicha";
 import Recorrido from "@/components/progreso/Recorrido";
+import BannerDiploma from "@/components/BannerDiploma";
+import RitmoCompacto, { datosDeRitmo } from "@/components/RitmoCompacto";
+import SenderoClases from "@/components/clases/SenderoClases";
+import { TituloSeccion } from "@/components/base/Seccion";
 import { EstilosFicha } from "@/components/progreso/estilos";
 import type { EstadoDiploma } from "@/lib/diploma";
 import { ESCALERA_MCER, proximoHito, type NivelMcer } from "@/lib/recorrido";
 import { enViñetas, soloParaElAlumno, textoParaElAlumno } from "@/lib/texto-alumno";
 
 // ---------------------------------------------------------------
-// LA FICHA DE PROGRESO, RÉPLICA DE LA DE DRC GESTIÓN
+// LA FICHA DE PROGRESO, RÉPLICA DE LA DE DRC GESTIÓN — EN ESCRITORIO
+//
+// ⚠ DESDE SEPTIEMBRE DE 2026 EL CALCO VALE PARA ESCRITORIO (más de 720px,
+// el corte de la propia ficha). En móvil el LMS tiene su versión de tres
+// piezas: el diploma (`BannerDiploma`), la comparativa de ritmo
+// (`RitmoCompacto`) y el recorrido (`SenderoClases`). Las dos versiones
+// van en el HTML y el corte elige; lo demás de la ficha es el mismo en
+// los dos anchos. Un cambio en Gestión se copia aquí para escritorio;
+// móvil no lo sigue.
 //
 // ⚠ ESTO ES UNA COPIA DELIBERADA de `app/progreso/[token]/page.tsx` de
 // Gestión: mismos bloques, mismo orden, mismo copy y mismo CSS. No es
@@ -117,6 +129,7 @@ export default function Ficha({
   const foco = textoParaElAlumno(focoRecomendado);
 
   const hito = proximoHito(clasesContadas);
+  const ritmoMovil = datosDeRitmo(estimacion);
 
   return (
     <div className="pg-page">
@@ -196,7 +209,21 @@ export default function Ficha({
           </div>
         </section>
 
-        <BannerDiplomaFicha diploma={diploma} hrefCurso={hrefCurso} />
+        {/* LAS PIEZAS DE MÓVIL LLEVAN `font-variant-numeric: normal`: la
+            ficha pone `tabular-nums` a todo, y en Radio Canada Big eso
+            ensancha también los espacios («Llegarías  3  meses»). Las
+            cifras que lo necesitan ya lo piden con `tabular-nums`. */}
+        {/* EL DIPLOMA: en escritorio, el calco de Gestión; en móvil, el
+            banner del LMS (título, frase, cifra grande y botón). Los dos
+            van en el HTML y el corte de 720px de la ficha elige.
+            `empty:hidden`: sin curso ninguno pinta nada, y el hueco vacío
+            sumaría un `gap` más a la columna. */}
+        <div className="empty:hidden max-[720px]:hidden">
+          <BannerDiplomaFicha diploma={diploma} hrefCurso={hrefCurso} />
+        </div>
+        <div className="empty:hidden [font-variant-numeric:normal] min-[721px]:hidden">
+          <BannerDiploma estado={diploma} href={hrefCurso} />
+        </div>
 
         {/* ---------------------------------------------------------------
             DOS BANNERS, Y NINGÚN ALUMNO SIN UNO
@@ -213,8 +240,24 @@ export default function Ficha({
             sirve igual, solo que por otro motivo: no llega ANTES, llega
             MÁS PREPARADO. Y eso se puede decir sin inventar una sola
             cifra, que es justo lo que la regla protegía. */}
+        {/* EN MÓVIL, LA MISMA PIEZA QUE EL INICIO (`RitmoCompacto`): dos
+            barras, tu plan y la recomendada. Solo cuando hay algo que
+            recomendar; si no —ya va al plan más alto—, el banner de
+            siempre, que es el que sabe decir «vas al mejor ritmo». La
+            variante sin cifras (examen de su propio nivel) no cambia. */}
         {estimacion ? (
-          <BannerAmpliar estimacion={estimacion} urlAmpliar={urlAmpliar} />
+          ritmoMovil ? (
+            <>
+              <div className="max-[720px]:hidden">
+                <BannerAmpliar estimacion={estimacion} urlAmpliar={urlAmpliar} />
+              </div>
+              <div className="[font-variant-numeric:normal] min-[721px]:hidden">
+                <RitmoCompacto datos={ritmoMovil} href={urlAmpliar} id="titulo-ritmo-ficha" />
+              </div>
+            </>
+          ) : (
+            <BannerAmpliar estimacion={estimacion} urlAmpliar={urlAmpliar} />
+          )
         ) : preparaExamen ? (
           <BannerAmpliar
             estimacion={null}
@@ -278,12 +321,27 @@ export default function Ficha({
           </section>
         )}
 
-        <Recorrido
-          clases={clases}
-          titulo={t.tuRecorrido}
-          vacio={t.recorridoVacio}
-          rotuloTemas={textosActuales().clases.temasYVocabulario}
-        />
+        {/* EL RECORRIDO: en escritorio, el de Gestión; en móvil, el
+            sendero de «Mis clases» —la misma pieza—, con la fecha y el
+            título de cada clase y los temas en un desplegable. */}
+        <div className="max-[720px]:hidden">
+          <Recorrido
+            clases={clases}
+            titulo={t.tuRecorrido}
+            vacio={t.recorridoVacio}
+            rotuloTemas={textosActuales().clases.temasYVocabulario}
+          />
+        </div>
+        <section aria-labelledby="titulo-recorrido-movil" className="flex flex-col gap-4 pt-2 [font-variant-numeric:normal] min-[721px]:hidden">
+          <TituloSeccion id="titulo-recorrido-movil">{t.tuRecorrido}</TituloSeccion>
+          <SenderoClases
+            clases={clases}
+            vacio={t.recorridoVacio}
+            rotuloTemas={textosActuales().clases.temasTratados}
+            visibles={6}
+            verMas={() => t.verLasClases(clases.length)}
+          />
+        </section>
 
         <p className="pg-foot">
           {t.informePrivado}

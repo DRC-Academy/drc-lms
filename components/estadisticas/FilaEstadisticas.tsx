@@ -1,13 +1,17 @@
 import type { ReactNode } from "react";
 import type { EstadisticasAlumno } from "@/lib/estadisticas";
 import type { Textos } from "@/lib/textos";
-import AnilloCurso from "@/components/estadisticas/AnilloCurso";
+import { TARJETA } from "@/components/base/Seccion";
 
 /**
  * Las estadísticas en el inicio, por debajo de 900px: una fila de
  * tarjetas que se desliza en horizontal. En escritorio viven en la barra
  * lateral (`BarraLateral`), y por eso aquí todo va con `min-[900px]:hidden`
  * desde fuera.
+ *
+ * SIN EL CURSO (septiembre de 2026). La tarjeta del anillo contaba «12
+ * de 182 lecciones» dos dedos por debajo del banner del diploma, que
+ * cuenta lo mismo. El dato vive solo en el banner.
  *
  * Una tarjeta por dato que se pudo leer; lo que llegó null no se pinta.
  * Un cero nunca sale como cifra: sale su frase de bienvenida (ver
@@ -20,36 +24,9 @@ import AnilloCurso from "@/components/estadisticas/AnilloCurso";
 export default function FilaEstadisticas({ estadisticas, t }: { estadisticas: EstadisticasAlumno; t: Textos }) {
   const te = t.estadisticas;
   const tp = t.progreso;
-  const { curso, nivel, clases, ejercicios } = estadisticas;
+  const { nivel, clases, ejercicios } = estadisticas;
 
   const tarjetas: { clave: string; contenido: ReactNode }[] = [];
-
-  if (curso) {
-    tarjetas.push({
-      clave: "curso",
-      contenido: (
-        <div className="flex items-center gap-3.5">
-          <AnilloCurso porcentaje={curso.porcentaje} tamaño={56} grosor={5} />
-          <div className="min-w-0">
-            {curso.completadas === 0 ? (
-              <>
-                <p className="font-display text-[16px] font-bold leading-tight text-marca-tinta">{te.cursoVacioTitulo}</p>
-                <p className="mt-1 text-[13.5px] leading-snug text-marca-tintaMedia">{te.cursoVacioTexto}</p>
-              </>
-            ) : (
-              <>
-                <p className="sr-only">{te.porcentajeDe(curso.porcentaje, curso.titulo)}</p>
-                <p className="font-display text-[16px] font-bold leading-tight text-marca-tinta">
-                  {curso.porcentaje === 100 ? te.cursoCompleto : te.lecciones(curso.completadas, curso.total)}
-                </p>
-                <p className="mt-1 line-clamp-2 text-[13.5px] leading-snug text-marca-tintaMedia">{curso.titulo}</p>
-              </>
-            )}
-          </div>
-        </div>
-      ),
-    });
-  }
 
   if (nivel) {
     tarjetas.push({
@@ -87,9 +64,7 @@ export default function FilaEstadisticas({ estadisticas, t }: { estadisticas: Es
         {tarjetas.map(({ clave, contenido }) => (
           <li
             key={clave}
-            className={`flex shrink-0 snap-start scroll-ml-4 rounded-[16px] border border-marca-borde bg-white p-4 shadow-[0_10px_24px_rgba(18,33,26,0.07)] ${
-              clave === "curso" ? "w-[272px]" : "w-[168px]"
-            }`}
+            className={`${TARJETA} flex w-[168px] shrink-0 snap-start scroll-ml-4 p-4`}
           >
             <div className="w-full">{contenido}</div>
           </li>

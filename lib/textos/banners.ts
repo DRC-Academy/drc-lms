@@ -76,6 +76,12 @@ export type TextosBanners = {
   /** El botón de quien no ha empezado: lleva a la lección que toca, aquí mismo. */
   empezarMiCurso: string;
   todasLasLecciones: string;
+  /** La frase del banner del diploma: para qué sirve. */
+  diplomaFrase: string;
+  /** Detrás de la cifra grande: "de 182 lecciones". */
+  deLecciones: (total: number) => string;
+  /** El botón del banner del diploma, a la siguiente lección. */
+  siguienteLeccion: string;
 
   // --- ampliar el plan ---
   llegaMasPreparado: string;
@@ -127,6 +133,12 @@ export type TextosBanners = {
   estasAqui: string;
   tuMeta: string;
   quieroIrMasRapido: string;
+  /** Lo primero que se lee en la comparativa compacta: "Llegarías 3 meses antes". */
+  llegariasAntes: (meses: number) => string;
+  /** Debajo: "Con 2 h más a la semana, hasta el nivel B2." */
+  conHorasMasHasta: (horasExtra: number, nivel: string) => string;
+  /** La meta, al final de las barras: "Nivel B2". */
+  nivelMeta: (nivel: string) => string;
   /** Todo lo que dice el dibujo, para el lector de pantalla. */
   ritmoLector: (nivel: string, horasActual: number, mesesActual: number, horasMas: number, mesesMas: number) => string;
 
@@ -170,6 +182,9 @@ const ES: TextosBanners = {
   comienzaElCamino: "Comienza ahora el camino hacia tu diploma.",
   empezarMiCurso: "Empezar mi curso →",
   todasLasLecciones: "Todas las lecciones completadas.",
+  diplomaFrase: "Completa todas las lecciones de tu curso y consigues tu diploma.",
+  deLecciones: (total) => `de ${total} ${total === 1 ? "lección" : "lecciones"}`,
+  siguienteLeccion: "Ir a la siguiente lección",
 
   llegaMasPreparado: "Llega más preparado",
   vasAlMaximo: "Vas al máximo de horas",
@@ -207,6 +222,9 @@ const ES: TextosBanners = {
   estasAqui: "Estás aquí",
   tuMeta: "Tu meta",
   quieroIrMasRapido: "Quiero ir más rápido",
+  llegariasAntes: (meses) => `Llegarías ${meses} ${meses === 1 ? "mes" : "meses"} antes`,
+  conHorasMasHasta: (horasExtra, nivel) => `Con ${horasExtra} h más a la semana, hasta el nivel ${nivel}.`,
+  nivelMeta: (nivel) => `Nivel ${nivel}`,
   ritmoLector: (nivel, horasActual, mesesActual, horasMas, mesesMas) =>
     `Hacia Nivel ${nivel}: a tu ritmo actual, ${horasActual} h a la semana, unos ${mesesActual} meses. Con ${horasMas} h a la semana, unos ${mesesMas} meses.`,
 
@@ -245,6 +263,9 @@ const EN: TextosBanners = {
   comienzaElCamino: "Start the path to your diploma now.",
   empezarMiCurso: "Start my course →",
   todasLasLecciones: "All lessons completed.",
+  diplomaFrase: "Complete every lesson in your course to earn your diploma.",
+  deLecciones: (total) => `of ${total} ${total === 1 ? "lesson" : "lessons"}`,
+  siguienteLeccion: "Go to your next lesson",
 
   llegaMasPreparado: "Arrive better prepared",
   vasAlMaximo: "You're on the maximum hours",
@@ -282,6 +303,9 @@ const EN: TextosBanners = {
   estasAqui: "You are here",
   tuMeta: "Your goal",
   quieroIrMasRapido: "I want to go faster",
+  llegariasAntes: (meses) => `You'd get there ${meses} ${meses === 1 ? "month" : "months"} sooner`,
+  conHorasMasHasta: (horasExtra, nivel) => `With ${horasExtra} more ${horasExtra === 1 ? "hour" : "hours"} a week, all the way to ${nivel}.`,
+  nivelMeta: (nivel) => `Level ${nivel}`,
   ritmoLector: (nivel, horasActual, mesesActual, horasMas, mesesMas) =>
     `Towards Level ${nivel}: at your current pace, ${horasActual} h a week, about ${mesesActual} months. With ${horasMas} h a week, about ${mesesMas} months.`,
 

@@ -1,8 +1,25 @@
 import { textosActuales } from "@/lib/idioma-servidor";
+import Link from "next/link";
 import { textoDiploma, type EstadoDiploma } from "@/lib/diploma";
+import { TARJETA, TituloSeccion } from "@/components/base/Seccion";
 
 /**
- * EL DIPLOMA, EN UN FILETE.
+ * EL DIPLOMA, EN SU TARJETA.
+ *
+ * ---------------------------------------------------------------
+ * VUELVE A TENER CAJA (septiembre de 2026, ronda de móvil)
+ *
+ * Sin caja, «18 lecciones para tu diploma» no se entendía: no decía qué
+ * era el diploma ni cómo se conseguía, y el avance iba en gris pequeño
+ * a la derecha. Ahora es una tarjeta de la base común con título, UNA
+ * frase que dice para qué sirve, la cifra grande de lo que lleva («12 de
+ * 182 lecciones»), la barra y un botón a la siguiente lección.
+ *
+ * Lo que sigue de la nota anterior vale para la barra y sus gestos; lo
+ * de "sin caja" y "ni un botón" es historia.
+ * ---------------------------------------------------------------
+ *
+ * (Nota anterior) EL DIPLOMA, EN UN FILETE.
  *
  * Va entre el saludo y la rejilla, a lo ancho: es lo primero que se ve
  * al entrar.
@@ -46,7 +63,18 @@ import { textoDiploma, type EstadoDiploma } from "@/lib/diploma";
  *
  * Se renderiza en el servidor: no tiene estado ni interacción.
  */
-export default function BannerDiploma({ estado }: { estado: EstadoDiploma }) {
+export default function BannerDiploma({
+  estado,
+  href = null,
+}: {
+  estado: EstadoDiploma;
+  /**
+   * A dónde lleva el botón: la siguiente lección, la misma ruta que la
+   * pestaña «Mi curso». Sin él no hay botón —en «Mi curso» la franja de
+   * encima ya tiene su «Continuar»—.
+   */
+  href?: string | null;
+}) {
   const t = textosActuales().banners;
   const texto = textoDiploma(estado, t);
   if (texto === null) return null;
@@ -56,45 +84,41 @@ export default function BannerDiploma({ estado }: { estado: EstadoDiploma }) {
   const hechas = estado.estado === "en-curso" ? estado.completadas : total;
 
   // Solo para el lector de pantalla: la barra sin narrar es un
-  // porcentaje suelto, y el número de al lado no dice de cuántas.
+  // porcentaje suelto.
   const descripcion = conseguido
     ? t.cursoCompletado
     : t.faltanParaDiploma(texto.cifra ?? 0, total);
 
   return (
-    <section aria-label={t.tuDiploma}>
-      {/* ------------------------- LA LÍNEA -------------------------
-          El icono y la frase a la izquierda; el recuento a la derecha,
-          en el gris más apagado. El recuento es la escala de la barra:
-          sin él, el carril es un porcentaje sin denominador. */}
-      <div className="mb-[11px] flex items-baseline justify-between gap-4">
-        <p className="flex min-w-0 items-center gap-2.5">
+    <section aria-labelledby="titulo-diploma" className={`${TARJETA} px-5 py-5 min-[900px]:px-6`}>
+      <div className="flex items-start gap-3">
+        <span aria-hidden className="mt-[3px] grid h-8 w-8 shrink-0 place-items-center rounded-full bg-marca-verdeFondo">
           <IconoDiploma conseguido={conseguido} />
-          {texto.cifra === null ? (
-            <span className="truncate font-display text-[14.5px] font-bold leading-[1.25] text-marca-verdeOsc">
-              {texto.unidad}
-            </span>
-          ) : (
-            <span className="text-pretty text-[14.5px] leading-[1.25] text-marca-tintaMedia">
-              <span className="font-display font-bold tabular-nums text-marca-tinta">
-                {texto.cifra}
-              </span>{" "}
-              {texto.unidad}
-            </span>
-          )}
-        </p>
-
-        {total > 0 && (
-          <span className="shrink-0 whitespace-nowrap text-[12.5px] leading-none tabular-nums text-marca-grisTenue">
-            {t.progresoDiploma(hechas, total)}
-          </span>
-        )}
+        </span>
+        <TituloSeccion id="titulo-diploma" subtitulo={conseguido ? undefined : t.diplomaFrase} className="min-w-0">
+          {conseguido ? t.diplomaConseguido : t.tuDiploma}
+        </TituloSeccion>
       </div>
 
-      {/* LA MISMA BARRA EN LAS DOS PANTALLAS. El inicio pasaba aquí un
-          sendero de hitos que la sustituía; se fue, y con él la consulta
-          más cara de esa página. Ver la nota en la ficha del alumno. */}
-      <Barra relleno={texto.relleno} descripcion={descripcion} conseguido={conseguido} />
+      {/* LA CIFRA GRANDE ES LO QUE LLEVA, NO LO QUE FALTA. «12 de 182
+          lecciones» se lee de un vistazo y la barra dice el resto. */}
+      <p className="mt-4 flex flex-wrap items-baseline gap-x-2">
+        <span className="font-display text-[32px] font-bold leading-none tabular-nums text-marca-tinta">{hechas}</span>
+        <span className="whitespace-nowrap text-[15px] text-marca-tintaMedia">{t.deLecciones(total)}</span>
+      </p>
+
+      <div className="mt-3">
+        <Barra relleno={texto.relleno} descripcion={descripcion} conseguido={conseguido} />
+      </div>
+
+      {href && !conseguido && (
+        <Link
+          href={href}
+          className="btn-verde-linea mt-4 flex min-h-[44px] w-full items-center justify-center rounded-full px-6 text-[15px] font-bold min-[900px]:w-fit"
+        >
+          {hechas === 0 ? t.empezarMiCurso : t.siguienteLeccion}
+        </Link>
+      )}
     </section>
   );
 }

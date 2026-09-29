@@ -1,6 +1,8 @@
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { Estimacion } from "@/lib/estimacion";
 import MascotaRitmo from "@/components/MascotaRitmo";
+import RitmoCompacto, { type DatosRitmo } from "@/components/RitmoCompacto";
+import { TARJETA, TITULO_SECCION } from "@/components/base/Seccion";
 
 /**
  * «AHORA PUEDES LLEGAR MÁS RÁPIDO»: la comparativa de ritmos del inicio.
@@ -15,8 +17,8 @@ import MascotaRitmo from "@/components/MascotaRitmo";
  * diferencia se ve sin leer: los tiempos, además, van escritos en la
  * leyenda —y el lector de pantalla los oye en una frase—.
  *
- * En móvil los senderos bajan en vertical, uno a cada lado; desde 900px
- * van en horizontal junto al texto.
+ * DESDE 900PX. En móvil, desde septiembre de 2026, se pinta la pieza
+ * compacta (`RitmoCompacto`): el sendero vertical partía las etiquetas.
  *
  * LA MASCOTA señala el recomendado: su ancla está en esa fila de la
  * leyenda (`MascotaRitmo`).
@@ -27,29 +29,9 @@ import MascotaRitmo from "@/components/MascotaRitmo";
  * algún mes (`datosDeRitmo`).
  */
 
-export type DatosRitmo = {
-  /** El nivel de la meta: "B2". */
-  meta: string;
-  actual: { horas: number; meses: number };
-  recomendado: { horas: number; meses: number; ahorro: number };
-};
-
-/**
- * Lo que enseña la comparativa, o null si no hay nada que recomendar: sin
- * estimación, ya en el plan más alto, o con un ahorro de cero meses. Con
- * null la sección no se pinta.
- */
-export function datosDeRitmo(estimacion: Estimacion | null): DatosRitmo | null {
-  if (!estimacion || !estimacion.hayAmpliacion) return null;
-  const actual = estimacion.opciones.find((o) => o.esSuPlan);
-  const mejor = estimacion.opciones[estimacion.opciones.length - 1];
-  if (!actual || !mejor || mejor.esSuPlan || mejor.mesesAhorrados <= 0) return null;
-  return {
-    meta: estimacion.meta.nivel,
-    actual: { horas: actual.horasSemanales, meses: actual.meses },
-    recomendado: { horas: mejor.horasSemanales, meses: mejor.meses, ahorro: mejor.mesesAhorrados },
-  };
-}
+// El tipo y la regla de «hay algo que recomendar» viven con la pieza
+// compacta, que es la que comparten el inicio y «Mi progreso».
+export { datosDeRitmo, type DatosRitmo } from "@/components/RitmoCompacto";
 
 const ID_RECOMENDADO = "ritmo-recomendado";
 
@@ -58,26 +40,27 @@ export default function ComparativaRitmo({ datos, href }: { datos: DatosRitmo; h
   const { meta, actual, recomendado } = datos;
 
   return (
+    <>
+      {/* EN MÓVIL, LA PIEZA COMPACTA: el ahorro primero y dos barras. El
+          sendero vertical se fue: partía las etiquetas y ocupaba una
+          pantalla entera. */}
+      <div className="min-[900px]:hidden">
+        <RitmoCompacto datos={datos} href={href} id="titulo-ritmo-movil" />
+      </div>
+
     <section
       aria-labelledby="titulo-ritmo"
-      className="rounded-[20px] border border-marca-borde bg-white px-5 py-[22px] min-[900px]:grid min-[900px]:grid-cols-[minmax(0,0.9fr)_minmax(0,1.25fr)] min-[900px]:items-center min-[900px]:gap-x-10 min-[900px]:px-8 min-[900px]:py-[30px]"
+      className={`${TARJETA} hidden px-8 py-[30px] min-[900px]:grid min-[900px]:grid-cols-[minmax(0,0.9fr)_minmax(0,1.25fr)] min-[900px]:items-center min-[900px]:gap-x-10`}
     >
-      <div className="flex flex-col gap-4 min-[900px]:gap-3.5">
-        <p className="flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-[0.12em] text-marca-verdeOsc">
-          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-marca-verde" />
-          {t.haciaTuMeta(meta)}
-        </p>
-        <h2 id="titulo-ritmo" className="text-balance font-display text-[23px] font-bold leading-[1.15] tracking-[-0.01em] text-marca-tinta min-[900px]:text-[27px]">
+      <div className="flex flex-col gap-3.5">
+        {/* Sin antetítulo («Hacia tu meta · Nivel B2»): la meta ya la dice
+            la entradilla y el dibujo. Título con la base común. */}
+        <h2 id="titulo-ritmo" className={`text-balance ${TITULO_SECCION}`}>
           {t.ahoraPuedesLlegarMasRapido}
         </h2>
         <p className="text-pretty text-[14.5px] leading-[1.45] text-marca-tintaMedia">
           {t.ritmoEntradilla(recomendado.horas - actual.horas, meta, recomendado.ahorro)}
         </p>
-
-        {/* El dibujo en vertical, solo en móvil. */}
-        <div className="min-[900px]:hidden">
-          <SenderosVertical datos={datos} t={t} />
-        </div>
 
         <p className="sr-only">{t.ritmoLector(meta, actual.horas, actual.meses, recomendado.horas, recomendado.meses)}</p>
 
@@ -117,7 +100,7 @@ export default function ComparativaRitmo({ datos, href }: { datos: DatosRitmo; h
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex min-h-[48px] w-full items-center justify-center rounded-full btn-verde px-7 text-[15.5px] font-bold min-[900px]:w-fit"
+          className="flex min-h-[48px] w-fit items-center justify-center rounded-full btn-verde px-7 text-[15.5px] font-bold"
         >
           {t.quieroIrMasRapido}
         </a>
@@ -128,6 +111,7 @@ export default function ComparativaRitmo({ datos, href }: { datos: DatosRitmo; h
         <SenderosHorizontal datos={datos} t={t} />
       </div>
     </section>
+    </>
   );
 }
 
@@ -227,43 +211,6 @@ function SenderosHorizontal({ datos, t }: { datos: DatosRitmo; t: Textos }) {
       </text>
       <text x="302" y="198" textAnchor="middle" className="font-sans" fontSize="13.5" fontWeight="700" fill="#14722A">
         {t.unosMeses(datos.recomendado.meses)}
-      </text>
-    </svg>
-  );
-}
-
-/** «unos 10 meses» → «unos» / «10 meses»: en vertical, a cada lado, no cabe en una. */
-function dosLineas(texto: string): string[] {
-  const corte = texto.indexOf(" ");
-  return corte < 0 ? [texto] : [texto.slice(0, corte), texto.slice(corte + 1)];
-}
-
-function SenderosVertical({ datos, t }: { datos: DatosRitmo; t: Textos }) {
-  return (
-    <svg aria-hidden viewBox="0 0 320 412" className="mx-auto block h-auto w-full max-w-[320px]">
-      <Senderos
-        lento="M168 58 C 98 62, 56 88, 70 122 C 84 156, 140 150, 136 184 C 132 218, 58 214, 54 248 C 50 282, 118 282, 120 310 C 122 336, 146 350, 168 362"
-        veloz="M168 58 C 272 130, 272 290, 168 362"
-        paradasLento={[[70, 122], [136, 184], [54, 248], [120, 310]]}
-        paradasVeloz={[[239, 164], [239, 258]]}
-        inicio={[168, 58]}
-        meta={[168, 362]}
-        datos={datos}
-        t={t}
-      />
-      <text className="font-sans" fontSize="12.5" fontWeight="600" fill="#4C5C53">
-        {dosLineas(t.unosMeses(datos.actual.meses)).map((linea, i) => (
-          <tspan key={i} x="10" y={186 + i * 16}>
-            {linea}
-          </tspan>
-        ))}
-      </text>
-      <text className="font-sans" fontSize="13" fontWeight="700" fill="#14722A">
-        {dosLineas(t.unosMeses(datos.recomendado.meses)).map((linea, i) => (
-          <tspan key={i} x="258" y={206 + i * 16}>
-            {linea}
-          </tspan>
-        ))}
       </text>
     </svg>
   );

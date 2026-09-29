@@ -5,7 +5,6 @@ import { textoDeEspera } from "@/lib/drip";
 import type { EstadoCurso } from "@/lib/cursos-servidor";
 import { rutaDeMiCurso } from "@/lib/cursos";
 import { partirModulo } from "@/lib/modulo";
-import { etiquetaPosicion, ubicarModulo } from "@/lib/temario";
 import Banner from "@/components/Banner";
 import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
 
@@ -81,7 +80,7 @@ export default function BannerCurso({
 
   const principal = estados[0];
   const otros = estados.slice(1);
-  const { curso, total, completadas, siguiente, diasParaAbrir, abreEl } = principal;
+  const { curso, completadas, siguiente, diasParaAbrir, abreEl } = principal;
 
   const empezado = completadas > 0;
 
@@ -147,8 +146,21 @@ export default function BannerCurso({
   // navegación en «Mi curso», y aquí era un renglón más que leer antes
   // de llegar al botón.
   // ---------------------------------------------------------------
+  // ---------------------------------------------------------------
+  // Y AHORA, EL NOMBRE DEL MÓDULO (septiembre de 2026)
+  //
+  // «Mes 1 · Semana 2 · Módulo 3» situaba en el plan, pero en móvil era
+  // la numeración interna del curso ocupando dos renglones a 30px, y
+  // debajo «Lección 13 de 182» contaba otra vez desde el principio del
+  // curso. Ninguna de las dos cosas se entiende sin haber visto el
+  // temario. El nombre del módulo, limpio de su prefijo (`partirModulo`),
+  // sí: dice de qué va lo que vas a hacer. La lección sigue debajo.
+  //
+  // El rótulo de posición sigue en «Mi curso», que es donde está el plan
+  // que le da sentido.
+  // ---------------------------------------------------------------
   const titulo = siguiente
-    ? etiquetaPosicion(ubicarModulo(partirModulo(siguiente.moduloTitulo, siguiente.moduloOrden)), t)
+    ? partirModulo(siguiente.moduloTitulo, siguiente.moduloOrden).titulo
     : esperando
       ? t.todoLoAbierto
       : curso.titulo;
@@ -158,6 +170,9 @@ export default function BannerCurso({
       <Banner
         eyebrow={etiqueta}
         title={titulo}
+        // El nombre del módulo viene del catálogo y no se elige: el más
+        // largo de los siete cursos tiene 64 caracteres (C1 general).
+        tituloDosLineas
         subtitle={siguiente?.titulo}
         action={{ label: llamada, href: destino, srSuffix: siguiente?.titulo ?? titulo }}
         ilustracion={<MascotaBienvenida id="inicio-curso" prioridad={2} variante="franja" escena="inicio" estado={terminado ? "nivel_superado" : "idle"} />}
@@ -169,13 +184,12 @@ export default function BannerCurso({
         // Al que espera se le pone aquí cuándo se abre, con la misma
         // frase que usan el temario y las filas de módulo: es la única
         // pregunta que tiene, y va pegada al botón que le lleva a verlo.
-        secondaryText={
-          siguiente
-            ? t.leccionDeTotal(siguiente.posicion, total)
-            : esperando && diasParaAbrir !== null
-              ? textoDeEspera(diasParaAbrir, abreEl, t)
-              : undefined
-        }
+        //
+        // «Lección 13 de 182» se fue: era la posición en el curso entero,
+        // que no le dice nada a quien no ha visto el temario, y el avance
+        // ya lo cuenta el diploma. Queda la espera, que sí es una
+        // pregunta del alumno.
+        secondaryText={esperando && diasParaAbrir !== null ? textoDeEspera(diasParaAbrir, abreEl, t) : undefined}
       />
 
       {/* El segundo curso del alumno de examen. Discreto a propósito y

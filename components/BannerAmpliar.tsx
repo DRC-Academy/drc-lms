@@ -7,7 +7,13 @@ import { enMeses, opcionesDeHoras, type Estimacion } from "@/lib/estimacion";
 // Lo que le costaría al alumno llegar a su meta con su plan de hoy y
 // con los dos siguientes, para que vea qué se ahorra pagando más.
 //
-// ⚠ ES LA COPIA VISUAL de `components/BannerAmpliar.tsx` de DRC Gestión:
+// ⚠ EL CALCO VALE PARA ESCRITORIO. Desde septiembre de 2026, en móvil
+// «Mi progreso» enseña en su lugar la pieza compacta del inicio
+// (`RitmoCompacto`, dos barras) siempre que haya algo que recomendar; este
+// banner sigue en móvil solo para quien ya va al plan más alto y en la
+// variante sin cifras. Ver `Ficha.tsx`.
+//
+// ES LA COPIA VISUAL de `components/BannerAmpliar.tsx` de DRC Gestión:
 // mismo markup, mismas clases `pg-pace` / `pg-bars` / `pg-cta` y el mismo
 // CSS, copiado literal del bloque "Banner de ampliacion de plan" de su
 // `PROGRESO_CSS`. Tuvo un diseño propio (fondo claro, filas apiladas y

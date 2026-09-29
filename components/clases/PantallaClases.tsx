@@ -31,6 +31,8 @@ import BannerClase, { SinProxima } from "@/components/clases/BannerClase";
 import SemanaClases from "@/components/clases/SemanaClases";
 import HistorialClases from "@/components/clases/HistorialClases";
 import AnclaMascota from "@/components/mascota/AnclaMascota";
+import CtaProximaClase from "@/components/clases/CtaProximaClase";
+import { FlechaDesplegable, RESUMEN_DESPLEGABLE, TARJETA } from "@/components/base/Seccion";
 
 export default function PantallaClases({
   calendario,
@@ -83,8 +85,36 @@ export default function PantallaClases({
             className={`entra grid items-stretch gap-3 min-[900px]:gap-5 ${ultima ? "min-[1200px]:grid-cols-[minmax(0,1fr)_416px]" : ""}`}
             style={{ animationDelay: "var(--paso-escalonado)" }}
           >
-            {proxima ? <BannerClase proxima={proxima} t={tc} ahora={ahora} conMascota /> : <SinProxima t={tc} />}
-            {ultima && <UltimaClase clase={ultima} profesores={profesores} t={t} />}
+            {/* EN MÓVIL, UNA FILA; EN ESCRITORIO, LA TARJETA DE SIEMPRE.
+                Las dos van en el HTML y el corte de 900px elige; con
+                `contents` la de escritorio sigue siendo la celda de la
+                rejilla, como antes. El refresco lo pone la fila: con dos
+                habría dos recargas en cada corte. Sin próxima clase, en
+                móvil no hay nada: ni fila ni línea vacía. */}
+            {proxima ? (
+              <>
+                <div className="min-[900px]:hidden">
+                  <CtaProximaClase proxima={proxima} t={tc} ahora={ahora} />
+                </div>
+                <div className="hidden min-[900px]:contents">
+                  <BannerClase proxima={proxima} t={tc} ahora={ahora} conMascota refresco={false} />
+                </div>
+              </>
+            ) : (
+              <div className="hidden min-[900px]:contents">
+                <SinProxima t={tc} />
+              </div>
+            )}
+            {ultima && (
+              <>
+                <div className="min-[900px]:hidden">
+                  <UltimaClaseCompacta clase={ultima} profesores={profesores} t={t} />
+                </div>
+                <div className="hidden min-[900px]:contents">
+                  <UltimaClase clase={ultima} profesores={profesores} t={t} />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="entra mt-[26px] min-[900px]:mt-9" style={{ animationDelay: "calc(var(--paso-escalonado) * 2)" }}>
@@ -138,6 +168,55 @@ function UltimaClase({ clase, profesores, t }: { clase: ClaseDelRecorrido; profe
       >
         {tc.verLoQueTrabajaste}
       </a>
+    </article>
+  );
+}
+
+/**
+ * LA ÚLTIMA CLASE EN MÓVIL: el título y la fecha, y nada más a la vista.
+ *
+ * Lo que la tarjeta de escritorio enseña abierto va aquí en un
+ * desplegable cerrado, «Temas tratados»: con quién fue, los temas (sin el
+ * recorte a cuatro líneas, ya que se ha pedido verlos) y «Ver clase
+ * completa», que lleva a su sitio en el historial. La chapa «Tu última
+ * clase» se queda como rótulo pequeño, pegado a la fecha. Sin temas no
+ * hay desplegable: queda el enlace solo.
+ */
+function UltimaClaseCompacta({ clase, profesores, t }: { clase: ClaseDelRecorrido; profesores: Map<string, string>; t: Textos }) {
+  const tc = t.clases;
+  const fecha = clase.fechaClase !== "" ? formatearFechaLarga(clase.fechaClase, t.progreso.fechaLarga) : null;
+  const profesor = clase.teacherId ? profesores.get(clase.teacherId) : undefined;
+  const enlace = (
+    <a href={`#clase-${clase.id}`} className="inline-flex min-h-[44px] items-center gap-1.5 text-[15px] font-bold text-marca-verdeOsc underline-offset-4 hover:underline">
+      {tc.verClaseCompleta}
+      <span aria-hidden>→</span>
+    </a>
+  );
+
+  return (
+    <article className={`${TARJETA} px-5 pb-2 pt-4`}>
+      <p className="text-[13px] leading-snug text-marca-gris">
+        {tc.tuUltimaClase}
+        {fecha && <span className="first-letter:uppercase">{` · ${fecha}`}</span>}
+      </p>
+      {clase.titulo !== "" && (
+        <h2 className="mt-1 text-pretty font-display text-[18px] font-bold leading-[1.2] text-marca-tinta">{clase.titulo}</h2>
+      )}
+      {clase.temas !== "" ? (
+        <details className="group mt-1">
+          <summary className={`${RESUMEN_DESPLEGABLE} justify-between`}>
+            {tc.temasTratados}
+            <FlechaDesplegable />
+          </summary>
+          <div className="pb-2">
+            {profesor && <p className="text-[14px] text-marca-gris first-letter:uppercase">{tc.conProfesor(profesor)}</p>}
+            <p className="mt-1.5 text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia">{clase.temas}</p>
+            {enlace}
+          </div>
+        </details>
+      ) : (
+        <div className="mt-1">{enlace}</div>
+      )}
     </article>
   );
 }

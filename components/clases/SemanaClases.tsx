@@ -29,6 +29,7 @@
 // enlace en el HTML con la sala abierta.
 // ---------------------------------------------------------------
 
+import { ID_CALENDARIO } from "@/components/clases/CtaProximaClase";
 import Link from "next/link";
 import { ventanaAbierta, type ClaseCalendario, type DiaCalendario, type SemanaCalendario, DIAS } from "@/lib/clases";
 import type { ClaseDelRecorrido } from "@/lib/gestion";
@@ -59,7 +60,13 @@ export default function SemanaClases({
   const clases = semana.dias.flatMap((d) => d.clases);
 
   return (
-    <section className="flex flex-col gap-4 min-[900px]:gap-5" aria-labelledby="titulo-calendario">
+    <section
+      // El destino del CTA de la próxima clase en móvil. El margen deja
+      // el título a la vista por debajo de la cabecera fija.
+      id={ID_CALENDARIO}
+      className="flex scroll-mt-16 flex-col gap-4 min-[900px]:gap-5"
+      aria-labelledby="titulo-calendario"
+    >
       <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
           <h2 id="titulo-calendario" className="font-display text-[20px] font-bold leading-tight text-marca-tinta min-[900px]:text-[24px]">

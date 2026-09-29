@@ -18,6 +18,7 @@ import {
 } from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
 import { comoFecha } from "@/lib/fechas";
+import { rutaDeMiCurso } from "@/lib/cursos";
 import { calcularDiploma } from "@/lib/diploma";
 import AvatarProfesor from "@/components/AvatarProfesor";
 import BannerCurso, { cursoTerminado } from "@/components/BannerCurso";
@@ -359,7 +360,20 @@ export default async function PerfilAlumno({
               dice en 8px de alto: cuánto llevas y cuánto falta. Con el
               banner sin caja, esa altura era lo único que seguía
               haciendo del diploma un bloque en vez de una línea. */}
-          <BannerDiploma estado={diploma} />
+          <BannerDiploma
+            estado={diploma}
+            // SIN BOTÓN, salvo un caso. La franja de debajo ya lleva
+            // «Continuar» a la misma lección, y dos botones seguidos al
+            // mismo sitio hacen dudar de cuál pulsar. La excepción es
+            // quien no ha empezado cuando la franja es la de la clase
+            // (sala abierta): entonces no hay «Empezar» en ningún otro
+            // sitio de la pantalla, y el diploma lo conserva.
+            href={
+              diploma.estado === "en-curso" && diploma.completadas === 0 && enVentana && principal?.siguiente
+                ? conFoco(rutaDeMiCurso(principal), foco)
+                : null
+            }
+          />
         </div>
 
         {/* La franja entra como pieza ya renderizada: la pinta el

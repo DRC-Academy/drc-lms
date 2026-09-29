@@ -4,7 +4,11 @@ import type { EstadoDiploma } from "@/lib/diploma";
 // ---------------------------------------------------------------
 // EL BANNER DEL DIPLOMA EN LA FICHA DE PROGRESO
 //
-// ⚠ ES LA COPIA de `components/DiplomaBanner.tsx` de DRC Gestión: mismo
+// ⚠ EL CALCO VALE PARA ESCRITORIO. Desde septiembre de 2026, en móvil
+// (hasta 720px) «Mi progreso» pinta el banner del diploma del LMS
+// (`components/BannerDiploma.tsx`) y este se oculta. Ver `Ficha.tsx`.
+//
+// ES LA COPIA de `components/DiplomaBanner.tsx` de DRC Gestión: mismo
 // dibujo, mismas clases `pg-diploma-*`, mismo copy. Va justo debajo de
 // la caja "Tu nivel", como allí. Si allí cambia una frase o un píxel,
 // aquí cambia lo mismo.

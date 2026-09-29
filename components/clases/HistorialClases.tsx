@@ -1,9 +1,10 @@
 // ---------------------------------------------------------------
 // EL HISTORIAL DE «CLASES»
 //
-// Las clases pasadas y lo que se trabajó en cada una. No es una pieza
-// nueva: es el recorrido clase a clase de la ficha de progreso
-// (`components/progreso/Recorrido.tsx`), con su CSS, en su modo
+// Las clases pasadas y lo que se trabajó en cada una. Desde la ronda de
+// móvil de septiembre de 2026 es el sendero (`SenderoClases`): por clase
+// la fecha y el título, y el resto en un desplegable. Antes era el
+// recorrido de la ficha de progreso con su CSS `pg-*`. Con su modo
 // `detalle` —quién dio cada clase—, y con
 // TODAS las clases, también las que no tienen análisis: esas salen con su
 // fecha y su profesor, sin contenido inventado.
@@ -19,8 +20,8 @@
 
 import type { ClaseDelRecorrido } from "@/lib/gestion";
 import type { TextosClases } from "@/lib/textos/clases";
-import Recorrido from "@/components/progreso/Recorrido";
-import { EstilosFicha } from "@/components/progreso/estilos";
+import SenderoClases from "@/components/clases/SenderoClases";
+import { TituloSeccion } from "@/components/base/Seccion";
 import AbrirClaseDelAncla from "@/components/clases/AbrirClaseDelAncla";
 
 export default function HistorialClases({
@@ -38,29 +39,20 @@ export default function HistorialClases({
 }) {
   return (
     <section className="flex flex-col gap-4" aria-labelledby="titulo-historial">
-      <header>
-        <h2 id="titulo-historial" className="font-display text-[22px] font-bold leading-tight text-marca-tinta lg:text-[24px]">
-          {t.historial}
-        </h2>
-        <p className="mt-1 text-[15px] text-marca-gris">{t.historialAyuda}</p>
-      </header>
+      {/* Sin la bajada «de la más reciente a la primera»: el sendero ya
+          se lee de arriba abajo, y la fecha de cada parada lo confirma. */}
+      <TituloSeccion id="titulo-historial">{t.historial}</TituloSeccion>
 
-      {/* `pg-page` pone las variables y la tipografía de la ficha; aquí no
-          es la página entera, así que no crece ni pinta fondo. */}
-      <div className="pg-page" style={{ flex: "none", background: "transparent" }}>
-        <EstilosFicha />
-        <Recorrido
-          clases={clases}
-          vacio={t.historialVacio}
-          retraso="0ms"
-          rotuloTemas={t.temasYVocabulario}
-          detalle={{ profesores, conProfesor: t.conProfesor }}
-          anclas={anclas}
-          visibles={1}
-          verMas={t.verMasClases}
-        />
-        {anclas && <AbrirClaseDelAncla />}
-      </div>
+      <SenderoClases
+        clases={clases}
+        vacio={t.historialVacio}
+        rotuloTemas={t.temasTratados}
+        detalle={{ profesores, conProfesor: t.conProfesor }}
+        anclas={anclas}
+        visibles={1}
+        verMas={t.verMasClases}
+      />
+      {anclas && <AbrirClaseDelAncla />}
     </section>
   );
 }

@@ -82,6 +82,7 @@ export default function Banner({
   asideWidth = "210px",
   ilustracion,
   children,
+  tituloDosLineas = false,
 }: {
   size?: BannerSize;
   /** Etiqueta corta en mayúsculas, con punto delante. */
@@ -107,6 +108,12 @@ export default function Banner({
   ilustracion?: ReactNode;
   /** Lo que va a ancho completo debajo de las dos columnas, si algo va. */
   children?: ReactNode;
+  /**
+   * El titular, en dos líneas como mucho y con puntos suspensivos. Para
+   * los que vienen de datos y no se eligen —el nombre de un módulo llega
+   * a 64 caracteres—; el texto entero sigue en el DOM para el lector.
+   */
+  tituloDosLineas?: boolean;
 }) {
   const esBarra = size === "bar";
 
@@ -146,7 +153,7 @@ export default function Banner({
       <h2
         className={`text-pretty font-display font-extrabold leading-[1.15] tracking-[-0.02em] text-white ${
           size === "lg" ? "text-[26px] min-[900px]:text-[34px]" : "text-[24px] min-[900px]:text-[28px]"
-        } ${eyebrow ? "mt-3" : ""}`}
+        } ${eyebrow ? "mt-3" : ""} ${tituloDosLineas ? "line-clamp-2" : ""}`}
       >
         {title}
       </h2>

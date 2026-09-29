@@ -126,6 +126,18 @@ export type TextosClases = {
   vacioInicio: string;
   /** El estado de una clase movida en la semana de escritorio del inicio, donde no cabe la frase entera. */
   reprogramadaCorta: string;
+
+  // --- la ronda de móvil de «Mis clases» ---
+  /** El CTA de una fila: "Jueves, 18:00", "Hoy, 18:00". */
+  cuandoCorto: (cuando: string, hora: string) => string;
+  /** El nombre del día solo, para el CTA: "jueves". */
+  nombreDiaMinuscula: (dia: DiaSemana) => string;
+  /** Para el lector de pantalla: a dónde lleva el CTA. */
+  irAlCalendario: string;
+  /** El desplegable de la última clase y del historial. */
+  temasTratados: string;
+  /** Dentro del desplegable de la última clase. */
+  verClaseCompleta: string;
 };
 
 const DIAS_ES: Record<DiaSemana, string> = {
@@ -232,6 +244,11 @@ export const CLASES: Record<Idioma, TextosClases> = {
     verTodasMisClases: "Ver todas mis clases",
     vacioInicio: "En cuanto fijes tu horario con tu profesor, verás aquí tu semana de clases.",
     reprogramadaCorta: "Reprogramada",
+    cuandoCorto: (cuando, hora) => `${cuando.charAt(0).toUpperCase()}${cuando.slice(1)}, ${hora}`,
+    nombreDiaMinuscula: (dia) => DIAS_ES[dia],
+    irAlCalendario: "Ver en tu calendario",
+    temasTratados: "Temas tratados",
+    verClaseCompleta: "Ver clase completa",
   },
 
   en: {
@@ -300,5 +317,10 @@ export const CLASES: Record<Idioma, TextosClases> = {
     verTodasMisClases: "See all my classes",
     vacioInicio: "As soon as you agree your schedule with your teacher, you'll see your week of classes here.",
     reprogramadaCorta: "Rescheduled",
+    cuandoCorto: (cuando, hora) => `${cuando.charAt(0).toUpperCase()}${cuando.slice(1)}, ${hora}`,
+    nombreDiaMinuscula: (dia) => DIAS_EN[dia],
+    irAlCalendario: "See it in your calendar",
+    temasTratados: "Topics covered",
+    verClaseCompleta: "See the full class",
   },
 };
