@@ -1,11 +1,8 @@
 import { profesorDelAlumno } from "@/lib/profesor-servidor";
 import { obtenerPerfil, obtenerRecorrido } from "@/lib/gestion";
-import {
-  calcularEstimacion,
-  nivelDelAlumno,
-  nivelMostrado,
-  preparaSuPropioExamen,
-} from "@/lib/estimacion";
+import { nivelDelAlumno, nivelMostrado } from "@/lib/estimacion";
+import { construirEstimacion } from "@/lib/estimacion-ficha";
+import { textoParaElAlumno } from "@/lib/texto-alumno";
 import { objetivoDelAlumno } from "@/lib/objetivo-servidor";
 import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
@@ -13,7 +10,6 @@ import { rutaDeMiCurso } from "@/lib/cursos";
 import { calcularDiploma } from "@/lib/diploma";
 import { conFoco } from "@/lib/foco";
 import { comoFecha } from "@/lib/fechas";
-import { textosActuales } from "@/lib/idioma-servidor";
 import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
 import Ficha from "@/components/progreso/Ficha";
 
@@ -57,8 +53,9 @@ const URL_AMPLIAR = RUTA_AMPLIAR;
 /**
  * El progreso del alumno, como cuarta sección.
  *
- * ES LA MISMA FICHA QUE `/progreso/{token}` DE DRC GESTIÓN, replicada
- * bloque a bloque: mismo orden, mismo copy y mismo CSS. Ver la cabecera
+ * ES LA MISMA FICHA QUE `/progreso/{token}` DE DRC GESTIÓN (la rediseñada
+ * el 30/09/2026), replicada bloque a bloque: mismo orden, mismo copy y
+ * mismo CSS. Ver la cabecera
  * de `components/progreso/Ficha.tsx`, que es donde vive la copia y donde
  * está anotado lo poco que no se replica.
  *
@@ -128,17 +125,22 @@ export default async function PaginaProgreso() {
   const mostrado = perfil ? nivelMostrado(alumnoId, perfil, profe?.nombre ?? null) : null;
   const nivel = mostrado?.nivel ?? null;
 
-  // Null mientras no se corra `gestion-vista-perfil-ritmo.sql` (faltan
-  // las horas), y también cuando el alumno ya está en C2 o ya está en el
-  // nivel del examen que prepara. En los tres casos no hay banner ni
-  // bandera de meta en la escalera, exactamente como en Gestión.
+  // LA ESTIMACIÓN DE GESTIÓN, NO LA DEL INICIO (`lib/estimacion-ficha.ts`):
+  // las mismas cinco fuentes en el mismo orden —el producto de WooCommerce
+  // primero—, para que esta pantalla y la ficha de Gestión nombren la misma
+  // meta. Null solo sin horas semanales (o sin la columna, mientras no se
+  // corra `gestion-vista-perfil-ritmo.sql`): entonces no hay banner de ritmo.
   const estimacion = perfil
-    ? calcularEstimacion({
+    ? construirEstimacion({
         nivelActual: nivel,
         horasSemanales: perfil.horasSemanales,
-        // Los mismos tres textos que mira Gestión, en el mismo orden.
-        textosDelPlan: [perfil.planContratado, perfil.objetivoSetter, perfil.objetivoPerfil],
-        t: textosActuales().banners,
+        fuentes: {
+          productoWoo: perfil.producto,
+          planAlumno: perfil.plan,
+          planAssignment: perfil.planContratado,
+          objetivo: perfil.objetivoSetter,
+          objetivoPersonal: textoParaElAlumno(perfil.objetivoPerfil),
+        },
       })
     : null;
 
@@ -148,29 +150,6 @@ export default async function PaginaProgreso() {
       <Ficha
         nombre={perfil?.nombre ?? ""}
         nivel={nivel}
-        // ---------------------------------------------------------------
-        // DE DÓNDE SALE EL NIVEL, Y POR QUÉ IMPORTA AQUÍ
-        //
-        // 125 de los 174 alumnos lo tienen puesto en el alta y sin
-        // confirmar —70 de ellos en B1, que es el valor por defecto—.
-        // Esta pantalla es la única que le enseña el nivel al alumno, y
-        // además calcula sobre él una estimación en horas y meses. Con
-        // `false` la ficha añade la nota de «estimado».
-        // ---------------------------------------------------------------
-        marcaNivel={{ origen: mostrado?.origen ?? "alta", profesor: mostrado?.profesor ?? null }}
-        // Sin estimación, pero con algo que decir: el alumno prepara el
-        // examen de su propio nivel. Son los 41 que hasta ahora no veían
-        // ningún banner. Ver `preparaSuPropioExamen`.
-        preparaExamen={
-          !estimacion && perfil !== null && nivel !== null
-            ? preparaSuPropioExamen(
-                [perfil.planContratado, perfil.objetivoSetter, perfil.objetivoPerfil],
-                nivel
-              )
-            : false
-        }
-        horasSemanales={perfil?.horasSemanales ?? null}
-        clasesContadas={recorrido.clasesContadas}
         estimacion={estimacion}
         objetivo={objetivo}
         puntosFuertes={perfil?.puntosFuertes ?? null}
@@ -178,16 +157,14 @@ export default async function PaginaProgreso() {
         focoRecomendado={perfil?.focoRecomendado ?? null}
         clases={recorrido.clases}
         urlAmpliar={URL_AMPLIAR}
-        // EL DIPLOMA, CON EL MISMO CÁLCULO QUE `/api/externo/diploma`: el
-        // curso principal manda y `calcularDiploma` dice cuánto falta. Es
-        // lo que Gestión pinta en su ficha pidiéndonoslo por HTTP; aquí
-        // sale del mismo render. Sin curso principal, "sin-curso", y la
-        // tarjeta no se pinta.
+        // LAS LECCIONES DEL DIPLOMA, con el mismo cálculo que
+        // `/api/externo/diploma` (lo que Gestión nos pide por HTTP): el curso
+        // principal manda. La CUENTA ATRÁS sale de `fechaInicio`, como en
+        // Gestión: seis meses desde que empezó.
         diploma={calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0)}
-        // A dónde lleva "Empezar mi curso": el mismo destino que la
-        // pestaña «Mi curso» de la cabecera, con el foco de revisión. Sin
-        // curso no hay botón —el estado es "sin-curso"—, así que el "/"
-        // es solo para que la prop no sea opcional.
+        fechaInicio={perfil?.fechaInicio ?? null}
+        // A dónde lleva la tarjeta del diploma: el mismo destino que la
+        // pestaña «Mi curso» de la cabecera, con el foco de revisión.
         hrefCurso={principal ? conFoco(rutaDeMiCurso(principal), paraEnlaces) : "/"}
       />
     </div>

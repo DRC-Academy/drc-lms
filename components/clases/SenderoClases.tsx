@@ -3,8 +3,15 @@ import type { ClaseDelRecorrido } from "@/lib/gestion";
 import { formatearFechaLarga } from "@/lib/perfil";
 import { esHito } from "@/lib/recorrido";
 import { textosActuales } from "@/lib/idioma-servidor";
-import type { DetalleRecorrido } from "@/components/progreso/Recorrido";
 import { FlechaDesplegable, RESUMEN_DESPLEGABLE, TARJETA } from "@/components/base/Seccion";
+
+/** Lo que el historial añade a cada clase. (Vivía en `components/progreso/Recorrido`, borrado el 30/09/2026.) */
+export type DetalleRecorrido = {
+  /** El nombre de cada profesor por `teacher_id`. */
+  profesores: Map<string, string>;
+  /** "con Ignacio" */
+  conProfesor: (nombre: string) => string;
+};
 
 // ---------------------------------------------------------------
 // LAS CLASES PASADAS, COMO UN SENDERO

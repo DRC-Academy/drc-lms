@@ -67,7 +67,7 @@ export type TextosBanners = {
   faltanParaDiploma: (restantes: number, total: number) => string;
   /** El recuento junto al carril: es la escala de la barra. */
   progresoDiploma: (hechas: number, total: number) => string;
-  // El banner del diploma de la ficha de progreso (components/progreso/BannerDiplomaFicha),
+  // El banner del diploma de la ficha de progreso (components/progreso/Ficha, TarjetaDiploma),
   // que es el mismo que el de Gestión: un rótulo por estado, la frase de quien no ha
   // empezado y su botón, y la frase de quien ya lo tiene.
   tuCaminoAlDiploma: string;
@@ -142,6 +142,24 @@ export type TextosBanners = {
   /** Todo lo que dice el dibujo, para el lector de pantalla. */
   ritmoLector: (nivel: string, horasActual: number, mesesActual: number, horasMas: number, mesesMas: number) => string;
 
+  // --- las otras cuatro variantes de la comparativa (`datosDeRitmo`) ---
+  /** Ya va a 5 h o más: el titular. */
+  vasAlRitmoMasRapido: string;
+  /** Debajo, con cifra: "llegas al nivel B2 en unos 3 meses". */
+  llegasAEn: (nivel: string, meses: number) => string;
+  /** Debajo, sin estimación: "hacia tu meta". */
+  haciaTuMetaSinCifras: string;
+  /** Sin nivel, sin horas o sin ahorro: los dos caminos sin cifras. */
+  conMasHorasLlegasAntes: string;
+  /** C2 sin examen: no hay meta fija, así que no se «llega antes». */
+  conMasHorasAvanzasMas: string;
+  /** La segunda fila sin cifras. */
+  conMasHorasALaSemana: string;
+  /** La meta de quien ya está en C2 sin examen. */
+  perfeccionarTuC2: string;
+  /** Lector de pantalla de las variantes sin comparación. */
+  ritmoLectorMaximo: (nivel: string | null, meses: number | null) => string;
+
   // --- posición dentro del temario ---
   posicion: (mes: number, semana: number, modulo: number) => string;
 };
@@ -150,6 +168,13 @@ export type TextosBanners = {
 // que es como abrevia la RAE; sin él en inglés, que no lo lleva.
 const MESES_CORTOS_ES = ["ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sept.", "oct.", "nov.", "dic."];
 const MESES_CORTOS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"];
+
+/**
+ * «unos 3 meses», y con uno, «un mes»: ni «unos 1 meses» ni «unos 1 mes».
+ * Todas las frases de meses de la comparativa pasan por aquí.
+ */
+const ES_UNOS_MESES = (cantidad: number) => (cantidad === 1 ? "un mes" : `unos ${cantidad} meses`);
+const EN_UNOS_MESES = (cantidad: number) => `about ${cantidad} ${cantidad === 1 ? "month" : "months"}`;
 
 const ES: TextosBanners = {
   sinCursoTitulo: "Tu plan todavía no tiene un curso asociado. Coméntaselo a tu profesor y lo activamos.",
@@ -218,7 +243,7 @@ const ES: TextosBanners = {
     `Con ${horasExtra} h más a la semana, llegas a Nivel ${nivel} unos ${meses} ${meses === 1 ? "mes" : "meses"} antes.`,
   tuRitmoActual: "Tu ritmo actual",
   conHorasALaSemana: (horas) => `Con ${horas} h a la semana`,
-  unosMeses: (cantidad) => `unos ${cantidad} ${cantidad === 1 ? "mes" : "meses"}`,
+  unosMeses: (cantidad) => ES_UNOS_MESES(cantidad),
   estasAqui: "Estás aquí",
   tuMeta: "Tu meta",
   quieroIrMasRapido: "Quiero ir más rápido",
@@ -226,7 +251,19 @@ const ES: TextosBanners = {
   conHorasMasHasta: (horasExtra, nivel) => `Con ${horasExtra} h más a la semana, hasta el nivel ${nivel}.`,
   nivelMeta: (nivel) => `Nivel ${nivel}`,
   ritmoLector: (nivel, horasActual, mesesActual, horasMas, mesesMas) =>
-    `Hacia Nivel ${nivel}: a tu ritmo actual, ${horasActual} h a la semana, unos ${mesesActual} meses. Con ${horasMas} h a la semana, unos ${mesesMas} meses.`,
+    `Hacia Nivel ${nivel}: a tu ritmo actual, ${horasActual} h a la semana, ${ES_UNOS_MESES(mesesActual)}. Con ${horasMas} h a la semana, ${ES_UNOS_MESES(mesesMas)}.`,
+
+  vasAlRitmoMasRapido: "Vas al ritmo más rápido",
+  llegasAEn: (nivel, meses) => `Llegas al nivel ${nivel} en ${ES_UNOS_MESES(meses)}.`,
+  haciaTuMetaSinCifras: "Vas al ritmo más rápido hacia tu meta.",
+  conMasHorasLlegasAntes: "Con más horas a la semana, llegas antes a tu meta",
+  conMasHorasAvanzasMas: "Con más horas a la semana, avanzas más en tu inglés",
+  conMasHorasALaSemana: "Con más horas a la semana",
+  perfeccionarTuC2: "Perfeccionar tu C2",
+  ritmoLectorMaximo: (nivel, meses) =>
+    nivel && meses
+      ? `Vas al ritmo más rápido: llegas al nivel ${nivel} en ${ES_UNOS_MESES(meses)}.`
+      : "Vas al ritmo más rápido hacia tu meta.",
 
   posicion: (mes, semana, modulo) => `Mes ${mes} · Semana ${semana} · Módulo ${modulo}`,
 };
@@ -299,7 +336,7 @@ const EN: TextosBanners = {
     `With ${horasExtra} more ${horasExtra === 1 ? "hour" : "hours"} a week, you reach Level ${nivel} about ${meses} ${meses === 1 ? "month" : "months"} sooner.`,
   tuRitmoActual: "Your current pace",
   conHorasALaSemana: (horas) => `With ${horas} h a week`,
-  unosMeses: (cantidad) => `about ${cantidad} ${cantidad === 1 ? "month" : "months"}`,
+  unosMeses: (cantidad) => EN_UNOS_MESES(cantidad),
   estasAqui: "You are here",
   tuMeta: "Your goal",
   quieroIrMasRapido: "I want to go faster",
@@ -307,7 +344,19 @@ const EN: TextosBanners = {
   conHorasMasHasta: (horasExtra, nivel) => `With ${horasExtra} more ${horasExtra === 1 ? "hour" : "hours"} a week, all the way to ${nivel}.`,
   nivelMeta: (nivel) => `Level ${nivel}`,
   ritmoLector: (nivel, horasActual, mesesActual, horasMas, mesesMas) =>
-    `Towards Level ${nivel}: at your current pace, ${horasActual} h a week, about ${mesesActual} months. With ${horasMas} h a week, about ${mesesMas} months.`,
+    `Towards Level ${nivel}: at your current pace, ${horasActual} h a week, ${EN_UNOS_MESES(mesesActual)}. With ${horasMas} h a week, ${EN_UNOS_MESES(mesesMas)}.`,
+
+  vasAlRitmoMasRapido: "You're going at the fastest pace",
+  llegasAEn: (nivel, meses) => `You'll reach level ${nivel} in ${EN_UNOS_MESES(meses)}.`,
+  haciaTuMetaSinCifras: "You're going at the fastest pace towards your goal.",
+  conMasHorasLlegasAntes: "With more hours a week, you reach your goal sooner",
+  conMasHorasAvanzasMas: "With more hours a week, your English goes further",
+  conMasHorasALaSemana: "With more hours a week",
+  perfeccionarTuC2: "Perfect your C2",
+  ritmoLectorMaximo: (nivel, meses) =>
+    nivel && meses
+      ? `You're going at the fastest pace: you'll reach level ${nivel} in ${EN_UNOS_MESES(meses)}.`
+      : "You're going at the fastest pace towards your goal.",
 
   posicion: (mes, semana, modulo) => `Month ${mes} · Week ${semana} · Module ${modulo}`,
 };

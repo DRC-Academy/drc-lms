@@ -74,6 +74,45 @@ export type TextosProgreso = {
   /** "19 de agosto de 2026" / "19 August 2026". */
   fechaLarga: FormatoFecha;
   hito: string;
+
+  // --- La ficha rediseñada (30/09/2026, copia de la de Gestión) ---
+  /** "Hola, Ana." */
+  hola: (nombre: string) => string;
+  entradilla: string;
+  tuRitmo: string;
+  /** Nombre accesible del selector de horas. */
+  horasALaSemana: string;
+  /** Lo que se pregunta arriba del selector. `nivel` null = meta sin nombre. */
+  ritmoPregunta: (tope: boolean, nivel: string | null, examen: boolean) => string;
+  /** Lo que va encima de la fecha: "Llegarías al B2 en". */
+  ritmoFrase: (tope: boolean, nivel: string | null, examen: boolean) => string;
+  /** La etiqueta de cada plan en el selector: "2 h", y "· tu plan" en el suyo. */
+  horas: (h: number) => string;
+  tuPlanNota: string;
+  mesDeLlegada: (indiceMes: number, anio: number) => string;
+  /** "4 meses · es tu plan actual". */
+  detalleActual: (meses: number) => string;
+  /** "4 meses · 3 meses antes que con tu plan". */
+  detalleAhorro: (meses: number, ahorro: number) => string;
+  enMeses: (n: number) => string;
+  ampliaTuPlan: string;
+  tuDiploma: string;
+  /** "2 meses y 5 días" · "23 días". */
+  cuentaDiploma: (meses: number, dias: number) => string;
+  paraTuDiploma: string;
+  leccionesDe: (hechas: number, total: number) => string;
+  diplomaHoy: string;
+  retomaTuCurso: string;
+  retomaTuCursoCorto: string;
+  diplomaConseguido: string;
+  empezarMiCurso: string;
+  irAMiCurso: string;
+  continuarMiCurso: string;
+  verMiCurso: string;
+  /** "16 clases · la última, el 25 de septiembre: Condicionales". */
+  recorridoResumen: (n: number, fecha: string | null, titulo: string | null) => string;
+  verTodas: string;
+  plegar: string;
 };
 
 const ES: TextosProgreso = {
@@ -111,6 +150,49 @@ const ES: TextosProgreso = {
   claseNumero: (n) => `Clase ${n}`,
   fechaLarga: (dia, indiceMes, anio) => `${dia} de ${MESES_ES[indiceMes]} de ${anio}`,
   hito: "Hito",
+
+  hola: (nombre) => (nombre ? `Hola, ${nombre}.` : "Hola."),
+  entradilla: "Esto es lo que llevas recorrido y lo que te queda por delante.",
+  tuRitmo: "Tu ritmo",
+  horasALaSemana: "Horas de clase a la semana",
+  ritmoPregunta: (tope, nivel, examen) => {
+    const destino = nivel ? (examen ? `preparado al ${nivel}` : `al ${nivel}`) : null;
+    if (tope) return "Vas al mejor ritmo posible: ya haces el máximo de clases a la semana.";
+    return destino ? `Elige tu ritmo y mira cuándo llegas ${destino}.` : "Elige tu ritmo y mira cuándo consigues tu objetivo.";
+  },
+  ritmoFrase: (tope, nivel, examen) => {
+    const destino = nivel ? (examen ? `preparado al ${nivel}` : `al ${nivel}`) : null;
+    if (tope) return destino ? `Llegarás ${destino} en` : "Conseguirás tu objetivo en";
+    return destino ? `Llegarías ${destino} en` : "Conseguirías tu objetivo en";
+  },
+  horas: (h) => `${h} h`,
+  tuPlanNota: " · tu plan",
+  mesDeLlegada: (indiceMes, anio) => `${MESES_ES[indiceMes]} de ${anio}`,
+  detalleActual: (meses) => `${meses === 1 ? "1 mes" : `${meses} meses`} · es tu plan actual`,
+  detalleAhorro: (meses, ahorro) =>
+    `${meses === 1 ? "1 mes" : `${meses} meses`} · ${ahorro === 1 ? "1 mes" : `${ahorro} meses`} antes que con tu plan`,
+  enMeses: (n) => (n === 1 ? "1 mes" : `${n} meses`),
+  ampliaTuPlan: "Amplía tu plan",
+  tuDiploma: "Tu diploma",
+  cuentaDiploma: (meses, dias) => {
+    const m = meses === 1 ? "1 mes" : `${meses} meses`;
+    const d = dias === 1 ? "1 día" : `${dias} días`;
+    return meses === 0 ? d : dias === 0 ? m : `${m} y ${d}`;
+  },
+  paraTuDiploma: "para tu diploma",
+  leccionesDe: (hechas, total) => `${hechas} de ${total} lecciones`,
+  diplomaHoy: "Hoy es el día de tu diploma",
+  retomaTuCurso: "¡Retoma tu curso y consigue tu diploma!",
+  retomaTuCursoCorto: "¡Retoma tu curso!",
+  diplomaConseguido: "Diploma conseguido",
+  empezarMiCurso: "Empezar mi curso",
+  irAMiCurso: "Ir a mi curso",
+  continuarMiCurso: "Continuar mi curso",
+  verMiCurso: "Ver mi curso",
+  recorridoResumen: (n, fecha, titulo) =>
+    [`${n} ${n === 1 ? "clase" : "clases"}`, [fecha ? `la última, el ${fecha}` : "la última", titulo].filter(Boolean).join(": ")].join(" · "),
+  verTodas: "Ver todas",
+  plegar: "Plegar",
 };
 
 const EN: TextosProgreso = {
@@ -149,6 +231,49 @@ const EN: TextosProgreso = {
   claseNumero: (n) => `Class ${n}`,
   fechaLarga: (dia, indiceMes, anio) => `${dia} ${MESES_EN[indiceMes]} ${anio}`,
   hito: "Milestone",
+
+  hola: (nombre) => (nombre ? `Hi, ${nombre}.` : "Hi."),
+  entradilla: "Here's how far you've come and what's still ahead.",
+  tuRitmo: "Your pace",
+  horasALaSemana: "Class hours per week",
+  ritmoPregunta: (tope, nivel, examen) => {
+    if (tope) return "You're at the best pace possible: you already take the most classes a week.";
+    if (!nivel) return "Pick your pace and see when you reach your goal.";
+    return examen ? `Pick your pace and see when you're ready for ${nivel}.` : `Pick your pace and see when you reach ${nivel}.`;
+  },
+  ritmoFrase: (tope, nivel, examen) => {
+    if (!nivel) return tope ? "You'll reach your goal in" : "You'd reach your goal in";
+    const verbo = tope ? "You'll" : "You'd";
+    return examen ? `${verbo} be ready for ${nivel} in` : `${verbo} reach ${nivel} in`;
+  },
+  horas: (h) => `${h} h`,
+  tuPlanNota: " · your plan",
+  mesDeLlegada: (indiceMes, anio) => `${MESES_EN[indiceMes]} ${anio}`,
+  detalleActual: (meses) => `${meses === 1 ? "1 month" : `${meses} months`} · your current plan`,
+  detalleAhorro: (meses, ahorro) =>
+    `${meses === 1 ? "1 month" : `${meses} months`} · ${ahorro === 1 ? "1 month" : `${ahorro} months`} sooner than your plan`,
+  enMeses: (n) => (n === 1 ? "1 month" : `${n} months`),
+  ampliaTuPlan: "Upgrade your plan",
+  tuDiploma: "Your diploma",
+  cuentaDiploma: (meses, dias) => {
+    const m = meses === 1 ? "1 month" : `${meses} months`;
+    const d = dias === 1 ? "1 day" : `${dias} days`;
+    return meses === 0 ? d : dias === 0 ? m : `${m} and ${d}`;
+  },
+  paraTuDiploma: "to your diploma",
+  leccionesDe: (hechas, total) => `${hechas} of ${total} lessons`,
+  diplomaHoy: "Today is your diploma day",
+  retomaTuCurso: "Pick your course back up and get your diploma!",
+  retomaTuCursoCorto: "Pick your course back up!",
+  diplomaConseguido: "Diploma earned",
+  empezarMiCurso: "Start my course",
+  irAMiCurso: "Go to my course",
+  continuarMiCurso: "Continue my course",
+  verMiCurso: "See my course",
+  recorridoResumen: (n, fecha, titulo) =>
+    [`${n} ${n === 1 ? "class" : "classes"}`, [fecha ? `the latest on ${fecha}` : "the latest", titulo].filter(Boolean).join(": ")].join(" · "),
+  verTodas: "See all",
+  plegar: "Collapse",
 };
 
 export const PROGRESO: Record<Idioma, TextosProgreso> = { en: EN, es: ES };
