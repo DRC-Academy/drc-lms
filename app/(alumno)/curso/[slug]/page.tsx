@@ -1,6 +1,6 @@
 import { nivelDelAlumno } from "@/lib/estimacion";
 import { notFound, redirect } from "next/navigation";
-import { focoActual } from "@/lib/sesion-servidor";
+import { alumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { arbolDelCurso, cursoPorSlug, cursosAsignados, fechaDelDrip } from "@/lib/cursos-servidor";
 import { construirTemario } from "@/lib/temario";
@@ -34,7 +34,7 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
   // La tira de "estás revisando" la pone la cabecera, que vive en el
   // layout: aquí solo hace falta de quién es el curso y qué colgar de
   // los enlaces para no perderlo al entrar en una lección.
-  const { alumnoId, paraEnlaces } = await focoActual();
+  const { alumnoId, paraEnlaces } = await alumnoDeLaPagina();
 
   const curso = await cursoPorSlug(params.slug);
   if (!curso) notFound();

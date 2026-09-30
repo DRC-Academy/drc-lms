@@ -1,14 +1,13 @@
-import { nivelMcer } from "@/lib/recorrido";
+import { profesorDelAlumno } from "@/lib/profesor-servidor";
 import { obtenerPerfil, obtenerRecorrido } from "@/lib/gestion";
 import {
   calcularEstimacion,
   nivelDelAlumno,
-  nivelEsFiable,
-  origenDelNivel,
+  nivelMostrado,
   preparaSuPropioExamen,
 } from "@/lib/estimacion";
 import { objetivoDelAlumno } from "@/lib/objetivo-servidor";
-import { exigirFoco } from "@/lib/sesion-servidor";
+import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
 import { rutaDeMiCurso } from "@/lib/cursos";
 import { calcularDiploma } from "@/lib/diploma";
@@ -78,7 +77,7 @@ export default async function PaginaProgreso() {
   // Igual que "Para ti": el alumno de la sesión, o el que el equipo está
   // revisando. Esta pantalla es de solo lectura —no hay nada que
   // guardar— así que la revisión no necesita ninguna precaución extra.
-  const { alumnoId, paraEnlaces } = await exigirFoco();
+  const { alumnoId, paraEnlaces } = await exigirAlumnoDeLaPagina();
 
   const [perfil, recorrido] = await Promise.all([
     obtenerPerfil(alumnoId),
@@ -121,9 +120,13 @@ export default async function PaginaProgreso() {
   // fuente de MENOR prioridad. Con las dos columnas nuevas se aplica la
   // misma regla y el alumno sale en el mismo peldaño en las dos
   // pantallas; sin ellas esto se queda en el de siempre.
-  const nivel = perfil
-    ? nivelMcer(nivelDelAlumno(alumnoId, perfil))
-    : null;
+  //
+  // El valor y la marca salen de la MISMA llamada (`nivelMostrado`), la
+  // de «Cómo vas»: un alumno congelado enseña el nivel del alta y la
+  // marca del alta, no el de un origen y la marca de otro.
+  const profe = perfil ? await profesorDelAlumno(alumnoId) : null;
+  const mostrado = perfil ? nivelMostrado(alumnoId, perfil, profe?.nombre ?? null) : null;
+  const nivel = mostrado?.nivel ?? null;
 
   // Null mientras no se corra `gestion-vista-perfil-ritmo.sql` (faltan
   // las horas), y también cuando el alumno ya está en C2 o ya está en el
@@ -154,18 +157,7 @@ export default async function PaginaProgreso() {
         // además calcula sobre él una estimación en horas y meses. Con
         // `false` la ficha añade la nota de «estimado».
         // ---------------------------------------------------------------
-        nivelFiable={
-          perfil
-            ? nivelEsFiable(
-                origenDelNivel(
-                  perfil.nivelProfesor,
-                  perfil.nivelFicha,
-                  perfil.nivelPrueba,
-                  perfil.nivel
-                )
-              )
-            : false
-        }
+        marcaNivel={{ origen: mostrado?.origen ?? "alta", profesor: mostrado?.profesor ?? null }}
         // Sin estimación, pero con algo que decir: el alumno prepara el
         // examen de su propio nivel. Son los 41 que hasta ahora no veían
         // ningún banner. Ver `preparaSuPropioExamen`.

@@ -1,6 +1,7 @@
 import { nivelDelAlumno } from "@/lib/estimacion";
+import { profesorDelAlumno } from "@/lib/profesor-servidor";
 import { notFound, redirect } from "next/navigation";
-import { focoActual } from "@/lib/sesion-servidor";
+import { alumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { conFoco } from "@/lib/foco";
 import { obtenerPerfil } from "@/lib/gestion";
 import {
@@ -29,7 +30,7 @@ export default async function PaginaLeccion({
   // Quién es el alumno de esta lección: él mismo, el revisado, o nadie
   // —el equipo repasando contenido—. Ver la cabecera equivalente en
   // `app/curso/[slug]/page.tsx`.
-  const { sesion, alumnoId, paraEnlaces } = await focoActual();
+  const { sesion, alumnoId, paraEnlaces } = await alumnoDeLaPagina();
 
   // ---------------------------------------------------------------
   // DOS OLAS, NO SIETE ESPERAS
@@ -168,7 +169,7 @@ export default async function PaginaLeccion({
       // cookie y no esto.
       registrarIntentos={sesion.rol === "alumno"}
       foco={paraEnlaces}
-      profesor={perfil?.profesor.trim() ?? ""}
+      profesor={(await profesorDelAlumno(alumnoId))?.nombre ?? ""}
     />
   );
 }

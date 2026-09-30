@@ -151,7 +151,12 @@ export type PerfilAlumno = {
    * ni se usa para generar ejercicios. Está aquí por si sirve más adelante.
    */
   objetivoSetter: string | null;
+  /** El usuario de Gestión del profesor de su ficha («DanielaN»). Para enseñarlo, `profesorDelAlumno`. */
   profesor: string;
+  /** El `teacher_id` de su assignment. Null hasta que la vista lo exponga (`gestion-nombre-visible-profesor.sql`). */
+  profesorId: string | null;
+  /** El nombre visible que se puso en Gestión. Null si no lo tiene, o si la vista aún no lo expone. */
+  profesorVisible: string | null;
   /**
    * Cuándo empezó con la academia (`assignments.start_date`, el más
    * antiguo de sus assignments activos). Es lo que fija la apertura

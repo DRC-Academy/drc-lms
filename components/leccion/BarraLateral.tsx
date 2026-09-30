@@ -42,8 +42,8 @@ import type { EstadisticasAlumno } from "@/lib/estadisticas";
  * está en CSS (`.barra-app` en `globals.css`); aquí solo se marca qué se
  * ve abierta (`.barra-rotulo`).
  *
- * LAS ESTADÍSTICAS LLEGAN HECHAS, por props desde el layout
- * (`lib/estadisticas-servidor.ts`). Esta barra no lee nada. Para el
+ * LAS ESTADÍSTICAS LLEGAN HECHAS, por props desde el slot `@marco`
+ * (`lib/navegacion-servidor.ts`), del mismo alumno que la página. Esta barra no lee nada. Para el
  * lector de pantalla van siempre en texto (`sr-only`): lo que solo sale
  * abierta se oculta con `visibility`, que también lo oculta a él.
  */
@@ -234,26 +234,6 @@ function ComoVasDeLaBarra({ estadisticas, hrefPractica }: { estadisticas: Estadi
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * El hueco de la barra mientras el layout lee la sesión: el símbolo, que
- * no depende de nada, y sitio para lo demás.
- */
-export function BarraLateralCargando() {
-  return (
-    <aside
-      aria-hidden
-      className="sticky top-0 hidden h-dvh w-[80px] shrink-0 flex-col items-center border-r border-marca-borde bg-white pb-[18px] pt-[18px] min-[900px]:flex"
-    >
-      <Image src="/simbolo-drc.png" alt="" width={40} height={40} priority className="mb-[22px] h-10 w-10" />
-      <div className="flex flex-col gap-1.5">
-        {[0, 1, 2, 3].map((i) => (
-          <span key={i} className="h-11 w-11 rounded-[12px] bg-marca-niebla" />
-        ))}
-      </div>
-    </aside>
   );
 }
 

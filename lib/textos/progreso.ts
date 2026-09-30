@@ -47,6 +47,10 @@ export type TextosProgreso = {
   clasesHechas: (n: number) => string;
   nivelActual: string;
   nivelEstimado: string;
+  /** El nivel lo midió la prueba automática: medido, pero sin confirmar. */
+  nivelPrueba: string;
+  /** Lo confirmó su profesor. Solo con `nivel_profesor`. */
+  nivelConfirmadoPor: (profesor: string | null) => string;
   cadaSemana: string;
   clase: string;
   proximoHito: string;
@@ -81,6 +85,8 @@ const ES: TextosProgreso = {
   clasesHechas: (n) => (n === 1 ? "Clase hecha" : "Clases hechas"),
   nivelActual: "Nivel actual",
   nivelEstimado: "Estimado · confírmalo con tu profesor",
+  nivelPrueba: "Según tu prueba de nivel",
+  nivelConfirmadoPor: (profesor) => (profesor ? `✓ Confirmado por ${profesor}` : "✓ Confirmado por tu profesor"),
   cadaSemana: "Cada semana",
   clase: "Clase",
   proximoHito: "Próximo hito",
@@ -118,6 +124,8 @@ const EN: TextosProgreso = {
   // Conserva la distancia del español: es una estimación nuestra, no un
   // hecho, y quien la confirma es el profesor.
   nivelEstimado: "Estimated · check it with your teacher",
+  nivelPrueba: "From your level test",
+  nivelConfirmadoPor: (profesor) => (profesor ? `✓ Confirmed by ${profesor}` : "✓ Confirmed by your teacher"),
   cadaSemana: "Each week",
   clase: "Class",
   proximoHito: "Next milestone",

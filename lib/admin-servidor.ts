@@ -25,7 +25,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { baseLms } from "@/lib/supabase-lms";
-import { alumnosDelPanel, clasesDelPanel, type AlumnoPanel } from "@/lib/gestion";
+import { alumnosDelPanel, clasesDelPanel, obtenerProfesores, profesoresFueraDeLaFicha, type AlumnoPanel } from "@/lib/gestion";
 import { esIdDemo } from "@/lib/demo/cuenta";
 import { detectarExamen } from "@/lib/perfil";
 import { origenDelNivel, nivelEsFiable, type OrigenNivel } from "@/lib/estimacion";
@@ -783,3 +783,60 @@ export function detalleDeVista(
       return { titulo: "Generaron y no completaron", alumnos: atencion.generaronSinCompletar, ...llana };
   }
 }
+
+
+// ---------------------------------------------------------------
+// PROFESOR DISTINTO DEL DE LA FICHA
+//
+// Decisión de producto (30/09/2026): al alumno se le nombra siempre el
+// profesor de su ficha. Si el calendario o la última clase dicen otro
+// —un suplente, un cambio a medias en Gestión—, el alumno no ve nada
+// distinto y el equipo lo ve aquí, para arreglarlo en Gestión si toca.
+// ---------------------------------------------------------------
+
+export type DiscrepanciaProfesor = {
+  alumnoId: string;
+  nombre: string;
+  /** El de la ficha, tal como está en Gestión (usuario). */
+  ficha: string;
+  /** Los del calendario que no son el de la ficha. Vacío si coinciden. */
+  calendario: string[];
+  /** Quien dio la última clase, si no es el de la ficha. */
+  ultimaClase: string | null;
+};
+
+/** La cuenta de pruebas de Facundo: no es un alumno. */
+const CUENTA_DE_PRUEBAS = "s_1785879819493";
+
+export const discrepanciasDeProfesor = unstable_cache(
+  async (): Promise<DiscrepanciaProfesor[]> => {
+    const [alumnos, profesores, fuera] = await Promise.all([
+      alumnosDelPanel(),
+      obtenerProfesores(),
+      profesoresFueraDeLaFicha(),
+    ]);
+    const usuario = (id: string) => profesores.get(id)?.usuario.trim() ?? id;
+    const mismo = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+    const salida: DiscrepanciaProfesor[] = [];
+    for (const a of alumnos) {
+      if (a.alumnoId === CUENTA_DE_PRUEBAS || esIdDemo(a.alumnoId)) continue;
+      const ficha = a.profesor.trim();
+      if (!ficha) continue;
+
+      const calendario = Array.from(fuera.calendario.get(a.alumnoId) ?? [])
+        .map(usuario)
+        .filter((n) => !mismo(n, ficha));
+      const idUltima = fuera.ultimaClase.get(a.alumnoId);
+      const ultima = idUltima ? usuario(idUltima) : null;
+      const ultimaClase = ultima && !mismo(ultima, ficha) ? ultima : null;
+
+      if (calendario.length > 0 || ultimaClase) {
+        salida.push({ alumnoId: a.alumnoId, nombre: a.nombre, ficha, calendario, ultimaClase });
+      }
+    }
+    return salida.sort((x, y) => x.nombre.localeCompare(y.nombre, "es"));
+  },
+  ["discrepancias-profesor"],
+  { revalidate: 300 }
+);

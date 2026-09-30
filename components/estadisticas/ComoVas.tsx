@@ -15,14 +15,14 @@ import type { TextosEstadisticas } from "@/lib/textos/estadisticas";
  *                       profesor. NO ES UNA RACHA. La llama no se apaga
  *                       ni castiga: con pocas clases sale más pequeña y
  *                       más tranquila (`Llama`), nada más.
- *   El nivel            la escalera A1–C2. El peldaño actual va hueco y
- *                       con «estimado» mientras nadie lo ha medido; lleno
- *                       y con el nombre del profesor cuando él lo
- *                       confirma. Un nivel calculado no puede leerse
- *                       como un hecho.
+ *   El nivel            la escalera A1–C2, con la marca de
+ *                       `nivelMostrado`: «✓ Daniela» solo si lo confirmó
+ *                       su profesor, «prueba de nivel» si lo midió la
+ *                       prueba automática, «estimado» si es el del alta.
  *   Tres círculos       ejercicios distintos hechos, bloques de «Para ti»
  *                       terminados y las semanas que quedan de las 24
- *                       (este sí es un anillo de progreso).
+ *                       (este sí es un anillo de progreso). Pasadas las
+ *                       24: «Todo tu curso está abierto».
  *
  * NINGÚN PORCENTAJE DEL CURSO: lo enseña el anillo de la barra y el
  * banner del diploma.
@@ -51,10 +51,15 @@ const SECUNDARIO = "text-[#CFE2D4]";
 export function lecturasComoVas(e: EstadisticasAlumno, te: TextosEstadisticas): string[] {
   const l: string[] = [];
   if (e.clases !== null) l.push(e.clases === 0 ? te.lector.clasesVacio : te.lector.clases(e.clases, e.profesor));
-  if (e.nivel) l.push(te.lector.nivel(e.nivel.valor, e.nivel.fiable));
+  if (e.nivel) l.push(te.lector.nivel(e.nivel.valor, e.nivel.origen, e.nivel.profesor));
   if (e.ejercicios !== null) l.push(e.ejercicios === 0 ? te.lector.ejerciciosVacio : te.lector.ejercicios(e.ejercicios));
   if (e.bloques !== null) l.push(e.bloques === 0 ? te.lector.practicaVacio : te.lector.practica(e.bloques));
-  if (e.tiempo) l.push(te.lector.tiempo(e.tiempo.semanasRestantes, e.tiempo.semanasTotales));
+  if (e.tiempo)
+    l.push(
+      e.tiempo.semanasRestantes === 0
+        ? te.lector.cursoAbierto
+        : te.lector.tiempo(e.tiempo.semanasRestantes, e.tiempo.semanasTotales)
+    );
   return l;
 }
 
@@ -128,11 +133,18 @@ export default function ComoVas({
     const { semanasRestantes: n, semanasTotales: total } = e.tiempo;
     medallas.push({
       clave: "tiempo",
-      contenido: (
-        <Medalla movil={movil} rotulo={tt.semanas(n)} progreso={(total - n) / total}>
-          {n}
-        </Medalla>
-      ),
+      // Cumplidas las 24 semanas, el anillo va cerrado y dice lo que
+      // significa para el alumno —lo tiene todo abierto—, no que se acabó.
+      contenido:
+        n === 0 ? (
+          <Medalla movil={movil} rotulo={tt.cursoAbierto} progreso={1}>
+            <IconoAbierto />
+          </Medalla>
+        ) : (
+          <Medalla movil={movil} rotulo={tt.semanas(n)} progreso={(total - n) / total}>
+            {n}
+          </Medalla>
+        ),
     });
   }
 
@@ -171,12 +183,12 @@ export default function ComoVas({
               </p>
             </div>
           ) : (
-            <p className={`font-medium leading-snug ${movil ? "text-[15px]" : "text-[13.5px]"}`}>{tt.clasesVacio(profesor)}</p>
+            <p className={`font-medium leading-snug ${movil ? "text-[15px]" : "text-[13.5px]"}`}>{tt.clasesVacio(profesor?.nombre ?? null)}</p>
           )}
         </div>
       )}
 
-      {nivel && <Escalera nivel={nivel} profesor={profesor} movil={movil} te={te} />}
+      {nivel && <Escalera nivel={nivel} movil={movil} te={te} />}
 
       {medallas.length > 0 && (
         <div
@@ -213,7 +225,7 @@ export function ComoVasPlegado({ estadisticas: e }: { estadisticas: Estadisticas
       {nivel && (
         <span
           className={`rounded-full px-1.5 py-[3px] font-display text-[11.5px] font-bold leading-none ${
-            nivel.fiable ? "bg-white text-marca-verdeOsc" : "shadow-[inset_0_0_0_1px_rgba(255,255,255,.45)]"
+            nivel.origen === "profesor" ? "bg-white text-marca-verdeOsc" : "shadow-[inset_0_0_0_1px_rgba(255,255,255,.45)]"
           }`}
         >
           {nivel.valor}
@@ -226,25 +238,33 @@ export function ComoVasPlegado({ estadisticas: e }: { estadisticas: Estadisticas
       {e.bloques !== null && <Circulo tam={30}>{e.bloques === 0 ? <IconoLapiz pequeño /> : cifra(e.bloques)}</Circulo>}
       {e.tiempo && (
         <Circulo tam={30} progreso={(e.tiempo.semanasTotales - e.tiempo.semanasRestantes) / e.tiempo.semanasTotales}>
-          {e.tiempo.semanasRestantes}
+          {e.tiempo.semanasRestantes === 0 ? <IconoAbierto pequeño /> : e.tiempo.semanasRestantes}
         </Circulo>
       )}
     </div>
   );
 }
 
+/**
+ * La escalera A1–C2 con la marca del nivel (`nivelMostrado`):
+ *
+ *   profesor   peldaño lleno y «✓ Daniela»;
+ *   prueba     peldaño lleno y «prueba de nivel», sin ✓: está medido,
+ *              pero no lo ha confirmado nadie;
+ *   alta       peldaño hueco y «estimado».
+ */
 function Escalera({
   nivel,
-  profesor,
   movil,
   te,
 }: {
   nivel: NonNullable<EstadisticasAlumno["nivel"]>;
-  profesor: string | null;
   movil: boolean;
   te: TextosEstadisticas;
 }) {
   const actual = ESCALERA_MCER.indexOf(nivel.valor as (typeof ESCALERA_MCER)[number]);
+  const lleno = nivel.origen !== "alta";
+  const marca = te.tarjeta.marcaNivel(nivel.origen, nivel.profesor);
   return (
     <div aria-hidden className={movil ? "mt-3.5" : "mt-3"}>
       <div className={`mb-1.5 flex items-center justify-between gap-2 ${SECUNDARIO} ${movil ? "text-[12.5px]" : "text-[11.5px]"}`}>
@@ -252,13 +272,13 @@ function Escalera({
           {te.nivel}
           <b className={`ml-[3px] font-display font-bold text-white ${movil ? "text-[15px]" : "text-[13px]"}`}>{nivel.valor}</b>
         </span>
-        {nivel.fiable ? (
+        {nivel.origen === "profesor" ? (
           <span className="inline-flex min-w-0 items-center gap-[3px] font-semibold text-[#FFE27A]">
             <IconoCheck />
-            <span className="truncate">{profesor ?? te.tarjeta.confirmado}</span>
+            <span className="truncate">{marca}</span>
           </span>
         ) : (
-          <span>{te.tarjeta.estimado}</span>
+          <span>{marca}</span>
         )}
       </div>
       <div className="grid grid-cols-6 gap-[3px]">
@@ -269,7 +289,7 @@ function Escalera({
               i < actual
                 ? "bg-white/60"
                 : i === actual
-                  ? nivel.fiable
+                  ? lleno
                     ? "bg-marca-amarillo"
                     : "shadow-[inset_0_0_0_1.5px_#FFC400]"
                   : "bg-white/15"
@@ -391,6 +411,16 @@ export function Llama({ viva, className = "" }: { viva: boolean; className?: str
           d="M24 30C26 36 31 40 32 47C33 54 29 59 24 59C19 59 15 55 16 49C16.5 44 19 41 21 38C21.5 41 22.5 43 24 44C23.5 39 23 34 24 30Z"
         />
       </g>
+    </svg>
+  );
+}
+
+/** El curso entero abierto: un candado abierto, no un reloj parado. */
+function IconoAbierto({ pequeño = false }: { pequeño?: boolean }) {
+  return (
+    <svg aria-hidden viewBox="0 0 20 20" className={pequeño ? "h-3.5 w-3.5" : "h-[18px] w-[18px]"} fill="none" stroke="#FFC400" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="9" width="12" height="8" rx="1.6" />
+      <path d="M7 9V6.5a3 3 0 0 1 5.8-1.1" />
     </svg>
   );
 }

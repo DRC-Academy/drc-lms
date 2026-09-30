@@ -82,9 +82,10 @@ export function Icono({
  * La sección en la que está una ruta, para marcarla en la navegación.
  *
  * SE DEDUCE DE LA RUTA Y NO SE PASA DESDE LA PÁGINA porque la navegación
- * vive en el layout común (`app/(alumno)/layout.tsx`), y un layout no se
- * vuelve a renderizar al pasar de una página a otra: si la sección le
- * llegara del servidor, se quedaría marcada la primera.
+ * vivía en el layout común, que no se vuelve a renderizar al pasar de una
+ * página a otra: si la sección le llegara del servidor, se quedaba
+ * marcada la primera. Ahora la pinta el slot `@marco`, que sí, pero
+ * deducirla aquí sigue siendo lo más barato.
  *
  * El bloque de práctica (`/alumno/<id>/<bloque>`) es «Para ti»: se abre
  * desde allí y es de allí.

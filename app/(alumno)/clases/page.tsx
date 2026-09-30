@@ -1,6 +1,7 @@
 import { obtenerCalendario, obtenerExcepciones, obtenerNombresProfesor, obtenerRecorrido } from "@/lib/gestion";
+import { conProfesorDeLaFicha, profesorDelAlumno } from "@/lib/profesor-servidor";
 import { conFoco } from "@/lib/foco";
-import { exigirFoco } from "@/lib/sesion-servidor";
+import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { textosActuales } from "@/lib/idioma-servidor";
 import PantallaClases from "@/components/clases/PantallaClases";
 
@@ -28,14 +29,18 @@ export const dynamic = "force-dynamic";
  * cacheada diría "hoy" el día siguiente.
  */
 export default async function PaginaClases({ searchParams }: { searchParams: { semana?: string } }) {
-  const { alumnoId, paraEnlaces } = await exigirFoco();
+  const { alumnoId, paraEnlaces } = await exigirAlumnoDeLaPagina();
 
-  const [calendario, excepciones, recorrido, profesores] = await Promise.all([
+  const [calendarioCrudo, excepciones, recorrido, profesores, profe] = await Promise.all([
     obtenerCalendario(alumnoId),
     obtenerExcepciones(alumnoId),
     obtenerRecorrido(alumnoId),
     obtenerNombresProfesor(),
+    profesorDelAlumno(alumnoId),
   ]);
+  // El profesor que se nombra en las clases de ahora es el de la ficha;
+  // el historial sigue diciendo quién dio cada clase pasada.
+  const calendario = conProfesorDeLaFicha(calendarioCrudo, profe);
   const semana = Number.parseInt(searchParams.semana ?? "0", 10);
 
   return (

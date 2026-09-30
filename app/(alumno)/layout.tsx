@@ -1,30 +1,25 @@
 import { Suspense } from "react";
 import type { Viewport } from "next";
-import { headers } from "next/headers";
-import { focoActual, sesionActual } from "@/lib/sesion-servidor";
+import { sesionActual } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
-import { cursosDelInicio } from "@/lib/cursos-servidor";
-import { rutaDeMiCurso } from "@/lib/cursos";
-import { nivelDelAlumno } from "@/lib/estimacion";
-import { comoFecha } from "@/lib/fechas";
-import { CABECERA_URL } from "@/lib/foco";
-import { estadisticasDelAlumno } from "@/lib/estadisticas-servidor";
-import MarcoApp, { MarcoAppCargando, type DatosNavegacion } from "@/components/Navegacion";
+import { MarcoFijo, PiezasDeLaSesion } from "@/components/Navegacion";
+import { ProveedorMarco } from "@/components/leccion/MarcoCurso";
 
 /**
- * EL LAYOUT COMÚN DEL ALUMNO: la navegación de toda la aplicación.
+ * EL LAYOUT COMÚN DEL ALUMNO: la rejilla del marco y lo que solo depende
+ * de la sesión.
  *
  * `(alumno)` es un grupo de rutas: no cambia ninguna URL. Cuelgan de él
  * el inicio y el bloque (`/alumno/…`), «Clases», el curso, «Para ti» y
- * «Mi progreso». La navegación la pinta este layout y no cada página, así
- * que no parpadea al saltar de una a otra: un layout no se vuelve a
- * montar mientras no se sale de él.
+ * «Mi progreso».
  *
- * POR QUÉ NO ES `async`. Si esperara sus datos, la página no empezaría a
- * renderizarse hasta tenerlos. Síncrono, la página arranca sus consultas a
- * la vez que la navegación las suyas, y el `Suspense` deja que cada una
- * llegue cuando pueda. No se duplican: `obtenerPerfil` y las lecturas del
- * curso van por `cache()`.
+ * AQUÍ NO VA NADA DEL ALUMNO. Next no vuelve a renderizar un layout al
+ * navegar entre las páginas que cuelgan de él, así que todo lo que
+ * dependa de qué ficha se está mirando —la tira de revisión, la barra con
+ * «Cómo vas», el perfil— va en el slot `@marco`, que sí se renderiza con
+ * cada URL. Aquí solo queda lo que depende de la cookie, que no cambia
+ * sin una carga completa: la ayuda y el recorrido guiado, que tienen que
+ * sobrevivir a la navegación.
  *
  * `viewport-fit=cover` es lo que hace que `env(safe-area-inset-bottom)`
  * valga algo en un iPhone: sin él, la barra de pestañas se quedaría
@@ -32,77 +27,28 @@ import MarcoApp, { MarcoAppCargando, type DatosNavegacion } from "@/components/N
  */
 export const viewport: Viewport = { viewportFit: "cover" };
 
-export default function LayoutAlumno({ children }: { children: React.ReactNode }) {
+export default function LayoutAlumno({ children, marco }: { children: React.ReactNode; marco: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
-      <Suspense fallback={<MarcoAppCargando>{children}</MarcoAppCargando>}>
-        <MarcoConDatos>{children}</MarcoConDatos>
-      </Suspense>
+      <ProveedorMarco>
+        <MarcoFijo piezas={marco}>{children}</MarcoFijo>
+        <Suspense fallback={null}>
+          <DeLaSesion />
+        </Suspense>
+      </ProveedorMarco>
     </div>
   );
 }
 
-async function MarcoConDatos({ children }: { children: React.ReactNode }) {
-  const datos = await datosDeNavegacion();
-  if (!datos) return <MarcoAppCargando>{children}</MarcoAppCargando>;
-  return <MarcoApp datos={datos}>{children}</MarcoApp>;
-}
-
 /**
- * De quién es la pantalla, para los enlaces y el perfil.
- *
- * El alumno es siempre él mismo. El equipo revisa una ficha de dos
- * maneras, y las dos se leen de la URL que el middleware deja en
- * `x-drc-url` —un layout no recibe `params` de sus hijos ni
- * `searchParams`—: en el inicio y el bloque el alumno va en la ruta
- * (`/alumno/<id>`), y en el resto en el parámetro de foco (`focoActual`).
- *
- * Esto no protege nada: quien decide si se puede ver una ficha es la
- * página. Si no hay sesión, la página redirige y aquí se pinta el hueco.
+ * La ayuda y el recorrido, con el nombre de quien ha entrado. El equipo
+ * tiene la ayuda, sin nombre, y no el recorrido.
  */
-async function datosDeNavegacion(): Promise<DatosNavegacion | null> {
+async function DeLaSesion() {
   const sesion = await sesionActual();
   if (!sesion) return null;
+  if (sesion.rol !== "alumno") return <PiezasDeLaSesion nombre="" inicioHref={null} />;
 
-  let alumnoId: string;
-  let revisando: boolean;
-
-  if (sesion.rol === "alumno") {
-    alumnoId = sesion.alumnoId;
-    revisando = false;
-  } else {
-    const url = headers().get(CABECERA_URL);
-    const ruta = url ? new URL(url).pathname : "";
-    const enRuta = ruta.match(/^\/alumno\/([^/]+)/);
-    if (enRuta) {
-      alumnoId = decodeURIComponent(enRuta[1]);
-    } else {
-      alumnoId = (await focoActual()).alumnoId;
-    }
-    revisando = alumnoId !== "";
-  }
-
-  const perfil = alumnoId ? await obtenerPerfil(alumnoId) : null;
-  const principal = perfil
-    ? (
-        await cursosDelInicio(alumnoId, perfil.plan, nivelDelAlumno(alumnoId, perfil), comoFecha(perfil.fechaInicio))
-      )[0]
-    : undefined;
-
-  // LAS ESTADÍSTICAS DE LA BARRA, con el perfil y el curso que ya se
-  // han leído aquí arriba. Se quedarían viejas al navegar —el layout no
-  // se vuelve a renderizar entre páginas— si no fuera porque lo que las
-  // mueve refresca la ruta: completar una lección es un formulario que
-  // recarga el documento, y cada intento de ejercicio pide un
-  // `router.refresh()` (`FlujoEjercicios`).
-  const estadisticas = alumnoId ? await estadisticasDelAlumno(alumnoId, perfil, principal) : null;
-
-  return {
-    alumnoId,
-    nombre: perfil?.nombre.trim() ?? "",
-    miCurso: principal ? rutaDeMiCurso(principal) : null,
-    foco: revisando ? alumnoId : null,
-    revisando,
-    estadisticas,
-  };
+  const perfil = await obtenerPerfil(sesion.alumnoId);
+  return <PiezasDeLaSesion nombre={perfil?.nombre.trim() ?? ""} inicioHref={`/alumno/${sesion.alumnoId}`} />;
 }

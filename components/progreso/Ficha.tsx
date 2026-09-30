@@ -1,6 +1,6 @@
 import type { ClaseDelRecorrido } from "@/lib/gestion";
 import { textosActuales } from "@/lib/idioma-servidor";
-import type { Estimacion } from "@/lib/estimacion";
+import type { Estimacion, MarcaNivel } from "@/lib/estimacion";
 import BannerAmpliar from "@/components/BannerAmpliar";
 import BannerDiplomaFicha from "@/components/progreso/BannerDiplomaFicha";
 import Recorrido from "@/components/progreso/Recorrido";
@@ -84,7 +84,7 @@ export default function Ficha({
   focoRecomendado,
   clases,
   urlAmpliar,
-  nivelFiable,
+  marcaNivel,
   preparaExamen,
   diploma,
   hrefCurso,
@@ -93,11 +93,12 @@ export default function Ficha({
   nombre: string;
   nivel: NivelMcer | null;
   /**
-   * Si el nivel viene de una medición —profesor, ficha o prueba— o solo
-   * de la casilla del alta. Con false se enseña la nota de «estimado».
-   * Ver `origenDelNivel` en `lib/estimacion.ts`.
+   * De dónde sale el nivel, de `nivelMostrado` (la misma llamada que da
+   * el valor): «✓ Confirmado por Daniela» si lo puso su profesor, «Según
+   * tu prueba de nivel» si lo midió la prueba, y la nota de «estimado» si
+   * es el del alta. Igual que en «Cómo vas».
    */
-  nivelFiable: boolean;
+  marcaNivel: { origen: MarcaNivel; profesor: string | null };
   /**
    * El alumno prepara el examen de su propio nivel, así que no hay
    * estimación posible pero sí banner que enseñar. Ver
@@ -182,8 +183,14 @@ export default function Ficha({
             <div className="pg-stat">
               <span className="pg-stat-num">{nivel ?? "—"}</span>
               <span className="pg-stat-label">{t.nivelActual}</span>
-              {nivel && !nivelFiable && (
-                <span className="pg-stat-nota">{t.nivelEstimado}</span>
+              {nivel && (
+                <span className="pg-stat-nota">
+                  {marcaNivel.origen === "profesor"
+                    ? t.nivelConfirmadoPor(marcaNivel.profesor)
+                    : marcaNivel.origen === "prueba"
+                      ? t.nivelPrueba
+                      : t.nivelEstimado}
+                </span>
               )}
             </div>
             <div className="pg-stat">

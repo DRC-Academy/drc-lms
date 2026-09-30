@@ -1,5 +1,6 @@
 "use client";
 
+import { limpiarUsuarioProfesor } from "@/lib/profesor";
 import type { TextosRuta } from "@/lib/textos/ruta";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import Link from "next/link";
@@ -1184,7 +1185,7 @@ function Atribucion({ bloque }: { bloque: Bloque }) {
   if (!bloque.claseOrigen) return null;
   return (
     <p className="mt-2 text-[12.5px] leading-[1.45] text-marca-grisSuave min-[900px]:text-[13px]">
-      {t.claseDel(formatearFecha(bloque.claseOrigen.fecha, tp.fechaCorta), bloque.claseOrigen.profesor)}
+      {t.claseDel(formatearFecha(bloque.claseOrigen.fecha, tp.fechaCorta), limpiarUsuarioProfesor(bloque.claseOrigen.profesor))}
     </p>
   );
 }

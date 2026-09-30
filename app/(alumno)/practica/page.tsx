@@ -1,4 +1,5 @@
 import { nivelDelAlumno } from "@/lib/estimacion";
+import { profesorDelAlumno } from "@/lib/profesor-servidor";
 import { obtenerAlumno } from "@/lib/gestion";
 import {
   avisoFormulario,
@@ -7,7 +8,7 @@ import {
   tieneContexto,
   urlFormulario,
 } from "@/lib/modos";
-import { exigirFoco } from "@/lib/sesion-servidor";
+import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { idiomaActual, textosActuales } from "@/lib/idioma-servidor";
 import { bloquesEnIdioma } from "@/lib/traducciones-servidor";
 import {
@@ -57,7 +58,7 @@ export default async function PaginaPractica() {
   // la cookie, ve que quien pide no es alumno y marca el bloque como
   // `generado_por_equipo`, que lo deja fuera de la lista del alumno, de
   // su espera entre generaciones y del panel.
-  const { sesion, alumnoId } = await exigirFoco();
+  const { sesion, alumnoId } = await exigirAlumnoDeLaPagina();
 
   const [datos, progreso, generadosCrudos, ultimaGeneracion] = await Promise.all([
     obtenerAlumno(alumnoId),
@@ -84,6 +85,8 @@ export default async function PaginaPractica() {
   // Sin ficha en Gestión no hay perfil del que generar nada. No es un
   // 404: el alumno existe, es su ficha la que falta.
   const perfil = datos?.perfil ?? null;
+  // El profesor que se nombra en la pantalla: el de la ficha, con su nombre visible.
+  const profesor = (await profesorDelAlumno(alumnoId))?.nombre ?? "";
   const ultimaClase = datos?.ultimaClase ?? null;
 
   const t = textosActuales().practica;
@@ -127,7 +130,7 @@ export default async function PaginaPractica() {
           // de hoy: son lo que hace que la ruta se lea como suya y no
           // como una pantalla más del producto.
           nombre={perfil?.nombre.trim() ?? ""}
-          profesor={perfil?.profesor.trim() ?? ""}
+          profesor={profesor}
           tarjeta={tarjeta}
           conContexto={tieneContexto(perfil)}
           progreso={progreso}
@@ -135,7 +138,7 @@ export default async function PaginaPractica() {
           urlFormulario={urlFormulario(process.env.URL_FORMULARIO_BASE, perfil?.formToken ?? null)}
           avisoFormulario={avisoFormulario(
             t,
-            perfil?.profesor ?? "",
+            profesor,
             perfil?.formTokenEnviadoEn ?? null
           )}
           // Sin curso no hay franja en el inicio, que es donde la

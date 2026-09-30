@@ -1,4 +1,5 @@
 import { calcularEstimacion, nivelDelAlumno } from "@/lib/estimacion";
+import { conProfesorDeLaFicha, profesorDelAlumno } from "@/lib/profesor-servidor";
 import { nivelMcer } from "@/lib/recorrido";
 import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
 import { notFound } from "next/navigation";
@@ -10,7 +11,7 @@ import { formatearFecha } from "@/lib/perfil";
 import { calcularTarjeta } from "@/lib/modos";
 import { idiomaActual, textosActuales } from "@/lib/idioma-servidor";
 import { bloquesEnIdioma } from "@/lib/traducciones-servidor";
-import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
+import { alumnoDeLaPagina } from "@/lib/sesion-servidor";
 import {
   leerBloquesGenerados,
   leerProgresoAlumno,
@@ -47,7 +48,10 @@ export default async function PerfilAlumno({
 }) {
   // Antes de leer nada: un alumno solo abre su propia ficha, aunque
   // escriba otro id en la barra de direcciones. El equipo, cualquiera.
-  const sesion = await exigirAccesoAFicha(params.id);
+  // Quién es la ficha lo decide `alumnoDeLaPagina`, lo mismo que para el
+  // marco: el alumno, siempre la suya; el equipo, la del id de la ruta.
+  const alumno = await alumnoDeLaPagina(params.id);
+  const { sesion, alumnoId } = alumno;
 
   // ---------------------------------------------------------------
   // AQUÍ EMPIEZA LA REVISIÓN
@@ -61,29 +65,32 @@ export default async function PerfilAlumno({
   // Para el alumno esto es null y no cambia absolutamente nada: sus
   // enlaces siguen siendo los de siempre.
   // ---------------------------------------------------------------
-  const revisando = sesion.rol === "admin";
-  const foco = revisando ? params.id : null;
+  const revisando = alumno.revisando;
+  const foco = alumno.paraEnlaces;
 
   // Si toca el recorrido guiado. Se pide a la vez que lo demás; ante
   // cualquier fallo dice que no (ver lib/tutorial/estado.ts).
-  const pendienteTutorial = sesion.rol === "alumno" ? tutorialPendiente(params.id) : Promise.resolve(false);
+  const pendienteTutorial = sesion.rol === "alumno" ? tutorialPendiente(alumnoId) : Promise.resolve(false);
 
   // Gestión primero: de su `plan` y su `nivel` sale qué cursos le tocan,
   // así que la consulta de cursos no puede ir en el mismo lote.
-  const [datos, progreso, generadosCrudos, ultimaGeneracion, calendario, quitas, excepciones] = await Promise.all([
-    obtenerAlumno(params.id),
-    leerProgresoAlumno(params.id),
+  const [datos, progreso, generadosCrudos, ultimaGeneracion, calendarioCrudo, quitas, excepciones, profe] = await Promise.all([
+    obtenerAlumno(alumnoId),
+    leerProgresoAlumno(alumnoId),
     // Con el rol: los bloques que el equipo genera para revisar solo
     // salen en la lista de quien los generó. Al alumno no le aparecen.
-    leerBloquesGenerados(params.id, sesion.rol === "admin"),
-    leerUltimaGeneracion(params.id),
+    leerBloquesGenerados(alumnoId, sesion.rol === "admin"),
+    leerUltimaGeneracion(alumnoId),
     // Las clases, del calendario de Gestión. Ver «LA PRÓXIMA CLASE» abajo.
-    obtenerCalendario(params.id),
-    obtenerQuitas(params.id),
+    obtenerCalendario(alumnoId),
+    obtenerQuitas(alumnoId),
     // Todas las excepciones —'quita' y 'añade'—, para el calendario de
     // abajo: las mismas que lee «Mis clases».
-    obtenerExcepciones(params.id),
+    obtenerExcepciones(alumnoId),
+    // El profesor que se nombra en toda la pantalla: el de la ficha.
+    profesorDelAlumno(alumnoId),
   ]);
+  const calendario = conProfesorDeLaFicha(calendarioCrudo, profe);
   const onboarding = await pendienteTutorial;
 
   // LOS BLOQUES, EN EL IDIOMA EN EL QUE SE ESTÁ LEYENDO.
@@ -114,9 +121,9 @@ export default async function PerfilAlumno({
   // `cursosDelInicio`; aquí solo se le da la fecha de su ficha.
   const estadosCurso = perfil
     ? await cursosDelInicio(
-        params.id,
+        alumnoId,
         perfil.plan,
-        nivelDelAlumno(params.id, perfil),
+        nivelDelAlumno(alumnoId, perfil),
         comoFecha(perfil.fechaInicio)
       )
     : [];
@@ -162,7 +169,7 @@ export default async function PerfilAlumno({
   // ---------------------------------------------------------------
 
   const nombre = perfil?.nombre.trim() ?? "";
-  const profesor = perfil?.profesor.trim() ?? "";
+  const profesor = profe?.nombre ?? "";
 
   // ---------------------------------------------------------------
   // EL SALUDO
@@ -237,7 +244,7 @@ export default async function PerfilAlumno({
   // las mismas semanas, calculadas igual, y cada clase lleva a su día
   // allí, que es donde está el botón de entrar.
   // ---------------------------------------------------------------
-  const estadisticas = await estadisticasDelAlumno(params.id, perfil, principal);
+  const estadisticas = await estadisticasDelAlumno(alumnoId, perfil, principal);
 
   // «AHORA PUEDES LLEGAR MÁS RÁPIDO»: la misma estimación que el banner
   // de «Mi progreso», con los mismos datos (ver `app/(alumno)/progreso`).
@@ -245,7 +252,7 @@ export default async function PerfilAlumno({
   const ritmo = perfil
     ? datosDeRitmo(
         calcularEstimacion({
-          nivelActual: nivelMcer(nivelDelAlumno(params.id, perfil)),
+          nivelActual: nivelMcer(nivelDelAlumno(alumnoId, perfil)),
           horasSemanales: perfil.horasSemanales,
           textosDelPlan: [perfil.planContratado, perfil.objetivoSetter, perfil.objetivoPerfil],
           t: textosActuales().banners,
@@ -387,7 +394,7 @@ export default async function PerfilAlumno({
             servidor y la coloca «PanelAlumno», que es quien monta la
             rejilla porque la columna derecha necesita estado. */}
         <PanelAlumno
-          alumnoId={params.id}
+          alumnoId={alumnoId}
           tarjeta={tarjeta}
           generadosIniciales={generados}
           idsTerminados={idsTerminados}
@@ -403,7 +410,7 @@ export default async function PerfilAlumno({
                   semanas={semanas}
                   indice={indiceSemana}
                   sinHorario={sinHorario}
-                  hrefSemana={(i) => conFoco(i === 0 ? `/alumno/${params.id}` : `/alumno/${params.id}?semana=${i}`, foco)}
+                  hrefSemana={(i) => conFoco(i === 0 ? `/alumno/${alumnoId}` : `/alumno/${alumnoId}?semana=${i}`, foco)}
                   hrefDia={(fecha) =>
                     conFoco(`/clases${indiceSemana === 0 ? "" : `?semana=${indiceSemana}`}#dia-${fecha}`, foco)
                   }

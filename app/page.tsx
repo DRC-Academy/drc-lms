@@ -1,6 +1,7 @@
 import { exigirAdministrador } from "@/lib/sesion-servidor";
 import {
   cargarPanel,
+  discrepanciasDeProfesor,
   detalleDeVista,
   esOrden,
   esPeriodo,
@@ -15,6 +16,7 @@ import MarcoApp from "@/components/Navegacion";
 import PanelAdmin from "@/components/admin/PanelAdmin";
 import ListaPanel from "@/components/admin/ListaPanel";
 import ListaActivos from "@/components/admin/ListaActivos";
+import DiscrepanciasProfesor from "@/components/admin/DiscrepanciasProfesor";
 
 export const dynamic = "force-dynamic";
 
@@ -95,7 +97,7 @@ export default async function Home({
   /** Si la vista venía en la URL. Solo lo mira móvil. */
   const explicita = esVista(searchParams.ver);
 
-  const datos = await cargarPanel(periodo);
+  const [datos, discrepancias] = await Promise.all([cargarPanel(periodo), discrepanciasDeProfesor()]);
   const detalle = detalleDeVista(datos, vista, orden);
 
   // El buscador mira DENTRO de la lista que hay delante, no en todos.
@@ -201,6 +203,12 @@ export default async function Home({
             explicita={explicita}
             dePeriodo={detalle.dePeriodo}
           />
+        </div>
+
+        {/* Solo en escritorio o con la lista abierta en móvil: en el panel
+            de móvil no cabe una tabla. */}
+        <div className={explicita ? "" : "hidden lg:block"}>
+          <DiscrepanciasProfesor alumnos={discrepancias} />
         </div>
       </main>
     </MarcoApp>

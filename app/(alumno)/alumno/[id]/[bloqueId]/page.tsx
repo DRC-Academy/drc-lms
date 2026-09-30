@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { profesorDelAlumno } from "@/lib/profesor-servidor";
 import { notFound } from "next/navigation";
 import { textosActuales } from "@/lib/idioma-servidor";
 import { obtenerAlumno } from "@/lib/gestion";
 import { buscarBloqueGenerado } from "@/lib/progreso-servidor";
-import { exigirAccesoAFicha } from "@/lib/sesion-servidor";
+import { alumnoDeLaPagina } from "@/lib/sesion-servidor";
 import VistaBloque from "@/components/practica/VistaBloque";
 
 // Mismo motivo que la ficha: el alumno se resuelve contra Gestión.
@@ -16,14 +17,17 @@ export default async function PaginaBloque({
 }) {
   // El bloque enseña el nombre y el profesor del alumno: el mismo
   // guard que la ficha, o se colaría por aquí lo que se cierra allí.
-  const sesion = await exigirAccesoAFicha(params.id);
+  // Quién es la ficha lo decide `alumnoDeLaPagina`, lo mismo que para el
+  // marco: el alumno, siempre la suya; el equipo, la del id de la ruta.
+  const alumno = await alumnoDeLaPagina(params.id);
+  const { sesion, alumnoId } = alumno;
 
   // Igual que en la ficha: el id ya está en la ruta, y el foco existe
   // para que los enlaces que salen de aquí no pierdan al alumno.
-  const revisando = sesion.rol === "admin";
-  const foco = revisando ? params.id : null;
+  const revisando = alumno.revisando;
+  const foco = alumno.paraEnlaces;
 
-  const datos = await obtenerAlumno(params.id);
+  const datos = await obtenerAlumno(alumnoId);
   if (!datos) notFound();
 
   // Todos los bloques son generados y están en la base: se resuelven
@@ -32,7 +36,7 @@ export default async function PaginaBloque({
   //
   // El equipo abre además los que generó él para revisar, que son los
   // que no salen en la práctica del alumno.
-  const bloque = await buscarBloqueGenerado(params.id, params.bloqueId, sesion.rol === "admin");
+  const bloque = await buscarBloqueGenerado(alumnoId, params.bloqueId, sesion.rol === "admin");
 
   if (!bloque) {
     return (
@@ -54,7 +58,7 @@ export default async function PaginaBloque({
                 ? "Los bloques que el equipo generaba antes no llegaban a guardarse, así que no hay nada que abrir. Genera uno nuevo desde la ficha y ese sí se puede revisar entero."
                 : textosActuales().practica.bloquePerdidoCuerpo}
             </p>
-            <Link href={`/alumno/${params.id}`} className="btn btn-verde mt-7 min-h-[48px] w-full">
+            <Link href={`/alumno/${alumnoId}`} className="btn btn-verde mt-7 min-h-[48px] w-full">
               {sesion.rol === "admin"
                 ? "Volver a la ficha"
                 : textosActuales().practica.volverAMisBloques}
@@ -66,13 +70,13 @@ export default async function PaginaBloque({
   }
 
   // EL MISMO MARCO QUE LA LECCIÓN: la barra de iconos, las pestañas de
-  // abajo y el cajón del panel de fases los pone el layout común
-  // (`app/(alumno)/layout.tsx`). Aquí solo va la pantalla.
+  // abajo y el cajón del panel de fases los ponen el layout común y su
+  // slot `@marco` (`app/(alumno)`). Aquí solo va la pantalla.
   return (
     <VistaBloque
       bloque={bloque}
-      alumnoId={params.id}
-      profesor={datos.perfil?.profesor ?? ""}
+      alumnoId={alumnoId}
+      profesor={(await profesorDelAlumno(alumnoId))?.nombre ?? ""}
       foco={foco}
     />
   );

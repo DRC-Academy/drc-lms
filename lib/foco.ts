@@ -31,7 +31,7 @@
 // ESTO NO ES UNA LLAVE. El parámetro NO autoriza nada: solo dice de
 // quién se habla. Quién puede mirar lo decide `lib/sesion-servidor.ts`
 // leyendo la cookie firmada, y a un alumno se le ignora el parámetro
-// entero —ver `focoActual`—. Escribir sigue saliendo siempre de la
+// entero —ver `alumnoDeLaPagina`—. Escribir sigue saliendo siempre de la
 // cookie y nunca de aquí: ver la cabecera de `app/api/progreso`.
 //
 // Módulo puro y sin `server-only`: lo usan las páginas (servidor) y los

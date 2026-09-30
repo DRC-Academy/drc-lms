@@ -678,6 +678,51 @@ export function nivelEsFiable(origen: OrigenNivel): boolean {
   return origen === "profesor" || origen === "ficha" || origen === "prueba";
 }
 
+/**
+ * La marca que acompaña al nivel cuando se le ENSEÑA al alumno. Tres, y
+ * solo tres (decisión de producto, 30/09/2026):
+ *
+ *   profesor   «✓ Daniela»: lo confirmó su profesor (`nivel_profesor`).
+ *   prueba     «prueba de nivel»: medido, pero por una prueba automática.
+ *              Nunca «confirmado» ni con nombre de profesor.
+ *   alta       «estimado»: la casilla del alta. También la ficha
+ *              (`nivel_ficha`, un solo alumno hoy) y los congelados.
+ */
+export type MarcaNivel = "profesor" | "prueba" | "alta";
+
+export type NivelMostrado = {
+  nivel: NivelMcer | null;
+  origen: MarcaNivel;
+  /** El nombre visible del profesor, solo con `origen: "profesor"`. */
+  profesor?: string;
+};
+
+/**
+ * EL NIVEL QUE SE ENSEÑA, CON SU MARCA, EN UNA SOLA LLAMADA.
+ *
+ * Antes el valor salía de `nivelDelAlumno` y la marca de
+ * `origenDelNivel`, y no aplicaban la misma regla: un alumno congelado
+ * enseñaba el nivel del alta como confirmado por el profesor porque el
+ * profesor había puesto OTRO. Aquí la marca sale del mismo sitio que el
+ * valor: si está congelado, el valor es el del alta y la marca también.
+ *
+ * `profesor` es el nombre visible (`profesorDelAlumno`): el que firma la
+ * marca cuando la confirmación es suya.
+ */
+export function nivelMostrado(
+  alumnoId: string,
+  perfil: { nivel: string; nivelProfesor: string | null; nivelFicha: string | null; nivelPrueba: string | null },
+  profesor: string | null
+): NivelMostrado {
+  const nivel = nivelMcer(nivelDelAlumno(alumnoId, perfil));
+  if (NIVEL_CONGELADO.has(alumnoId)) return { nivel, origen: "alta" };
+
+  const origen = origenDelNivel(perfil.nivelProfesor, perfil.nivelFicha, perfil.nivelPrueba, perfil.nivel);
+  if (origen === "profesor") return profesor ? { nivel, origen, profesor } : { nivel, origen };
+  if (origen === "prueba") return { nivel, origen };
+  return { nivel, origen: "alta" };
+}
+
 // ===============================================================
 // LA CAUSA RAÍZ: UN RESOLUTOR Y NUEVE RUTAS QUE NO LO USAN
 //

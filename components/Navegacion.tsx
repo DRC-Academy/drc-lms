@@ -1,12 +1,15 @@
 // ---------------------------------------------------------------
 // LA NAVEGACIÓN DE TODA LA APLICACIÓN
 //
-// Una sola pieza. En escritorio, la barra de iconos a la izquierda que
-// nació en la lección (`BarraLateral`); por debajo de 900px, la barra de
-// pestañas de abajo (`NavegacionInferior`) con los mismos iconos. La
-// monta el layout común del alumno, `app/(alumno)/layout.tsx`, así que
-// ninguna pantalla se acuerda de ponerla y ninguna la pierde al cambiar
-// de página. Sustituye a la cabecera de arriba, que ya no existe.
+// En escritorio, la barra de iconos a la izquierda que nació en la
+// lección (`BarraLateral`); por debajo de 900px, la barra de pestañas de
+// abajo (`NavegacionInferior`) con los mismos iconos. Sustituye a la
+// cabecera de arriba, que ya no existe.
+//
+// DÓNDE SE MONTA. La rejilla y lo que solo depende de la sesión (la
+// ayuda, el recorrido), en el layout de `(alumno)`; lo que depende del
+// alumno, en el slot `app/(alumno)/@marco`, que se renderiza con cada
+// URL. Ninguna pantalla se acuerda de ponerla y ninguna la pierde.
 //
 // LO QUE ESTABA EN LA CABECERA, Y DÓNDE HA IDO:
 //
@@ -31,7 +34,7 @@ import { conFoco } from "@/lib/foco";
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { TextosNavegacion } from "@/lib/textos/navegacion";
 import type { EnlaceSeccion } from "@/components/IconoSeccion";
-import BarraLateral, { BarraLateralCargando } from "@/components/leccion/BarraLateral";
+import BarraLateral from "@/components/leccion/BarraLateral";
 import MenuPerfil from "@/components/leccion/MenuPerfil";
 import { ProveedorMarco } from "@/components/leccion/MarcoCurso";
 import NavegacionInferior from "@/components/NavegacionInferior";
@@ -95,10 +98,17 @@ export type DatosNavegacion = {
 };
 
 /**
- * El marco: la tira de revisión, la barra a la izquierda, la pantalla y
- * las pestañas de abajo. Lo que va dentro es la página.
+ * LO QUE DEPENDE DEL ALUMNO: la tira de revisión, la barra de la
+ * izquierda (con «Cómo vas» y el anillo del curso) y las pestañas de
+ * abajo con el perfil.
+ *
+ * Lo pinta el slot `app/(alumno)/@marco`, que Next vuelve a renderizar
+ * con cada URL, y NUNCA el layout: un layout se reutiliza al navegar y
+ * se quedaba con el alumno de la primera ficha (auditoría del
+ * 30/09/2026). Cada pieza se coloca en la rejilla de `MarcoFijo` con su
+ * propia área, así que puede llegar de otro sitio que el contenido.
  */
-export default function MarcoApp({ datos, children }: { datos: DatosNavegacion; children: ReactNode }) {
+export function PiezasDelMarco({ datos }: { datos: DatosNavegacion }) {
   const t = textosActuales().navegacion;
   const enlaces = enlacesDeSecciones({
     alumnoId: datos.alumnoId,
@@ -110,16 +120,14 @@ export default function MarcoApp({ datos, children }: { datos: DatosNavegacion; 
   const inicioHref = datos.alumnoId ? conFoco(`/alumno/${datos.alumnoId}`, datos.foco) : "/";
 
   return (
-    <ProveedorMarco>
-      {datos.revisando && <TiraRevision nombre={nombre || undefined} t={t} />}
-      <div className="flex min-h-dvh flex-1 items-stretch">
-        <BarraLateral enlaces={enlaces} nombre={nombre} inicioHref={inicioHref} estadisticas={datos.estadisticas ?? null} />
-        {/* `contenido-app`: aquí dentro, el `main` de cada pantalla deja
-            al final el hueco del botón de ayuda (`globals.css`). */}
-        <div className="contenido-app flex min-w-0 flex-1 flex-col">
-          <CabeceraIdioma />
-          {children}
+    <>
+      {datos.revisando && (
+        <div className="col-span-2 row-start-1">
+          <TiraRevision nombre={nombre || undefined} t={t} />
         </div>
+      )}
+      <div className="col-start-1 row-start-2">
+        <BarraLateral enlaces={enlaces} nombre={nombre} inicioHref={inicioHref} estadisticas={datos.estadisticas ?? null} />
       </div>
       <NavegacionInferior
         enlaces={enlaces}
@@ -133,35 +141,56 @@ export default function MarcoApp({ datos, children }: { datos: DatosNavegacion; 
           />
         }
       />
-      {/* La ayuda es para el alumno: el equipo en su buscador no la usa.
-          El botón flotante, abajo a la derecha, en todas las anchuras. */}
-      {enlaces.length > 0 && <ChatAyuda nombre={nombre} />}
-      {/* El recorrido guiado: uno para toda la app, aquí para que
-          sobreviva a la navegación entre pantallas. */}
-      {enlaces.length > 0 && (
-        <Tutorial
-          rutas={{
-            inicio: inicioHref,
-            clases: conFoco("/clases", datos.foco),
-            practica: conFoco("/practica", datos.foco),
-          }}
-        />
-      )}
-    </ProveedorMarco>
+    </>
   );
 }
 
-/** El marco mientras el layout lee la sesión: la barra en hueco y la pantalla ya pintándose. */
-export function MarcoAppCargando({ children }: { children: ReactNode }) {
+/**
+ * La rejilla del marco: arriba la tira, a la izquierda la barra, y la
+ * pantalla en el resto. `piezas` son las de `PiezasDelMarco`; `children`,
+ * la página. Las pestañas de abajo son `fixed` y no ocupan celda.
+ */
+export function MarcoFijo({ piezas, children }: { piezas: ReactNode; children: ReactNode }) {
+  return (
+    <div className="grid min-h-dvh flex-1 grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_1fr]">
+      {piezas}
+      {/* `contenido-app`: aquí dentro, el `main` de cada pantalla deja
+          al final el hueco del botón de ayuda (`globals.css`). */}
+      <div className="contenido-app col-start-2 row-start-2 flex min-w-0 flex-col">
+        <CabeceraIdioma />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Lo que depende solo de la SESIÓN y tiene que sobrevivir a la
+ * navegación: la ayuda y el recorrido guiado. Estos sí van en un layout,
+ * porque la cookie no cambia entre páginas —cambiar de identidad es
+ * siempre una carga completa (`/entrar`, `/salir`)—.
+ */
+export function PiezasDeLaSesion({ nombre, inicioHref }: { nombre: string; inicioHref: string | null }) {
+  return (
+    <>
+      {/* La ayuda, abajo a la derecha, en todas las anchuras. */}
+      <ChatAyuda nombre={nombre} />
+      {/* El recorrido guiado: solo el alumno lo hace. */}
+      {inicioHref && <Tutorial rutas={{ inicio: inicioHref, clases: "/clases", practica: "/practica" }} />}
+    </>
+  );
+}
+
+/**
+ * El marco entero, en una pieza, para las pantallas que no cuelgan de
+ * `(alumno)`: el buscador del equipo (`app/page.tsx`).
+ */
+export default function MarcoApp({ datos, children }: { datos: DatosNavegacion; children: ReactNode }) {
+  const inicioHref = datos.alumnoId ? conFoco(`/alumno/${datos.alumnoId}`, datos.foco) : "/";
   return (
     <ProveedorMarco>
-      <div className="flex min-h-dvh flex-1 items-stretch">
-        <BarraLateralCargando />
-        <div className="contenido-app flex min-w-0 flex-1 flex-col">
-          <CabeceraIdioma />
-          {children}
-        </div>
-      </div>
+      <MarcoFijo piezas={<PiezasDelMarco datos={datos} />}>{children}</MarcoFijo>
+      {datos.alumnoId && <PiezasDeLaSesion nombre={datos.nombre.trim()} inicioHref={datos.revisando ? null : inicioHref} />}
     </ProveedorMarco>
   );
 }

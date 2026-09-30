@@ -1,5 +1,6 @@
 "use client";
 
+import { limpiarUsuarioProfesor } from "@/lib/profesor";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Bloque } from "@/lib/data";
@@ -293,7 +294,8 @@ export default function VistaBloque({
               <p className="mt-4 text-[12.5px] leading-[1.5] text-marca-grisSuave">
                 {todos.ruta.claseDel(
                   formatearFecha(bloque.claseOrigen.fecha, todos.practica.fechaCorta),
-                  bloque.claseOrigen.profesor
+                  // Los bloques de antes guardaban el usuario de Gestión.
+                  limpiarUsuarioProfesor(bloque.claseOrigen.profesor)
                 )}
               </p>
             ) : null

@@ -17,6 +17,7 @@
 // pasa quien llama.
 // ---------------------------------------------------------------
 
+import { profesorVisibleDelPerfil } from "@/lib/profesor";
 import "server-only";
 import { nivelDelAlumno } from "@/lib/estimacion";
 import type { Bloque, PerfilAlumno, TipoExamen, UltimaClase } from "@/lib/data";
@@ -115,7 +116,7 @@ export function prepararGeneracion(
   // otra forma, `validarBloque` la descartaría al releer, así que se
   // recorta aquí a los diez caracteres del día.
   const claseOrigen: Bloque["claseOrigen"] | null = ultimaClase
-    ? { fecha: ultimaClase.fechaClase.slice(0, 10), profesor: perfil?.profesor.trim() ?? "" }
+    ? { fecha: ultimaClase.fechaClase.slice(0, 10), profesor: perfil ? profesorVisibleDelPerfil(perfil) : "" }
     : null;
 
   return { perfil, ultimaClase, anteriores, nivel, materia, claseOrigen };

@@ -118,13 +118,14 @@ export type Foco = {
 };
 
 /**
- * El alumno en foco, sin exigir que haya ninguno.
+ * El alumno en foco que dice la URL (`?alumno=`), sin exigir que haya
+ * ninguno. Interna: las pantallas llaman a `alumnoDeLaPagina`.
  *
  * Va en `cache()` por lo mismo que `sesionActual`: dentro de una misma
- * petición lo preguntan la página y el layout de la cabecera, y sin esto
- * se leerían las cabeceras y la cookie dos veces.
+ * petición lo preguntan la página y el marco (`app/(alumno)/@marco`), y
+ * sin esto se leerían las cabeceras y la cookie dos veces.
  */
-export const focoActual = cache(async (): Promise<Foco> => {
+const focoActual = cache(async (): Promise<Foco> => {
   const sesion = await exigirSesion();
 
   if (sesion.rol === "alumno") {
@@ -144,14 +145,49 @@ export const focoActual = cache(async (): Promise<Foco> => {
   return { sesion, alumnoId: pedido, revisando: true, paraEnlaces: pedido };
 });
 
+// ---------------------------------------------------------------
+// DE QUIÉN ES ESTA PÁGINA: LA ÚNICA RESPUESTA
+//
+// Todas las pantallas del alumno y su marco (la barra, «Cómo vas», la
+// tira de revisión, el perfil) preguntan aquí, y solo aquí.
+//
+//   · Rol alumno: SIEMPRE la cookie. Ni la ruta ni `?alumno=` cambian
+//     nada: si pide `/alumno/<otro>`, `exigirAccesoAFicha` le devuelve
+//     a la suya.
+//   · Equipo: la ficha que está revisando. En `/alumno/<id>/…` es el id
+//     de la ruta; en el resto, `?alumno=`. Sin ninguno, cadena vacía
+//     (revisar un curso sin mirar a nadie).
+//
+// POR QUÉ HACÍA FALTA (auditoría del 30/09/2026). El layout de
+// `(alumno)` resolvía el alumno por su cuenta, y Next reutiliza un layout
+// al navegar entre páginas que cuelgan de él: la barra de una ficha se
+// quedaba pegada a la página de otra. Ahora el marco es un slot
+// (`app/(alumno)/@marco`), que se renderiza con cada URL, y pregunta
+// aquí lo mismo que la página, en la misma petición.
+// ---------------------------------------------------------------
+
+/**
+ * El alumno del que habla la página. `idDeLaRuta` es el `[id]` de
+ * `/alumno/[id]/…`, para las pantallas que lo llevan en la ruta.
+ */
+export async function alumnoDeLaPagina(idDeLaRuta?: string): Promise<Foco> {
+  if (idDeLaRuta === undefined) return focoActual();
+
+  // El permiso sigue siendo cosa de `exigirAccesoAFicha`.
+  const sesion = await exigirAccesoAFicha(idDeLaRuta);
+  if (sesion.rol === "alumno") {
+    return { sesion, alumnoId: sesion.alumnoId, revisando: false, paraEnlaces: null };
+  }
+  return { sesion, alumnoId: idDeLaRuta, revisando: true, paraEnlaces: idDeLaRuta };
+}
+
 /**
  * Igual, pero para las pantallas que NO existen sin un alumno detrás:
  * "Para ti" se genera de su perfil y "Mi progreso" son sus clases. Sin
- * ficha elegida, el equipo se va al buscador —que es lo que ya hacían
- * las dos, solo que ahora tiene forma de volver con contexto—.
+ * ficha elegida, el equipo se va al buscador.
  */
-export async function exigirFoco(): Promise<Foco> {
-  const foco = await focoActual();
-  if (foco.alumnoId === "") redirect("/");
-  return foco;
+export async function exigirAlumnoDeLaPagina(): Promise<Foco> {
+  const alumno = await alumnoDeLaPagina();
+  if (alumno.alumnoId === "") redirect("/");
+  return alumno;
 }

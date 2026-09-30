@@ -22,6 +22,7 @@
 // el servidor y le pasa el resultado ya resuelto al componente.
 // ---------------------------------------------------------------
 
+import { profesorVisibleDelPerfil } from "@/lib/profesor";
 import type { PerfilAlumno, TipoExamen, UltimaClase } from "@/lib/data";
 import { NOMBRE_EXAMEN } from "@/lib/data";
 import { detectarExamen, formatearFecha } from "@/lib/perfil";
@@ -285,7 +286,7 @@ export function calcularTarjeta(
 
   const conContexto = tieneContexto(perfil);
   const examen = perfil ? detectarExamen(perfil.plan) : null;
-  const profesor = perfil?.profesor.trim() ?? "";
+  const profesor = perfil ? profesorVisibleDelPerfil(perfil) : "";
   const fuentes = describirFuentes(ultimaClase, conContexto, examen, t);
 
   const espera = redactarEspera(
@@ -337,7 +338,7 @@ export function resumenUltimaClase(
   }
 
   const fecha = formatearFecha(ultimaClase.fechaClase);
-  const profesor = perfil?.profesor.trim();
+  const profesor = perfil ? profesorVisibleDelPerfil(perfil) : "";
 
   // Sin perfil no sabemos quién dio la clase: se cuenta sin el nombre en
   // lugar de esconder la tarjeta.

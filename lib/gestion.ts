@@ -34,6 +34,7 @@ import {
   comoTexto,
   comoTextoOpcional,
 } from "@/lib/perfil";
+import { nombreVisibleProfesor } from "@/lib/profesor";
 import type { PerfilAlumno, ResumenAlumno, UltimaClase } from "@/lib/data";
 import type { FilaCalendario } from "@/lib/calendario-gestion";
 
@@ -53,6 +54,11 @@ function aPerfil(fila: Fila): PerfilAlumno {
     producto: comoTextoOpcional(fila.producto),
     objetivoSetter: comoTextoOpcional(fila.objetivo_setter),
     profesor: comoTexto(fila.profesor),
+    // Las dos del nombre visible. Aguantan que la vista todavía no las
+    // tenga, como las de más abajo. Ver
+    // `supabase/gestion-nombre-visible-profesor.sql` y `lib/profesor.ts`.
+    profesorId: comoTextoOpcional(fila.profesor_id),
+    profesorVisible: comoTextoOpcional(fila.profesor_visible),
     fechaInicio: comoTextoOpcional(fila.fecha_inicio),
     ocupacion: comoTextoOpcional(fila.ocupacion),
     objetivoPerfil: comoTextoOpcional(fila.objetivo_perfil),
@@ -313,32 +319,86 @@ export const obtenerExcepciones = cache(async (alumnoId: string): Promise<unknow
   return data ?? [];
 });
 
+/** Un profesor de Gestión: su usuario y, si ya se le puso, su nombre visible. */
+export type ProfesorGestion = { usuario: string; visible: string | null };
+
 /**
- * El nombre de cada profesor, por `teacher_id`, para el historial de
- * clases: el que dio cada una, que puede ser un suplente o alguien que
- * ya no le da clase. Sale de `vista_profesores`, que solo tiene eso.
- * Si no se puede leer, el historial se enseña sin nombres.
+ * Todos los profesores, por `teacher_id`, archivados incluidos: una
+ * clase pasada pudo darla alguien que ya no está. Sale de
+ * `vista_profesores`.
+ *
+ * `select("*")` y no la lista de columnas: `nombre_visible` llega
+ * cuando se ejecute `supabase/gestion-nombre-visible-profesor.sql`, y
+ * pedirla antes haría fallar la consulta entera.
  */
-export const obtenerNombresProfesor = cache(async (): Promise<Map<string, string>> => {
+export const obtenerProfesores = cache(async (): Promise<Map<string, ProfesorGestion>> => {
   const { data, error } = await soloLectura("vista_profesores")
-    .select("teacher_id, profesor")
+    .select("*")
     .order("teacher_id", { ascending: true })
     .returns<Fila[]>();
 
   // El profesor de la demo va siempre: no está en Gestión y su id
   // (`demo-t1`) no puede coincidir con ninguno de allí.
-  const nombres = new Map<string, string>([[PROFESOR_DEMO.teacherId, PROFESOR_DEMO.nombre]]);
+  const profesores = new Map<string, ProfesorGestion>([
+    [PROFESOR_DEMO.teacherId, { usuario: PROFESOR_DEMO.nombre, visible: null }],
+  ]);
 
   if (error) {
     console.error("[gestion] No se pudo leer vista_profesores:", error.message);
-    return nombres;
+    return profesores;
   }
   for (const fila of data ?? []) {
     const id = comoTexto(fila.teacher_id);
-    const nombre = comoTexto(fila.profesor).trim();
-    if (id && nombre) nombres.set(id, nombre);
+    const usuario = comoTexto(fila.profesor);
+    if (id && usuario.trim()) profesores.set(id, { usuario, visible: comoTextoOpcional(fila.nombre_visible) });
   }
+  return profesores;
+});
+
+/**
+ * El nombre que ve el alumno de cada profesor, por `teacher_id`, para el
+ * historial de clases: el que dio cada una, que puede ser un suplente o
+ * alguien que ya no le da clase. Si no se puede leer, el historial se
+ * enseña sin nombres.
+ */
+export const obtenerNombresProfesor = cache(async (): Promise<Map<string, string>> => {
+  const nombres = new Map<string, string>();
+  (await obtenerProfesores()).forEach((p, id) => nombres.set(id, nombreVisibleProfesor(p.visible, p.usuario)));
   return nombres;
+});
+
+/**
+ * Cuántos análisis tiene el alumno con cada profesor (`teacher_id`), para
+ * «16 clases · 7 con Liliana». Cuenta filas, como la parte `count(*)` de
+ * `vista_clases_contadas`, sin filtrar por estado. Null si la lectura
+ * falla.
+ */
+export const obtenerClasesPorProfesor = cache(async (alumnoId: string): Promise<Map<string, number> | null> => {
+  const cuenta = new Map<string, number>();
+  const sumar = (id: string) => {
+    if (id) cuenta.set(id, (cuenta.get(id) ?? 0) + 1);
+  };
+
+  const demo = await escenarioDe(alumnoId);
+  if (demo) {
+    for (const f of demo.clases) sumar(comoTexto((f as Fila).teacher_id));
+    return cuenta;
+  }
+
+  for (let desde = 0; ; desde += 1000) {
+    const { data, error } = await soloLectura("class_analyses")
+      .select("teacher_id")
+      .eq("student_id", alumnoId)
+      .order("id", { ascending: true })
+      .range(desde, desde + 999)
+      .returns<Fila[]>();
+    if (error) {
+      console.error("[gestion] No se pudo contar las clases por profesor:", error.message);
+      return null;
+    }
+    for (const f of data ?? []) sumar(comoTexto(f.teacher_id));
+    if ((data ?? []).length < 1000) return cuenta;
+  }
 });
 
 /**
@@ -613,6 +673,65 @@ export async function clasesDelPanel(): Promise<ClasePanel[]> {
   }
 
   return salida;
+}
+
+/**
+ * Para el panel del equipo: qué profesores tiene cada alumno en el
+ * calendario (`vista_calendario_alumno`) y quién le dio la última clase
+ * (`class_analyses`), por `teacher_id`. Es lo que se compara con el
+ * profesor de la ficha en «Profesor distinto del de la ficha».
+ * Paginado por el tope de 1000 filas de PostgREST.
+ */
+export async function profesoresFueraDeLaFicha(): Promise<{
+  calendario: Map<string, Set<string>>;
+  ultimaClase: Map<string, string>;
+}> {
+  const calendario = new Map<string, Set<string>>();
+  const ultimaClase = new Map<string, string>();
+
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await soloLectura("vista_calendario_alumno")
+      .select("alumno_id, teacher_id")
+      .order("alumno_id", { ascending: true })
+      .order("teacher_id", { ascending: true })
+      .range(desde, desde + PAGINA - 1)
+      .returns<Fila[]>();
+    if (error) {
+      console.error("[gestion] No se pudo leer el calendario para el panel:", error.message);
+      break;
+    }
+    for (const f of data ?? []) {
+      const alumno = comoTexto(f.alumno_id);
+      const profesor = comoTexto(f.teacher_id);
+      if (!alumno || !profesor) continue;
+      const suyos = calendario.get(alumno) ?? new Set<string>();
+      suyos.add(profesor);
+      calendario.set(alumno, suyos);
+    }
+    if ((data ?? []).length < PAGINA) break;
+  }
+
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await soloLectura("class_analyses")
+      .select("student_id, teacher_id, class_date")
+      .not("student_id", "is", null)
+      .order("class_date", { ascending: false })
+      .order("id", { ascending: false })
+      .range(desde, desde + PAGINA - 1)
+      .returns<Fila[]>();
+    if (error) {
+      console.error("[gestion] No se pudo leer la última clase para el panel:", error.message);
+      break;
+    }
+    for (const f of data ?? []) {
+      const alumno = comoTexto(f.student_id);
+      const profesor = comoTexto(f.teacher_id);
+      if (alumno && profesor && !ultimaClase.has(alumno)) ultimaClase.set(alumno, profesor);
+    }
+    if ((data ?? []).length < PAGINA) break;
+  }
+
+  return { calendario, ultimaClase };
 }
 
 const CAMPOS_RESUMEN = "alumno_id, nombre, email, nivel, profesor";

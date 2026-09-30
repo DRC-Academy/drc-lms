@@ -14,6 +14,9 @@
 // bienvenida, no como cifra.
 // ---------------------------------------------------------------
 
+import type { MarcaNivel } from "@/lib/estimacion";
+import type { ClasesDelProfesor } from "@/lib/textos/estadisticas";
+
 export type EstadisticasAlumno = {
   /**
    * El curso principal, con el cálculo del diploma (`calcularDiploma`):
@@ -27,18 +30,22 @@ export type EstadisticasAlumno = {
   } | null;
   /**
    * El tiempo de curso: semanas que quedan de las 24 del temario,
-   * contadas desde que empezó con la academia. Null sin fecha de inicio
-   * o con el tiempo ya cumplido: entonces no hay nada que contar.
+   * contadas desde que empezó con la academia. Cumplido el tiempo,
+   * `semanasRestantes` es 0: el temario entero está abierto, y así se
+   * dice. Null sin fecha de inicio.
    */
   tiempo: { semanasRestantes: number; semanasTotales: number } | null;
-  /** El nombre de pila del profesor, para «con Sebastian». */
-  profesor: string | null;
   /**
-   * El nivel, como lo enseña «Mi progreso». `fiable` falso añade la nota
-   * de «estimado»: el nivel viene de la casilla del alta y nadie lo ha
-   * medido. Null sin nivel reconocible.
+   * El profesor de la ficha, ya resuelto por `profesorDelAlumno`: el
+   * nombre que ve el alumno y cuántas de sus clases ha dado él.
    */
-  nivel: { valor: string; fiable: boolean } | null;
+  profesor: ClasesDelProfesor;
+  /**
+   * El nivel con su marca, de `nivelMostrado`: el mismo que enseña «Mi
+   * progreso». `profesor` solo con la marca «profesor». Null sin nivel
+   * reconocible.
+   */
+  nivel: { valor: string; origen: MarcaNivel; profesor: string | null } | null;
   /** `clasesContadas`, de `vista_clases_contadas`. */
   clases: number | null;
   /**
