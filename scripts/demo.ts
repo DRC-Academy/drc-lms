@@ -5,6 +5,9 @@
 //                               registra su actividad. Idempotente.
 //   npm run demo:rejuvenecer    mueve todas sus fechas para que su última
 //                               actividad vuelva a ser de ayer.
+//
+//   `crear` y `rejuvenecer` quitan, además, los bloques generados desde
+//   la cuenta en un ensayo (ver `quitarBloquesDeEnsayo`).
 //   npm run demo:borrar         borra todo lo suyo y nada más.
 //   npm run demo:enlace         imprime un enlace para entrar como él
 //                               (15 minutos), sin mandar ningún correo.
@@ -210,6 +213,7 @@ async function crear() {
     return;
   }
 
+  await quitarBloquesDeEnsayo(ancla);
   if (bandera("rehacer-actividad")) await borrarActividad();
   await registrarActividad(ancla);
   await registrarSesiones(ancla);
@@ -523,6 +527,7 @@ const FECHAS: { tabla: string; clave: string; columnas: string[] }[] = [
 
 async function rejuvenecer() {
   const cuenta = (await leerCuenta()) ?? fallar("No hay cuenta demo: lanza demo:crear.");
+  await quitarBloquesDeEnsayo(cuenta.ancla);
   const hoy = diaLocal(new Date());
   const dias = diasEntre(cuenta.ancla, hoy);
   if (dias <= 0) {
@@ -532,7 +537,8 @@ async function rejuvenecer() {
 
   // SOLO SE MUEVE LO ANTERIOR AL ANCLA, que es lo que escribió `crear`.
   // Lo que se haya hecho a mano después —un ensayo de la grabación— se
-  // queda donde está: moverlo lo mandaría al futuro.
+  // queda donde está: moverlo lo mandaría al futuro. Menos sus bloques,
+  // que ya ha quitado `quitarBloquesDeEnsayo`.
   const corte = instanteEnMadrid(cuenta.ancla, "00:00").getTime();
   const mover = (valor: unknown) => new Date(Date.parse(String(valor)) + dias * DIA_MS).toISOString();
 
@@ -568,6 +574,50 @@ async function rejuvenecer() {
 
   log(`\nAncla ${cuenta.ancla} → ${hoy}. Próxima clase: ${proximaDemo(hoy).fecha} a las ${proximaDemo(hoy).hora}.`);
   log("Espera un minuto antes de grabar: cada instancia recuerda el ancla hasta 60 segundos.");
+}
+
+// ---------------------------------------------------------------
+// LOS BLOQUES DE ENSAYO
+// ---------------------------------------------------------------
+
+/** Las tablas que cuelgan de un bloque por su `bloque_clave`. */
+const TABLAS_DE_BLOQUE = ["progreso_bloques", "avance_bloques", "respuestas_produccion", "reportes_ejercicio"];
+
+/**
+ * Borra los bloques generados DESDE LA CUENTA —los de un ensayo de la
+ * grabación—, con su progreso, su avance, sus respuestas, sus reportes
+ * y sus traducciones.
+ *
+ * Los de `crear` son todos anteriores al ancla (el día después de cada
+ * clase) y están terminados. Uno posterior es de alguien que entró y le
+ * dio a generar, y si lo dejó a medias ocupa el sitio de la comparativa
+ * de ritmo («Ahora puedes llegar más rápido», `BloquesGenerados`): la
+ * demo dejaba de enseñarla. Así, cada `crear` o `rejuvenecer` la
+ * devuelve a su estado: los doce bloques hechos y la comparativa a la
+ * vista. Generar uno en la grabación sigue funcionando como para
+ * cualquier alumno; el siguiente `rejuvenecer` lo quita.
+ */
+async function quitarBloquesDeEnsayo(ancla: string) {
+  const corte = instanteEnMadrid(ancla, "00:00").toISOString();
+  const { data, error } = await baseLms()
+    .from("bloques_generados")
+    .select("bloque_clave")
+    .eq("alumno_id", ID_DEMO)
+    .gte("generado_en", corte)
+    .returns<{ bloque_clave: string }[]>();
+  if (error) fallar(`No se pudieron leer los bloques de ensayo: ${error.message}`);
+  const claves = (data ?? []).map((b) => b.bloque_clave);
+  if (claves.length === 0) return;
+
+  for (const tabla of TABLAS_DE_BLOQUE) {
+    const { error: e } = await baseLms().from(tabla).delete().eq("alumno_id", ID_DEMO).in("bloque_clave", claves);
+    if (e) fallar(`No se pudo vaciar ${tabla}: ${e.message}`);
+  }
+  const { error: e1 } = await baseLms().from("traducciones_bloque").delete().in("bloque_clave", claves);
+  if (e1) fallar(`No se pudieron borrar las traducciones: ${e1.message}`);
+  const { error: e2 } = await baseLms().from("bloques_generados").delete().eq("alumno_id", ID_DEMO).in("bloque_clave", claves);
+  if (e2) fallar(`No se pudieron borrar los bloques de ensayo: ${e2.message}`);
+  log(`Bloques de ensayo: ${claves.length} quitado(s), con su progreso.`);
 }
 
 // ---------------------------------------------------------------
