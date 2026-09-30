@@ -248,17 +248,20 @@ export default async function PerfilAlumno({
 
   // «AHORA PUEDES LLEGAR MÁS RÁPIDO»: la misma estimación que el banner
   // de «Mi progreso», con los mismos datos (ver `app/(alumno)/progreso`).
-  // Null si ya va al plan más alto o no hay datos: entonces no se pinta.
-  const ritmo = perfil
-    ? datosDeRitmo(
-        calcularEstimacion({
-          nivelActual: nivelMcer(nivelDelAlumno(alumnoId, perfil)),
+  // Se enseña SIEMPRE: sin estimación, ya al máximo o sin ahorro cambia
+  // la variante, no si aparece (`datosDeRitmo`). Sin perfil, la genérica.
+  const nivelRitmo = perfil ? nivelMcer(nivelDelAlumno(alumnoId, perfil)) : null;
+  const ritmo = datosDeRitmo(
+    perfil
+      ? calcularEstimacion({
+          nivelActual: nivelRitmo,
           horasSemanales: perfil.horasSemanales,
           textosDelPlan: [perfil.planContratado, perfil.objetivoSetter, perfil.objetivoPerfil],
           t: textosActuales().banners,
         })
-      )
-    : null;
+      : null,
+    { nivel: nivelRitmo, horasSemanales: perfil?.horasSemanales ?? null }
+  );
   const semanas = semanasDelAlumno(calendario, excepciones, ahora, undefined, { conPasadas: true });
   const pedida = Number.parseInt(searchParams.semana ?? "0", 10);
   const indiceSemana = Math.min(Math.max(0, Number.isFinite(pedida) ? pedida : 0), semanas.length - 1);
@@ -399,7 +402,7 @@ export default async function PerfilAlumno({
           generadosIniciales={generados}
           idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}
-          ritmo={ritmo && <ComparativaRitmo datos={ritmo} href={RUTA_AMPLIAR} />}
+          ritmo={<ComparativaRitmo datos={ritmo} href={RUTA_AMPLIAR} />}
           entreMedias={
             <>
               <div

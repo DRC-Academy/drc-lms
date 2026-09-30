@@ -1,7 +1,7 @@
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { Estimacion } from "@/lib/estimacion";
 import MascotaRitmo from "@/components/MascotaRitmo";
-import RitmoCompacto, { type DatosRitmo } from "@/components/RitmoCompacto";
+import RitmoCompacto, { textosMaximo, tituloSinCifras, type DatosRitmo } from "@/components/RitmoCompacto";
 import { TARJETA, TITULO_SECCION } from "@/components/base/Seccion";
 
 /**
@@ -25,8 +25,12 @@ import { TARJETA, TITULO_SECCION } from "@/components/base/Seccion";
  *
  * LAS CIFRAS SON LAS DEL BANNER DE «MI PROGRESO», de la misma estimación
  * (`lib/estimacion.ts`), en horas a la semana, que es en lo que calcula.
- * El recomendado es el mismo: el plan de más horas, y solo si ahorra
- * algún mes (`datosDeRitmo`).
+ * El recomendado es el mismo: el plan de más horas.
+ *
+ * SE ENSEÑA SIEMPRE (30/09/2026), en una de las cinco variantes de
+ * `datosDeRitmo`: con ahorro, las cifras; ya al máximo, un solo sendero y
+ * sin botón; sin datos, en C2 sin examen o sin ahorro, los dos senderos
+ * sin una sola cifra.
  */
 
 // El tipo y la regla de «hay algo que recomendar» viven con la pieza
@@ -37,7 +41,33 @@ const ID_RECOMENDADO = "ritmo-recomendado";
 
 export default function ComparativaRitmo({ datos, href }: { datos: DatosRitmo; href: string }) {
   const t = textosActuales().banners;
-  const { meta, actual, recomendado } = datos;
+
+  // Lo que dice la columna de texto, por variante. Los meses solo en
+  // `normal` y en `maximo` con estimación; en el resto, ninguna cifra.
+  const normal = datos.variante === "normal" ? datos : null;
+  const maximo = datos.variante === "maximo" ? datos : null;
+  const titulo = normal ? t.ahoraPuedesLlegarMasRapido : maximo ? textosMaximo(maximo, t).titulo : tituloSinCifras(datos, t);
+  const entradilla = normal
+    ? t.ritmoEntradilla(normal.recomendado.horas - normal.actual.horas, normal.meta, normal.recomendado.ahorro)
+    : maximo
+      ? textosMaximo(maximo, t).linea
+      : null;
+  const lector = normal
+    ? t.ritmoLector(normal.meta, normal.actual.horas, normal.actual.meses, normal.recomendado.horas, normal.recomendado.meses)
+    : maximo
+      ? t.ritmoLectorMaximo(maximo.meta, maximo.meses)
+      : null;
+  const horasActuales = normal ? normal.actual.horas : "horas" in datos ? datos.horas : null;
+
+  // El dibujo: con qué meses rotular cada sendero y qué poner en la meta.
+  const mesesLento = normal ? t.unosMeses(normal.actual.meses) : null;
+  const mesesVeloz = normal
+    ? t.unosMeses(normal.recomendado.meses)
+    : maximo && maximo.meta && maximo.meses
+      ? t.unosMeses(maximo.meses)
+      : null;
+  const metaCorta = datos.variante === "perfeccionar-c2" ? "C2" : datos.meta;
+  const rotuloMeta = datos.variante === "perfeccionar-c2" ? t.perfeccionarTuC2 : t.tuMeta;
 
   return (
     <>
@@ -56,59 +86,87 @@ export default function ComparativaRitmo({ datos, href }: { datos: DatosRitmo; h
         {/* Sin antetítulo («Hacia tu meta · Nivel B2»): la meta ya la dice
             la entradilla y el dibujo. Título con la base común. */}
         <h2 id="titulo-ritmo" className={`text-balance ${TITULO_SECCION}`}>
-          {t.ahoraPuedesLlegarMasRapido}
+          {titulo}
         </h2>
-        <p className="text-pretty text-[14.5px] leading-[1.45] text-marca-tintaMedia">
-          {t.ritmoEntradilla(recomendado.horas - actual.horas, meta, recomendado.ahorro)}
-        </p>
+        {entradilla && <p className="text-pretty text-[14.5px] leading-[1.45] text-marca-tintaMedia">{entradilla}</p>}
 
-        <p className="sr-only">{t.ritmoLector(meta, actual.horas, actual.meses, recomendado.horas, recomendado.meses)}</p>
+        {lector && <p className="sr-only">{lector}</p>}
 
         {/* LOS TIEMPOS, ESCRITOS. El tiempo va debajo del texto: deja libre la
             derecha de la fila recomendada, que es el sitio de la mascota. */}
         <ul aria-hidden className="flex flex-col gap-2.5">
-          <li className="grid grid-cols-[34px_minmax(0,1fr)] items-center gap-x-2.5 gap-y-1 rounded-[12px] bg-marca-niebla px-3 py-2.5">
-            <TrazoLeyenda recomendado={false} />
-            <span className="text-[13.5px] leading-[1.3] text-marca-tintaMedia">
-              <b className="block text-[14.5px] font-semibold text-marca-tinta">{t.tuRitmoActual}</b>
-              {t.horasALaSemana(actual.horas)}
-            </span>
-            <span className="col-start-2 font-display text-[17px] font-bold leading-[1.1] text-marca-tinta">{t.unosMeses(actual.meses)}</span>
-          </li>
+          {/* «Máximo» no tiene alternativa: su única fila es la suya, en verde. */}
+          {!maximo && (
+            <li className="grid grid-cols-[34px_minmax(0,1fr)] items-center gap-x-2.5 gap-y-1 rounded-[12px] bg-marca-niebla px-3 py-2.5">
+              <TrazoLeyenda recomendado={false} />
+              <span className="text-[13.5px] leading-[1.3] text-marca-tintaMedia">
+                <b className="block text-[14.5px] font-semibold text-marca-tinta">{t.tuRitmoActual}</b>
+                {horasActuales ? t.horasALaSemana(horasActuales) : null}
+              </span>
+              {mesesLento && (
+                <span className="col-start-2 font-display text-[17px] font-bold leading-[1.1] text-marca-tinta">{mesesLento}</span>
+              )}
+            </li>
+          )}
           <li className="relative grid grid-cols-[34px_minmax(0,1fr)] items-center gap-x-2.5 gap-y-1 rounded-[12px] bg-[#EEF8F0] py-2.5 pl-3 pr-[84px] shadow-[inset_0_0_0_1px_#CFE8D8] min-[900px]:pr-[92px]">
             <TrazoLeyenda recomendado />
             <span id={ID_RECOMENDADO} className="text-[13.5px] leading-[1.3] text-marca-tintaMedia">
-              <b className="block text-[14.5px] font-semibold text-marca-tinta">
-                {t.conHorasALaSemana(recomendado.horas)}{" "}
-                <span className="ml-0.5 inline-flex -translate-y-px items-center rounded-full bg-marca-verde px-2 py-0.5 align-middle text-[10.5px] font-bold uppercase tracking-[0.06em] text-white">
-                  {t.recomendado}
-                </span>
-              </b>
-              {t.horasExtraCadaSemana(recomendado.horas - actual.horas)}
+              {maximo ? (
+                <>
+                  <b className="block text-[14.5px] font-semibold text-marca-tinta">{t.tuRitmoActual}</b>
+                  {t.horasALaSemana(maximo.horas)}
+                </>
+              ) : (
+                <>
+                  <b className="block text-[14.5px] font-semibold text-marca-tinta">
+                    {normal ? t.conHorasALaSemana(normal.recomendado.horas) : t.conMasHorasALaSemana}{" "}
+                    <span className="ml-0.5 inline-flex -translate-y-px items-center rounded-full bg-marca-verde px-2 py-0.5 align-middle text-[10.5px] font-bold uppercase tracking-[0.06em] text-white">
+                      {t.recomendado}
+                    </span>
+                  </b>
+                  {normal ? t.horasExtraCadaSemana(normal.recomendado.horas - normal.actual.horas) : null}
+                </>
+              )}
             </span>
             {/* El tiempo no se parte; «3 meses antes» baja de línea si no cabe
                 junto a él (en móvil, con el hueco de la mascota, no cabe). */}
-            <span className="col-start-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-display text-[17px] font-bold leading-[1.1] text-marca-verdeOsc">
-              <span className="whitespace-nowrap">{t.unosMeses(recomendado.meses)}</span>
-              <small className="whitespace-nowrap font-sans text-[11.5px] font-medium text-marca-gris">{t.mesesAntes(recomendado.ahorro)}</small>
-            </span>
+            {mesesVeloz && (
+              <span className="col-start-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-display text-[17px] font-bold leading-[1.1] text-marca-verdeOsc">
+                <span className="whitespace-nowrap">{mesesVeloz}</span>
+                {normal && (
+                  <small className="whitespace-nowrap font-sans text-[11.5px] font-medium text-marca-gris">
+                    {t.mesesAntes(normal.recomendado.ahorro)}
+                  </small>
+                )}
+              </span>
+            )}
             <MascotaRitmo idObjetivo={ID_RECOMENDADO} />
           </li>
         </ul>
 
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex min-h-[48px] w-fit items-center justify-center rounded-full btn-verde px-7 text-[15.5px] font-bold"
-        >
-          {t.quieroIrMasRapido}
-        </a>
+        {/* Sin botón a quien ya va al plan más alto: no hay nada que ampliar. */}
+        {!maximo && (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-[48px] w-fit items-center justify-center rounded-full btn-verde px-7 text-[15.5px] font-bold"
+          >
+            {t.quieroIrMasRapido}
+          </a>
+        )}
       </div>
 
       {/* El dibujo en horizontal, desde 900px. */}
       <div className="hidden min-[900px]:block">
-        <SenderosHorizontal datos={datos} t={t} />
+        <SenderosHorizontal
+          soloVeloz={Boolean(maximo)}
+          mesesLento={mesesLento}
+          mesesVeloz={mesesVeloz}
+          metaCorta={metaCorta}
+          rotuloMeta={rotuloMeta}
+          t={t}
+        />
       </div>
     </section>
     </>
@@ -130,9 +188,10 @@ function TrazoLeyenda({ recomendado }: { recomendado: boolean }) {
 }
 
 /**
- * Lo que comparten los dos dibujos: los senderos, sus paradas, «Estás
- * aquí» y la meta. El de su ritmo, punteado y con más paradas; el
- * recomendado, verde, liso y dibujándose al aparecer.
+ * Lo que comparten los dibujos: los senderos, sus paradas, «Estás aquí»
+ * y la meta. El de su ritmo, punteado y con más paradas; el recomendado,
+ * verde, liso y dibujándose al aparecer. Con `soloVeloz` (ya va al
+ * máximo) el sendero lento no se dibuja: el suyo ES el rápido.
  */
 function Senderos({
   lento,
@@ -141,7 +200,9 @@ function Senderos({
   paradasVeloz,
   inicio,
   meta,
-  datos,
+  soloVeloz,
+  metaCorta,
+  rotuloMeta,
   t,
 }: {
   lento: string;
@@ -150,13 +211,19 @@ function Senderos({
   paradasVeloz: [number, number][];
   inicio: [number, number];
   meta: [number, number];
-  datos: DatosRitmo;
+  soloVeloz: boolean;
+  metaCorta: string | null;
+  rotuloMeta: string;
   t: Textos;
 }) {
   return (
     <>
-      <path d={lento} fill="none" stroke="#DCEAE1" strokeWidth="12" strokeLinecap="round" />
-      <path d={lento} fill="none" stroke="#9FBAAA" strokeWidth="5" strokeLinecap="round" strokeDasharray="0.1 11" />
+      {!soloVeloz && (
+        <>
+          <path d={lento} fill="none" stroke="#DCEAE1" strokeWidth="12" strokeLinecap="round" />
+          <path d={lento} fill="none" stroke="#9FBAAA" strokeWidth="5" strokeLinecap="round" strokeDasharray="0.1 11" />
+        </>
+      )}
       <path d={veloz} fill="none" stroke="#D9EFE0" strokeWidth="14" strokeLinecap="round" />
       {/* Se dibuja al aparecer, con el mismo gesto que el camino andado de
           la ruta (`sendero-andado`). `pathLength` 1: el largo no depende
@@ -171,9 +238,10 @@ function Senderos({
         strokeWidth="6"
         strokeLinecap="round"
       />
-      {paradasLento.map(([x, y]) => (
-        <circle key={`l${x}-${y}`} cx={x} cy={y} r="6" fill="#FFFFFF" stroke="#9FBAAA" strokeWidth="2.5" />
-      ))}
+      {!soloVeloz &&
+        paradasLento.map(([x, y]) => (
+          <circle key={`l${x}-${y}`} cx={x} cy={y} r="6" fill="#FFFFFF" stroke="#9FBAAA" strokeWidth="2.5" />
+        ))}
       {paradasVeloz.map(([x, y]) => (
         <circle key={`v${x}-${y}`} cx={x} cy={y} r="6.5" fill="#FFFFFF" stroke="#1E9E3A" strokeWidth="3" />
       ))}
@@ -183,19 +251,45 @@ function Senderos({
       </text>
       <circle cx={inicio[0]} cy={inicio[1]} r="11" fill="#12211A" stroke="#FFFFFF" strokeWidth="3.5" />
       <circle cx={meta[0]} cy={meta[1]} r="25" fill="#F0FAF2" stroke="#FFC400" strokeWidth="5" />
-      <text x={meta[0]} y={meta[1] + 6} textAnchor="middle" className="font-display" fontSize="16" fontWeight="700" fill="#14722A">
-        {datos.meta}
-      </text>
+      {metaCorta ? (
+        <text x={meta[0]} y={meta[1] + 6} textAnchor="middle" className="font-display" fontSize="16" fontWeight="700" fill="#14722A">
+          {metaCorta}
+        </text>
+      ) : (
+        // Sin nivel de meta conocido: una bandera en vez de un código.
+        <path
+          d={`M${meta[0] - 5} ${meta[1] + 9}V${meta[1] - 9}l11 4.5-11 4.5`}
+          fill="none"
+          stroke="#14722A"
+          strokeWidth="2.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
       <text x={meta[0]} y={meta[1] + 44} textAnchor="middle" className="font-sans" fontSize="12" fontWeight="600" fill="#4C5C53">
-        {t.tuMeta}
+        {rotuloMeta}
       </text>
     </>
   );
 }
 
-function SenderosHorizontal({ datos, t }: { datos: DatosRitmo; t: Textos }) {
+function SenderosHorizontal({
+  soloVeloz,
+  mesesLento,
+  mesesVeloz,
+  metaCorta,
+  rotuloMeta,
+  t,
+}: {
+  soloVeloz: boolean;
+  mesesLento: string | null;
+  mesesVeloz: string | null;
+  metaCorta: string | null;
+  rotuloMeta: string;
+  t: Textos;
+}) {
   return (
-    <svg aria-hidden viewBox="0 0 604 214" className="block h-auto w-full">
+    <svg aria-hidden viewBox="0 0 604 214" className="block h-auto w-full overflow-visible">
       <Senderos
         lento="M56 112 C 66 58, 118 26, 160 44 C 202 62, 176 104, 218 104 C 262 104, 252 34, 302 32 C 352 30, 344 98, 388 94 C 432 90, 422 30, 466 32 C 510 34, 536 74, 548 112"
         veloz="M56 112 C 170 176, 434 176, 548 112"
@@ -203,15 +297,21 @@ function SenderosHorizontal({ datos, t }: { datos: DatosRitmo; t: Textos }) {
         paradasVeloz={[[208, 152], [396, 152]]}
         inicio={[56, 112]}
         meta={[548, 112]}
-        datos={datos}
+        soloVeloz={soloVeloz}
+        metaCorta={metaCorta}
+        rotuloMeta={rotuloMeta}
         t={t}
       />
-      <text x="302" y="16" textAnchor="middle" className="font-sans" fontSize="13" fontWeight="600" fill="#4C5C53">
-        {t.unosMeses(datos.actual.meses)}
-      </text>
-      <text x="302" y="198" textAnchor="middle" className="font-sans" fontSize="13.5" fontWeight="700" fill="#14722A">
-        {t.unosMeses(datos.recomendado.meses)}
-      </text>
+      {mesesLento && !soloVeloz && (
+        <text x="302" y="16" textAnchor="middle" className="font-sans" fontSize="13" fontWeight="600" fill="#4C5C53">
+          {mesesLento}
+        </text>
+      )}
+      {mesesVeloz && (
+        <text x="302" y="198" textAnchor="middle" className="font-sans" fontSize="13.5" fontWeight="700" fill="#14722A">
+          {mesesVeloz}
+        </text>
+      )}
     </svg>
   );
 }

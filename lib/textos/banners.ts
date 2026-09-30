@@ -147,7 +147,7 @@ export type TextosBanners = {
   vasAlRitmoMasRapido: string;
   /** Debajo, con cifra: "llegas al nivel B2 en unos 3 meses". */
   llegasAEn: (nivel: string, meses: number) => string;
-  /** Debajo, sin estimación: "hacia tu meta". */
+  /** Sin estimación, el titular entero: sin frase debajo que lo repita. */
   haciaTuMetaSinCifras: string;
   /** Sin nivel, sin horas o sin ahorro: los dos caminos sin cifras. */
   conMasHorasLlegasAntes: string;
@@ -240,7 +240,7 @@ const ES: TextosBanners = {
   haciaTuMeta: (nivel) => `Hacia tu meta · Nivel ${nivel}`,
   ahoraPuedesLlegarMasRapido: "Ahora puedes llegar más rápido",
   ritmoEntradilla: (horasExtra, nivel, meses) =>
-    `Con ${horasExtra} h más a la semana, llegas a Nivel ${nivel} unos ${meses} ${meses === 1 ? "mes" : "meses"} antes.`,
+    `Con ${horasExtra} h más a la semana, llegas a Nivel ${nivel} ${ES_UNOS_MESES(meses)} antes.`,
   tuRitmoActual: "Tu ritmo actual",
   conHorasALaSemana: (horas) => `Con ${horas} h a la semana`,
   unosMeses: (cantidad) => ES_UNOS_MESES(cantidad),
@@ -255,7 +255,7 @@ const ES: TextosBanners = {
 
   vasAlRitmoMasRapido: "Vas al ritmo más rápido",
   llegasAEn: (nivel, meses) => `Llegas al nivel ${nivel} en ${ES_UNOS_MESES(meses)}.`,
-  haciaTuMetaSinCifras: "Vas al ritmo más rápido hacia tu meta.",
+  haciaTuMetaSinCifras: "Vas al ritmo más rápido hacia tu meta",
   conMasHorasLlegasAntes: "Con más horas a la semana, llegas antes a tu meta",
   conMasHorasAvanzasMas: "Con más horas a la semana, avanzas más en tu inglés",
   conMasHorasALaSemana: "Con más horas a la semana",
@@ -348,7 +348,7 @@ const EN: TextosBanners = {
 
   vasAlRitmoMasRapido: "You're going at the fastest pace",
   llegasAEn: (nivel, meses) => `You'll reach level ${nivel} in ${EN_UNOS_MESES(meses)}.`,
-  haciaTuMetaSinCifras: "You're going at the fastest pace towards your goal.",
+  haciaTuMetaSinCifras: "You're going at the fastest pace towards your goal",
   conMasHorasLlegasAntes: "With more hours a week, you reach your goal sooner",
   conMasHorasAvanzasMas: "With more hours a week, your English goes further",
   conMasHorasALaSemana: "With more hours a week",
