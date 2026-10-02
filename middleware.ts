@@ -28,6 +28,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { NOMBRE_COOKIE, abrirSesion } from "@/lib/sesion";
 import { CABECERA_URL } from "@/lib/foco";
+import { destinoSeguro } from "@/lib/volver";
 
 /**
  * Lo único a lo que se llega sin haber entrado.
@@ -180,7 +181,16 @@ export async function middleware(peticion: NextRequest) {
     return respuesta;
   }
 
-  const respuesta = NextResponse.redirect(new URL("/acceso", peticion.url));
+  // A DÓNDE IBA, para volver ahí después de entrar: el enlace de una
+  // recuperación del correo abierto sin sesión tiene que acabar en esa
+  // recuperación, no en el inicio. `destinoSeguro` solo deja pasar rutas
+  // de este sitio (ver `lib/volver.ts`); la raíz no se apunta, porque
+  // volver al inicio es lo que ya pasa sin nada.
+  const acceso = new URL("/acceso", peticion.url);
+  const volver = destinoSeguro(`${pathname}${peticion.nextUrl.search}`);
+  if (volver) acceso.searchParams.set("volver", volver);
+
+  const respuesta = NextResponse.redirect(acceso);
   // Si venía una cookie caducada o manipulada, se retira: si no, el
   // navegador la seguiría mandando en cada petición.
   respuesta.cookies.delete(NOMBRE_COOKIE);

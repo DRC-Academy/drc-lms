@@ -33,6 +33,8 @@ import ArranqueTutorial from "@/components/tutorial/ArranqueTutorial";
 import ComoVas from "@/components/estadisticas/ComoVas";
 import SemanaCompacta from "@/components/clases/SemanaCompacta";
 import { tutorialPendiente } from "@/lib/tutorial/estado";
+import { Suspense } from "react";
+import { AvisoRecuperacion } from "@/components/clases/RecuperacionesDeGestion";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
 // prerenderizar y los datos cambian en cuanto se analiza una clase nueva.
@@ -352,6 +354,14 @@ export default async function PerfilAlumno({
             </p>
           </div>
         </div>
+
+        {/* UNA CLASE CANCELADA ESPERANDO A QUE ELIJA FECHA, antes que nada
+            más: es lo único del inicio con plazo. Se pide a Gestión aparte
+            y en `<Suspense>`, así que si tarda o falla el inicio sale igual
+            y el aviso, sencillamente, no aparece. */}
+        <Suspense fallback={null}>
+          <AvisoRecuperacion alumnoId={alumnoId} href={conFoco("/clases", foco)} />
+        </Suspense>
 
         {/* «CÓMO VAS», EN MÓVIL, JUSTO DEBAJO DEL SALUDO: lo primero después
             de la cara del profesor. En escritorio vive arriba de la barra

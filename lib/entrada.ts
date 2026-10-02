@@ -27,8 +27,16 @@ import { crearSesion, type OrigenSesion } from "@/lib/sesiones-lms";
  */
 export type MotivoRechazo = "caducado" | "sinficha" | "error";
 
-export function volverAAcceso(urlPeticion: string, motivo: MotivoRechazo) {
-  return NextResponse.redirect(new URL(`/acceso?motivo=${motivo}`, urlPeticion));
+/**
+ * `volver` es la ruta a la que iba quien entra (ver `lib/volver.ts`), y
+ * se conserva también al rechazarle: el enlace caducado de un alumno que
+ * venía a elegir su recuperación tiene que seguir llevándole allí cuando
+ * pida otro.
+ */
+export function volverAAcceso(urlPeticion: string, motivo: MotivoRechazo, volver: string | null = null) {
+  const destino = new URL(`/acceso?motivo=${motivo}`, urlPeticion);
+  if (volver) destino.searchParams.set("volver", volver);
+  return NextResponse.redirect(destino);
 }
 
 /**
@@ -40,7 +48,13 @@ export function volverAAcceso(urlPeticion: string, motivo: MotivoRechazo) {
  * sin respaldo la rechazaría el primer guard, y el alumno acabaría
  * fuera una pantalla más tarde y sin entender por qué.
  */
-export async function entrarComo(urlPeticion: string, sesion: Sesion, origen: OrigenSesion) {
+export async function entrarComo(
+  urlPeticion: string,
+  sesion: Sesion,
+  origen: OrigenSesion,
+  /** Ya pasada por `destinoSeguro`: una ruta de este sitio, o null. */
+  volver: string | null = null
+) {
   const sesionId = await crearSesion({
     rol: sesion.rol,
     alumnoId: sesion.alumnoId,
@@ -52,9 +66,11 @@ export async function entrarComo(urlPeticion: string, sesion: Sesion, origen: Or
     expiraEn: new Date(Date.now() + DIAS_SESION * 24 * 60 * 60 * 1000),
   });
 
-  if (!sesionId) return volverAAcceso(urlPeticion, "error");
+  if (!sesionId) return volverAAcceso(urlPeticion, "error", volver);
 
-  const destino = sesion.rol === "admin" ? "/" : `/alumno/${sesion.alumnoId}`;
+  // Sin `volver`, cada rol a su sitio de siempre. Con él, a donde iba:
+  // las pantallas que no son suyas ya saben devolverle a la suya.
+  const destino = volver ?? (sesion.rol === "admin" ? "/" : `/alumno/${sesion.alumnoId}`);
   const respuesta = NextResponse.redirect(new URL(destino, urlPeticion));
   respuesta.cookies.set(NOMBRE_COOKIE, await crearCookieSesion(sesion, sesionId), OPCIONES_COOKIE);
   return respuesta;

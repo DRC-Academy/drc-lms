@@ -6,6 +6,7 @@ import FormularioAcceso from "@/components/FormularioAcceso";
 import { textosActuales } from "@/lib/idioma-servidor";
 import { IdiomaEnEsquina } from "@/components/CabeceraIdioma";
 import type { TextosEntrada } from "@/lib/textos/entrada";
+import { destinoSeguro } from "@/lib/volver";
 
 // Lee la cookie, así que no hay nada que prerenderizar.
 export const dynamic = "force-dynamic";
@@ -70,10 +71,14 @@ function avisoDe(motivo: unknown, t: TextosEntrada): string | null {
   }
 }
 
-export default async function Acceso({ searchParams }: { searchParams: { motivo?: string } }) {
-  // Quien ya ha entrado no tiene nada que hacer aquí. A la home, que
-  // ya sabe si le toca el buscador o su propia ficha.
-  if (await sesionActual()) redirect("/");
+export default async function Acceso({ searchParams }: { searchParams: { motivo?: string; volver?: string } }) {
+  // A dónde iba quien ha acabado aquí, si se sabe: lo apunta el
+  // middleware y viaja en el enlace del correo (ver `lib/volver.ts`).
+  const volver = destinoSeguro(searchParams.volver);
+
+  // Quien ya ha entrado no tiene nada que hacer aquí. A donde iba o a la
+  // home, que ya sabe si le toca el buscador o su propia ficha.
+  if (await sesionActual()) redirect(volver ?? "/");
 
   const t = textosActuales().entrada;
   const aviso = avisoDe(searchParams.motivo, t);
@@ -102,7 +107,7 @@ export default async function Acceso({ searchParams }: { searchParams: { motivo?
         {t.ponTuEmail}
       </p>
 
-      <FormularioAcceso aviso={aviso} />
+      <FormularioAcceso aviso={aviso} volver={volver} />
 
       <p className="mt-10 border-t border-drc-borde pt-6 text-[13px] leading-[1.55] text-drc-cuerpo">
         {t.problemasParaEntrar}

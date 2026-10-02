@@ -4,6 +4,8 @@ import { conFoco } from "@/lib/foco";
 import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { textosActuales } from "@/lib/idioma-servidor";
 import PantallaClases from "@/components/clases/PantallaClases";
+import RecuperacionesDeGestion from "@/components/clases/RecuperacionesDeGestion";
+import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -25,11 +27,22 @@ export const dynamic = "force-dynamic";
  * La semana del calendario va en `?semana=` (0 es la actual): se cambia
  * con enlaces y se calcula en el servidor, como todo lo demás.
  *
+ * ARRIBA, LAS RECUPERACIONES de clases canceladas, que se piden a la API
+ * de Gestión (`lib/recuperaciones.ts`) y no a la base. `?recuperacion=`
+ * es la del enlace del correo (llega por `/mis-clases`): se resalta si es
+ * de este alumno, y si no, no está en su lista y no pasa nada. El equipo
+ * las ve sin botones.
+ *
  * `force-dynamic` porque la respuesta depende de la hora: una página
  * cacheada diría "hoy" el día siguiente.
  */
-export default async function PaginaClases({ searchParams }: { searchParams: { semana?: string } }) {
-  const { alumnoId, paraEnlaces } = await exigirAlumnoDeLaPagina();
+export default async function PaginaClases({
+  searchParams,
+}: {
+  searchParams: { semana?: string; recuperacion?: string };
+}) {
+  const { sesion, alumnoId, paraEnlaces } = await exigirAlumnoDeLaPagina();
+  const resaltada = typeof searchParams.recuperacion === "string" ? searchParams.recuperacion : null;
 
   const [calendarioCrudo, excepciones, recorrido, profesores, profe] = await Promise.all([
     obtenerCalendario(alumnoId),
@@ -54,6 +67,11 @@ export default async function PaginaClases({ searchParams }: { searchParams: { s
         hrefSemana={(i) => conFoco(i === 0 ? "/clases" : `/clases?semana=${i}`, paraEnlaces)}
         hrefPractica={conFoco("/practica", paraEnlaces)}
         t={textosActuales()}
+        recuperaciones={
+          <Suspense fallback={null}>
+            <RecuperacionesDeGestion alumnoId={alumnoId} resaltada={resaltada} soloLectura={sesion.rol !== "alumno"} />
+          </Suspense>
+        }
       />
     </div>
   );

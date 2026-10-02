@@ -136,14 +136,19 @@ function texto(enlace: string): string {
  * de acceso contesta lo mismo pase lo que pase. El booleano es para el
  * log, no para la interfaz.
  */
-export async function enviarEnlaceAcceso(email: string, token: string): Promise<boolean> {
+/**
+ * `volver`, si viene, es la ruta a la que iba el alumno —ya pasada por
+ * `destinoSeguro`—, y viaja en el enlace para que `/entrar` le deje allí.
+ */
+export async function enviarEnlaceAcceso(email: string, token: string, volver: string | null = null): Promise<boolean> {
   const clave = process.env.RESEND_API_KEY;
   if (!clave) {
     console.error("[correo] Falta RESEND_API_KEY: no se ha enviado el enlace de acceso.");
     return false;
   }
 
-  const enlace = `${urlBase()}/entrar?token=${encodeURIComponent(token)}`;
+  const enlace =
+    `${urlBase()}/entrar?token=${encodeURIComponent(token)}` + (volver ? `&volver=${encodeURIComponent(volver)}` : "");
 
   try {
     const { error } = await new Resend(clave).emails.send({

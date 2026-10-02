@@ -17,6 +17,7 @@ import { enviarEnlaceAcceso } from "@/lib/correo";
 import { registrarIntento, type ResultadoIntento, type RolIntento } from "@/lib/accesos-servidor";
 import type { EstadoAcceso } from "@/app/acceso/estado";
 import { textosActuales } from "@/lib/idioma-servidor";
+import { destinoSeguro } from "@/lib/volver";
 
 /** Lo que hay que dejar anotado, decidido dentro pero escrito fuera. */
 type Anotacion = { resultado: ResultadoIntento; rol: RolIntento; alumnoId: string | null };
@@ -48,7 +49,7 @@ function esperar(ms: number): Promise<void> {
  * Mira si ese email puede entrar y, si puede, le manda el enlace.
  * No devuelve nada: lo que pasa aquí dentro no sale al visitante.
  */
-async function atender(email: string): Promise<Anotacion> {
+async function atender(email: string, volver: string | null): Promise<Anotacion> {
   // La búsqueda del alumno se hace SIEMPRE, también para los del
   // equipo. Comprobar primero si es administrador y ahorrarse la
   // consulta haría que esos emails respondieran antes, y eso también
@@ -59,7 +60,7 @@ async function atender(email: string): Promise<Anotacion> {
 
   if (alumno === null && !admin) return { resultado: "sin_cuenta", rol, alumnoId: null };
 
-  const enviado = await enviarEnlaceAcceso(email, await crearTokenEnlace(email));
+  const enviado = await enviarEnlaceAcceso(email, await crearTokenEnlace(email), volver);
   if (!enviado) {
     // El visitante ve el mensaje de siempre; el aviso se queda en el
     // log, que es donde alguien puede hacer algo al respecto.
@@ -75,6 +76,10 @@ async function atender(email: string): Promise<Anotacion> {
 
 export async function solicitarEnlace(datos: FormData): Promise<EstadoAcceso> {
   const email = normalizarEmail(datos.get("email"));
+  // A dónde iba (ver `lib/volver.ts`). Lo trae un campo oculto del
+  // formulario, así que se vuelve a filtrar aquí: del navegador puede
+  // llegar cualquier cosa.
+  const volver = destinoSeguro(datos.get("volver"));
 
   // Esto sí se puede contar: que un email esté mal escrito se ve sin
   // preguntarle a nadie, así que decirlo no revela quién está dado de
@@ -93,7 +98,7 @@ export async function solicitarEnlace(datos: FormData): Promise<EstadoAcceso> {
   let anotacion: Anotacion = { resultado: "sin_cuenta", rol: "desconocido", alumnoId: null };
 
   try {
-    const [resultado] = await Promise.all([atender(email), esperar(SUELO_MS)]);
+    const [resultado] = await Promise.all([atender(email, volver), esperar(SUELO_MS)]);
     anotacion = resultado;
   } catch (error) {
     // Ni una excepción cambia la respuesta: si Gestión no contesta, el

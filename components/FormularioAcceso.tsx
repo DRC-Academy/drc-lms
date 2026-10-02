@@ -15,7 +15,14 @@ const INICIAL: EstadoAcceso = { estado: "inicial", mensaje: "" };
  * página. A cambio, el formulario necesita JavaScript; el resto de la
  * práctica también lo necesita, así que no se pierde nada.
  */
-export default function FormularioAcceso({ aviso }: { aviso: string | null }) {
+export default function FormularioAcceso({
+  aviso,
+  volver = null,
+}: {
+  aviso: string | null;
+  /** La ruta a la que volver después de entrar, ya filtrada en la página. */
+  volver?: string | null;
+}) {
   const t = usarIdioma().t.entrada;
   const [resultado, setResultado] = useState<EstadoAcceso>(INICIAL);
   const [enviando, setEnviando] = useState(false);
@@ -81,6 +88,7 @@ export default function FormularioAcceso({ aviso }: { aviso: string | null }) {
       )}
 
       <form onSubmit={alEnviar} noValidate className="flex flex-col gap-2.5">
+        {volver && <input type="hidden" name="volver" value={volver} />}
         <label htmlFor="email" className="sr-only">
           {t.tuEmail}
         </label>

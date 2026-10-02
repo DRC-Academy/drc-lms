@@ -53,6 +53,7 @@ import { AYUDA, type TextosAyuda } from "@/lib/textos/ayuda";
 import { CLASES, type TextosClases } from "@/lib/textos/clases";
 import { MASCOTA, type TextosMascota } from "@/lib/textos/mascota";
 import { ESTADISTICAS, type TextosEstadisticas } from "@/lib/textos/estadisticas";
+import { RECUPERACIONES, type TextosRecuperaciones } from "@/lib/textos/recuperaciones";
 
 export type Textos = {
   ejercicios: TextosEjercicios;
@@ -67,6 +68,7 @@ export type Textos = {
   clases: TextosClases;
   mascota: TextosMascota;
   estadisticas: TextosEstadisticas;
+  recuperaciones: TextosRecuperaciones;
 };
 
 export const TEXTOS: Record<Idioma, Textos> = {
@@ -83,6 +85,7 @@ export const TEXTOS: Record<Idioma, Textos> = {
     clases: CLASES.en,
     mascota: MASCOTA.en,
     estadisticas: ESTADISTICAS.en,
+    recuperaciones: RECUPERACIONES.en,
   },
   es: {
     ejercicios: EJERCICIOS.es,
@@ -97,5 +100,6 @@ export const TEXTOS: Record<Idioma, Textos> = {
     clases: CLASES.es,
     mascota: MASCOTA.es,
     estadisticas: ESTADISTICAS.es,
+    recuperaciones: RECUPERACIONES.es,
   },
 };

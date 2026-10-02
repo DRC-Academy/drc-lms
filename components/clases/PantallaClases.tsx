@@ -13,6 +13,12 @@
 //   · EL HISTORIAL (`HistorialClases`, el recorrido de «Mi progreso»), con
 //     un ancla por clase para que el calendario lleve a cada una.
 //
+// ANTES QUE NADA, LAS RECUPERACIONES de clases canceladas por el profesor
+// (`Recuperaciones`), cuando las hay: son lo único de la pantalla que le
+// pide al alumno que decida algo. Llegan como pieza ya montada —la página
+// las pide a Gestión dentro de un `<Suspense>`—, para que si Gestión tarda
+// el resto no espere.
+//
 // SIN HORARIO NI CLASES POR DELANTE, una tarjeta con la mascota que dice dónde van a
 // salir y lleva a la práctica: no es un error, es que aún no ha empezado.
 //
@@ -22,6 +28,7 @@
 // ---------------------------------------------------------------
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { proximaDelAlumno, semanasDelAlumno } from "@/lib/clases";
 import type { FilaCalendario } from "@/lib/calendario-gestion";
 import type { ClaseDelRecorrido } from "@/lib/gestion";
@@ -43,8 +50,11 @@ export default function PantallaClases({
   hrefSemana,
   hrefPractica,
   t,
+  recuperaciones = null,
   ahora = new Date(),
 }: {
+  /** Las recuperaciones, ya montadas (ver la cabecera). */
+  recuperaciones?: ReactNode;
   calendario: FilaCalendario[];
   excepciones: unknown;
   /** `obtenerRecorrido().todas`: de la más reciente a la más antigua. */
@@ -76,6 +86,8 @@ export default function PantallaClases({
           {tc.tuHorarioSemanal}
         </p>
       </header>
+
+      {recuperaciones}
 
       {sinHorario ? (
         <SinClases t={tc} hrefPractica={hrefPractica} />

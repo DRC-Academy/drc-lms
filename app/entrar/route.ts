@@ -20,6 +20,7 @@ import { entrarComo, volverAAcceso } from "@/lib/entrada";
 import { guardarVinculo } from "@/lib/vinculos";
 import { abrirTokenEnlace, esAdministrador, type Sesion } from "@/lib/sesion";
 import { registrarIntento } from "@/lib/accesos-servidor";
+import { destinoSeguro } from "@/lib/volver";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,13 +28,16 @@ export const dynamic = "force-dynamic";
 export async function GET(peticion: NextRequest) {
   const token = peticion.nextUrl.searchParams.get("token") ?? "";
   const email = await abrirTokenEnlace(token);
+  // A dónde iba, si el enlace lo trae. Fuera de la firma a propósito: solo
+  // vale una ruta de este sitio, así que no hay nada que proteger.
+  const volver = destinoSeguro(peticion.nextUrl.searchParams.get("volver"));
 
   if (!email) {
     // Aquí no hay email que mirar —el token no se pudo abrir— así que
     // no se sabe de quién era. Cuenta igual: un pico de caducados dice
     // que los correos se están leyendo tarde.
     await registrarIntento({ resultado: "enlace_caducado", rol: "desconocido" });
-    return volverAAcceso(peticion.url, "caducado");
+    return volverAAcceso(peticion.url, "caducado", volver);
   }
 
   let sesion: Sesion;
@@ -46,7 +50,7 @@ export async function GET(peticion: NextRequest) {
     const alumno = await buscarAlumnoPorEmail(email);
     if (!alumno) {
       await registrarIntento({ resultado: "sin_ficha", rol: "alumno" });
-      return volverAAcceso(peticion.url, "sinficha");
+      return volverAAcceso(peticion.url, "sinficha", volver);
     }
     sesion = { rol: "alumno", email, alumnoId: alumno.alumnoId };
 
@@ -58,5 +62,5 @@ export async function GET(peticion: NextRequest) {
     await guardarVinculo(alumno.alumnoId, email, null);
   }
 
-  return entrarComo(peticion.url, sesion, "magic_link");
+  return entrarComo(peticion.url, sesion, "magic_link", volver);
 }
