@@ -56,6 +56,11 @@ import { destinoSeguro } from "@/lib/volver";
  *     de leer nada (`lib/secreto-externo.ts`). Detrás de la cookie,
  *     Gestión recibiría un 401 en cada llamada.
  *
+ *   · `/api/wp` — lo que consulta WordPress de servidor a servidor, como
+ *     los meses del programa para la landing. Lo autoriza la firma HMAC
+ *     del cuerpo (DIPLOMA_HMAC_SECRET), que la ruta comprueba antes de
+ *     buscar a nadie. Detrás de la cookie, cada llamada era un 401.
+ *
  *   · `/salir` — cerrar sesión. Con la cookie caducada o manipulada,
  *     esta puerta mandaba a `/acceso` antes de llegar a la ruta, y la
  *     sesión de WordPress (`SALIR_WP`) se quedaba abierta. La ruta lee
@@ -69,6 +74,7 @@ const PUBLICAS = [
   "/api/avisos",
   "/api/avisos-apertura",
   "/api/externo",
+  "/api/wp",
 ];
 
 function esPublica(ruta: string): boolean {
