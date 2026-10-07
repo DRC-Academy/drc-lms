@@ -31,6 +31,7 @@
 import "server-only";
 import { cache } from "react";
 import { esIdDemo } from "@/lib/demo/cuenta";
+import { llamarGestion, type RespuestaGestion } from "@/lib/gestion-api";
 
 export const ESTADOS = [
   "esperando_alumno",
@@ -62,75 +63,9 @@ export type Recuperacion = {
   puedeDecirNinguna: boolean;
 };
 
-/** El tope de espera. Gestión responde en décimas; esto es para cuando no. */
-const MS_ESPERA = 8000;
-
-/** Gestión sin configurar en este entorno: no se llama y no se avisa en cada petición. */
-function configuracion(): { base: string; secreto: string } | null {
-  const base = process.env.GESTION_URL?.trim().replace(/\/+$/, "");
-  const secreto = process.env.LMS_GESTION_SECRET?.trim();
-  if (!base || !secreto) return null;
-  return { base, secreto };
-}
-
-/** Lo que devuelve una llamada: el cuerpo, o por qué no lo hay. */
-type Respuesta =
-  | { ok: true; cuerpo: unknown }
-  | { ok: false; status: number; error: string; mensaje: string | null; problemas: string[] };
-
-/**
- * Una llamada a la API de Gestión. Nunca lanza: si no hay variables, si
- * no contesta a tiempo o si contesta algo que no es JSON, sale como un
- * 503 más —para el alumno es lo mismo: ahora no se puede—.
- */
-async function llamar(ruta: string, init: { method: "GET" | "POST"; cuerpo?: unknown }): Promise<Respuesta> {
-  const config = configuracion();
-  if (!config) {
-    console.error("[recuperaciones] Faltan GESTION_URL o LMS_GESTION_SECRET: no se consulta Gestión.");
-    return { ok: false, status: 503, error: "no_configurado", mensaje: null, problemas: [] };
-  }
-
-  let respuesta: Response;
-  try {
-    respuesta = await fetch(`${config.base}${ruta}`, {
-      method: init.method,
-      headers: {
-        "x-lms-secret": config.secreto,
-        accept: "application/json",
-        ...(init.cuerpo !== undefined ? { "content-type": "application/json" } : {}),
-      },
-      body: init.cuerpo !== undefined ? JSON.stringify(init.cuerpo) : undefined,
-      cache: "no-store",
-      signal: AbortSignal.timeout(MS_ESPERA),
-    });
-  } catch (error) {
-    console.error(`[recuperaciones] Gestión no responde (${init.method} ${ruta.split("?")[0]}):`, error);
-    return { ok: false, status: 503, error: "sin_respuesta", mensaje: null, problemas: [] };
-  }
-
-  let cuerpo: unknown = null;
-  try {
-    cuerpo = await respuesta.json();
-  } catch {
-    // Sin cuerpo JSON: una página de error de Vercel, o nada.
-  }
-
-  if (respuesta.ok) return { ok: true, cuerpo };
-
-  const c = (typeof cuerpo === "object" && cuerpo !== null ? cuerpo : {}) as Record<string, unknown>;
-  const error = typeof c.error === "string" ? c.error : "desconocido";
-  if (respuesta.status === 401 || respuesta.status >= 500) {
-    // El 401 es un secreto que no cuadra entre los dos proyectos: el
-    // alumno no puede hacer nada, quien tiene que enterarse es el log.
-    console.error(`[recuperaciones] Gestión respondió ${respuesta.status} (${error}) a ${init.method} ${ruta.split("?")[0]}.`);
-  }
-  return {
-    ok: false,
-    status: respuesta.status,
-    error,
-    mensaje: typeof c.mensaje === "string" && c.mensaje.trim() !== "" ? c.mensaje : null,
-    problemas: Array.isArray(c.problemas) ? c.problemas.filter((p): p is string => typeof p === "string") : [],
-  };
+/** La llamada a Gestión, compartida con el autoservicio: `lib/gestion-api.ts`. */
+function llamar(ruta: string, init: { method: "GET" | "POST"; cuerpo?: unknown }): Promise<RespuestaGestion> {
+  return llamarGestion("recuperaciones", ruta, init);
 }
 
 // ---------------------------------------------------------------

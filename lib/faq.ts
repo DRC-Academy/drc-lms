@@ -27,6 +27,7 @@
 
 import type { Idioma } from "@/lib/idioma";
 import { PERFIL_WOO } from "@/lib/cuenta-woo";
+import { WHATSAPP_DRC } from "@/lib/soporte";
 
 /** Un texto en los dos idiomas. */
 export type Bilingue = Record<Idioma, string>;
@@ -743,7 +744,7 @@ export function buscar(consulta: string, idioma: Idioma, tope = 4): Resultado[] 
 // su propia conversación.
 // ---------------------------------------------------------------
 
-export const WHATSAPP = "353899409220";
+// El número sale de `lib/soporte.ts`, el único sitio donde está.
 
 /** Cómo se llama cada pantalla cuando se la nombra en un mensaje. */
 function nombreDePantalla(ruta: string, idioma: Idioma): string {
@@ -795,5 +796,5 @@ export function enlaceSoporte({
     partes.push(es ? `Mi duda: «${asunto.trim()}».` : `My question: "${asunto.trim()}".`);
   }
 
-  return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(partes.join(" "))}`;
+  return `https://wa.me/${WHATSAPP_DRC}?text=${encodeURIComponent(partes.join(" "))}`;
 }
