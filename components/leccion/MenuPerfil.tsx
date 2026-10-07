@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import HojaInferior from "@/components/base/HojaInferior";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { PERFIL_WOO } from "@/lib/cuenta-woo";
 import ComoVas from "@/components/estadisticas/ComoVas";
@@ -45,6 +45,7 @@ export default function MenuPerfil({
   const [abierto, setAbierto] = useState(false);
   const raiz = useRef<HTMLDivElement>(null);
   const idPanel = useId();
+  const cerrar = useCallback(() => setAbierto(false), []);
 
   const inicial = nombre.trim()[0]?.toUpperCase() ?? "";
 
@@ -119,38 +120,24 @@ export default function MenuPerfil({
           <span className="max-w-full truncate">{t.navegacion.perfil}</span>
         </button>
 
-        {/* EN EL BODY, no dentro de la barra: la barra es `fixed` con su
-            propio `z-index`, y una hoja dentro de ella nunca podría pasar
-            por encima del botón flotante de la ayuda. */}
-        {abierto &&
-          createPortal(
-            <div className="fixed inset-0 z-[60] flex flex-col justify-end min-[900px]:hidden">
-              <button
-                type="button"
-                aria-label={t.navegacion.cerrarElMenu}
-                onClick={() => setAbierto(false)}
-                className="flex-1 bg-[rgba(18,33,26,.42)]"
-              />
-              <div
-                id={idPanel}
-                role="dialog"
-                aria-label={t.navegacion.perfil}
-                // Con «Cómo vas» encima puede no caber en un móvil bajo: la
-                // hoja se queda en el 90 % de la pantalla y hace scroll.
-                className="aparece max-h-[90dvh] overflow-y-auto rounded-t-[20px] bg-white px-5 pt-4"
-                style={{ paddingBottom: "calc(32px + env(safe-area-inset-bottom))" }}
-              >
-                <span aria-hidden className="mx-auto mb-4 block h-1 w-9 rounded-full bg-marca-bordeSuave" />
-                {estadisticas && (
-                  <div className="mb-5">
-                    <ComoVas estadisticas={estadisticas} variante="movil" hrefPractica={hrefPractica} />
-                  </div>
-                )}
-                {contenido}
-              </div>
-            </div>,
-            document.body
+        {/* La hoja va al body (ver `HojaInferior`). Con «Cómo vas» encima
+            puede no caber en un móvil bajo: se queda en el 90 % de la
+            pantalla y hace scroll. */}
+        <HojaInferior
+          abierta={abierto}
+          alCerrar={cerrar}
+          etiqueta={t.navegacion.perfil}
+          etiquetaCerrar={t.navegacion.cerrarElMenu}
+          id={idPanel}
+          soloMovil
+        >
+          {estadisticas && (
+            <div className="mb-5">
+              <ComoVas estadisticas={estadisticas} variante="movil" hrefPractica={hrefPractica} />
+            </div>
           )}
+          {contenido}
+        </HojaInferior>
       </div>
     );
   }
