@@ -76,6 +76,7 @@ import {
 import { completarLeccion, cursosAsignados, guardarIntento } from "@/lib/cursos-servidor";
 import { crearSesion } from "@/lib/sesiones-lms";
 import { DIAS_SESION, crearTokenEnlace } from "@/lib/sesion";
+import { urlPublica } from "@/lib/url-publica";
 import { MODO_ACTUAL } from "@/lib/modos";
 import { nivelDelAlumno } from "@/lib/estimacion";
 import { abrirPlazo } from "@/lib/tiempo";
@@ -675,7 +676,12 @@ async function borrar() {
 async function enlace() {
   if (!(await leerCuenta())) fallar("No hay cuenta demo: lanza demo:crear.");
   if (!process.env.SECRETO_SESION) fallar("Falta SECRETO_SESION en .env.local.");
-  const base = (opcion("url") ?? process.env.URL_BASE ?? "http://localhost:3000").replace(/\/+$/, "");
+  let base: string;
+  try {
+    base = opcion("url")?.replace(/\/+$/, "") ?? urlPublica();
+  } catch (error) {
+    fallar(`${(error as Error).message} O pásala con --url=.`);
+  }
   const token = await crearTokenEnlace(EMAIL_DEMO);
   log(`${base}/entrar?token=${encodeURIComponent(token)}`);
   log("\nVale 15 minutos. Para producción, SECRETO_SESION tiene que ser el mismo que en Vercel.");

@@ -12,6 +12,7 @@
 import "server-only";
 import { Resend } from "resend";
 import { MINUTOS_ENLACE } from "@/lib/sesion";
+import { urlPublica } from "@/lib/url-publica";
 
 /**
  * Sale del dominio propio, ya verificado en Resend.
@@ -20,7 +21,9 @@ import { MINUTOS_ENLACE } from "@/lib/sesion";
  * viva en un vercel.app, el correo sale de @drcacademy.com con un enlace
  * a otro dominio, que es el patrón que Gmail y Outlook tratan como
  * sospechoso. Se cierra poniendo el LMS en practica.drcacademy.com y
- * apuntando URL_BASE ahí; hasta entonces, el enlace del correo puede
+ * apuntando URL_BASE ahí (ver `lib/url-publica.ts`, y la constante
+ * DRC_LMS_URL del plugin de WordPress, que no puede leer esta variable
+ * y hay que cambiar a la vez); hasta entonces, el enlace del correo puede
  * acabar en spam aunque el envío salga bien.
  */
 export const REMITENTE = "DRC Academy <practica@drcacademy.com>";
@@ -39,29 +42,6 @@ export const TITULAR = "#0E2A19";
 export const CUERPO = "#5A655E";
 export const FONDO = "#F4F3EF";
 export const BORDE = "#E6E3DA";
-
-/**
- * De dónde sale el dominio del enlace.
- *
- * A propósito NO se mira el encabezado `Host` de la petición: se puede
- * falsear, y entonces le mandaríamos al alumno un enlace con su token
- * apuntando al servidor de otro. El origen lo decide el entorno, no
- * quien llama.
- */
-export function urlBase(): string {
-  const explicita = process.env.URL_BASE?.trim();
-  if (explicita) return explicita.replace(/\/+$/, "");
-
-  // En producción, el dominio de verdad. En preview, el del propio
-  // despliegue, para poder probar el flujo entero sin tocar producción.
-  const produccion = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
-  if (process.env.VERCEL_ENV === "production" && produccion) return `https://${produccion}`;
-
-  const despliegue = process.env.VERCEL_URL?.trim();
-  if (despliegue) return `https://${despliegue}`;
-
-  return "http://localhost:3000";
-}
 
 function html(enlace: string): string {
   return `<!doctype html>
@@ -147,8 +127,19 @@ export async function enviarEnlaceAcceso(email: string, token: string, volver: s
     return false;
   }
 
+  // El dominio del enlace sale de `lib/url-publica.ts` y de nada más.
+  // Si URL_BASE falta o está mal, no se manda un enlace roto: se queda
+  // en el log y quien llama lo anota como envío fallido.
+  let base: string;
+  try {
+    base = urlPublica();
+  } catch (error) {
+    console.error(`[correo] No se ha enviado el enlace de acceso. ${(error as Error).message}`);
+    return false;
+  }
+
   const enlace =
-    `${urlBase()}/entrar?token=${encodeURIComponent(token)}` + (volver ? `&volver=${encodeURIComponent(volver)}` : "");
+    `${base}/entrar?token=${encodeURIComponent(token)}` + (volver ? `&volver=${encodeURIComponent(volver)}` : "");
 
   try {
     const { error } = await new Resend(clave).emails.send({

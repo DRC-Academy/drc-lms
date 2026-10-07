@@ -41,7 +41,7 @@ import {
   soltarAvisos,
 } from "@/lib/avisos-servidor";
 import { alumnosParaAvisos, type AlumnoAviso } from "@/lib/gestion";
-import { urlBase } from "@/lib/correo";
+import { urlPublica } from "@/lib/url-publica";
 import {
   enviarAviso,
   type AvisoApertura,
@@ -166,6 +166,17 @@ export async function GET(peticion: NextRequest) {
     );
   }
 
+  // La dirección de los enlaces se comprueba ANTES de nada. Si fallara
+  // dentro de `componer`, ya con los módulos reservados, la ronda dejaría
+  // reservas sin correo detrás.
+  let base: string;
+  try {
+    base = urlPublica();
+  } catch (error) {
+    console.error(`[avisos] No se envía nada. ${(error as Error).message}`);
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  }
+
   const ahora = new Date();
 
   const [alumnos, contenido, estado] = await Promise.all([
@@ -256,7 +267,7 @@ export async function GET(peticion: NextRequest) {
   // ------------------------------ PRUEBA ------------------------------
   if (prueba !== "") {
     const elegido = conAviso[0] ?? null;
-    const aviso = elegido ? await componer(elegido) : await avisoDeMuestra();
+    const aviso = elegido ? await componer(elegido, base) : await avisoDeMuestra(base);
 
     const resultado = seco ? { ok: true, id: null } : await enviarAviso(prueba, aviso);
 
@@ -341,7 +352,7 @@ export async function GET(peticion: NextRequest) {
     const ids = recortado.secciones.flatMap((seccion) => seccion.nuevos.map((m) => m.id));
 
     ultimoEnvio = Date.now();
-    const resultado = await enviarAviso(plan.alumno.email, await componer(recortado));
+    const resultado = await enviarAviso(plan.alumno.email, await componer(recortado, base));
 
     if (resultado.ok) {
       await confirmarAvisos(plan.alumno.alumnoId, ids, resultado.id);
@@ -432,8 +443,7 @@ function fundirRepetidos(modulos: ModuloAvisado[]): ModuloAvisado[] {
 }
 
 /** Del plan calculado al correo, con sus enlaces ya montados. */
-async function componer(plan: PlanAlumno): Promise<AvisoApertura> {
-  const base = urlBase();
+async function componer(plan: PlanAlumno, base: string): Promise<AvisoApertura> {
   const token = await crearTokenBaja(plan.alumno.alumnoId);
   const parametro = `?t=${encodeURIComponent(token)}`;
 
@@ -480,8 +490,7 @@ async function componer(plan: PlanAlumno): Promise<AvisoApertura> {
  * Datos inventados a propósito y reconocibles como tales, para que
  * nadie confunda una prueba con un envío real al mirar el buzón.
  */
-async function avisoDeMuestra(): Promise<AvisoApertura> {
-  const base = urlBase();
+async function avisoDeMuestra(base: string): Promise<AvisoApertura> {
   const token = await crearTokenBaja("muestra");
   const parametro = `?t=${encodeURIComponent(token)}`;
 
