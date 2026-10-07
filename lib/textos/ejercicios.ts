@@ -205,10 +205,14 @@ const ES: TextosEjercicios = {
   compararConElModelo: "Comparar con el modelo",
   revisaTuRespuesta: "Revisa tu respuesta",
   unEjemploValido: "Un ejemplo válido",
-  avisoProfesor: "Tu profesor verá esta respuesta antes de la próxima clase.",
+  // BUCLE-PROFESOR: restaurar promesa cuando el bucle de vuelta exista
+  // Antes: "Tu profesor verá esta respuesta antes de la próxima clase."
+  avisoProfesor: "Tu respuesta queda guardada en tu progreso.",
 
   tuPractica: "Tu práctica",
-  avisoProfesorLateral: (profesor) => `${profesor} verá tu respuesta antes de la clase.`,
+  // BUCLE-PROFESOR: restaurar promesa cuando el bucle de vuelta exista
+  // Antes: (profesor) => `${profesor} verá tu respuesta antes de la clase.`
+  avisoProfesorLateral: () => "Lo que escribas queda guardado en tu progreso.",
   faseDeTotal: (n, total) => `Fase ${n} de ${total}`,
   ejerciciosYMinutos: (n, minutos) => `${n} ${n === 1 ? "ejercicio" : "ejercicios"} · ${minutos} min`,
   irALaFase: (nombre) => `Fase: ${nombre}`,
@@ -237,12 +241,12 @@ const ES: TextosEjercicios = {
       : total === 1
         ? "Correcto."
         : `Los ${enLetras("es", total)}, correctos.`,
-  cierreLeccion: (aciertos, total, profesor) =>
+  // BUCLE-PROFESOR: restaurar promesa cuando el bucle de vuelta exista
+  // Antes, tras «…en tu práctica.»: profesor ? ` ${profesor} lo verá antes de vuestra próxima clase.` : ""
+  cierreLeccion: (aciertos, total) =>
     aciertos === total
       ? "Has terminado los ejercicios de esta lección. Puedes seguir con la siguiente cuando quieras."
-      : `Lo que se te ha quedado a medias vuelve a aparecer en tu práctica.${
-          profesor ? ` ${profesor} lo verá antes de vuestra próxima clase.` : ""
-        }`,
+      : "Lo que se te ha quedado a medias vuelve a aparecer en tu práctica.",
   ver: "Ver",
   completarYSeguir: "Completar y seguir",
   repetirLosEjercicios: "Repetir los ejercicios",
@@ -315,10 +319,14 @@ const EN: TextosEjercicios = {
   compararConElModelo: "Compare with the example",
   revisaTuRespuesta: "Check your answer",
   unEjemploValido: "One good example",
-  avisoProfesor: "Your teacher will read this before your next class.",
+  // BUCLE-PROFESOR: restaurar promesa cuando el bucle de vuelta exista
+  // Antes: "Your teacher will read this before your next class."
+  avisoProfesor: "Your answer is saved in your progress.",
 
   tuPractica: "Your practice",
-  avisoProfesorLateral: (profesor) => `${profesor} will read your answer before your class.`,
+  // BUCLE-PROFESOR: restaurar promesa cuando el bucle de vuelta exista
+  // Antes: (profesor) => `${profesor} will read your answer before your class.`
+  avisoProfesorLateral: () => "What you write is saved in your progress.",
   faseDeTotal: (n, total) => `Phase ${n} of ${total}`,
   ejerciciosYMinutos: (n, minutos) => `${n} ${n === 1 ? "exercise" : "exercises"} · ${minutos} min`,
   irALaFase: (nombre) => `Phase: ${nombre}`,
@@ -347,12 +355,12 @@ const EN: TextosEjercicios = {
       : total === 1
         ? "Correct."
         : `All ${enLetras("en", total)} correct.`,
-  cierreLeccion: (aciertos, total, profesor) =>
+  // BUCLE-PROFESOR: restaurar promesa cuando el bucle de vuelta exista
+  // Antes, tras «…in your practice.»: profesor ? ` ${profesor} will see it before your next class.` : ""
+  cierreLeccion: (aciertos, total) =>
     aciertos === total
       ? "You have finished the exercises in this lesson. Move on to the next one whenever you like."
-      : `What you left half done comes back in your practice.${
-          profesor ? ` ${profesor} will see it before your next class.` : ""
-        }`,
+      : "What you left half done comes back in your practice.",
   ver: "See",
   completarYSeguir: "Complete and continue",
   repetirLosEjercicios: "Do them again",

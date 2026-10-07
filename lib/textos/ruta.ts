@@ -201,8 +201,9 @@ const ES: TextosRuta = {
   tuRutaParadas: (n) => `Tu ruta · ${n} ${n === 1 ? "parada" : "paradas"}`,
   tuRutaSinParadas: "Tu ruta · aún sin paradas",
   preparando: "Preparando…",
-  loQueEscribasLoLee: (profesor) =>
-    `Lo que escribas al final lo lee ${profesor} antes de vuestra próxima clase.`,
+  // BUCLE-PROFESOR: restaurar promesa cuando el bucle de vuelta exista
+  // Antes: (profesor) => `Lo que escribas al final lo lee ${profesor} antes de vuestra próxima clase.`
+  loQueEscribasLoLee: () => "Cada parada sale de tus clases, y lo que escribas queda guardado en tu progreso.",
 
   paradaListaParaAbrir: "Parada lista para abrir",
   paradaCerrada: "Parada cerrada: se abre con tu próxima clase",
@@ -283,8 +284,9 @@ const EN: TextosRuta = {
   tuRutaParadas: (n) => `Your path · ${n} ${n === 1 ? "stop" : "stops"}`,
   tuRutaSinParadas: "Your path · no stops yet",
   preparando: "Getting it ready…",
-  loQueEscribasLoLee: (profesor) =>
-    `What you write at the end is read by ${profesor} before your next class.`,
+  // BUCLE-PROFESOR: restaurar promesa cuando el bucle de vuelta exista
+  // Antes: (profesor) => `What you write at the end is read by ${profesor} before your next class.`
+  loQueEscribasLoLee: () => "Each stop comes from your classes, and what you write is saved in your progress.",
 
   paradaListaParaAbrir: "Stop ready to open",
   paradaCerrada: "Stop closed: it opens with your next class",
