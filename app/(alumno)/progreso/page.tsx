@@ -130,7 +130,10 @@ export default async function PaginaProgreso() {
   // primero—, para que esta pantalla y la ficha de Gestión nombren la misma
   // meta. Null solo sin horas semanales (o sin la columna, mientras no se
   // corra `gestion-vista-perfil-ritmo.sql`): entonces no hay banner de ritmo.
-  const estimacion = perfil
+  //
+  // Y null fuera de calendario: las horas y el plan de la assignment son
+  // los de un horario que ya no da, y la estimación saldría de ellos.
+  const estimacion = perfil?.asignacionActiva
     ? construirEstimacion({
         nivelActual: nivel,
         horasSemanales: perfil.horasSemanales,

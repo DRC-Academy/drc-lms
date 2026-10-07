@@ -48,8 +48,26 @@ export function nombreVisibleProfesor(visible: string | null | undefined, usuari
  * El nombre visible del profesor de la ficha, para el código puro que
  * recibe el perfil y no puede llamar a `profesorDelAlumno` (la tarjeta de
  * práctica, el generador de bloques). Es la misma regla: el visible de
- * la vista de perfiles o el usuario limpio.
+ * la vista de perfiles o el usuario limpio, y nadie si el alumno está
+ * fuera de calendario —igual que `profesorDelAlumno`—.
  */
-export function profesorVisibleDelPerfil(perfil: { profesor: string; profesorVisible: string | null }): string {
-  return perfil.profesor.trim() ? nombreVisibleProfesor(perfil.profesorVisible, perfil.profesor) : "";
+export function profesorVisibleDelPerfil(perfil: {
+  profesor: string;
+  profesorVisible: string | null;
+  asignacionActiva: boolean;
+}): string {
+  if (!perfil.asignacionActiva || !perfil.profesor.trim()) return "";
+  return nombreVisibleProfesor(perfil.profesorVisible, perfil.profesor);
+}
+
+/**
+ * Los bloques sin el profesor estampado en su `claseOrigen`, para quien
+ * no tiene profesor vigente. Los que se generaron cuando sí lo tenía
+ * guardaron su nombre («Clase del 12 sep con Camila»); la fecha se
+ * queda, el nombre no.
+ */
+export function sinProfesorDeOrigen<B extends { claseOrigen?: { fecha: string; profesor: string } }>(
+  bloque: B
+): B {
+  return bloque.claseOrigen ? { ...bloque, claseOrigen: { ...bloque.claseOrigen, profesor: "" } } : bloque;
 }

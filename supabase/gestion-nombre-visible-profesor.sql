@@ -25,6 +25,12 @@
 --     assignment) y `profesor_visible` al final. Con el id, el LMS cuenta
 --     «7 con Liliana» sin casar nombres.
 --
+-- PARTE DE LA VISTA DE `gestion-vista-perfil-estado.sql` (aplicada el
+-- 07/10/2026), no de la de antes: lleva `estado_asignacion` en la columna
+-- 25 y los LATERAL que ponen primero la assignment activa. Sin eso, este
+-- `create or replace` fallaría —no deja poner `profesor_id` donde ya está
+-- `estado_asignacion`— o, peor, desharía aquel arreglo.
+--
 -- `vista_calendario_alumno` NO SE TOCA. La de Gestión tiene una columna
 -- (`meet_link`) que no está en ningún SQL del repositorio, así que
 -- recrearla desde aquí podría deshacer lo que se hizo allí. Y no hace
@@ -42,10 +48,10 @@
 -- PASO 0 — ANTES DE TOCAR NADA: QUE LAS VISTAS SEAN LAS QUE ESPERO
 --
 -- Las definiciones de abajo salen de los últimos SQL del LMS
--- (`gestion-vista-perfil-inactivos.sql`, `gestion-vista-profesores.sql`).
+-- (`gestion-vista-perfil-estado.sql`, `gestion-vista-profesores.sql`).
 -- Si alguien las ha cambiado en Gestión desde entonces, este `create or
--- replace` desharía ese cambio. Esperado (comprobado desde el LMS el
--- 30/09/2026): vista_perfil_alumno 24 y vista_profesores 2. Si no cuadra,
+-- replace` desharía ese cambio. Esperado (desde el 07/10/2026):
+-- vista_perfil_alumno 25 y vista_profesores 2. Si no cuadra,
 -- PARA y avísame. La segunda consulta enseña la definición de verdad de
 -- la vista de perfiles, para compararla con la del PASO 2 si hay dudas.
 -- ---------------------------------------------------------------
@@ -114,6 +120,7 @@ create or replace view public.vista_perfil_alumno as
     base.nivel_prueba,
     cla.meet_link,
     cla.slots,
+    base.estado_asignacion,
     base.profesor_id,
     nullif(btrim(tv.display_name), '') AS profesor_visible
    FROM ( SELECT base_1.alumno_id,
@@ -133,6 +140,7 @@ create or replace view public.vista_perfil_alumno as
             base_1.respuestas_formulario,
             base_1.tiene_perfil,
             base_1.fecha_inicio,
+            base_1.estado_asignacion,
             base_1.profesor_id,
             asg.horas AS horas_semanales,
             asg.plan AS plan_contratado,
@@ -147,6 +155,7 @@ create or replace view public.vista_perfil_alumno as
                     s.product_name AS producto,
                     a.objetivo AS objetivo_setter,
                     a.teacher_name AS profesor,
+                    a.status AS estado_asignacion,
                     a.teacher_id AS profesor_id,
                     p.occupation AS ocupacion,
                     p.personal_objective AS objetivo_perfil,
@@ -179,7 +188,7 @@ create or replace view public.vista_perfil_alumno as
                         END AS horas
                    FROM assignments a
                   WHERE a.student_id = base_1.alumno_id
-                  ORDER BY (GREATEST(
+                  ORDER BY (a.status = 'active'::text) DESC, (GREATEST(
                         CASE
                             WHEN jsonb_typeof(a.slots) = 'array'::text THEN jsonb_array_length(a.slots)
                             ELSE 0
@@ -198,7 +207,7 @@ create or replace view public.vista_perfil_alumno as
                 END AS slots
            FROM assignments a
           WHERE a.student_id = base.alumno_id
-          ORDER BY (GREATEST(
+          ORDER BY (a.status = 'active'::text) DESC, (GREATEST(
                 CASE
                     WHEN jsonb_typeof(a.slots) = 'array'::text THEN jsonb_array_length(a.slots)
                     ELSE 0
@@ -215,7 +224,7 @@ revoke select on public.vista_profesores from anon, authenticated;
 -- PASO 3 — COMPROBAR
 -- ---------------------------------------------------------------
 
--- 1 · Las columnas nuevas están. Esperado: vista_perfil_alumno 26,
+-- 1 · Las columnas nuevas están. Esperado: vista_perfil_alumno 27,
 -- vista_profesores 3.
 select table_name, count(*) as columnas
 from information_schema.columns
@@ -269,7 +278,8 @@ order by t.name;
 -- ejecutar los SQL anteriores no basta: hay que borrar cada vista,
 -- recrearla con su SQL de antes y volver a cerrar `vista_profesores`.
 --
---   drop view public.vista_perfil_alumno;      -- + PASO 1 de gestion-vista-perfil-inactivos.sql
+--   drop view public.vista_perfil_alumno;      -- + PASO 1 de gestion-vista-perfil-estado.sql
+--   revoke select on public.vista_perfil_alumno from anon, authenticated;
 --   drop view public.vista_profesores;         -- + gestion-vista-profesores.sql entero
 --   alter table public.teachers drop column display_name;
 --

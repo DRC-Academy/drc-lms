@@ -22,7 +22,8 @@
 // El profesor sale de la ficha actual del alumno (`vista_perfil_alumno`).
 // Si cambió de profesor desde entonces, esto pone el de ahora; Gestión
 // no guarda con quién fue cada clase, y el nombre de ahora es mejor que
-// ninguno.
+// ninguno. Si el alumno trae más de una fila, manda la de la assignment
+// activa (`estado_asignacion`, como `deduplicar` en `lib/gestion.ts`).
 //
 // SOLO LOS BLOQUES DE IA. Los del banco (`origen = 'banco'`) no salen de
 // ninguna clase y se dejan sin atribución a propósito. Y se puede
@@ -90,10 +91,19 @@ async function main() {
       CLAVE_GESTION,
       `class_analyses?select=student_id,class_date,analyzed_at&analysis_status=eq.ready&student_id=in.(${lista})&order=analyzed_at.desc`
     ),
-    pedir<FilaPerfil[]>(URL_GESTION, CLAVE_GESTION, `vista_perfil_alumno?select=alumno_id,profesor&alumno_id=in.(${lista})`),
+    pedir<FilaPerfil[]>(
+      URL_GESTION,
+      CLAVE_GESTION,
+      `vista_perfil_alumno?select=alumno_id,profesor&alumno_id=in.(${lista})&order=alumno_id.asc,estado_asignacion.asc`
+    ),
   ]);
 
-  const profesorDe = new Map(perfiles.map((p) => [p.alumno_id, (p.profesor ?? "").trim()]));
+  // La primera fila de cada alumno, que con ese orden es la activa: un
+  // `new Map(...)` a secas se quedaría con la última.
+  const profesorDe = new Map<string, string>();
+  for (const p of perfiles) {
+    if (!profesorDe.has(p.alumno_id)) profesorDe.set(p.alumno_id, (p.profesor ?? "").trim());
+  }
 
   let escritos = 0;
   let sinClase = 0;

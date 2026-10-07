@@ -84,6 +84,8 @@ export type TextosPractica = {
   saludoConClase: (nombre: string) => string;
   saludoSinClase: (nombre: string) => string;
   trabajoContigoElDia: (profesor: string, fecha: string) => string;
+  /** El saludo con clase y sin profesor que nombrar: el alumno fuera de calendario. */
+  ultimaClaseElDia: (fecha: string) => string;
   cursoPreparado: (profesor: string) => string;
   fuenteRepeticiones: string;
   fuenteContexto: string;
@@ -170,6 +172,11 @@ export type TextosPractica = {
   avisoFormularioCuerpo: (quien: string) => string;
   avisoFormularioEnviadoTitulo: string;
   avisoFormularioEnviadoCuerpo: (quien: string, fecha: string) => string;
+  /**
+   * Quien firma cuando no hay profesor que nombrar —sin profesor en la
+   * ficha, o fuera de calendario—. Es el equipo, no «tu profesor»: a ese
+   * alumno no le está dando clase nadie ahora mismo.
+   */
   tuProfesor: string;
 };
 
@@ -194,6 +201,7 @@ const ES: TextosPractica = {
   saludoSinClase: (nombre) => `Bienvenido, ${nombre}`,
   trabajoContigoElDia: (profesor, fecha) =>
     `${profesor} trabajó contigo el ${fecha}. Aquí tienes por dónde seguir.`,
+  ultimaClaseElDia: (fecha) => `Tu última clase fue el ${fecha}. Aquí tienes por dónde seguir.`,
   cursoPreparado: (profesor) =>
     `${profesor} ya te ha dejado el curso preparado. Empieza cuando quieras.`,
   fuenteRepeticiones: "lo que se te repite",
@@ -276,7 +284,7 @@ const ES: TextosPractica = {
   avisoFormularioEnviadoTitulo: "Busca el formulario en tu correo",
   avisoFormularioEnviadoCuerpo: (quien, fecha) =>
     `${quien} te lo envió el ${fecha}. Si no lo encuentras o el enlace ya no funciona, pídeselo otra vez.`,
-  tuProfesor: "Tu profesor",
+  tuProfesor: "El equipo de DRC",
 };
 
 const EN: TextosPractica = {
@@ -300,6 +308,7 @@ const EN: TextosPractica = {
   saludoSinClase: (nombre) => `Welcome, ${nombre}`,
   trabajoContigoElDia: (profesor, fecha) =>
     `${profesor} worked with you on ${fecha}. Here's where to carry on.`,
+  ultimaClaseElDia: (fecha) => `Your last class was on ${fecha}. Here's where to carry on.`,
   cursoPreparado: (profesor) =>
     `${profesor} has your course ready. Start whenever you like.`,
   fuenteRepeticiones: "what keeps coming back",
@@ -381,7 +390,7 @@ const EN: TextosPractica = {
   avisoFormularioEnviadoTitulo: "Look for the form in your email",
   avisoFormularioEnviadoCuerpo: (quien, fecha) =>
     `${quien} sent it to you on ${fecha}. If you can't find it or the link no longer works, ask for it again.`,
-  tuProfesor: "Your teacher",
+  tuProfesor: "The DRC team",
 };
 
 export const PRACTICA: Record<Idioma, TextosPractica> = { en: EN, es: ES };

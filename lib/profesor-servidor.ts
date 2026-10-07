@@ -49,7 +49,11 @@ export type ProfesorDelAlumno = {
 export const profesorDelAlumno = cache(async (alumnoId: string): Promise<ProfesorDelAlumno | null> => {
   const perfil = await obtenerPerfil(alumnoId);
   const usuario = perfil?.profesor.trim() ?? "";
-  if (!perfil || !usuario) return null;
+  // Fuera de calendario no hay profesor vigente (decisión de producto,
+  // 07/10/2026): el de la ficha es el último que tuvo, y nombrárselo
+  // diría que sigue dándole clase. Cada pantalla tiene ya su frase sin
+  // nombre, la misma del alumno sin profesor.
+  if (!perfil || !usuario || !perfil.asignacionActiva) return null;
 
   const [profesores, clasesTotales, porProfesor] = await Promise.all([
     obtenerProfesores(),
@@ -81,6 +85,10 @@ export const profesorDelAlumno = cache(async (alumnoId: string): Promise<Profeso
  * un cambio a medias), el alumno no ve nada distinto; el equipo lo ve en
  * su panel. Solo cambia el NOMBRE que se enseña: la celda, la hora y el
  * enlace de la clase siguen siendo los de la fila.
+ *
+ * Sin profesor de la ficha —también el alumno fuera de calendario, para
+ * quien `profesorDelAlumno` da null— las filas se quedan como vienen de
+ * `vista_calendario_alumno`, con el profesor de cada celda.
  */
 export function conProfesorDeLaFicha<T extends { profesor: string | null }>(
   filas: T[],

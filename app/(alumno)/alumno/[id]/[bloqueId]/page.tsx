@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { profesorDelAlumno } from "@/lib/profesor-servidor";
+import { sinProfesorDeOrigen } from "@/lib/profesor";
 import { notFound } from "next/navigation";
 import { textosActuales } from "@/lib/idioma-servidor";
 import { obtenerAlumno } from "@/lib/gestion";
@@ -72,11 +73,14 @@ export default async function PaginaBloque({
   // EL MISMO MARCO QUE LA LECCIÓN: la barra de iconos, las pestañas de
   // abajo y el cajón del panel de fases los ponen el layout común y su
   // slot `@marco` (`app/(alumno)`). Aquí solo va la pantalla.
+  //
+  // Sin profesor vigente, sin el nombre que quedó en su clase de origen.
+  const profesor = (await profesorDelAlumno(alumnoId))?.nombre ?? "";
   return (
     <VistaBloque
-      bloque={bloque}
+      bloque={profesor ? bloque : sinProfesorDeOrigen(bloque)}
       alumnoId={alumnoId}
-      profesor={(await profesorDelAlumno(alumnoId))?.nombre ?? ""}
+      profesor={profesor}
       foco={foco}
     />
   );

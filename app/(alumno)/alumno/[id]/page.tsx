@@ -1,5 +1,6 @@
 import { calcularEstimacion, nivelDelAlumno } from "@/lib/estimacion";
 import { conProfesorDeLaFicha, profesorDelAlumno } from "@/lib/profesor-servidor";
+import { sinProfesorDeOrigen } from "@/lib/profesor";
 import { nivelMcer } from "@/lib/recorrido";
 import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
 import { notFound } from "next/navigation";
@@ -105,7 +106,11 @@ export default async function PerfilAlumno({
   //
   // Esto no encarga ninguna: lee de una sola vez las que ya están
   // hechas. Lo que falte se queda en su idioma, igual que antes.
-  const generados = await bloquesEnIdioma(generadosCrudos, idiomaActual());
+  //
+  // Sin profesor vigente, sin su nombre en la clase de origen de cada
+  // bloque (`sinProfesorDeOrigen`).
+  const traducidos = await bloquesEnIdioma(generadosCrudos, idiomaActual());
+  const generados = profe ? traducidos : traducidos.map(sinProfesorDeOrigen);
 
   // Solo es 404 cuando el id no corresponde a nadie. Un alumno con clase
   // pero sin perfil ve su ficha con lo que haya.
@@ -189,7 +194,9 @@ export default async function PerfilAlumno({
 
   const quien = profesor || tp.tuProfesor;
   const subtituloDeSiempre = ultimaClase
-    ? tp.trabajoContigoElDia(quien, formatearFecha(ultimaClase.fechaClase, tp.fechaCorta))
+    ? profesor
+      ? tp.trabajoContigoElDia(profesor, formatearFecha(ultimaClase.fechaClase, tp.fechaCorta))
+      : tp.ultimaClaseElDia(formatearFecha(ultimaClase.fechaClase, tp.fechaCorta))
     : tp.cursoPreparado(quien);
 
   // ---------------------------------------------------------------
@@ -252,6 +259,11 @@ export default async function PerfilAlumno({
   // de «Mi progreso», con los mismos datos (ver `app/(alumno)/progreso`).
   // Se enseña SIEMPRE: sin estimación, ya al máximo o sin ahorro cambia
   // la variante, no si aparece (`datosDeRitmo`). Sin perfil, la genérica.
+  //
+  // Menos fuera de calendario: sus horas son las de un horario que ya no
+  // da, y la comparativa le prometería llegar antes con unas clases que
+  // no tiene. Ahí no se pinta.
+  const conRitmo = !perfil || perfil.asignacionActiva;
   const nivelRitmo = perfil ? nivelMcer(nivelDelAlumno(alumnoId, perfil)) : null;
   const ritmo = datosDeRitmo(
     perfil
@@ -412,7 +424,7 @@ export default async function PerfilAlumno({
           generadosIniciales={generados}
           idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}
-          ritmo={<ComparativaRitmo datos={ritmo} href={RUTA_AMPLIAR} />}
+          ritmo={conRitmo ? <ComparativaRitmo datos={ritmo} href={RUTA_AMPLIAR} /> : null}
           entreMedias={
             <>
               <div

@@ -59,6 +59,7 @@ function aPerfil(fila: Fila): PerfilAlumno {
     // `supabase/gestion-nombre-visible-profesor.sql` y `lib/profesor.ts`.
     profesorId: comoTextoOpcional(fila.profesor_id),
     profesorVisible: comoTextoOpcional(fila.profesor_visible),
+    asignacionActiva: esAsignacionActiva(fila.estado_asignacion),
     fechaInicio: comoTextoOpcional(fila.fecha_inicio),
     ocupacion: comoTextoOpcional(fila.ocupacion),
     objetivoPerfil: comoTextoOpcional(fila.objetivo_perfil),
@@ -115,10 +116,27 @@ function aUltimaClase(fila: Fila): UltimaClase {
 }
 
 /**
+ * `estado_asignacion` es `assignments.status` de la fila
+ * (`supabase/gestion-vista-perfil-estado.sql`). Activa solo con
+ * `'active'`: cualquier otro estado, también uno que Gestión invente
+ * mañana, cuenta como «fuera de calendario». Sin la columna —las filas
+ * de la demo, o la vista de antes— se lee como activa, que es lo que el
+ * LMS hacía hasta ahora.
+ */
+function esAsignacionActiva(valor: unknown): boolean {
+  return typeof valor !== "string" || valor === "active";
+}
+
+/**
  * Un alumno puede tener más de una fila por assignments duplicadas en
  * Gestión. Nos quedamos con la primera. El `order` de las consultas fija
  * cuál es "la primera": sin él PostgREST no garantiza ningún orden y el
  * alumno duplicado cambiaría de datos entre recargas.
+ *
+ * Por eso todas ordenan también por `estado_asignacion` (`ORDEN_ESTADO`):
+ * `'active'` va antes que `'inactive'`, así que si un alumno trae una
+ * fila activa y otra que no, gana siempre la activa. Hoy la vista ya no
+ * mezcla las dos, pero que la que gane no dependa de eso.
  */
 function deduplicar(filas: Fila[]): Fila[] {
   const vistos = new Set<string>();
@@ -133,6 +151,9 @@ function deduplicar(filas: Fila[]): Fila[] {
 
   return salida;
 }
+
+/** El desempate de `deduplicar`: la fila activa primero. */
+const ORDEN_ESTADO = ["estado_asignacion", { ascending: true }] as const;
 
 // ---------------------------------------------------------------
 // CONSULTAS
@@ -154,7 +175,7 @@ export const obtenerPerfil = cache(async (alumnoId: string): Promise<PerfilAlumn
   const { data, error } = await soloLectura("vista_perfil_alumno")
     .select("*")
     .eq("alumno_id", alumnoId)
-    .order("alumno_id", { ascending: true })
+    .order(...ORDEN_ESTADO)
     .returns<Fila[]>();
 
   if (error) {
@@ -531,6 +552,8 @@ export async function alumnosDelPanel(): Promise<AlumnoPanel[]> {
       "alumno_id, nombre, nivel, plan, profesor, ocupacion, objetivo_perfil, fecha_inicio, nivel_profesor, nivel_ficha, nivel_prueba"
     )
     .order("nombre", { ascending: true })
+    .order("alumno_id", { ascending: true })
+    .order(...ORDEN_ESTADO)
     .returns<Fila[]>();
 
   if (error) {
@@ -580,6 +603,7 @@ export async function alumnosParaAvisos(): Promise<AlumnoAviso[]> {
   const { data, error } = await soloLectura("vista_perfil_alumno")
     .select("alumno_id, nombre, email, plan, nivel, fecha_inicio")
     .order("alumno_id", { ascending: true })
+    .order(...ORDEN_ESTADO)
     .returns<Fila[]>();
 
   if (error) {
@@ -792,6 +816,7 @@ export async function buscarAlumnoPorEmail(email: string): Promise<ResumenAlumno
     .select(CAMPOS_RESUMEN)
     .ilike("email", escaparLike(limpio))
     .order("alumno_id", { ascending: true })
+    .order(...ORDEN_ESTADO)
     .returns<Fila[]>();
 
   if (error) {
@@ -825,7 +850,9 @@ export async function listarAlumnos(busqueda = "", limite = 20): Promise<Resumen
 
   let consulta = soloLectura("vista_perfil_alumno")
     .select(CAMPOS_RESUMEN)
-    .order("nombre", { ascending: true });
+    .order("nombre", { ascending: true })
+    .order("alumno_id", { ascending: true })
+    .order(...ORDEN_ESTADO);
 
   if (termino !== "") {
     const patron = valorEnOr(`%${escaparLike(termino)}%`);

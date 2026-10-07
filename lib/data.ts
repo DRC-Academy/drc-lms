@@ -158,6 +158,15 @@ export type PerfilAlumno = {
   /** El nombre visible que se puso en Gestión. Null si no lo tiene, o si la vista aún no lo expone. */
   profesorVisible: string | null;
   /**
+   * Si la assignment de esta fila está `active` (`estado_asignacion`,
+   * `supabase/gestion-vista-perfil-estado.sql`). False es un alumno
+   * «fuera de calendario»: entra al LMS igual, pero ya no tiene
+   * profesor ni horario vigentes, así que no se le nombra a ninguno
+   * (`profesorDelAlumno`) ni se le calcula el ritmo con unas horas que
+   * ya no da.
+   */
+  asignacionActiva: boolean;
+  /**
    * Cuándo empezó con la academia (`assignments.start_date`, el más
    * antiguo de sus assignments activos). Es lo que fija la apertura
    * progresiva del curso. Null en los pocos alumnos sin fecha: esos ven

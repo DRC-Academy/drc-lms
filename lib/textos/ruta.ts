@@ -225,14 +225,14 @@ const ES: TextosRuta = {
   laPreparaCuandoSuba: (profesor) =>
     `${profesor} la prepara cuando suba lo que trabajéis. Sale de esa clase, así que hasta entonces no existe.`,
   tuProfesorLaPrepara:
-    "Tu profesor la prepara cuando suba lo que trabajéis. Sale de esa clase, así que hasta entonces no existe.",
+    "La preparamos en cuanto se suba lo que trabajes en clase. Sale de esa clase, así que hasta entonces no existe.",
   noTienesQueHacerNada: "No tienes que hacer nada: te la encuentras aquí abierta.",
 
   todaviaNoHayNada: "Todavía no hay nada para practicar",
   cuandoAnaliceTuPrimeraClase: (profesor) =>
     `Cuando ${profesor} analice tu primera clase, aparecerá aquí tu primera parada.`,
   cuandoTuProfesorAnalice:
-    "Cuando tu profesor analice tu primera clase, aparecerá aquí tu primera parada.",
+    "En cuanto analicemos tu primera clase, aparecerá aquí tu primera parada.",
 
   rutaAlDia: "Ruta al día",
   tuRuta: "Tu ruta",
@@ -307,14 +307,14 @@ const EN: TextosRuta = {
   laPreparaCuandoSuba: (profesor) =>
     `${profesor} builds it once they upload what you work on. It comes from that class, so until then it doesn't exist.`,
   tuProfesorLaPrepara:
-    "Your teacher builds it once they upload what you work on. It comes from that class, so until then it doesn't exist.",
+    "We build it as soon as what you work on in class is uploaded. It comes from that class, so until then it doesn't exist.",
   noTienesQueHacerNada: "You don't have to do anything: you'll find it open here.",
 
   todaviaNoHayNada: "Nothing to practise yet",
   cuandoAnaliceTuPrimeraClase: (profesor) =>
     `Once ${profesor} reviews your first class, your first stop will appear here.`,
   cuandoTuProfesorAnalice:
-    "Once your teacher reviews your first class, your first stop will appear here.",
+    "As soon as we review your first class, your first stop will appear here.",
 
   rutaAlDia: "Path up to date",
   tuRuta: "Your path",

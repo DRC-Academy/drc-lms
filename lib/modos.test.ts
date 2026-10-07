@@ -14,6 +14,7 @@ const perfil: PerfilAlumno = {
   nivelFicha: null,
   nivelPrueba: "B2",
   profesor: "Noeli",
+  asignacionActiva: true,
   plan: "Intensivo FCE — 12:00-13:00 · 01/09/2026",
   fechaInicio: "2026-09-01",
   ocupacion: "Farmacéutica.",
@@ -45,6 +46,11 @@ describe("calcularTarjeta", () => {
     expect(tarjeta!.espera).toBeNull();
     expect(tarjeta!.clase).toEqual({ fecha: "2026-09-17", profesor: "Noeli" });
     expect(tarjeta!.fuentes).toEqual({ clase: true, contexto: true });
+  });
+
+  it("3b' · fuera de calendario: la clase que usaría, sin profesor", () => {
+    const tarjeta = calcularTarjeta({ ...perfil, asignacionActiva: false }, clase, null, t);
+    expect(tarjeta!.clase).toEqual({ fecha: "2026-09-17", profesor: "" });
   });
 
   it("3c · generado después de la última clase analizada: cerrada hasta la próxima", () => {

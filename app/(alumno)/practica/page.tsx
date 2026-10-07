@@ -1,5 +1,6 @@
 import { nivelDelAlumno } from "@/lib/estimacion";
 import { profesorDelAlumno } from "@/lib/profesor-servidor";
+import { sinProfesorDeOrigen } from "@/lib/profesor";
 import { obtenerAlumno } from "@/lib/gestion";
 import {
   avisoFormulario,
@@ -80,13 +81,15 @@ export default async function PaginaPractica() {
   //
   // Esto no encarga ninguna: lee de una sola vez las que ya están
   // hechas. Lo que falte se queda en su idioma, igual que antes.
-  const generados = await bloquesEnIdioma(generadosCrudos, idiomaActual());
+  const traducidos = await bloquesEnIdioma(generadosCrudos, idiomaActual());
 
   // Sin ficha en Gestión no hay perfil del que generar nada. No es un
   // 404: el alumno existe, es su ficha la que falta.
   const perfil = datos?.perfil ?? null;
   // El profesor que se nombra en la pantalla: el de la ficha, con su nombre visible.
+  // Sin profesor vigente, tampoco el que quedó estampado en los bloques.
   const profesor = (await profesorDelAlumno(alumnoId))?.nombre ?? "";
+  const generados = profesor ? traducidos : traducidos.map(sinProfesorDeOrigen);
   const ultimaClase = datos?.ultimaClase ?? null;
 
   const t = textosActuales().practica;
