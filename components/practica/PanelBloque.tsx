@@ -183,19 +183,19 @@ export default function PanelBloque({
         </div>
       </div>
 
-      {/* EL AVISO DEL PROFESOR. Es lo que hace que la fase de producir se
-          escriba en serio: el alumno sabe que esto no cae en un pozo. */}
-      {profesor && (
-        <div className="mt-4 flex items-start gap-2.5 rounded-[12px] bg-marca-niebla px-3.5 py-3">
-          <span
-            aria-hidden
-            className="mt-px grid h-5 w-5 shrink-0 place-items-center rounded-full bg-marca-verde text-[10px] font-semibold leading-none text-white"
-          >
-            {profesor[0]?.toUpperCase()}
-          </span>
-          <p className="text-[12.5px] leading-[1.45] text-marca-gris">{t.avisoProfesorLateral(profesor)}</p>
-        </div>
-      )}
+      {/* EL AVISO DE LA FASE DE PRODUCIR. Es lo que hace que se escriba en
+          serio: el alumno sabe que esto no cae en un pozo.
+
+          BUCLE-PROFESOR: restaurar promesa cuando el bucle de vuelta exista.
+          Antes solo salía con profesor (`profesor && (…)`) y llevaba su
+          inicial delante del texto, en un círculo verde:
+            <span aria-hidden className="mt-px grid h-5 w-5 shrink-0 place-items-center
+              rounded-full bg-marca-verde text-[10px] font-semibold leading-none
+              text-white">{profesor[0]?.toUpperCase()}</span>
+          Con el `flex items-start gap-2.5` del contenedor. */}
+      <div className="mt-4 rounded-[12px] bg-marca-niebla px-3.5 py-3">
+        <p className="text-[12.5px] leading-[1.45] text-marca-gris">{t.avisoProfesorLateral(profesor ?? "")}</p>
+      </div>
     </div>
   );
 }
