@@ -35,3 +35,11 @@ export function proveedorAutoservicio(): ProveedorAutoservicio {
   }
   return autoservicioSimulado(escenario);
 }
+
+/**
+ * Si se están usando los datos simulados. Es lo que enseña «Cambiar de
+ * profesor», que de momento solo tiene simulación (fase 2).
+ */
+export function autoservicioSimuladoActivo(): boolean {
+  return escenarioDe(process.env.AUTOSERVICIO_SIMULADO) !== null && process.env.VERCEL_ENV !== "production";
+}

@@ -5,6 +5,8 @@ import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { textosActuales } from "@/lib/idioma-servidor";
 import PantallaClases from "@/components/clases/PantallaClases";
 import RecuperacionesDeGestion from "@/components/clases/RecuperacionesDeGestion";
+import AutoservicioDeGestion from "@/components/clases/autoservicio/AutoservicioDeGestion";
+import { autoservicioActivo } from "@/lib/autoservicio";
 import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +34,10 @@ export const dynamic = "force-dynamic";
  * es la del enlace del correo (llega por `/mis-clases`): se resalta si es
  * de este alumno, y si no, no está en su lista y no pasa nada. El equipo
  * las ve sin botones.
+ *
+ * DEBAJO DEL CALENDARIO, «TU HORARIO» —cambiar de horario o de
+ * profesor—, también de Gestión y también en su `<Suspense>`. Solo con
+ * AUTOSERVICIO_ACTIVO=1 (`lib/autoservicio`): apagado no se monta nada.
  *
  * `force-dynamic` porque la respuesta depende de la hora: una página
  * cacheada diría "hoy" el día siguiente.
@@ -71,6 +77,13 @@ export default async function PaginaClases({
           <Suspense fallback={null}>
             <RecuperacionesDeGestion alumnoId={alumnoId} resaltada={resaltada} soloLectura={sesion.rol !== "alumno"} />
           </Suspense>
+        }
+        autoservicio={
+          autoservicioActivo() ? (
+            <Suspense fallback={null}>
+              <AutoservicioDeGestion alumnoId={alumnoId} soloLectura={sesion.rol !== "alumno"} />
+            </Suspense>
+          ) : null
         }
       />
     </div>

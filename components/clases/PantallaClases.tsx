@@ -13,6 +13,11 @@
 //   · EL HISTORIAL (`HistorialClases`, el recorrido de «Mi progreso»), con
 //     un ancla por clase para que el calendario lleve a cada una.
 //
+// DEBAJO DEL CALENDARIO, «TU HORARIO» (`components/clases/autoservicio/`):
+// cambiar de horario o de profesor sin pasar por WhatsApp. Solo con
+// AUTOSERVICIO_ACTIVO=1; apagado, la página no lo pasa y esta pantalla
+// es exactamente la de siempre.
+//
 // ANTES QUE NADA, LAS RECUPERACIONES de clases canceladas por el profesor
 // (`Recuperaciones`), cuando las hay: son lo único de la pantalla que le
 // pide al alumno que decida algo. Llegan como pieza ya montada —la página
@@ -51,8 +56,11 @@ export default function PantallaClases({
   hrefPractica,
   t,
   recuperaciones = null,
+  autoservicio = null,
   ahora = new Date(),
 }: {
+  /** «Tu horario», ya montado. Null con el interruptor apagado. */
+  autoservicio?: ReactNode;
   /** Las recuperaciones, ya montadas (ver la cabecera). */
   recuperaciones?: ReactNode;
   calendario: FilaCalendario[];
@@ -134,6 +142,8 @@ export default function PantallaClases({
           </div>
         </>
       )}
+
+      {autoservicio}
 
       <div className="mt-[26px] min-[900px]:mt-9">
         <HistorialClases clases={recorrido} profesores={profesores} t={tc} anclas />
