@@ -6,7 +6,7 @@ import { textosActuales } from "@/lib/idioma-servidor";
 import PantallaClases from "@/components/clases/PantallaClases";
 import RecuperacionesDeGestion from "@/components/clases/RecuperacionesDeGestion";
 import AutoservicioDeGestion from "@/components/clases/autoservicio/AutoservicioDeGestion";
-import { autoservicioActivo } from "@/lib/autoservicio";
+import { autoservicioActivoPara } from "@/lib/autoservicio";
 import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,8 @@ export const dynamic = "force-dynamic";
  *
  * DEBAJO DEL CALENDARIO, «TU HORARIO» —cambiar de horario o de
  * profesor—, también de Gestión y también en su `<Suspense>`. Solo con
- * AUTOSERVICIO_ACTIVO=1 (`lib/autoservicio`): apagado no se monta nada.
+ * AUTOSERVICIO_ACTIVO=1, o para los alumnos de AUTOSERVICIO_ALUMNOS_PRUEBA
+ * (`lib/autoservicio`): para los demás no se monta nada.
  *
  * `force-dynamic` porque la respuesta depende de la hora: una página
  * cacheada diría "hoy" el día siguiente.
@@ -79,7 +80,7 @@ export default async function PaginaClases({
           </Suspense>
         }
         autoservicio={
-          autoservicioActivo() ? (
+          autoservicioActivoPara(alumnoId) ? (
             <Suspense fallback={null}>
               <AutoservicioDeGestion alumnoId={alumnoId} soloLectura={sesion.rol !== "alumno"} />
             </Suspense>
