@@ -17,7 +17,7 @@
 
 import { sesionActual } from "@/lib/sesion-servidor";
 import { autoservicioActivo, proveedorAutoservicio } from "@/lib/autoservicio";
-import { peticionValida } from "@/lib/autoservicio/leer";
+import { idSesionValido, peticionValida } from "@/lib/autoservicio/leer";
 import type {
   HuecoLibre,
   LecturaAutoservicio,
@@ -33,16 +33,21 @@ async function alumnoDeLaSesion(): Promise<string | null> {
   return sesion.alumnoId;
 }
 
-const ID = /^[A-Za-z0-9_-]{1,80}$/;
+const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Los huecos libres de su profesor para una de sus clases. */
-export async function huecosAutoservicio(modo: unknown, sesionId: unknown): Promise<LecturaAutoservicio<HuecoLibre[]>> {
+/**
+ * Los huecos libres de su profesor para una de sus clases. En puntual,
+ * `fecha` es la clase que quiere mover: con ella Gestión comprueba que se
+ * puede mover y no ofrece la propia clase.
+ */
+export async function huecosAutoservicio(modo: unknown, sesionId: unknown, fecha: unknown = null): Promise<LecturaAutoservicio<HuecoLibre[]>> {
   const alumnoId = await alumnoDeLaSesion();
-  if (!alumnoId || (modo !== "fijo" && modo !== "puntual") || typeof sesionId !== "string" || !ID.test(sesionId)) {
+  const fechaValida = modo === "puntual" && typeof fecha === "string" && FECHA.test(fecha) ? fecha : null;
+  if (!alumnoId || (modo !== "fijo" && modo !== "puntual") || !idSesionValido(sesionId)) {
     return { ok: false, codigo: "GENERICO" };
   }
   try {
-    return await proveedorAutoservicio().huecos(alumnoId, modo as ModoCambio, sesionId);
+    return await proveedorAutoservicio().huecos(alumnoId, modo as ModoCambio, sesionId, fechaValida);
   } catch (error) {
     console.error("[autoservicio] Falló la lectura de huecos:", error);
     return { ok: false, codigo: "GENERICO" };
@@ -56,12 +61,13 @@ export async function huecosAutoservicio(modo: unknown, sesionId: unknown): Prom
 export async function cambiarHorarioAutoservicio(peticion: unknown): Promise<ResultadoCambio> {
   const alumnoId = await alumnoDeLaSesion();
   const o = typeof peticion === "object" && peticion !== null ? (peticion as Record<string, unknown>) : {};
+  const s = typeof o.sesionOrigen === "object" && o.sesionOrigen !== null ? (o.sesionOrigen as Record<string, unknown>) : {};
   const d = typeof o.destino === "object" && o.destino !== null ? (o.destino as Record<string, unknown>) : {};
   const limpia = {
     modo: o.modo,
-    sesionOrigen: o.sesionOrigen,
+    sesionOrigen: { dia: s.dia, hora: s.hora, duracion: s.duracion },
     fechaOrigen: o.fechaOrigen ?? null,
-    destino: { dia: d.dia, hora: d.hora, duracion: d.duracion, fecha: d.fecha ?? null },
+    destino: { dia: d.dia, hora: d.hora, duracion: d.duracion, fecha: d.fecha ?? null, primeraClase: d.primeraClase ?? null },
     idempotencyKey: o.idempotencyKey,
   } as PeticionCambio;
 

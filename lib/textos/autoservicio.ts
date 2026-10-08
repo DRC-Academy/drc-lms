@@ -11,12 +11,16 @@
 // error: explica qué pasa y, cuando desde aquí no se puede, ofrece el
 // WhatsApp. Lo que diga Gestión en `mensaje` no se enseña: viene solo en
 // español y con su propio tono.
+//
+// LO QUE TODAVÍA NO SE PUEDE, CON FECHA. Si Gestión manda
+// `disponible_desde`, el alumno no lee «no se puede» a secas, sino desde
+// cuándo sí (`noMovible`).
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
 import { DIAS, type DiaSemana } from "@/lib/clases";
 import { partesFecha } from "@/lib/recuperaciones-fechas";
-import type { CodigoAutoservicio } from "@/lib/autoservicio/tipos";
+import type { CodigoAutoservicio, Momento, Movilidad } from "@/lib/autoservicio/tipos";
 import type { Franja } from "@/lib/autoservicio/franjas";
 
 export type TextosAutoservicio = {
@@ -40,6 +44,8 @@ export type TextosAutoservicio = {
   todas: string;
   todasDetalle: string;
   queFecha: string;
+  /** La sesión no tiene clases próximas que mover. */
+  sinProximas: string;
   /** «martes 13 de octubre, 18:00–19:00» */
   clase: (fecha: string, desde: string, hasta: string) => string;
   huecosDe: (profesor: string) => string;
@@ -57,6 +63,8 @@ export type TextosAutoservicio = {
   /** «Los martes, 18:00–19:00» o «martes 13 de octubre, 18:00–19:00», con «desde ahora» si es fijo. */
   desdeAhora: string;
   conProfesor: (profesor: string) => string;
+  /** En fijo, cuándo es la primera clase con el horario nuevo. */
+  primeraClase: (fecha: string) => string;
   confirmar: string;
   enviando: string;
   hechoTitulo: string;
@@ -73,6 +81,11 @@ export type TextosAutoservicio = {
   sinResultados: string;
   simulacion: string;
 
+  /**
+   * Por qué no se puede mover su horario fijo (`que: "horario"`) o una
+   * clase suelta (`"clase"`) y, si Gestión lo sabe, desde cuándo sí.
+   */
+  noMovible: (m: Movilidad, que: "horario" | "clase") => string;
   /** Lo que se le explica al alumno, por código. */
   motivo: (codigo: CodigoAutoservicio) => string;
   /**
@@ -113,6 +126,15 @@ function fechaEn(fecha: string): string {
 }
 const mayuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** «lunes 20 de octubre», o «martes 13 de octubre a las 17:00». A las 00:00 es el día entero. */
+function momentoEs(m: Momento): string {
+  return m.hora === "00:00" ? fechaEs(m.fecha) : `${fechaEs(m.fecha)} a las ${m.hora}`;
+}
+/** «Monday 20 October», or «Tuesday 13 October at 17:00». */
+function momentoEn(m: Momento): string {
+  return m.hora === "00:00" ? fechaEn(m.fecha) : `${fechaEn(m.fecha)} at ${m.hora}`;
+}
+
 export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
   es: {
     titulo: "Tu horario",
@@ -132,6 +154,7 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     todas: "Desde ahora, todas mis clases",
     todasDetalle: "Tu horario semanal pasa a ser el nuevo.",
     queFecha: "¿Qué clase quieres mover?",
+    sinProximas: "No tienes clases de este horario en las próximas semanas.",
     clase: (fecha, desde, hasta) => `${mayuscula(fechaEs(fecha))}, ${desde}–${hasta}`,
     huecosDe: (profesor) => (profesor ? `Huecos libres de ${profesor}` : "Huecos libres"),
     horaPeninsular: "Horas en hora peninsular española.",
@@ -145,6 +168,7 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     despues: "Después",
     desdeAhora: "Desde ahora, cada semana",
     conProfesor: (profesor) => `Con ${profesor}`,
+    primeraClase: (fecha) => `Primera clase: ${fechaEs(fecha)}`,
     confirmar: "Confirmar el cambio",
     enviando: "Guardando el cambio…",
     hechoTitulo: "¡Hecho!",
@@ -160,6 +184,20 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     sinResultados: "Con estos filtros no hay huecos. Prueba con otro día u otra franja.",
     simulacion: "Datos de prueba: este cambio todavía no se guarda.",
 
+    noMovible: (m, que) => {
+      if (m.movible) return "";
+      if (!m.disponibleDesde) return AUTOSERVICIO.es.motivo(m.motivo);
+      const razon =
+        m.motivo === "ANTELACION_INSUFICIENTE"
+          ? que === "horario"
+            ? "Tu próxima clase con este horario está muy cerca."
+            : "Esta clase está muy cerca."
+          : m.motivo === "MARCA_PUNTUAL_EXISTENTE"
+            ? "Ya tienes otra clase de este horario movida."
+            : "";
+      const podras = que === "horario" ? "Podrás cambiarlo" : "Podrás moverla";
+      return `${razon} ${podras} a partir del ${momentoEs(m.disponibleDesde)}.`.trim();
+    },
     motivo: (codigo) => {
       switch (codigo) {
         case "NO_ELEGIBLE":
@@ -172,8 +210,22 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
           return "Esta clase está muy cerca para moverla desde aquí. Si necesitas cambiarla, escríbenos por WhatsApp.";
         case "MARCA_PUNTUAL_EXISTENTE":
           return "Esta clase ya la cambiaste una vez. Para moverla de nuevo, escríbenos por WhatsApp y lo vemos contigo.";
+        case "FUERA_DE_VENTANA":
+          return "Desde aquí puedes mover clases de las próximas seis semanas. Para una fecha más lejana, escríbenos por WhatsApp.";
+        case "MISMO_HORARIO":
+          return "Ese ya es tu horario. Elige otro hueco de la lista.";
         case "HUECO_YA_OCUPADO":
+        case "SLOT_NO_DISPONIBLE":
           return "Ese hueco se acaba de ocupar, aquí tienes los que siguen libres.";
+        case "SESION_NO_ENCONTRADA":
+          return "Tu horario ha cambiado mientras lo mirabas. Cierra esta ventana para ver el actual y vuelve a probar; si no lo encuentras, escríbenos por WhatsApp.";
+        case "EN_CURSO":
+          return "Tu cambio se está guardando. Espera unos segundos y vuelve a pulsar «Confirmar el cambio»: no se hará dos veces.";
+        case "ERROR_LECTURA":
+        case "CALENDARIO_ILEGIBLE":
+          return "Ahora mismo no podemos consultar tu horario. Prueba otra vez en unos minutos o escríbenos por WhatsApp y lo vemos contigo.";
+        case "A_MEDIAS":
+          return "Algo no ha terminado bien al guardar tu cambio y el equipo ya está avisado. No hace falta que lo repitas: te escribimos nosotros. Si quieres, también puedes escribirnos por WhatsApp.";
         default:
           return "Ahora mismo no hemos podido completar el cambio. Prueba otra vez en un rato o escríbenos por WhatsApp y lo hacemos contigo.";
       }
@@ -201,6 +253,7 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     todas: "All my classes from now on",
     todasDetalle: "Your weekly schedule becomes the new one.",
     queFecha: "Which class do you want to move?",
+    sinProximas: "You have no classes at this time in the coming weeks.",
     clase: (fecha, desde, hasta) => `${fechaEn(fecha)}, ${desde}–${hasta}`,
     huecosDe: (profesor) => (profesor ? `${profesor}'s free slots` : "Free slots"),
     horaPeninsular: "Times are in mainland Spain time.",
@@ -214,6 +267,7 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     despues: "After",
     desdeAhora: "From now on, every week",
     conProfesor: (profesor) => `With ${profesor}`,
+    primeraClase: (fecha) => `First class: ${fechaEn(fecha)}`,
     confirmar: "Confirm the change",
     enviando: "Saving the change…",
     hechoTitulo: "Done!",
@@ -229,6 +283,20 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     sinResultados: "No slots match these filters. Try another day or time of day.",
     simulacion: "Test data: this change isn't saved yet.",
 
+    noMovible: (m, que) => {
+      if (m.movible) return "";
+      if (!m.disponibleDesde) return AUTOSERVICIO.en.motivo(m.motivo);
+      const razon =
+        m.motivo === "ANTELACION_INSUFICIENTE"
+          ? que === "horario"
+            ? "Your next class at this time is very close."
+            : "This class is very close."
+          : m.motivo === "MARCA_PUNTUAL_EXISTENTE"
+            ? "You already have another class at this time moved."
+            : "";
+      const podras = que === "horario" ? "You'll be able to change it" : "You'll be able to move it";
+      return `${razon} ${podras} from ${momentoEn(m.disponibleDesde)}.`.trim();
+    },
     motivo: (codigo) => {
       switch (codigo) {
         case "NO_ELEGIBLE":
@@ -241,8 +309,22 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
           return "This class is too close to move from here. If you need to change it, message us on WhatsApp.";
         case "MARCA_PUNTUAL_EXISTENTE":
           return "You've already moved this class once. To move it again, message us on WhatsApp and we'll sort it out with you.";
+        case "FUERA_DE_VENTANA":
+          return "From here you can move classes in the next six weeks. For a later date, message us on WhatsApp.";
+        case "MISMO_HORARIO":
+          return "That's already your schedule. Pick another slot from the list.";
         case "HUECO_YA_OCUPADO":
+        case "SLOT_NO_DISPONIBLE":
           return "That slot has just been taken, here are the ones still free.";
+        case "SESION_NO_ENCONTRADA":
+          return "Your schedule changed while you were looking. Close this window to see the current one and try again; if you can't find it, message us on WhatsApp.";
+        case "EN_CURSO":
+          return "Your change is being saved. Wait a few seconds and tap «Confirm the change» again: it won't be made twice.";
+        case "ERROR_LECTURA":
+        case "CALENDARIO_ILEGIBLE":
+          return "We can't check your schedule just now. Try again in a few minutes, or message us on WhatsApp and we'll sort it out with you.";
+        case "A_MEDIAS":
+          return "Something didn't finish properly while saving your change, and the team already knows. No need to repeat it: we'll write to you. You can also message us on WhatsApp if you like.";
         default:
           return "We couldn't complete the change just now. Try again in a while, or message us on WhatsApp and we'll do it with you.";
       }

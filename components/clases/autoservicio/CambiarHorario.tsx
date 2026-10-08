@@ -26,8 +26,10 @@ import { Aviso, BotonWhatsApp, ListaDeHuecos, Opcion, TituloPaso, Volver, nuevaC
  * puede, se explica y se ofrece el WhatsApp—.
  *
  *   1. sesion     solo si tiene más de una clase a la semana
- *   2. modo       «solo una clase» o «desde ahora, todas»
- *   3. fecha      solo en «solo una clase»: cuál de las próximas
+ *   2. modo       «solo una clase» o «desde ahora, todas». Lo que
+ *                 Gestión no deja mover sale desactivado, con el motivo
+ *                 y, si lo sabe, desde cuándo se podrá
+ *   3. fecha      solo en «solo una clase»: cuál de las próximas, igual
  *   4. huecos     los de su profesor, por día y franja
  *   5. confirmar  antes y después
  *   6. hecho
@@ -38,6 +40,14 @@ import { Aviso, BotonWhatsApp, ListaDeHuecos, Opcion, TituloPaso, Volver, nuevaC
  * recibe la misma clave y aplica el cambio una sola vez. Además el botón
  * se desactiva al enviar, y `enVuelo` corta el segundo toque que llega
  * antes de que React lo pinte desactivado.
+ *
+ * QUÉ SE HACE CON CADA RESPUESTA DEL POST:
+ *   · HUECO_YA_OCUPADO, SLOT_NO_DISPONIBLE: la lista otra vez, recargada.
+ *   · MISMO_HORARIO: la lista otra vez, con el aviso.
+ *   · SESION_NO_ENCONTRADA: el aviso, y «Mis clases» se recarga debajo.
+ *   · EN_CURSO y el resto: el aviso; «Confirmar» repite con la misma
+ *     clave, como pide el contrato.
+ *   · A_MEDIAS: el aviso y solo «Cerrar». No se ofrece repetir.
  *
  * Vive dentro de la hoja: al cerrarla se desmonta, y al abrirla empieza
  * de cero.
@@ -68,6 +78,7 @@ export default function CambiarHorario({
   const [destino, setDestino] = useState<HuecoLibre | null>(null);
   const [clave, setClave] = useState<string | null>(null);
   const [fallo, setFallo] = useState<CodigoAutoservicio | null>(null);
+  const [fechaNueva, setFechaNueva] = useState<string | null>(null);
   const [enviando, iniciar] = useTransition();
   const enVuelo = useRef(false);
   const titulo = useRef<HTMLDivElement>(null);
@@ -84,17 +95,19 @@ export default function CambiarHorario({
     if (paso === "hecho") router.refresh();
   }, [paso, router]);
 
-  function cargarHuecos(m: ModoCambio, s: Sesion, mensaje: string | null = null) {
+  /** `fecha`: en puntual, la clase que se mueve. */
+  function cargarHuecos(m: ModoCambio, s: Sesion, fecha: string | null, mensaje: string | null = null) {
     setAviso(mensaje);
     setHuecos({ estado: "cargando" });
     setPaso("huecos");
     void (async () => {
       let r: LecturaAutoservicio<HuecoLibre[]>;
       try {
-        r = await huecosAutoservicio(m, s.id);
+        r = await huecosAutoservicio(m, s.id, fecha);
       } catch {
         r = { ok: false, codigo: "GENERICO" };
       }
+      if (!r.ok && r.codigo === "SESION_NO_ENCONTRADA") router.refresh();
       setHuecos(r.ok ? { estado: "listo", lista: r.datos } : { estado: "error", codigo: r.codigo });
     })();
   }
@@ -103,7 +116,7 @@ export default function CambiarHorario({
     if (!sesion) return;
     setModo(m);
     if (m === "puntual") setPaso("fecha");
-    else cargarHuecos(m, sesion);
+    else cargarHuecos(m, sesion, null);
   }
 
   function elegirDestino(h: HuecoLibre) {
@@ -123,7 +136,7 @@ export default function CambiarHorario({
       try {
         r = await cambiarHorarioAutoservicio({
           modo,
-          sesionOrigen: sesion.id,
+          sesionOrigen: { dia: sesion.dia, hora: sesion.hora, duracion: sesion.duracion },
           fechaOrigen: modo === "puntual" ? clase?.fecha ?? null : null,
           destino,
           idempotencyKey: clave,
@@ -133,13 +146,21 @@ export default function CambiarHorario({
       }
       enVuelo.current = false;
       if (r.ok) {
+        setFechaNueva(r.fechaNueva);
         setPaso("hecho");
-      } else if (r.codigo === "HUECO_YA_OCUPADO") {
+      } else if (r.codigo === "HUECO_YA_OCUPADO" || r.codigo === "SLOT_NO_DISPONIBLE") {
         // Sin salir del flujo: la lista otra vez, ya sin ese hueco.
         setDestino(null);
         setClave(null);
-        cargarHuecos(modo, sesion, t.ocupado);
+        cargarHuecos(modo, sesion, modo === "puntual" ? clase?.fecha ?? null : null, t.ocupado);
+      } else if (r.codigo === "MISMO_HORARIO") {
+        setDestino(null);
+        setClave(null);
+        setAviso(t.motivo(r.codigo));
+        setPaso("huecos");
       } else {
+        // Gestión ya no tiene esa sesión: lo de debajo se pone al día.
+        if (r.codigo === "SESION_NO_ENCONTRADA") router.refresh();
         setFallo(r.codigo);
       }
     });
@@ -177,9 +198,24 @@ export default function CambiarHorario({
           <TituloPaso>{t.queCambio}</TituloPaso>
           <p className="mt-1 text-[15px] text-marca-gris">{describeSesion(sesion)}</p>
           <div className="mt-4 flex flex-col gap-2.5">
-            <Opcion titulo={t.soloEsta} detalle={t.soloEstaDetalle} alPulsar={() => elegirModo("puntual")} />
-            <Opcion titulo={t.todas} detalle={t.todasDetalle} alPulsar={() => elegirModo("fijo")} />
+            <Opcion
+              titulo={t.soloEsta}
+              detalle={sesion.proximasClases.length > 0 ? t.soloEstaDetalle : t.sinProximas}
+              desactivada={sesion.proximasClases.length === 0}
+              alPulsar={() => elegirModo("puntual")}
+            />
+            <Opcion
+              titulo={t.todas}
+              detalle={sesion.fijo.movible ? t.todasDetalle : t.noMovible(sesion.fijo, "horario")}
+              desactivada={!sesion.fijo.movible}
+              alPulsar={() => elegirModo("fijo")}
+            />
           </div>
+          {!sesion.fijo.movible && (
+            <div className="mt-4">
+              <BotonWhatsApp href={whatsapp} texto={t.escribenos} />
+            </div>
+          )}
         </>
       )}
 
@@ -188,23 +224,21 @@ export default function CambiarHorario({
           <Volver texto={t.volver} alPulsar={() => setPaso("modo")} />
           <TituloPaso>{t.queFecha}</TituloPaso>
           <ul className="mt-4 flex flex-col gap-2.5">
-            {estado.proximasClases
-              .filter((c) => c.sesionId === sesion.id)
-              .map((c) => (
-                <li key={c.fecha}>
-                  <Opcion
-                    titulo={t.clase(c.fecha, ...tramo(c))}
-                    detalle={c.movible ? undefined : t.motivo(c.motivoNoMovible ?? "GENERICO")}
-                    desactivada={!c.movible}
-                    alPulsar={() => {
-                      setClase(c);
-                      cargarHuecos("puntual", sesion);
-                    }}
-                  />
-                </li>
-              ))}
+            {sesion.proximasClases.map((c) => (
+              <li key={c.fecha}>
+                <Opcion
+                  titulo={t.clase(c.fecha, ...tramo(c))}
+                  detalle={c.movible ? undefined : t.noMovible(c, "clase")}
+                  desactivada={!c.movible}
+                  alPulsar={() => {
+                    setClase(c);
+                    cargarHuecos("puntual", sesion, c.fecha);
+                  }}
+                />
+              </li>
+            ))}
           </ul>
-          {estado.proximasClases.some((c) => c.sesionId === sesion.id && !c.movible) && (
+          {sesion.proximasClases.some((c) => !c.movible) && (
             <div className="mt-4">
               <BotonWhatsApp href={whatsapp} texto={t.escribenos} />
             </div>
@@ -248,7 +282,7 @@ export default function CambiarHorario({
 
       {paso === "confirmar" && sesion && modo && destino && (
         <>
-          <Volver texto={t.volver} alPulsar={() => setPaso("huecos")} />
+          {fallo !== "A_MEDIAS" && <Volver texto={t.volver} alPulsar={() => setPaso("huecos")} />}
           <TituloPaso>{t.confirmaTitulo}</TituloPaso>
           <dl className="mt-4 overflow-hidden rounded-[14px] border border-marca-borde">
             <div className="bg-marca-niebla px-4 py-3">
@@ -264,6 +298,9 @@ export default function CambiarHorario({
                 {modo === "fijo" ? `${t.desdeAhora} · ` : ""}
                 {estado.profesor ? t.conProfesor(estado.profesor) : ""}
               </dd>
+              {modo === "fijo" && destino.primeraClase && (
+                <dd className="text-[14px] text-marca-gris">{t.primeraClase(destino.primeraClase)}</dd>
+              )}
             </div>
           </dl>
           <p className="mt-2 text-[13.5px] text-marca-gris">{t.horaPeninsular}</p>
@@ -275,14 +312,24 @@ export default function CambiarHorario({
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={confirmar}
-            disabled={enviando}
-            className="btn-verde mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-full px-6 text-[16px] font-bold disabled:opacity-60"
-          >
-            {enviando ? t.enviando : t.confirmar}
-          </button>
+          {fallo === "A_MEDIAS" ? (
+            <button
+              type="button"
+              onClick={alCerrar}
+              className="btn-verde mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-full px-6 text-[16px] font-bold"
+            >
+              {t.cerrar}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={confirmar}
+              disabled={enviando}
+              className="btn-verde mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-full px-6 text-[16px] font-bold disabled:opacity-60"
+            >
+              {enviando ? t.enviando : t.confirmar}
+            </button>
+          )}
         </>
       )}
 
@@ -292,6 +339,9 @@ export default function CambiarHorario({
           <div className="mt-3">
             <Aviso tono="ok" role="status">
               <p className="font-semibold">{modo === "fijo" ? t.hechoFijo(describeDestino(destino)) : t.hechoPuntual(describeDestino(destino))}</p>
+              {modo === "fijo" && (fechaNueva ?? destino.primeraClase) && (
+                <p className="mt-1">{t.primeraClase((fechaNueva ?? destino.primeraClase)!)}</p>
+              )}
               <p className="mt-1">{t.hechoAviso}</p>
             </Aviso>
           </div>
