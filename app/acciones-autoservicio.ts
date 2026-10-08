@@ -7,8 +7,7 @@
 // Gestión y su secreto no pasan nunca por el navegador. Del navegador
 // llega solo lo elegido; QUIÉN ES el alumno sale de la cookie, aquí.
 //
-// SOLO EL PROPIO ALUMNO, Y SOLO SI LO VE (`autoservicioActivoPara`: el
-// interruptor encendido, o él en la lista de alumnos de prueba). El equipo
+// SOLO EL PROPIO ALUMNO, Y SOLO CON EL INTERRUPTOR ENCENDIDO. El equipo
 // revisando una ficha ve la sección sin botones; si llamara a esto
 // igualmente, se le rechaza.
 //
@@ -17,7 +16,7 @@
 // ---------------------------------------------------------------
 
 import { sesionActual } from "@/lib/sesion-servidor";
-import { autoservicioActivoPara, proveedorAutoservicio } from "@/lib/autoservicio";
+import { autoservicioActivo, proveedorAutoservicio } from "@/lib/autoservicio";
 import { idSesionValido, peticionValida } from "@/lib/autoservicio/leer";
 import type {
   HuecoLibre,
@@ -28,9 +27,10 @@ import type {
 } from "@/lib/autoservicio/tipos";
 
 async function alumnoDeLaSesion(): Promise<string | null> {
+  if (!autoservicioActivo()) return null;
   const sesion = await sesionActual();
   if (!sesion || sesion.rol !== "alumno" || !sesion.alumnoId) return null;
-  return autoservicioActivoPara(sesion.alumnoId) ? sesion.alumnoId : null;
+  return sesion.alumnoId;
 }
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
