@@ -81,6 +81,15 @@ export type Vista = (typeof VISTAS)[number];
 
 let cliente: SupabaseClient | null = null;
 
+/** El tope de una lectura. Gestión contesta en décimas; esto es para cuando no. */
+export const MS_LECTURA = 5000;
+
+/** La señal del tope, unida a la que traiga la consulta si trae una. */
+function conTope(propia: AbortSignal | null | undefined): AbortSignal {
+  const tope = AbortSignal.timeout(MS_LECTURA);
+  return propia ? AbortSignal.any([propia, tope]) : tope;
+}
+
 /**
  * El cliente se crea la primera vez que se pide, no al importar el módulo.
  * Si validáramos las variables de entorno en el ámbito del módulo, `next build`
@@ -105,13 +114,29 @@ function crearCliente(): SupabaseClient {
     // No hay usuarios ni sesiones: cada petición entra con la service role key
     // y se resuelve en el servidor. Persistir o refrescar sesión no aplica.
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    db: { schema: "public" },
+
+    // SIN REINTENTOS. supabase-js repite por su cuenta cada GET que
+    // recibe un 503 o un 520, o que no llega, hasta tres veces más (a
+    // 1, 2 y 4 s). Contra una base que ya no da abasto eso es
+    // multiplicar por cuatro la carga justo cuando menos aguanta: el
+    // 08/10/2026 Gestión se cayó por exceso de peticiones. Una lectura
+    // que falla aquí sale como error y la pantalla enseña menos; la
+    // siguiente visita vuelve a preguntar.
+    db: { schema: "public", retry: false },
 
     // Lo mismo que en `lib/supabase-lms.ts`, y por la misma razón: las
     // fichas de Gestión cambian, y una respuesta que Next guarda un año
     // las congela. Allí está la explicación larga.
+    //
+    // Y CON TOPE DE ESPERA (`MS_LECTURA`). Sin él, una base atascada deja
+    // la página colgada lo que tarde en contestar, y cada alumno que
+    // recarga abre otra consulta encima. Un tiempo agotado es un error
+    // de lectura como cualquier otro: supabase-js lo devuelve en `error`
+    // —no lanza— y cada lectura de `lib/gestion.ts` ya sabe qué enseñar
+    // sin ese dato.
     global: {
-      fetch: (entrada, opciones) => fetch(entrada, { ...opciones, cache: "no-store" }),
+      fetch: (entrada, opciones) =>
+        fetch(entrada, { ...opciones, cache: "no-store", signal: conTope(opciones?.signal) }),
     },
   });
 

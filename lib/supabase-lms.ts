@@ -51,7 +51,11 @@ export function baseLms(): SupabaseClient {
     // gestiona `lib/sesion.ts` con cookies propias, y cada petición entra
     // aquí con la clave de servicio. Persistir o refrescar no aplica.
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    db: { schema: "public" },
+    // Sin los reintentos de supabase-js, como en `lib/supabase-server.ts`
+    // (allí el motivo): una base saturada no se arregla preguntándole
+    // cuatro veces. Solo afectaban a las lecturas; las escrituras no se
+    // reintentaban nunca.
+    db: { schema: "public", retry: false },
 
     // NUNCA POR LA CACHÉ DE DATOS DE NEXT.
     //
