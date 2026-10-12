@@ -6,7 +6,7 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
 import { cambiarProfesorAutoservicio, huecosDeProfesorAutoservicio, huecosProfesoresAutoservicio } from "@/app/acciones-autoservicio";
 import type { DiaSemana } from "@/lib/clases";
 import { DIAS_LABORABLES, FRANJAS, filtrarHuecos, horaFin, type Franja } from "@/lib/autoservicio/franjas";
-import { aDestino, agruparPorProfesor, cabe, destinosListos } from "@/lib/autoservicio/profesor";
+import { aDestino, agruparPorProfesor, cabe, destinosListos, estadoReparto } from "@/lib/autoservicio/profesor";
 import type {
   CodigoAutoservicio,
   HuecoProfesor,
@@ -32,10 +32,15 @@ import { Aviso, BotonWhatsApp, TituloPaso, Volver, nuevaClave } from "@/componen
  *                 durante el día, nunca por puntuación). Se pide una vez
  *                 al abrir y se filtra aquí. La lista es para la duración
  *                 de su primera sesión.
- *   2. repartir   solo si tiene más de una clase a la semana: los huecos
- *                 de ESE profesor para cada sesión, y un destino para
- *                 cada una. Lo que pisa algo ya elegido sale desactivado:
- *                 Gestión rechaza los solapes.
+ *   2. repartir   solo si tiene más de una clase a la semana. TODAS pasan
+ *                 al profesor nuevo, cada una con su misma duración: una
+ *                 fila por clase («Tu clase de los jueves, 2 horas») con
+ *                 los huecos de ESE profesor de esa duración, y un
+ *                 contador («Has elegido 2 de 3 clases»). Lo que pisa
+ *                 algo ya elegido sale desactivado: Gestión rechaza los
+ *                 solapes. Si para alguna clase no tiene hueco, o no
+ *                 caben todas sin pisarse, se dice y se ofrece otro
+ *                 profesor o el WhatsApp.
  *   3. confirmar  antes y después, con el profesor de cada lado
  *   4. hecho      el profesor nuevo está avisado, le llega un correo de
  *                 bienvenida y él le pasará el enlace
@@ -298,6 +303,10 @@ export default function CambiarProfesor({
   const describe = (s: SesionOrigen) => t.sesion(s.dia, ...tramo(s));
   const resultados = lista.estado === "listo" ? filtrarHuecos(lista.datos.huecos, dia, franja) : [];
   const listos = destinosListos(sesiones, destinos);
+  const reparto = suyos?.estado === "listo" ? estadoReparto(sesiones, suyos.datos.sesiones.map((s) => s.huecos), destinos) : null;
+  /** Las duraciones de las clases sin hueco, sin repetir: «tu clase de 2 horas» una vez. */
+  const horasSinHueco = reparto ? Array.from(new Set(reparto.sinHueco.map((i) => sesiones[i].duracion))) : [];
+  const atascado = reparto !== null && (reparto.sinHueco.length > 0 || reparto.imposible);
   const sinRepetir = fallo !== null && SIN_REPETIR.includes(fallo.codigo);
   const textoFallo = (f: Fallo) =>
     f.codigo === "ANTELACION_INSUFICIENTE"
@@ -402,14 +411,35 @@ export default function CambiarProfesor({
                 <BotonWhatsApp href={whatsapp} texto={t.escribenos} principal />
               </div>
             )}
-            {suyos.estado === "listo" && (
+            {suyos.estado === "listo" && reparto && (
               <div className="flex flex-col gap-6">
+                {atascado && (
+                  <div className="flex flex-col gap-3">
+                    <Aviso role="alert">
+                      {reparto.imposible ? t.noCabenTodas : horasSinHueco.map((h) => <p key={h}>{t.sinHuecoPara(h)}</p>)}
+                    </Aviso>
+                    <div className="flex flex-col gap-2.5 min-[500px]:flex-row">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAviso(null);
+                          setPaso("buscar");
+                        }}
+                        className="btn-verde inline-flex min-h-[48px] w-full items-center justify-center rounded-full px-6 text-[15.5px] font-bold min-[500px]:w-auto"
+                      >
+                        {t.otroProfesor}
+                      </button>
+                      <BotonWhatsApp href={whatsapp} texto={t.escribenos} />
+                    </div>
+                  </div>
+                )}
                 {suyos.datos.sesiones.map(({ sesion, huecos }, i) => (
                   <fieldset key={i}>
-                    <legend className="text-[16px] font-bold text-marca-tinta">{t.tuClaseDe(describe(sesion))}</legend>
+                    <legend className="text-[16px] font-bold text-marca-tinta">{t.tuClaseDe(sesion.dia, sesion.duracion)}</legend>
+                    <p className="text-[14px] text-marca-gris">{t.ahora(...tramo(sesion))}</p>
                     {huecos.length === 0 ? (
                       <div className="mt-2">
-                        <Aviso>{t.sinHuecos}</Aviso>
+                        <Aviso>{t.sinHuecoPara(sesion.duracion)}</Aviso>
                       </div>
                     ) : (
                       <ul className="mt-2 grid grid-cols-1 gap-2 min-[500px]:grid-cols-2">
@@ -431,18 +461,23 @@ export default function CambiarProfesor({
                     )}
                   </fieldset>
                 ))}
-                <button
-                  type="button"
-                  onClick={irAConfirmar}
-                  disabled={!listos}
-                  className="btn-verde inline-flex min-h-[52px] w-full items-center justify-center rounded-full px-6 text-[16px] font-bold disabled:opacity-50"
-                >
-                  {t.continuar}
-                </button>
+                <div className="flex flex-col gap-2.5">
+                  <p aria-live="polite" className="text-center text-[15px] font-semibold text-marca-tinta">
+                    {t.contadorClases(reparto.elegidas, reparto.total)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={irAConfirmar}
+                    disabled={!reparto.listo}
+                    className="btn-verde inline-flex min-h-[52px] w-full items-center justify-center rounded-full px-6 text-[16px] font-bold disabled:opacity-50"
+                  >
+                    {t.continuar}
+                  </button>
+                </div>
               </div>
             )}
           </div>
-          {suyos.estado !== "error" && pieWhatsApp}
+          {suyos.estado !== "error" && !atascado && pieWhatsApp}
         </>
       )}
 

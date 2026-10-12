@@ -32,11 +32,14 @@
 //       (a medias)               el del miércoles a las 20:00
 //       (genérico)               el del viernes a las 18:00 (ERROR_INTERNO)
 //
-// EL CAMBIO DE PROFESOR (v2): Daniela, Ignacio, Sol y Maribel, en un
-// orden que cambia cada día y no entre recargas, como en Gestión. Los
-// mismos destinos de arriba dan los mismos errores, y además:
+// EL CAMBIO DE PROFESOR (v2): Daniela, Ignacio, Sol, Maribel, Bruno y
+// Elena, en un orden que cambia cada día y no entre recargas, como en
+// Gestión. Los mismos destinos de arriba dan los mismos errores, y además:
 //       PROFESOR_ARCHIVADO       pedir los huecos de Maribel
 //       ASIGNACION_CAMBIADA      un destino el jueves a las 17:00
+//       sin hueco de 2 h         Bruno: solo tiene huecos a las 21:00
+//       no caben las dos         Elena: solo el lunes a las 10:00, que
+//                                vale para las dos clases y las pisa
 // ---------------------------------------------------------------
 
 import "server-only";
@@ -344,6 +347,19 @@ const OTROS: { id: string; nombre: string; libres: { dia: string; hora: string }
       { dia: "Jueves", hora: "13:00" },
       { dia: "Sábado", hora: "10:00" },
     ],
+  },
+  {
+    id: "t25",
+    nombre: "Bruno",
+    libres: [
+      { dia: "Lunes", hora: "21:00" },
+      { dia: "Miércoles", hora: "21:00" },
+    ],
+  },
+  {
+    id: "t26",
+    nombre: "Elena",
+    libres: [{ dia: "Lunes", hora: "10:00" }],
   },
   {
     id: "t24",

@@ -256,7 +256,9 @@ export function leerHuecosDeProfesor(v: unknown): HuecosDeProfesor | null {
     const c = obj(crudo);
     const s = sesionOrigen(c);
     if (!c || !s || typeof c.indice !== "number") return null;
-    sesiones.push({ indice: c.indice, sesion: s, huecos: huecosProfesor(c.huecos) });
+    // Cada clase pasa entera: solo huecos de SU duración, aunque llegara
+    // alguno de otra (una de 2 h no se parte en dos de 1 h).
+    sesiones.push({ indice: c.indice, sesion: s, huecos: huecosProfesor(c.huecos).filter((h) => h.duracion === s.duracion) });
   }
   if (sesiones.length === 0) return null;
   sesiones.sort((a, b) => a.indice - b.indice);

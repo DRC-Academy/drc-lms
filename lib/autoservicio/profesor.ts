@@ -49,6 +49,65 @@ export function destinosListos(sesiones: SesionOrigen[], destinos: (SesionOrigen
   return true;
 }
 
+/**
+ * Si hay alguna forma de dar destino a TODAS las sesiones sin que se
+ * pisen, con estos huecos (uno por sesión, de su misma duración).
+ *
+ * Búsqueda con vuelta atrás, empezando por la sesión con menos huecos.
+ * Son cinco sesiones como mucho y unas decenas de huecos cada una, así que
+ * acaba enseguida; aun así lleva un tope de pasos y, si lo alcanza, dice
+ * que sí: mejor dejar probar al alumno que cerrarle la puerta por una
+ * cuenta que no ha terminado.
+ */
+export function hayCombinacion(sesiones: SesionOrigen[], huecos: SesionOrigen[][], tope = 50_000): boolean {
+  const validos = sesiones.map((s, i) => (huecos[i] ?? []).filter((h) => h.duracion === s.duracion));
+  if (validos.some((v) => v.length === 0)) return false;
+  const orden = validos.map((_, i) => i).sort((a, b) => validos[a].length - validos[b].length);
+  const elegidos: (SesionOrigen | null)[] = sesiones.map(() => null);
+  let pasos = 0;
+
+  const probar = (k: number): boolean => {
+    if (k === orden.length) return true;
+    const i = orden[k];
+    for (const h of validos[i]) {
+      if (++pasos > tope) return true;
+      if (!cabe(h, i, elegidos)) continue;
+      elegidos[i] = h;
+      if (probar(k + 1)) return true;
+      elegidos[i] = null;
+    }
+    return false;
+  };
+  return probar(0);
+}
+
+/** Cómo va el reparto de sus clases con un profesor, para pintarlo. */
+export type Reparto = {
+  /** Sus clases semanales: todas tienen que pasar al profesor nuevo. */
+  total: number;
+  /** Las que ya tienen destino. */
+  elegidas: number;
+  /** Todas elegidas, cada una de su duración y sin pisarse. */
+  listo: boolean;
+  /** Las sesiones para las que este profesor no tiene ningún hueco de su duración. */
+  sinHueco: number[];
+  /** Hay huecos para cada una, pero no caben todas sin pisarse. */
+  imposible: boolean;
+};
+
+export function estadoReparto(sesiones: SesionOrigen[], huecos: SesionOrigen[][], destinos: (SesionOrigen | null)[]): Reparto {
+  const sinHueco = sesiones
+    .map((s, i) => ((huecos[i] ?? []).some((h) => h.duracion === s.duracion) ? -1 : i))
+    .filter((i) => i >= 0);
+  return {
+    total: sesiones.length,
+    elegidas: destinos.filter((d, i) => d !== null && d !== undefined && d.duracion === sesiones[i]?.duracion).length,
+    listo: destinosListos(sesiones, destinos),
+    sinHueco,
+    imposible: sinHueco.length === 0 && !hayCombinacion(sesiones, huecos),
+  };
+}
+
 export type GrupoProfesor = { profesor: Profesor; huecos: HuecoProfesor[] };
 
 /**

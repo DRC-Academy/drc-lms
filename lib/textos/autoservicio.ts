@@ -88,8 +88,17 @@ export type TextosAutoservicio = {
   /** El paso de repartir sus sesiones: «Elige tus horarios con Daniela». */
   repartirTitulo: (profesor: string) => string;
   repartirDetalle: (sesiones: number) => string;
-  /** Cabecera de cada sesión al repartir: «Tu clase de los martes, 18:00–19:00». */
-  tuClaseDe: (sesion: string) => string;
+  /** Cabecera de cada clase al repartir: «Tu clase de los martes, 1 hora». */
+  tuClaseDe: (dia: DiaSemana, horas: number) => string;
+  /** Debajo de la cabecera: el horario de ahora, «Ahora: 18:00–19:00». */
+  ahora: (desde: string, hasta: string) => string;
+  /** «Has elegido 2 de 3 clases» */
+  contadorClases: (elegidas: number, total: number) => string;
+  /** «Este profesor no tiene hueco para tu clase de 2 horas.» */
+  sinHuecoPara: (horas: number) => string;
+  /** Hay hueco para cada clase, pero no caben todas sin coincidir. */
+  noCabenTodas: string;
+  otroProfesor: string;
   /** Un hueco que pisa otro ya elegido. */
   coincide: string;
   elegido: string;
@@ -157,6 +166,11 @@ function fechaEn(fecha: string): string {
 }
 const mayuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** «martes», «sábados»: el día en plural, como en «los martes». */
+const diaPluralEs = (dia: DiaSemana) => `${dia.toLowerCase()}${dia === "Sábado" || dia === "Domingo" ? "s" : ""}`;
+const horasEs = (n: number) => `${n} ${n === 1 ? "hora" : "horas"}`;
+const horasEn = (n: number) => `${n} ${n === 1 ? "hour" : "hours"}`;
+
 /** «lunes 20 de octubre», o «martes 13 de octubre a las 17:00». A las 00:00 es el día entero. */
 function momentoEs(m: Momento): string {
   return m.hora === "00:00" ? fechaEs(m.fecha) : `${fechaEs(m.fecha)} a las ${m.hora}`;
@@ -178,7 +192,7 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     volver: "Volver",
 
     queClase: "¿Qué clase quieres cambiar?",
-    sesion: (dia, desde, hasta) => `Los ${dia.toLowerCase()}${dia === "Sábado" || dia === "Domingo" ? "s" : ""}, ${desde}–${hasta}`,
+    sesion: (dia, desde, hasta) => `Los ${diaPluralEs(dia)}, ${desde}–${hasta}`,
     queCambio: "¿Qué quieres cambiar?",
     soloEsta: "Solo una clase",
     soloEstaDetalle: "Mueves una fecha concreta y el resto sigue igual.",
@@ -218,8 +232,13 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     sinProfesores: "Ahora mismo no hay otros profesores con huecos libres para tu clase.",
     primeraClaseCorta: (fecha) => `1.ª clase: ${fechaEs(fecha)}`,
     repartirTitulo: (profesor) => `Elige tus horarios con ${profesor}`,
-    repartirDetalle: (n) => `Tienes ${n} clases a la semana: elige un hueco para cada una. No pueden coincidir.`,
-    tuClaseDe: (sesion) => `Tu clase de ${sesion.charAt(0).toLowerCase() + sesion.slice(1)}`,
+    repartirDetalle: (n) => `Tienes ${n} clases a la semana y pasan todas a tu nuevo profesor: elige un hueco para cada una, de su misma duración. No pueden coincidir.`,
+    tuClaseDe: (dia, horas) => `Tu clase de los ${diaPluralEs(dia)}, ${horasEs(horas)}`,
+    ahora: (desde, hasta) => `Ahora: ${desde}–${hasta}`,
+    contadorClases: (n, total) => `Has elegido ${n} de ${total} ${total === 1 ? "clase" : "clases"}`,
+    sinHuecoPara: (horas) => `Este profesor no tiene hueco para tu clase de ${horasEs(horas)}.`,
+    noCabenTodas: "Con los huecos de este profesor no caben todas tus clases sin que coincidan.",
+    otroProfesor: "Elegir otro profesor",
     coincide: "Coincide con otra que has elegido",
     elegido: "Elegido",
     continuar: "Continuar",
@@ -361,8 +380,13 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     sinProfesores: "There are no other teachers with free slots for your class right now.",
     primeraClaseCorta: (fecha) => `First class: ${fechaEn(fecha)}`,
     repartirTitulo: (profesor) => `Choose your times with ${profesor}`,
-    repartirDetalle: (n) => `You have ${n} classes a week: choose a slot for each one. They can't overlap.`,
-    tuClaseDe: (sesion) => `Your class on ${sesion}`,
+    repartirDetalle: (n) => `You have ${n} classes a week and they all move to your new teacher: choose a slot for each one, of the same length. They can't overlap.`,
+    tuClaseDe: (dia, horas) => `Your ${DIAS_EN[dia]} class, ${horasEn(horas)}`,
+    ahora: (desde, hasta) => `Now: ${desde}–${hasta}`,
+    contadorClases: (n, total) => `You've chosen ${n} of ${total} ${total === 1 ? "class" : "classes"}`,
+    sinHuecoPara: (horas) => `This teacher has no slot for your ${horas}-hour class.`,
+    noCabenTodas: "With this teacher's slots, your classes can't all fit without overlapping.",
+    otroProfesor: "Choose another teacher",
     coincide: "Overlaps with another one you chose",
     elegido: "Chosen",
     continuar: "Continue",
