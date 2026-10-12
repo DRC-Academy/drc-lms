@@ -30,6 +30,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import ChatAyuda from "@/components/ChatAyuda";
 import CabeceraIdioma from "@/components/CabeceraIdioma";
+import ContenidoApp from "@/components/ContenidoApp";
 import { conFoco } from "@/lib/foco";
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { TextosNavegacion } from "@/lib/textos/navegacion";
@@ -160,12 +161,11 @@ export function MarcoFijo({ piezas, children }: { piezas: ReactNode; children: R
   return (
     <div className="grid min-h-dvh flex-1 grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_1fr]">
       {piezas}
-      {/* `contenido-app`: aquí dentro, el `main` de cada pantalla deja
-          al final el hueco del botón de ayuda (`globals.css`). */}
-      <div className="contenido-app col-start-2 row-start-2 flex min-w-0 flex-col">
+      {/* El fondo de la columna lo decide la ruta (`ContenidoApp`). */}
+      <ContenidoApp>
         <CabeceraIdioma />
         {children}
-      </div>
+      </ContenidoApp>
     </div>
   );
 }

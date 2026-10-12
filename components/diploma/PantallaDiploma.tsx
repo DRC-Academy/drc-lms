@@ -38,9 +38,11 @@ export default function PantallaDiploma({ progreso }: { progreso: ProgresoDiplom
   const conseguido = progreso?.tramo === "conseguido";
 
   return (
-    // Fondo blanco, como la landing: la banda gris de las promesas es la
-    // única superficie distinta, y va a todo el ancho del contenido.
-    <main className="w-full flex-1 bg-white">
+    // FONDO BLANCO, como la landing, pero no lo pinta la página: lo pone
+    // el marco en toda la columna (`fondoDeRuta`, `ContenidoApp`), fila
+    // del idioma incluida. La banda gris de las promesas es la única
+    // superficie distinta, y va a todo el ancho del contenido.
+    <main className="w-full flex-1">
       <Cabecera conseguido={conseguido} />
       <div className="px-5 pb-12 pt-6 min-[900px]:pb-16">
         <Progreso progreso={progreso} />

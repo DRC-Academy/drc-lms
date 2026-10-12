@@ -1,6 +1,8 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import BotonIdioma from "@/components/BotonIdioma";
+import { fondoDeRuta } from "@/components/IconoSeccion";
 
 /**
  * EL IDIOMA, SIEMPRE A LA VISTA, arriba a la derecha de cada pantalla.
@@ -21,11 +23,15 @@ import BotonIdioma from "@/components/BotonIdioma";
  * no la ruta: así vale también mientras la lección carga. Las medidas de
  * aquí copian las de esa esquina, para que el botón no cambie de sitio
  * al entrar en una lección.
+ *
+ * SIN FONDO PROPIO: se pinta sobre el de la columna (`ContenidoApp`), y
+ * el botón se adapta a él con el mismo `fondoDeRuta`.
  */
 export default function CabeceraIdioma() {
+  const fondo = fondoDeRuta(usePathname() ?? "/");
   return (
     <div className="cabecera-idioma flex justify-end px-3.5 pt-3 min-[900px]:px-6 min-[900px]:pt-5 min-[1200px]:px-10">
-      <BotonIdioma />
+      <BotonIdioma fondo={fondo} />
     </div>
   );
 }

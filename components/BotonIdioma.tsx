@@ -2,6 +2,7 @@
 
 import type { Idioma } from "@/lib/idioma";
 import { usarIdioma } from "@/components/ProveedorIdioma";
+import type { FondoPantalla } from "@/components/IconoSeccion";
 
 /**
  * El conmutador de idioma de la cabecera.
@@ -24,22 +25,37 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
 /** En este orden se leen: el de la academia primero. */
 const CODIGOS: readonly Idioma[] = ["es", "en"];
 
-export default function BotonIdioma({ className = "" }: { className?: string }) {
+export default function BotonIdioma({
+  className = "",
+  fondo = "niebla",
+}: {
+  className?: string;
+  /**
+   * Sobre qué fondo va. Sobre blanco el borde de siempre casi no se ve y
+   * el código inactivo en `grisSuave` se queda en 3,6:1: ahí el borde
+   * sube a `puntoPendiente` con una sombra mínima, y el inactivo pasa a
+   * `gris` (5,3:1).
+   */
+  fondo?: FondoPantalla;
+}) {
   const { idioma, t, alternar } = usarIdioma();
+  const blanco = fondo === "blanco";
 
   return (
     <button
       type="button"
       onClick={alternar}
       aria-label={t.navegacion.otroIdiomaAria}
-      className={`inline-flex shrink-0 items-center gap-0.5 rounded-full border border-marca-borde bg-white p-[3px] transition-colors hover:border-marca-grisTenue ${className}`}
+      className={`inline-flex shrink-0 items-center gap-0.5 rounded-full border bg-white p-[3px] transition-colors hover:border-marca-grisTenue ${
+        blanco ? "border-marca-puntoPendiente shadow-[0_1px_2px_rgba(18,33,26,0.08)]" : "border-marca-borde"
+      } ${className}`}
     >
       {CODIGOS.map((codigo) => (
         <span
           key={codigo}
           aria-hidden
           className={`inline-flex h-[24px] min-w-[30px] items-center justify-center rounded-full px-1.5 text-[11.5px] font-semibold uppercase leading-none tracking-[0.04em] transition-colors ${
-            codigo === idioma ? "bg-marca-tinta text-white" : "text-marca-grisSuave"
+            codigo === idioma ? "bg-marca-tinta text-white" : blanco ? "text-marca-gris" : "text-marca-grisSuave"
           }`}
         >
           {codigo}

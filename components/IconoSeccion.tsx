@@ -122,6 +122,22 @@ export function seccionDeRuta(ruta: string): SeccionActiva | undefined {
 }
 
 /**
+ * El fondo de la columna de contenido del marco (`ContenidoApp`). Niebla
+ * en todas las pantallas, que es el del `body`; blanco solo donde la
+ * pantalla está compuesta sobre blanco y empieza a sangre arriba, para
+ * que la fila del idioma no deje una franja niebla encima.
+ *
+ * SALE DE LA RUTA, como la sección activa: el marco vive en un layout,
+ * que no se vuelve a renderizar al navegar, y una página no le puede
+ * pasar nada. Hoy solo «Mi diploma», que replica la landing en blanco.
+ */
+export type FondoPantalla = "niebla" | "blanco";
+
+export function fondoDeRuta(ruta: string): FondoPantalla {
+  return ruta === "/diploma" || ruta.startsWith("/diploma/") ? "blanco" : "niebla";
+}
+
+/**
  * Qué panel lateral tiene la pantalla, si tiene uno: el del curso en una
  * lección y el de las fases en un bloque. Entre 900 y 1200px ese panel
  * no cabe al lado del texto y lo abre un icono de la barra.
