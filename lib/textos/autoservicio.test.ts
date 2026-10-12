@@ -8,6 +8,10 @@ const TODOS: CodigoAutoservicio[] = [...CODIGOS_AUTOSERVICIO, "A_MEDIAS", "GENER
 const MISMO_TEXTO: CodigoAutoservicio[][] = [
   ["HUECO_YA_OCUPADO", "SLOT_NO_DISPONIBLE"],
   ["ERROR_LECTURA", "CALENDARIO_ILEGIBLE"],
+  // Cambio de profesor: ese profesor no vale, sea por lo que sea.
+  ["PROFESOR_NO_EXISTE", "PROFESOR_ARCHIVADO", "PROFESOR_DE_PRUEBA"],
+  // Cambio de profesor: no tiene una asignación desde la que cambiar.
+  ["ASIGNACION_INACTIVA", "ASIGNACION_NO_EXISTE"],
 ];
 
 describe("textos por código de error", () => {
@@ -33,12 +37,26 @@ describe("textos por código de error", () => {
         "ERROR_LECTURA",
         "A_MEDIAS",
         "GENERICO",
+        "HORAS_NO_COINCIDEN",
+        "ASIGNACION_CAMBIADA",
+        "ASIGNACION_INACTIVA",
+        "ASIGNACION_NO_EXISTE",
       ];
       for (const c of sinSalida) expect(t.motivo(c)).toMatch(/WhatsApp/);
     });
 
     it(`${idioma}: lo que se resuelve dentro del flujo no manda fuera`, () => {
-      for (const c of ["SLOT_NO_DISPONIBLE", "MISMO_HORARIO", "EN_CURSO"] as const) expect(t.motivo(c)).not.toMatch(/WhatsApp/);
+      for (const c of ["SLOT_NO_DISPONIBLE", "MISMO_HORARIO", "EN_CURSO", "MISMO_PROFESOR", "PROFESOR_ARCHIVADO"] as const) {
+        expect(t.motivo(c)).not.toMatch(/WhatsApp/);
+      }
+    });
+
+    it(`${idioma}: en el cambio de profesor, el calendario sin actualizar es el del ELEGIDO: se elige otro`, () => {
+      expect(t.motivoProfesor("CALENDARIO_SIN_ACTUALIZAR")).not.toBe(t.motivo("CALENDARIO_SIN_ACTUALIZAR"));
+      expect(t.motivoProfesor("CALENDARIO_SIN_ACTUALIZAR")).not.toMatch(/WhatsApp/);
+      // Lo que no habla de su profesor ni de su horario, igual que siempre.
+      expect(t.motivoProfesor("HORAS_NO_COINCIDEN")).toBe(t.motivo("HORAS_NO_COINCIDEN"));
+      expect(t.motivoProfesor("A_MEDIAS")).toBe(t.motivo("A_MEDIAS"));
     });
 
     it(`${idioma}: el hueco ocupado es el aviso de la lista, sin mandar fuera`, () => {
@@ -102,5 +120,35 @@ describe("cómo se escriben las clases", () => {
     const t = AUTOSERVICIO.en;
     expect(t.sesion("Miércoles", "18:00", "19:00")).toBe("Wednesdays, 18:00–19:00");
     expect(t.clase("2026-10-13", "18:00", "19:00")).toBe("Tuesday 13 October, 18:00–19:00");
+  });
+});
+
+describe("cuándo podrá cambiar de profesor", () => {
+  const antelacion = { puede: false, motivo: "ANTELACION_INSUFICIENTE", disponibleDesde: { fecha: "2026-10-13", hora: "17:00" } } as const;
+
+  it("es: con fecha, desde cuándo", () => {
+    expect(AUTOSERVICIO.es.profesorNoDisponible(antelacion)).toBe(
+      "Tu próxima clase está muy cerca. Podrás cambiar de profesor a partir del martes 13 de octubre a las 17:00."
+    );
+  });
+
+  it("en: with a date, from when", () => {
+    expect(AUTOSERVICIO.en.profesorNoDisponible(antelacion)).toBe(
+      "Your next class is very close. You'll be able to change teacher from Tuesday 13 October at 17:00."
+    );
+  });
+
+  it("sin fecha, el motivo del cambio de profesor", () => {
+    const t = AUTOSERVICIO.es;
+    expect(t.profesorNoDisponible({ puede: false, motivo: "RECUPERACION_PENDIENTE", disponibleDesde: null })).toBe(
+      t.motivoProfesor("RECUPERACION_PENDIENTE")
+    );
+    expect(t.profesorNoDisponible({ puede: false, motivo: "NO_ELEGIBLE", disponibleDesde: null })).toMatch(/profesor/);
+  });
+
+  it("la pantalla de hecho dice lo pedido", () => {
+    expect(AUTOSERVICIO.es.hechoProfesorAviso).toBe(
+      "Tu nuevo profesor ya está avisado. Te llegará un correo de bienvenida y te pasará el enlace de la clase."
+    );
   });
 });

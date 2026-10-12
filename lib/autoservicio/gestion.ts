@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------
 // EL AUTOSERVICIO CONTRA GESTIÓN DE VERDAD
 //
-// Los tres endpoints de `tipos.ts`, por `llamarGestion` (el mismo
+// Los cinco endpoints de `tipos.ts`, por `llamarGestion` (el mismo
 // cliente, secreto y tope de espera que las recuperaciones). Lo que
 // llega pasa por `leer.ts`. Un error trae su código en el cuerpo
 // (`{ ok: false, codigo, mensaje }`) también al leer; sin cuerpo —no
@@ -22,10 +22,20 @@ import "server-only";
 import { esIdDemo } from "@/lib/demo/cuenta";
 import { llamarGestion } from "@/lib/gestion-api";
 import { NoSeGuarda, SEGUNDOS_ALUMNO, conCache, etiquetaAlumno } from "@/lib/cache-gestion";
-import { aHuecoGestion, leerError, leerEstado, leerHuecos, leerResultadoCambio } from "@/lib/autoservicio/leer";
+import {
+  aHuecoGestion,
+  leerError,
+  leerEstado,
+  leerHuecos,
+  leerHuecosDeProfesor,
+  leerListaProfesores,
+  leerResultadoCambio,
+  leerResultadoCambioProfesor,
+} from "@/lib/autoservicio/leer";
 import type {
   CodigoAutoservicio,
   CuerpoCambiarHorario,
+  CuerpoCambiarProfesor,
   EstadoAutoservicio,
   LecturaAutoservicio,
   ProveedorAutoservicio,
@@ -95,6 +105,49 @@ export const autoservicioDeGestion: ProveedorAutoservicio = {
     const resultado = leerResultadoCambio(r.ok ? r.cuerpo : r.cuerpo ?? null);
     if (!resultado.ok && resultado.codigo === "A_MEDIAS") {
       console.error(`[${PREFIJO}] Cambio a medias para ${alumnoId} (clave ${p.idempotencyKey}): ${resultado.mensaje ?? ""}`);
+    }
+    return resultado;
+  },
+
+  // --- v2: cambio de profesor. Sin caché: se piden al abrir el flujo. ---
+
+  async huecosProfesores(alumnoId) {
+    if (esIdDemo(alumnoId)) return { ok: false, codigo: "NO_ELEGIBLE" };
+    const r = await llamarGestion(PREFIJO, `${BASE}/huecos-profesores?${new URLSearchParams({ alumno_id: alumnoId })}`, { method: "GET" });
+    if (!r.ok) return { ok: false, codigo: leerError(r.cuerpo).codigo };
+    const lista = leerListaProfesores(r.cuerpo);
+    if (!lista) {
+      console.error(`[${PREFIJO}] Gestión devolvió una lista de profesores que no se puede leer.`);
+      return { ok: false, codigo: "GENERICO" };
+    }
+    return { ok: true, datos: lista };
+  },
+
+  async huecosDeProfesor(alumnoId, profesorId) {
+    if (esIdDemo(alumnoId)) return { ok: false, codigo: "NO_ELEGIBLE" };
+    const consulta = new URLSearchParams({ alumno_id: alumnoId, profesor_id: profesorId });
+    const r = await llamarGestion(PREFIJO, `${BASE}/huecos-profesores?${consulta}`, { method: "GET" });
+    if (!r.ok) return { ok: false, codigo: leerError(r.cuerpo).codigo };
+    const huecos = leerHuecosDeProfesor(r.cuerpo);
+    if (!huecos) {
+      console.error(`[${PREFIJO}] Gestión devolvió los huecos de un profesor que no se pueden leer.`);
+      return { ok: false, codigo: "GENERICO" };
+    }
+    return { ok: true, datos: huecos };
+  },
+
+  async cambiarProfesor(alumnoId, p) {
+    if (esIdDemo(alumnoId)) return { ok: false, codigo: "NO_ELEGIBLE", mensaje: null, disponibleDesde: null };
+    const cuerpo: CuerpoCambiarProfesor = {
+      alumno_id: alumnoId,
+      profesor_id: p.profesorId,
+      destinos: p.destinos.map((d) => ({ dia: d.dia, hora: d.hora, duracion: d.duracion })),
+      idempotency_key: p.idempotencyKey,
+    };
+    const r = await llamarGestion(PREFIJO, `${BASE}/cambiar-profesor`, { method: "POST", cuerpo });
+    const resultado = leerResultadoCambioProfesor(r.cuerpo ?? null);
+    if (!resultado.ok && resultado.codigo === "A_MEDIAS") {
+      console.error(`[${PREFIJO}] Cambio de profesor a medias para ${alumnoId} (clave ${p.idempotencyKey}): ${resultado.mensaje ?? ""}`);
     }
     return resultado;
   },

@@ -1,17 +1,22 @@
 // ---------------------------------------------------------------
 // EL AUTOSERVICIO DE HORARIOS: EL CONTRATO, EN UN SOLO SITIO
 //
-// Contrato v1 (octubre de 2026): `docs/autoservicio-contrato.md` de
-// academy-scheduler. Si cambia, se cambia AQUÍ (las formas «de Gestión»,
-// en snake_case) y en `leer.ts` (cómo se pasan a las nuestras). Las
-// pantallas solo ven los tipos de dominio de abajo.
+// Contrato v2 (octubre de 2026): `docs/autoservicio-contrato.md` de
+// academy-scheduler, rama `fase2-cambio-profesor`. Si cambia, se cambia
+// AQUÍ (las formas «de Gestión», en snake_case) y en `leer.ts` (cómo se
+// pasan a las nuestras). Las pantallas solo ven los tipos de dominio.
 //
-// Los tres endpoints, con el alumno por `alumno_id` (= `students.id`)
+// Los cinco endpoints, con el alumno por `alumno_id` (= `students.id`)
 // sacado siempre de la sesión del LMS:
 //
 //   GET  /api/lms/autoservicio/estado?alumno_id=
 //   GET  /api/lms/autoservicio/huecos?alumno_id=&modo=fijo|puntual&sesion=[&fecha=]
 //   POST /api/lms/autoservicio/cambiar-horario
+//   GET  /api/lms/autoservicio/huecos-profesores?alumno_id=[&profesor_id=]   (v2)
+//   POST /api/lms/autoservicio/cambiar-profesor                               (v2)
+//
+// Con Gestión todavía en v1 el estado no trae `puede_cambiar_profesor`:
+// entonces «Cambiar de profesor» no sale (`cambioProfesor: null`).
 //
 // FORMATOS (los del contrato): `dia` como en el calendario, con tilde
 // («Miércoles»); `hora` «HH:MM» peninsular y en punto; `duracion` en
@@ -59,6 +64,16 @@ export const CODIGOS_AUTOSERVICIO = [
   // Gestión no pudo leer: probar en unos minutos
   "ERROR_LECTURA",
   "CALENDARIO_ILEGIBLE",
+  // Cambio de profesor (v2): el profesor elegido no vale, se elige otro
+  "MISMO_PROFESOR",
+  "PROFESOR_NO_EXISTE",
+  "PROFESOR_ARCHIVADO",
+  "PROFESOR_DE_PRUEBA",
+  // Cambio de profesor (v2): su asignación, o su plan, no cuadran
+  "HORAS_NO_COINCIDEN",
+  "ASIGNACION_CAMBIADA",
+  "ASIGNACION_INACTIVA",
+  "ASIGNACION_NO_EXISTE",
 ] as const;
 
 /**
@@ -97,6 +112,16 @@ export type SesionGestion = {
   proximas_clases: ClaseProximaGestion[];
 };
 
+/** v2: si puede cambiar de profesor y, si no, por qué y desde cuándo. */
+export type PuedeCambiarProfesorGestion = {
+  puede: boolean;
+  /** NO_ELEGIBLE, RECUPERACION_PENDIENTE, SESION_NO_ENCONTRADA o ANTELACION_INSUFICIENTE. */
+  motivo: string | null;
+  detalle_no_elegible: string | null;
+  /** Con ANTELACION_INSUFICIENTE: el final de la clase que lo impide. */
+  disponible_desde: MomentoGestion | null;
+};
+
 export type EstadoGestion = {
   ok: true;
   elegible: boolean;
@@ -105,6 +130,8 @@ export type EstadoGestion = {
   detalle_no_elegible: string | null;
   profesor: { nombre: string } | null;
   sesiones: SesionGestion[];
+  /** v2. Ausente con Gestión en v1. */
+  puede_cambiar_profesor?: PuedeCambiarProfesorGestion;
 };
 
 /** En `puntual`, `fecha` es el día del hueco; en `fijo`, la primera clase con el horario nuevo. */
@@ -144,6 +171,45 @@ export type RespuestaCambiarHorario =
     }
   | { ok: false; codigo: string; mensaje: string; detalle_no_elegible?: string };
 
+// --- v2: cambio de profesor ---
+
+export type ProfesorGestion = { id: string; nombre: string };
+
+/** Un hueco fijo semanal de otro profesor; `fecha_primera_clase`, la primera con él. */
+export type HuecoProfesorGestion = {
+  profesor: ProfesorGestion;
+  dia: string;
+  hora: string;
+  duracion: number;
+  fecha_primera_clase: string;
+};
+
+/** Sin `profesor_id`: todos los profesores disponibles, para la duración de su primera sesión. */
+export type ListaProfesoresGestion = {
+  ok: true;
+  tipo: "lista";
+  /** Sus sesiones actuales, en orden: el cambio tiene que darles destino a TODAS. */
+  sesiones: SesionOrigenGestion[];
+  /** En el orden que manda Gestión: aleatorio, estable durante el día, por profesor. */
+  huecos: HuecoProfesorGestion[];
+};
+
+/** Con `profesor_id`: los huecos de ese profesor para CADA sesión. */
+export type HuecosDeProfesorGestion = {
+  ok: true;
+  tipo: "profesor";
+  profesor: ProfesorGestion;
+  sesiones: (SesionOrigenGestion & { indice: number; huecos: HuecoProfesorGestion[] })[];
+};
+
+export type CuerpoCambiarProfesor = {
+  alumno_id: string;
+  profesor_id: string;
+  /** Uno por sesión, con las mismas duraciones, sin solaparse. */
+  destinos: SesionOrigenGestion[];
+  idempotency_key: string;
+};
+
 // ---------------------------------------------------------------
 // LO QUE VEN LAS PANTALLAS (dominio, ya validado)
 // ---------------------------------------------------------------
@@ -175,13 +241,25 @@ export type Sesion = {
   proximasClases: ClaseProxima[];
 };
 
+/** v2: si puede cambiar de profesor; si no, por qué y —si se sabe— desde cuándo. */
+export type CambioProfesorPosible =
+  | { puede: true; motivo: null; disponibleDesde: null }
+  | { puede: false; motivo: CodigoAutoservicio; disponibleDesde: Momento | null };
+
 export type EstadoAutoservicio = {
+  /** Si puede cambiar de HORARIO con su profesor. */
   elegible: boolean;
   /** Por qué no, cuando `elegible` es false. */
   motivoNoElegible: CodigoAutoservicio | null;
   /** Su nombre, o «» si Gestión no lo dio. */
   profesor: string;
   sesiones: Sesion[];
+  /**
+   * Si puede cambiar de PROFESOR. Va aparte de `elegible`: con el
+   * calendario de su profesor sin actualizar no puede cambiar de horario
+   * pero sí de profesor. Null con Gestión en v1: no se ofrece.
+   */
+  cambioProfesor: CambioProfesorPosible | null;
 };
 
 /**
@@ -215,20 +293,54 @@ export type LecturaAutoservicio<T> = { ok: true; datos: T } | { ok: false; codig
  */
 export type ResultadoCambio = { ok: true; fechaNueva: string | null } | { ok: false; codigo: CodigoAutoservicio; mensaje: string | null };
 
+// --- v2: cambio de profesor ---
+
+export type Profesor = { id: string; nombre: string };
+
+/**
+ * Un hueco fijo semanal de otro profesor. Es un `HuecoLibre` semanal
+ * (`fecha` null, `primeraClase` la primera con él), así que lo filtran y
+ * pintan las mismas piezas que los de «Cambiar de horario».
+ */
+export type HuecoProfesor = HuecoLibre & { fecha: null; profesor: Profesor };
+
+/** La lista de todos los profesores: sus sesiones y los huecos, en el orden de Gestión. */
+export type ListaProfesores = { sesiones: SesionOrigen[]; huecos: HuecoProfesor[] };
+
+/** Los huecos de UN profesor para cada una de sus sesiones. */
+export type HuecosDeProfesor = {
+  profesor: Profesor;
+  sesiones: { sesion: SesionOrigen; huecos: HuecoProfesor[] }[];
+};
+
+/** Lo que pide el alumno al confirmar el cambio de profesor. */
+export type PeticionCambioProfesor = {
+  profesorId: string;
+  /** Uno por sesión actual, en el mismo orden y con las mismas duraciones. */
+  destinos: SesionOrigen[];
+  /** La misma en cada reintento del mismo cambio. */
+  idempotencyKey: string;
+};
+
+/**
+ * El resultado del cambio de profesor. Hecho: el profesor nuevo y sus
+ * sesiones. No hecho: el código, el `mensaje` para el log y, con
+ * ANTELACION_INSUFICIENTE, desde cuándo podrá.
+ */
+export type ResultadoCambioProfesor =
+  | { ok: true; profesorNuevo: string; sesionesDespues: SesionOrigen[] }
+  | { ok: false; codigo: CodigoAutoservicio; mensaje: string | null; disponibleDesde: Momento | null };
+
 /** Lo que tiene que saber hacer cualquier implementación: la de Gestión y la simulada. */
 export type ProveedorAutoservicio = {
   estado(alumnoId: string): Promise<LecturaAutoservicio<EstadoAutoservicio>>;
   /** `fecha`: en puntual, la clase que se quiere mover (así Gestión no ofrece la propia clase). */
   huecos(alumnoId: string, modo: ModoCambio, sesionId: string, fecha: string | null): Promise<LecturaAutoservicio<HuecoLibre[]>>;
   cambiarHorario(alumnoId: string, peticion: PeticionCambio): Promise<ResultadoCambio>;
+  /** v2: todos los profesores disponibles, para la duración de su primera sesión. */
+  huecosProfesores(alumnoId: string): Promise<LecturaAutoservicio<ListaProfesores>>;
+  /** v2: los huecos de ese profesor para cada sesión. */
+  huecosDeProfesor(alumnoId: string, profesorId: string): Promise<LecturaAutoservicio<HuecosDeProfesor>>;
+  /** v2: el cambio. Todas las sesiones a la vez. */
+  cambiarProfesor(alumnoId: string, peticion: PeticionCambioProfesor): Promise<ResultadoCambioProfesor>;
 };
-
-// ---------------------------------------------------------------
-// CAMBIO DE PROFESOR (FASE 2)
-//
-// Sin contrato todavía: solo existe la simulación, para el esqueleto de
-// la pantalla. Con Gestión de verdad el botón no sale.
-// ---------------------------------------------------------------
-
-/** Un hueco libre de otro profesor. */
-export type HuecoConProfesor = HuecoLibre & { profesor: string };

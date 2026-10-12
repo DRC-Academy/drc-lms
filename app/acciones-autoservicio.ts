@@ -7,28 +7,35 @@
 // Gestión y su secreto no pasan nunca por el navegador. Del navegador
 // llega solo lo elegido; QUIÉN ES el alumno sale de la cookie, aquí.
 //
-// SOLO EL PROPIO ALUMNO, Y SOLO CON EL INTERRUPTOR ENCENDIDO. El equipo
-// revisando una ficha ve la sección sin botones; si llamara a esto
-// igualmente, se le rechaza.
+// SOLO EL PROPIO ALUMNO, Y SOLO CON EL INTERRUPTOR DE CADA FUNCIÓN
+// ENCENDIDO: AUTOSERVICIO_ACTIVO para el horario y
+// AUTOSERVICIO_PROFESOR_ACTIVO para el profesor. El equipo revisando una
+// ficha ve la sección sin botones; si llamara a esto igualmente, se le
+// rechaza.
 //
 // Lo que vuelve es un código, no un texto: la pantalla lo traduce con
 // `motivo(codigo)` en el idioma del alumno.
 // ---------------------------------------------------------------
 
 import { sesionActual } from "@/lib/sesion-servidor";
-import { autoservicioActivo, proveedorAutoservicio } from "@/lib/autoservicio";
-import { idSesionValido, peticionValida } from "@/lib/autoservicio/leer";
+import { autoservicioActivo, autoservicioProfesorActivo, proveedorAutoservicio } from "@/lib/autoservicio";
+import { idProfesorValido, idSesionValido, peticionProfesorValida, peticionValida } from "@/lib/autoservicio/leer";
 import { olvidarLecturasDe } from "@/lib/cache-gestion";
 import type {
   HuecoLibre,
+  HuecosDeProfesor,
   LecturaAutoservicio,
+  ListaProfesores,
   ModoCambio,
   PeticionCambio,
+  PeticionCambioProfesor,
   ResultadoCambio,
+  ResultadoCambioProfesor,
+  SesionOrigen,
 } from "@/lib/autoservicio/tipos";
 
-async function alumnoDeLaSesion(): Promise<string | null> {
-  if (!autoservicioActivo()) return null;
+async function alumnoDeLaSesion(activo: () => boolean = autoservicioActivo): Promise<string | null> {
+  if (!activo()) return null;
   const sesion = await sesionActual();
   if (!sesion || sesion.rol !== "alumno" || !sesion.alumnoId) return null;
   return sesion.alumnoId;
@@ -87,5 +94,63 @@ export async function cambiarHorarioAutoservicio(peticion: unknown): Promise<Res
   } catch (error) {
     console.error("[autoservicio] Falló el cambio de horario:", error);
     return { ok: false, codigo: "GENERICO", mensaje: null };
+  }
+}
+
+// ---------------------------------------------------------------
+// v2: CAMBIAR DE PROFESOR
+// ---------------------------------------------------------------
+
+/** Todos los profesores disponibles, con sus huecos, en el orden de Gestión. */
+export async function huecosProfesoresAutoservicio(): Promise<LecturaAutoservicio<ListaProfesores>> {
+  const alumnoId = await alumnoDeLaSesion(autoservicioProfesorActivo);
+  if (!alumnoId) return { ok: false, codigo: "GENERICO" };
+  try {
+    return await proveedorAutoservicio().huecosProfesores(alumnoId);
+  } catch (error) {
+    console.error("[autoservicio] Falló la lectura de los huecos de profesores:", error);
+    return { ok: false, codigo: "GENERICO" };
+  }
+}
+
+/** Los huecos de un profesor para cada una de sus sesiones. */
+export async function huecosDeProfesorAutoservicio(profesorId: unknown): Promise<LecturaAutoservicio<HuecosDeProfesor>> {
+  const alumnoId = await alumnoDeLaSesion(autoservicioProfesorActivo);
+  if (!alumnoId || !idProfesorValido(profesorId)) return { ok: false, codigo: "GENERICO" };
+  try {
+    return await proveedorAutoservicio().huecosDeProfesor(alumnoId, profesorId);
+  } catch (error) {
+    console.error("[autoservicio] Falló la lectura de los huecos de un profesor:", error);
+    return { ok: false, codigo: "GENERICO" };
+  }
+}
+
+/**
+ * El cambio de profesor. Como en el de horario, lo que llega se vuelve a
+ * armar campo a campo; Gestión revalida todo.
+ */
+export async function cambiarProfesorAutoservicio(peticion: unknown): Promise<ResultadoCambioProfesor> {
+  const rechazo: ResultadoCambioProfesor = { ok: false, codigo: "GENERICO", mensaje: null, disponibleDesde: null };
+  const alumnoId = await alumnoDeLaSesion(autoservicioProfesorActivo);
+  const o = typeof peticion === "object" && peticion !== null ? (peticion as Record<string, unknown>) : {};
+  const destinos = (Array.isArray(o.destinos) ? o.destinos : []).map((d) => {
+    const x = typeof d === "object" && d !== null ? (d as Record<string, unknown>) : {};
+    return { dia: x.dia, hora: x.hora, duracion: x.duracion } as SesionOrigen;
+  });
+  const limpia = { profesorId: o.profesorId, destinos, idempotencyKey: o.idempotencyKey } as PeticionCambioProfesor;
+
+  if (!alumnoId || !peticionProfesorValida(limpia)) return rechazo;
+  try {
+    const r = await proveedorAutoservicio().cambiarProfesor(alumnoId, limpia);
+    // Hecho, a medias, o con su asignación o sus sesiones cambiadas por
+    // otro lado: lo cacheado del alumno ya no vale. Se tira aquí, antes
+    // del `router.refresh()` de la pantalla.
+    if (r.ok || ["A_MEDIAS", "SESION_NO_ENCONTRADA", "ASIGNACION_CAMBIADA", "ASIGNACION_INACTIVA"].includes(r.codigo)) {
+      olvidarLecturasDe(alumnoId);
+    }
+    return r;
+  } catch (error) {
+    console.error("[autoservicio] Falló el cambio de profesor:", error);
+    return rechazo;
   }
 }

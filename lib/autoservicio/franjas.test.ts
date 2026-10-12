@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { agruparHuecos, filtrarHuecos, franjaDe, horaFin } from "@/lib/autoservicio/franjas";
-import type { HuecoConProfesor, HuecoLibre } from "@/lib/autoservicio/tipos";
+import type { HuecoLibre, HuecoProfesor } from "@/lib/autoservicio/tipos";
 
 const h = (dia: HuecoLibre["dia"], hora: string, fecha: string | null = null, duracion = 1): HuecoLibre => ({ dia, hora, duracion, fecha });
 
@@ -55,12 +55,12 @@ describe("agruparHuecos", () => {
   });
 
   it("dos profesores a la misma hora salen los dos", () => {
-    const otros: HuecoConProfesor[] = [
-      { ...h("Lunes", "09:00"), profesor: "Daniela" },
-      { ...h("Lunes", "09:00"), profesor: "Sol" },
+    const otros: HuecoProfesor[] = [
+      { ...h("Lunes", "09:00"), fecha: null, profesor: { id: "t21", nombre: "Daniela" } },
+      { ...h("Lunes", "09:00"), fecha: null, profesor: { id: "t23", nombre: "Sol" } },
     ];
     const [lunes] = agruparHuecos(otros);
-    expect(lunes.franjas[0].huecos.map((x) => x.profesor)).toEqual(["Daniela", "Sol"]);
+    expect(lunes.franjas[0].huecos.map((x) => x.profesor.nombre)).toEqual(["Daniela", "Sol"]);
   });
 
   it("sin huecos, sin grupos", () => {

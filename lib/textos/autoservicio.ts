@@ -20,7 +20,7 @@
 import type { Idioma } from "@/lib/idioma";
 import { DIAS, type DiaSemana } from "@/lib/clases";
 import { partesFecha } from "@/lib/recuperaciones-fechas";
-import type { CodigoAutoservicio, Momento, Movilidad } from "@/lib/autoservicio/tipos";
+import type { CambioProfesorPosible, CodigoAutoservicio, Momento, Movilidad } from "@/lib/autoservicio/tipos";
 import type { Franja } from "@/lib/autoservicio/franjas";
 
 export type TextosAutoservicio = {
@@ -73,13 +73,44 @@ export type TextosAutoservicio = {
   hechoAviso: string;
   ocupado: string;
 
-  // --- cambiar de profesor (fase 2: esqueleto) ---
+  // --- cambiar de profesor (v2) ---
   buscaTitulo: string;
   buscaDetalle: string;
   cualquierDia: string;
   cualquierHora: string;
   sinResultados: string;
+  /** Solo con la simulación: lo que se elija no se guarda. */
   simulacion: string;
+  cargandoProfesores: string;
+  sinProfesores: string;
+  /** Debajo de un hueco de otro profesor: «1.ª clase: lunes 12 de octubre». */
+  primeraClaseCorta: (fecha: string) => string;
+  /** El paso de repartir sus sesiones: «Elige tus horarios con Daniela». */
+  repartirTitulo: (profesor: string) => string;
+  repartirDetalle: (sesiones: number) => string;
+  /** Cabecera de cada sesión al repartir: «Tu clase de los martes, 18:00–19:00». */
+  tuClaseDe: (sesion: string) => string;
+  /** Un hueco que pisa otro ya elegido. */
+  coincide: string;
+  elegido: string;
+  continuar: string;
+  /** Debajo del «Después» del cambio de profesor. */
+  enlaceCambia: string;
+  hechoProfesorTitulo: string;
+  /** «Desde ahora tus clases son con Daniela:» */
+  hechoProfesor: (profesor: string) => string;
+  /** El texto pedido: profesor avisado, correo de bienvenida y el enlace. */
+  hechoProfesorAviso: string;
+  /**
+   * Por qué no puede cambiar de profesor ahora (`puede_cambiar_profesor`)
+   * y, si Gestión lo sabe, desde cuándo podrá.
+   */
+  profesorNoDisponible: (c: Extract<CambioProfesorPosible, { puede: false }>) => string;
+  /**
+   * Los códigos dentro del cambio de profesor: los que hablan de SU
+   * profesor o de SU horario se dicen de otra manera; el resto, `motivo`.
+   */
+  motivoProfesor: (codigo: CodigoAutoservicio) => string;
 
   /**
    * Por qué no se puede mover su horario fijo (`que: "horario"`) o una
@@ -182,7 +213,38 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     cualquierDia: "Cualquier día",
     cualquierHora: "Cualquier hora",
     sinResultados: "Con estos filtros no hay huecos. Prueba con otro día u otra franja.",
-    simulacion: "Datos de prueba: este cambio todavía no se guarda.",
+    simulacion: "Datos de prueba: este cambio no se guarda.",
+    cargandoProfesores: "Buscando profesores con huecos libres…",
+    sinProfesores: "Ahora mismo no hay otros profesores con huecos libres para tu clase.",
+    primeraClaseCorta: (fecha) => `1.ª clase: ${fechaEs(fecha)}`,
+    repartirTitulo: (profesor) => `Elige tus horarios con ${profesor}`,
+    repartirDetalle: (n) => `Tienes ${n} clases a la semana: elige un hueco para cada una. No pueden coincidir.`,
+    tuClaseDe: (sesion) => `Tu clase de ${sesion.charAt(0).toLowerCase() + sesion.slice(1)}`,
+    coincide: "Coincide con otra que has elegido",
+    elegido: "Elegido",
+    continuar: "Continuar",
+    enlaceCambia: "El enlace de la clase cambia: te lo pasará tu nuevo profesor.",
+    hechoProfesorTitulo: "¡Ya tienes nuevo profesor!",
+    hechoProfesor: (profesor) => `Desde ahora tus clases son con ${profesor}:`,
+    hechoProfesorAviso: "Tu nuevo profesor ya está avisado. Te llegará un correo de bienvenida y te pasará el enlace de la clase.",
+    profesorNoDisponible: (c) =>
+      c.motivo === "ANTELACION_INSUFICIENTE" && c.disponibleDesde
+        ? `Tu próxima clase está muy cerca. Podrás cambiar de profesor a partir del ${momentoEs(c.disponibleDesde)}.`
+        : AUTOSERVICIO.es.motivoProfesor(c.motivo),
+    motivoProfesor: (codigo) => {
+      switch (codigo) {
+        case "NO_ELEGIBLE":
+          return "El cambio de profesor lo hacemos contigo por WhatsApp. Escríbenos y buscamos juntos el que mejor te encaje.";
+        case "RECUPERACION_PENDIENTE":
+          return "Tienes una clase por recuperar. Cuando la tengas resuelta podrás cambiar de profesor desde aquí; si te corre prisa, escríbenos por WhatsApp.";
+        case "CALENDARIO_SIN_ACTUALIZAR":
+          return "El calendario de ese profesor no está al día. Elige a otro de la lista.";
+        case "ANTELACION_INSUFICIENTE":
+          return "Tu próxima clase está muy cerca para cambiar de profesor ahora. Prueba cuando haya pasado, o escríbenos por WhatsApp.";
+        default:
+          return AUTOSERVICIO.es.motivo(codigo);
+      }
+    },
 
     noMovible: (m, que) => {
       if (m.movible) return "";
@@ -226,6 +288,19 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
           return "Ahora mismo no podemos consultar tu horario. Prueba otra vez en unos minutos o escríbenos por WhatsApp y lo vemos contigo.";
         case "A_MEDIAS":
           return "Algo no ha terminado bien al guardar tu cambio y el equipo ya está avisado. No hace falta que lo repitas: te escribimos nosotros. Si quieres, también puedes escribirnos por WhatsApp.";
+        case "MISMO_PROFESOR":
+          return "Ese ya es tu profesor. Elige a otro de la lista.";
+        case "PROFESOR_NO_EXISTE":
+        case "PROFESOR_ARCHIVADO":
+        case "PROFESOR_DE_PRUEBA":
+          return "Ese profesor ya no tiene huecos disponibles. Elige a otro de la lista.";
+        case "HORAS_NO_COINCIDEN":
+          return "Tu plan tiene otras horas a la semana que las que estás eligiendo. Escríbenos por WhatsApp y lo ajustamos contigo.";
+        case "ASIGNACION_CAMBIADA":
+          return "Tus clases han cambiado mientras elegías y no hemos tocado nada. Cierra esta ventana y vuelve a probar; si te lía, escríbenos por WhatsApp.";
+        case "ASIGNACION_INACTIVA":
+        case "ASIGNACION_NO_EXISTE":
+          return "Ahora mismo no tienes un profesor asignado desde el que hacer el cambio. Escríbenos por WhatsApp y lo vemos contigo.";
         default:
           return "Ahora mismo no hemos podido completar el cambio. Prueba otra vez en un rato o escríbenos por WhatsApp y lo hacemos contigo.";
       }
@@ -281,7 +356,38 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     cualquierDia: "Any day",
     cualquierHora: "Any time",
     sinResultados: "No slots match these filters. Try another day or time of day.",
-    simulacion: "Test data: this change isn't saved yet.",
+    simulacion: "Test data: this change isn't saved.",
+    cargandoProfesores: "Looking for teachers with free slots…",
+    sinProfesores: "There are no other teachers with free slots for your class right now.",
+    primeraClaseCorta: (fecha) => `First class: ${fechaEn(fecha)}`,
+    repartirTitulo: (profesor) => `Choose your times with ${profesor}`,
+    repartirDetalle: (n) => `You have ${n} classes a week: choose a slot for each one. They can't overlap.`,
+    tuClaseDe: (sesion) => `Your class on ${sesion}`,
+    coincide: "Overlaps with another one you chose",
+    elegido: "Chosen",
+    continuar: "Continue",
+    enlaceCambia: "Your class link changes: your new teacher will send it to you.",
+    hechoProfesorTitulo: "You have a new teacher!",
+    hechoProfesor: (profesor) => `From now on your classes are with ${profesor}:`,
+    hechoProfesorAviso: "Your new teacher already knows. You'll get a welcome email, and they'll send you the class link.",
+    profesorNoDisponible: (c) =>
+      c.motivo === "ANTELACION_INSUFICIENTE" && c.disponibleDesde
+        ? `Your next class is very close. You'll be able to change teacher from ${momentoEn(c.disponibleDesde)}.`
+        : AUTOSERVICIO.en.motivoProfesor(c.motivo),
+    motivoProfesor: (codigo) => {
+      switch (codigo) {
+        case "NO_ELEGIBLE":
+          return "We change your teacher with you on WhatsApp. Message us and we'll find the one that suits you best.";
+        case "RECUPERACION_PENDIENTE":
+          return "You have a class to make up. Once it's sorted you'll be able to change teacher here; if it's urgent, message us on WhatsApp.";
+        case "CALENDARIO_SIN_ACTUALIZAR":
+          return "That teacher's calendar isn't up to date. Pick another one from the list.";
+        case "ANTELACION_INSUFICIENTE":
+          return "Your next class is too close to change teacher now. Try again once it's over, or message us on WhatsApp.";
+        default:
+          return AUTOSERVICIO.en.motivo(codigo);
+      }
+    },
 
     noMovible: (m, que) => {
       if (m.movible) return "";
@@ -325,6 +431,19 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
           return "We can't check your schedule just now. Try again in a few minutes, or message us on WhatsApp and we'll sort it out with you.";
         case "A_MEDIAS":
           return "Something didn't finish properly while saving your change, and the team already knows. No need to repeat it: we'll write to you. You can also message us on WhatsApp if you like.";
+        case "MISMO_PROFESOR":
+          return "That's already your teacher. Pick another one from the list.";
+        case "PROFESOR_NO_EXISTE":
+        case "PROFESOR_ARCHIVADO":
+        case "PROFESOR_DE_PRUEBA":
+          return "That teacher no longer has free slots. Pick another one from the list.";
+        case "HORAS_NO_COINCIDEN":
+          return "Your plan has a different number of hours a week than the ones you're choosing. Message us on WhatsApp and we'll sort it out with you.";
+        case "ASIGNACION_CAMBIADA":
+          return "Your classes changed while you were choosing, and nothing has been touched. Close this window and try again; if it's confusing, message us on WhatsApp.";
+        case "ASIGNACION_INACTIVA":
+        case "ASIGNACION_NO_EXISTE":
+          return "You don't have an assigned teacher to change from right now. Message us on WhatsApp and we'll sort it out with you.";
         default:
           return "We couldn't complete the change just now. Try again in a while, or message us on WhatsApp and we'll do it with you.";
       }

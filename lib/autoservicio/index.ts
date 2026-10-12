@@ -5,12 +5,12 @@
 // separado:
 //
 //   AUTOSERVICIO_ACTIVO=1           «Cambiar de horario» (contrato v1).
-//   AUTOSERVICIO_PROFESOR_ACTIVO=1  «Cambiar de profesor» (fase 2). Apagado
-//                                   por defecto aunque el otro esté
-//                                   encendido. Hoy solo tiene datos con la
-//                                   simulación: con Gestión de verdad no
-//                                   se enseña hasta que exista el contrato
-//                                   v2 (rama fase2-cambio-profesor).
+//   AUTOSERVICIO_PROFESOR_ACTIVO=1  «Cambiar de profesor» (contrato v2).
+//                                   Apagado por defecto aunque el otro
+//                                   esté encendido. Con Gestión en la v1
+//                                   el estado no trae
+//                                   `puede_cambiar_profesor` y el botón no
+//                                   sale aunque esté encendido.
 //
 // Apagados —el valor por defecto, y cualquier cosa que no sea «1»—, la
 // pantalla es la de siempre y nada de esto se llama.
@@ -58,9 +58,8 @@ export function proveedorAutoservicio(): ProveedorAutoservicio {
 }
 
 /**
- * Si se están usando los datos simulados. Hoy es la única fuente de
- * huecos de «Cambiar de profesor» (fase 2), así que además de su
- * interruptor hace falta esto para que salga.
+ * Si se están usando los datos simulados. Con ellos, «Cambiar de
+ * profesor» avisa de que lo que se elija no se guarda.
  */
 export function autoservicioSimuladoActivo(): boolean {
   return escenarioDe(process.env.AUTOSERVICIO_SIMULADO) !== null && process.env.VERCEL_ENV !== "production";
