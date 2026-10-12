@@ -21,7 +21,7 @@ import {
 import { cursosDelInicio } from "@/lib/cursos-servidor";
 import { comoFecha } from "@/lib/fechas";
 import { rutaDeMiCurso } from "@/lib/cursos";
-import { calcularDiploma } from "@/lib/diploma";
+import { calcularDiploma, progresoDiploma } from "@/lib/diploma";
 import AvatarProfesor from "@/components/AvatarProfesor";
 import BannerCurso, { cursoTerminado } from "@/components/BannerCurso";
 import BannerDiploma from "@/components/BannerDiploma";
@@ -155,6 +155,10 @@ export default async function PerfilAlumno({
   // ---------------------------------------------------------------
   const principal = estadosCurso[0];
   const diploma = calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0);
+  // EL DIPLOMA ES DE TIEMPO (12/10/2026): seis meses desde la fecha de
+  // inicio, con `progresoDiploma`. Las lecciones de arriba quedan como
+  // dato secundario de la tarjeta y para decidir su botón.
+  const caminoDiploma = progresoDiploma(perfil, new Date());
 
   // ---------------------------------------------------------------
   // SE FUE EL TEMARIO, Y CON ÉL LA CONSULTA MÁS CARA DE ESTA PANTALLA
@@ -400,7 +404,9 @@ export default async function PerfilAlumno({
               banner sin caja, esa altura era lo único que seguía
               haciendo del diploma un bloque en vez de una línea. */}
           <BannerDiploma
-            estado={diploma}
+            progreso={caminoDiploma}
+            lecciones={diploma}
+            hrefDiploma={conFoco("/diploma", foco)}
             // SIN BOTÓN, salvo un caso. La franja de debajo ya lleva
             // «Continuar» a la misma lección, y dos botones seguidos al
             // mismo sitio hacen dudar de cuál pulsar. La excepción es

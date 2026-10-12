@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Icono, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSeccion";
+import { Icono, enBarraMovil, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSeccion";
 
 /**
  * La barra de pestañas de abajo: la navegación de toda la aplicación por
@@ -20,10 +20,11 @@ import { Icono, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSecc
  * común, que no se vuelve a renderizar al cambiar de página.
  */
 export default function NavegacionInferior({
-  enlaces,
+  enlaces: todos,
   secciones,
   extra,
 }: {
+  /** La lista entera; aquí solo se pintan las de `enBarraMovil`. */
   enlaces: EnlaceSeccion[];
   /** El nombre de la navegación para los lectores de pantalla. */
   secciones: string;
@@ -33,10 +34,15 @@ export default function NavegacionInferior({
   const ruta = usePathname() ?? "/";
   const seccion = seccionDeRuta(ruta);
 
-  // Dónde cae la sección actual dentro de la fila. -1 cuando no hay
-  // ninguna marcada, y entonces no se pinta la marca.
-  const indice = enlaces.findIndex((enlace) => enlace.clave === seccion);
+  const enlaces = todos.filter(enBarraMovil);
   const celdas = enlaces.length + (extra ? 1 : 0);
+
+  // Dónde cae la sección actual dentro de la fila. -1 cuando no hay
+  // ninguna marcada, y entonces no se pinta la marca. Una sección que
+  // vive en la hoja del perfil («Mi diploma») marca la celda del perfil:
+  // es por donde se llega a ella.
+  const enLaHoja = extra && todos.some((enlace) => enlace.clave === seccion && !enBarraMovil(enlace));
+  const indice = enLaHoja ? celdas - 1 : enlaces.findIndex((enlace) => enlace.clave === seccion);
 
   return (
     <nav

@@ -1,5 +1,5 @@
 /**
- * Los iconos de las cinco secciones y sus tipos.
+ * Los iconos de las seis secciones y sus tipos.
  *
  * Viven aparte de `Navegacion.tsx` porque los pintan la barra lateral y
  * las pestañas de abajo, que son componentes de cliente, y la navegación
@@ -7,7 +7,7 @@
  * puede arrastrar.
  */
 
-export type SeccionActiva = "inicio" | "curso" | "clases" | "practica" | "progreso";
+export type SeccionActiva = "inicio" | "curso" | "clases" | "practica" | "progreso" | "diploma";
 
 export type EnlaceSeccion = {
   clave: SeccionActiva;
@@ -15,7 +15,16 @@ export type EnlaceSeccion = {
   /** La etiqueta de la barra de pestañas de móvil, donde `texto` no cabe. */
   corto: string;
   href: string;
+  /**
+   * Si va en la barra de pestañas de móvil. Por defecto sí. Las que no
+   * caben ahí salen en la hoja del perfil, que lee esta misma lista:
+   * no hay una segunda lista de enlaces para móvil.
+   */
+  enBarraMovil?: boolean;
 };
+
+/** Las secciones de la barra de móvil, y las que van en la hoja del perfil. */
+export const enBarraMovil = (enlace: EnlaceSeccion) => enlace.enBarraMovil !== false;
 
 export function Icono({
   seccion,
@@ -67,6 +76,17 @@ export function Icono({
           <path d="M6.2 2.5v2.4M11.8 2.5v2.4" stroke={trazo} />
         </>
       )}
+      {/* Diploma: el pergamino de la tarjeta del diploma
+          (`BannerDiploma`, `IconoDiploma`), del viewBox de 20 al de 18:
+          la hoja que se cierra por la izquierda, el rollo y dos
+          renglones. Los renglones van en blanco cuando va relleno. */}
+      {seccion === "diploma" && (
+        <>
+          <path d="M5 3.8h7.8a1.7 1.7 0 0 1 1.7 1.7v7a1.7 1.7 0 0 1-1.7 1.7H5" stroke={trazo} fill={relleno} />
+          <ellipse cx="5" cy="9" rx="1.6" ry="5.2" stroke={trazo} fill={activo ? "#FFFFFF" : "none"} />
+          <path d="M8 7.4h4.1M8 10.3h2.7" stroke={activo ? "#FFFFFF" : trazo} />
+        </>
+      )}
       {seccion === "progreso" && (
         <>
           <path d="M3.4 14.6v-3.1" stroke={trazo} strokeWidth="2.2" />
@@ -95,6 +115,7 @@ export function seccionDeRuta(ruta: string): SeccionActiva | undefined {
   if (ruta.startsWith("/curso/")) return "curso";
   if (ruta.startsWith("/practica")) return "practica";
   if (ruta.startsWith("/progreso")) return "progreso";
+  if (ruta.startsWith("/diploma")) return "diploma";
   const alumno = ruta.match(/^\/alumno\/[^/]+(\/[^/]+)?\/?$/);
   if (alumno) return alumno[1] ? "practica" : "inicio";
   return undefined;

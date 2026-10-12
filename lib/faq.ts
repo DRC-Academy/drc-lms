@@ -752,6 +752,7 @@ function nombreDePantalla(ruta: string, idioma: Idioma): string {
   if (ruta === "/practica") return es ? "mi práctica" : "my practice";
   if (ruta.startsWith("/clases")) return es ? "mis clases" : "my classes";
   if (ruta.startsWith("/progreso")) return es ? "mi progreso" : "my progress";
+  if (ruta.startsWith("/diploma")) return es ? "mi diploma" : "my diploma";
   if (ruta.startsWith("/alumno/")) return es ? "mi inicio" : "my home screen";
   if (/^\/curso\/[^/]+\/[^/]+/.test(ruta)) return es ? "una lección del curso" : "a course lesson";
   if (ruta.startsWith("/curso/")) return es ? "el temario del curso" : "the course syllabus";

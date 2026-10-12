@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Icono, enBarraMovil, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSeccion";
 import HojaInferior from "@/components/base/HojaInferior";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { PERFIL_WOO } from "@/lib/cuenta-woo";
@@ -21,6 +24,11 @@ import type { EstadisticasAlumno } from "@/lib/estadisticas";
  * última pestaña de la navegación en móvil. Lo que se abre es lo mismo en los dos sitios; lo que cambia es
  * de dónde sale —un globo junto al avatar, o una hoja desde abajo—.
  *
+ * EN MÓVIL, LAS SECCIONES QUE NO CABEN EN LA BARRA («Mi diploma») van
+ * en esta hoja, encima del nombre. Salen de la MISMA lista que la barra
+ * (`enlacesDeSecciones`): las que llevan `enBarraMovil: false`. Mientras
+ * se está en una de ellas, la pestaña del perfil va marcada.
+ *
  * SIN NOMBRE TAMBIÉN EXISTE. El equipo que repasa un curso sin ficha no
  * tiene alumno del que hablar, pero sí salida.
  */
@@ -29,6 +37,7 @@ export default function MenuPerfil({
   variante,
   estadisticas = null,
   hrefPractica,
+  enlaces = [],
 }: {
   nombre: string;
   /** `barra`: el avatar de la barra de iconos. `movil`: la pestaña de abajo. */
@@ -40,8 +49,13 @@ export default function MenuPerfil({
   estadisticas?: EstadisticasAlumno | null;
   /** A dónde lleva la invitación a practicar de «Cómo vas». */
   hrefPractica?: string;
+  /** La lista de secciones entera; la hoja pinta las que no van en la barra. */
+  enlaces?: EnlaceSeccion[];
 }) {
   const { t } = usarIdioma();
+  const seccion = seccionDeRuta(usePathname() ?? "/");
+  const enLaHoja = enlaces.filter((enlace) => !enBarraMovil(enlace));
+  const marcada = enLaHoja.some((enlace) => enlace.clave === seccion);
   const [abierto, setAbierto] = useState(false);
   const raiz = useRef<HTMLDivElement>(null);
   const idPanel = useId();
@@ -113,10 +127,10 @@ export default function MenuPerfil({
           aria-expanded={abierto}
           aria-controls={idPanel}
           className={`flex min-h-[44px] flex-col items-center justify-center gap-[5px] rounded-[10px] text-[12px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-marca-verdeOsc ${
-            abierto ? "font-semibold text-marca-tinta" : "font-medium text-marca-gris"
+            abierto || marcada ? "font-semibold text-marca-tinta" : "font-medium text-marca-gris"
           }`}
         >
-          <IconoPerfil activo={abierto} />
+          <IconoPerfil activo={abierto || marcada} />
           <span className="max-w-full truncate">{t.navegacion.perfil}</span>
         </button>
 
@@ -135,6 +149,30 @@ export default function MenuPerfil({
             <div className="mb-5">
               <ComoVas estadisticas={estadisticas} variante="movil" hrefPractica={hrefPractica} />
             </div>
+          )}
+          {enLaHoja.length > 0 && (
+            <nav aria-label={t.navegacion.secciones} className="mb-3 border-b border-marca-nieblaOscura pb-3">
+              {enLaHoja.map((enlace) => {
+                const activo = enlace.clave === seccion;
+                return (
+                  <Link
+                    key={enlace.clave}
+                    href={enlace.href}
+                    onClick={cerrar}
+                    aria-current={activo ? "page" : undefined}
+                    className={`-mx-2 flex min-h-[48px] items-center gap-3 rounded-[10px] px-2 py-1.5 text-[14.5px] font-semibold text-marca-tinta transition-colors hover:bg-marca-niebla focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-marca-verdeOsc ${
+                      activo ? "bg-drc-chip-verde" : ""
+                    }`}
+                  >
+                    <Icono seccion={enlace.clave} activo={activo} className="h-[20px] w-[20px] shrink-0" />
+                    <span className="min-w-0 flex-1">{enlace.texto}</span>
+                    <svg aria-hidden viewBox="0 0 16 16" className="h-[14px] w-[14px] shrink-0 text-marca-gris" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 3.5 10.5 8 6 12.5" />
+                    </svg>
+                  </Link>
+                );
+              })}
+            </nav>
           )}
           {contenido}
         </HojaInferior>

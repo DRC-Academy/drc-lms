@@ -5,7 +5,8 @@ import { obtenerPerfil } from "@/lib/gestion";
 import { arbolDelCurso, cursoPorSlug, cursosAsignados, fechaDelDrip } from "@/lib/cursos-servidor";
 import { construirTemario } from "@/lib/temario";
 import { textosActuales } from "@/lib/idioma-servidor";
-import { calcularDiploma } from "@/lib/diploma";
+import { calcularDiploma, progresoDiploma } from "@/lib/diploma";
+import { conFoco } from "@/lib/foco";
 import Temario from "@/components/curso/Temario";
 import BannerDiploma from "@/components/BannerDiploma";
 
@@ -114,7 +115,11 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
           slug={curso.slug}
           foco={paraEnlaces}
           diploma={
-            <BannerDiploma estado={calcularDiploma(temario.completadas, temario.totalLecciones)} />
+            <BannerDiploma
+              progreso={progresoDiploma(perfil, new Date())}
+              lecciones={calcularDiploma(temario.completadas, temario.totalLecciones)}
+              hrefDiploma={conFoco("/diploma", paraEnlaces)}
+            />
           }
         />
       </main>

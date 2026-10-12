@@ -16,6 +16,7 @@
 
 import type { MarcaNivel } from "@/lib/estimacion";
 import type { ClasesDelProfesor } from "@/lib/textos/estadisticas";
+import type { ProgresoDiploma } from "@/lib/diploma";
 
 export type EstadisticasAlumno = {
   /**
@@ -29,12 +30,12 @@ export type EstadisticasAlumno = {
     porcentaje: number;
   } | null;
   /**
-   * El tiempo de curso: semanas que quedan de las 24 del temario,
-   * contadas desde que empezó con la academia. Cumplido el tiempo,
-   * `semanasRestantes` es 0: el temario entero está abierto, y así se
-   * dice. Null sin fecha de inicio.
+   * El camino al diploma, de `progresoDiploma`: el mismo cálculo que la
+   * página «Mi diploma», «Mi progreso» y la landing. El anillo cuenta lo
+   * que falta para el diploma; conseguido, lo dice. Null sin fecha de
+   * inicio.
    */
-  tiempo: { semanasRestantes: number; semanasTotales: number } | null;
+  diploma: ProgresoDiploma | null;
   /**
    * El profesor de la ficha, ya resuelto por `profesorDelAlumno`: el
    * nombre que ve el alumno y cuántas de sus clases ha dado él.

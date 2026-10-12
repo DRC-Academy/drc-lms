@@ -33,15 +33,16 @@
 // academia. Lo que sí queda es una línea en el log, sin el email, para
 // poder contar cuántas visitas no se emparejan.
 //
-// El tramo lo calcula `mesesTranscurridos` (`lib/meses-landing.ts`):
-// solo tiempo, nada de contenido ni de diploma.
+// El tramo sale de `progresoDiploma` (`lib/diploma.ts`), el mismo cálculo
+// que «Mi diploma» y el resto del LMS: solo tiempo, meses de calendario
+// desde `fecha_inicio`. Sin fecha, 0.
 // ---------------------------------------------------------------
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { buscarAlumnoPorEmail, obtenerPerfil } from "@/lib/gestion";
 import { resolverPorWooUserId } from "@/lib/vinculos";
 import { normalizarEmail } from "@/lib/sesion";
-import { mesesTranscurridos } from "@/lib/meses-landing";
+import { progresoDiploma } from "@/lib/diploma";
 import type { PerfilAlumno } from "@/lib/data";
 
 export const runtime = "nodejs";
@@ -126,7 +127,7 @@ export async function POST(peticion: Request): Promise<Response> {
       return json({ meses: 0 });
     }
 
-    return json({ meses: mesesTranscurridos(perfil.fechaInicio, ahora) });
+    return json({ meses: progresoDiploma(perfil, ahora)?.meses ?? 0 });
   } catch (error) {
     console.error("[wp/progreso-diploma] fallo al calcular:", error);
     return json({ error: "error_interno" }, 500);

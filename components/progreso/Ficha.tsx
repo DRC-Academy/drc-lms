@@ -1,9 +1,7 @@
 import type { ClaseDelRecorrido } from "@/lib/gestion";
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { EstimacionFicha } from "@/lib/estimacion-ficha";
-import type { EstadoDiploma } from "@/lib/diploma";
-import { calcularPlazo } from "@/lib/diploma-plazo";
-import { diaLocal } from "@/lib/fechas";
+import type { EstadoDiploma, ProgresoDiploma } from "@/lib/diploma";
 import { formatearFechaLarga } from "@/lib/perfil";
 import { ESCALERA_MCER, esHito, type NivelMcer } from "@/lib/recorrido";
 import { enViñetas, soloParaElAlumno, textoParaElAlumno } from "@/lib/texto-alumno";
@@ -25,8 +23,12 @@ import RecorridoPlegado, { type ClasePlegada } from "@/components/progreso/Recor
 // EL ORDEN:
 //   1. Saludo con el nombre de pila y, al lado (debajo en móvil), la
 //      tarjeta del diploma: cuenta atrás de seis meses desde la fecha de
-//      inicio (`lib/diploma-plazo.ts`, copia de Gestión) y las lecciones
-//      del curso principal. Toda la tarjeta lleva a «Mi curso».
+//      inicio (`progresoDiploma`, sobre el reloj de `lib/diploma-plazo.ts`,
+//      copia de Gestión) y las lecciones del curso principal como dato
+//      secundario. Toda la tarjeta lleva a «Mi curso».
+//      DIFERENCIA CON GESTIÓN desde el 12/10/2026: aquí el diploma es
+//      solo tiempo, así que pasada la fecha dice «Diploma conseguido» y
+//      no «Retoma tu curso».
 //   2. «Elige tu ritmo» (`RitmoElige`), con `lib/estimacion-ficha.ts`.
 //   3. Tu nivel y tu objetivo, sin caja.
 //   4. Lo que ya haces bien / lo que estamos reforzando, sin caja.
@@ -59,7 +61,7 @@ export default function Ficha({
   clases,
   urlAmpliar,
   diploma,
-  fechaInicio,
+  progresoDiploma,
   hrefCurso,
 }: {
   nombre: string;
@@ -73,10 +75,10 @@ export default function Ficha({
   /** De la más reciente a la más antigua. */
   clases: ClaseDelRecorrido[];
   urlAmpliar: string;
-  /** Lecciones del curso principal. Con "sin-curso" la tarjeta cuenta solo por fecha. */
+  /** Lecciones del curso principal, solo como dato secundario. */
   diploma: EstadoDiploma;
-  /** `vista_perfil_alumno.fecha_inicio`. Sin ella, y sin diploma conseguido, no hay tarjeta. */
-  fechaInicio: string | null;
+  /** De `progresoDiploma`. Null sin fecha de inicio: entonces no hay tarjeta. */
+  progresoDiploma: ProgresoDiploma | null;
   /** A dónde lleva la tarjeta del diploma: la misma ruta que la pestaña «Mi curso». */
   hrefCurso: string;
 }) {
@@ -98,7 +100,7 @@ export default function Ficha({
                 <h1>{t.hola(nombrePila)}</h1>
                 <p>{t.entradilla}</p>
               </div>
-              <TarjetaDiploma diploma={diploma} fechaInicio={fechaInicio} href={hrefCurso} />
+              <TarjetaDiploma diploma={diploma} progreso={progresoDiploma} href={hrefCurso} />
             </div>
             {estimacion && <Ritmo estimacion={estimacion} urlAmpliar={urlAmpliar} />}
           </div>
@@ -211,16 +213,15 @@ function Ritmo({ estimacion, urlAmpliar }: { estimacion: EstimacionFicha; urlAmp
 }
 
 /**
- * La tarjeta del diploma, junto al saludo. Qué dice, en este orden (el
- * mismo que `bannerDe` en Gestión): conseguido → sin fecha de inicio,
- * nada → vencido → hoy → la cuenta atrás. Debajo, «para tu diploma» y las
- * lecciones del curso cuando hay curso.
+ * La tarjeta del diploma, junto al saludo. Qué dice: sin fecha de
+ * inicio, nada → conseguido (el día de los seis meses y después) → la
+ * cuenta atrás. Debajo, «para tu diploma» y las lecciones del curso
+ * cuando hay curso.
  */
-function TarjetaDiploma({ diploma, fechaInicio, href }: { diploma: EstadoDiploma; fechaInicio: string | null; href: string }) {
+function TarjetaDiploma({ diploma, progreso, href }: { diploma: EstadoDiploma; progreso: ProgresoDiploma | null; href: string }) {
   const t = textosActuales().progreso;
-  const conseguido = diploma.estado === "conseguido";
-  const plazo = conseguido ? null : calcularPlazo(fechaInicio, diaLocal(new Date()));
-  if (!conseguido && !plazo) return null;
+  if (!progreso) return null;
+  const conseguido = progreso.tramo === "conseguido";
 
   const lecciones =
     diploma.estado === "en-curso"
@@ -234,21 +235,16 @@ function TarjetaDiploma({ diploma, fechaInicio, href }: { diploma: EstadoDiploma
   let linea2: string | null = lecciones;
   let boton = sinEmpezar ? t.empezarMiCurso : t.irAMiCurso;
 
-  if (conseguido || !plazo) {
+  if (conseguido) {
     linea1 = <span className="p2-dip-titular">{t.diplomaConseguido}</span>;
     boton = t.verMiCurso;
-  } else if (plazo.fase === "vencido") {
-    linea1 = (
-      <span className="p2-dip-titular">
-        <span className="p2-solo-ancho">{t.retomaTuCurso}</span>
-        <span className="p2-solo-movil">{t.retomaTuCursoCorto}</span>
-      </span>
-    );
-    boton = t.continuarMiCurso;
-  } else if (plazo.fase === "hoy") {
-    linea1 = <span className="p2-dip-cifra">{t.diplomaHoy}</span>;
   } else {
-    const cuenta = plazo.fase === "dias" ? t.cuentaDiploma(0, plazo.dias) : t.cuentaDiploma(plazo.meses, plazo.diasSueltos);
+    // En el último mes, en días; antes, en meses y días sueltos. Es la
+    // misma regla que `calcularPlazo` (fase «dias» hasta 30).
+    const cuenta =
+      progreso.diasRestantes <= 30
+        ? t.cuentaDiploma(0, progreso.diasRestantes)
+        : t.cuentaDiploma(progreso.cuenta.meses, progreso.cuenta.dias);
     linea1 = <span className="p2-dip-cifra">{cuenta}</span>;
     linea2 = [t.paraTuDiploma, lecciones].filter(Boolean).join(" · ");
   }

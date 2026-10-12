@@ -57,9 +57,13 @@ export type TextosEstadisticas = {
     marcaNivel: (origen: MarcaNivel, profesor: string | null) => string;
     ejercicios: (n: number) => string;
     practicas: (n: number) => string;
-    semanas: (n: number) => string;
-    /** Pasadas las 24 semanas: el temario entero está abierto. Nada de plazos. */
-    cursoAbierto: string;
+    /**
+     * Debajo del anillo del diploma: lo que falta, en semanas o, en el
+     * último mes, en días (`progresoDiploma`).
+     */
+    paraTuDiploma: (n: number, unidad: "semanas" | "dias") => string;
+    /** Cumplidos los seis meses. */
+    diplomaConseguido: string;
     /** El círculo de la práctica a cero, que lleva a «Para ti». */
     empiezaAqui: string;
     empiezaPractica: string;
@@ -69,8 +73,8 @@ export type TextosEstadisticas = {
     nivel: (valor: string, origen: MarcaNivel, profesor: string | null) => string;
     ejercicios: (n: number) => string;
     ejerciciosVacio: string;
-    tiempo: (restantes: number, total: number) => string;
-    cursoAbierto: string;
+    diploma: (meses: number, total: number, falta: string) => string;
+    diplomaConseguido: string;
     clases: (n: number, profesor: ClasesDelProfesor) => string;
     clasesVacio: string;
     practica: (n: number) => string;
@@ -104,8 +108,11 @@ const ES: TextosEstadisticas = {
       origen === "profesor" ? (profesor ?? "confirmado") : origen === "prueba" ? "prueba de nivel" : "estimado",
     ejercicios: (n) => (n === 1 ? "ejercicio" : "ejercicios"),
     practicas: (n) => (n === 1 ? "práctica" : "prácticas"),
-    semanas: (n) => (n === 1 ? "semana para acabar" : "semanas para acabar"),
-    cursoAbierto: "Todo tu curso está abierto",
+    paraTuDiploma: (n, unidad) =>
+      unidad === "dias"
+        ? n === 1 ? "día para tu diploma" : "días para tu diploma"
+        : n === 1 ? "semana para tu diploma" : "semanas para tu diploma",
+    diplomaConseguido: "Diploma conseguido",
     empiezaAqui: "Empieza aquí",
     empiezaPractica: "Empieza tu primera práctica en «Para ti»",
   },
@@ -118,9 +125,8 @@ const ES: TextosEstadisticas = {
           : `Nivel ${valor}, estimado: te lo confirmará tu profesor.`,
     ejercicios: (n) => `Ejercicios: ${n} ${n === 1 ? "hecho" : "hechos"}.`,
     ejerciciosVacio: "Ejercicios: tus ejercicios sumarán aquí.",
-    tiempo: (restantes, total) =>
-      `Tiempo de curso: ${restantes} ${restantes === 1 ? "semana" : "semanas"} para completar tu curso, de ${total}.`,
-    cursoAbierto: "Tiempo de curso: todo tu curso está abierto.",
+    diploma: (meses, total, falta) => `Tu diploma: ${meses} de ${total} meses completados; ${falta}.`,
+    diplomaConseguido: "Tu diploma: conseguido.",
     clases: (n, p) =>
       !p
         ? `Clases: ${n}.`
@@ -160,8 +166,11 @@ const EN: TextosEstadisticas = {
       origen === "profesor" ? (profesor ?? "confirmed") : origen === "prueba" ? "level test" : "estimated",
     ejercicios: (n) => (n === 1 ? "exercise" : "exercises"),
     practicas: (n) => (n === 1 ? "practice" : "practices"),
-    semanas: (n) => (n === 1 ? "week to go" : "weeks to go"),
-    cursoAbierto: "Your whole course is open",
+    paraTuDiploma: (n, unidad) =>
+      unidad === "dias"
+        ? n === 1 ? "day to your diploma" : "days to your diploma"
+        : n === 1 ? "week to your diploma" : "weeks to your diploma",
+    diplomaConseguido: "Diploma earned",
     empiezaAqui: "Start here",
     empiezaPractica: "Start your first practice in “For you”",
   },
@@ -174,9 +183,8 @@ const EN: TextosEstadisticas = {
           : `Level ${valor}, estimated: your teacher will confirm it.`,
     ejercicios: (n) => `Exercises: ${n} done.`,
     ejerciciosVacio: "Exercises: yours will add up here.",
-    tiempo: (restantes, total) =>
-      `Course time: ${restantes} ${restantes === 1 ? "week" : "weeks"} to complete your course, out of ${total}.`,
-    cursoAbierto: "Course time: your whole course is open.",
+    diploma: (meses, total, falta) => `Your diploma: ${meses} of ${total} months completed; ${falta}.`,
+    diplomaConseguido: "Your diploma: earned.",
     clases: (n, p) =>
       !p
         ? `Classes: ${n}.`

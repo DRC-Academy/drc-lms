@@ -1,122 +1,122 @@
 import { textosActuales } from "@/lib/idioma-servidor";
 import Link from "next/link";
-import { textoDiploma, type EstadoDiploma } from "@/lib/diploma";
+import type { EstadoDiploma, ProgresoDiploma } from "@/lib/diploma";
+import { formatearFechaLarga } from "@/lib/perfil";
 import { TARJETA, TituloSeccion } from "@/components/base/Seccion";
 
 /**
  * EL DIPLOMA, EN SU TARJETA.
  *
  * ---------------------------------------------------------------
- * VUELVE A TENER CAJA (septiembre de 2026, ronda de móvil)
+ * SEIS MESES, NO LECCIONES (12/10/2026)
  *
- * Sin caja, «18 lecciones para tu diploma» no se entendía: no decía qué
- * era el diploma ni cómo se conseguía, y el avance iba en gris pequeño
- * a la derecha. Ahora es una tarjeta de la base común con título, UNA
- * frase que dice para qué sirve, la cifra grande de lo que lleva («12 de
- * 182 lecciones»), la barra y un botón a la siguiente lección.
+ * El diploma se consigue al cumplir seis meses de calendario desde la
+ * fecha de inicio. La cifra grande es la de los meses («3 de 6 meses»),
+ * la barra avanza por días y debajo van la fecha prevista y, como dato
+ * secundario, las lecciones hechas. Todo sale de `progresoDiploma`, el
+ * mismo cálculo que «Mi diploma», «Mi progreso» y «Cómo vas».
  *
- * Lo que sigue de la nota anterior vale para la barra y sus gestos; lo
- * de "sin caja" y "ni un botón" es historia.
+ * TODA LA TARJETA LLEVA A «MI DIPLOMA», con el enlace estirado sobre la
+ * caja (`after:inset-0`) y no envolviéndola: así el botón de «Empezar mi
+ * curso», cuando lo hay, sigue siendo un enlace propio por encima, y no
+ * un enlace dentro de otro.
+ *
+ * SIN FECHA DE INICIO no hay cifra: una frase neutra y el enlace. Nunca
+ * un «0 de 6».
  * ---------------------------------------------------------------
  *
- * (Nota anterior) EL DIPLOMA, EN UN FILETE.
- *
- * Va entre el saludo y la rejilla, a lo ancho: es lo primero que se ve
- * al entrar.
- *
- * ---------------------------------------------------------------
- * SE LE QUITÓ LA CAJA, Y ESO ES TODO EL REDISEÑO
- *
- * Tenía superficie de pergamino con doble filete interior, un círculo
- * de 68px con el icono dentro y la cifra a 28px. Tres piezas que
- * pesaban como una franja de acción, para decir un dato que no se puede
- * pulsar: el banner ocupaba como la pieza principal de la pantalla sin
- * serlo.
- *
- * Ahora no hay caja. Una línea de texto y un carril de 12px a ancho
- * completo, sobre el fondo de la página. Lo que antes era un objeto
- * pasa a ser una marca de agua del progreso: se ve —la barra cruza la
- * pantalla entera y se llena al entrar— sin meterse en medio de nada.
- *
- * LA BARRA ES LA PIEZA, y por eso es lo único que engorda: 12px de
- * carril contra los 7-8 que tenía dentro de la caja. Sin nada alrededor
- * pesa aún más de lo que dice el número. La cifra, en cambio, baja de
- * 28px a 14,5: el mayor del inicio ya no es el único que no se pulsa.
- *
- * NI UN BOTÓN, que eso no cambia. El verde de acción es de la franja y
- * de la práctica. Cuando exista la descarga del diploma, este es su
- * sitio y será lo único pulsable aquí.
- *
- * ---------------------------------------------------------------
- * LA CARGA, Y POR QUÉ NO PARPADEA
- *
- * Al entrar, el carril se llena de cero a su sitio (`.llena`), un
- * brillo lo recorre tres veces (`.barre`) y la punta asoma con un halo
- * que se apaga (`.punta`). Se ve moverse cada vez que el alumno abre el
- * inicio, que es cuando lo mira.
- *
- * Y ahí se acaba. Un elemento que late en bucle en una pantalla que se
- * lee entera pide atención sin tener nada que ofrecer a cambio, y
- * además promete una acción que aquí no existe. Carga, llega y se
- * queda. Los tres gestos están en `globals.css` y cumplen su regla: con
- * movimiento reducido la barra sale llena y quieta.
+ * LA BARRA Y SUS GESTOS (de la versión anterior, siguen igual): al
+ * entrar el carril se llena de cero a su sitio (`.llena`), un brillo lo
+ * recorre (`.barre`) y la punta asoma con un halo (`.punta`). Y ahí se
+ * acaba: nada late en bucle. Con movimiento reducido sale llena y quieta.
  *
  * Se renderiza en el servidor: no tiene estado ni interacción.
  */
 export default function BannerDiploma({
-  estado,
+  progreso,
+  lecciones = null,
+  hrefDiploma,
   href = null,
 }: {
-  estado: EstadoDiploma;
+  /** De `progresoDiploma`. Null sin fecha de inicio. */
+  progreso: ProgresoDiploma | null;
+  /** Las lecciones del curso principal, solo como dato secundario. */
+  lecciones?: EstadoDiploma | null;
+  /** «Mi diploma», con el foco de revisión si lo hay. */
+  hrefDiploma: string;
   /**
-   * A dónde lleva el botón: la siguiente lección, la misma ruta que la
-   * pestaña «Mi curso». Sin él no hay botón —en «Mi curso» la franja de
-   * encima ya tiene su «Continuar»—.
+   * El botón «Empezar mi curso» / «Ir a la siguiente lección». Sin él no
+   * hay botón —en el inicio la franja de debajo ya tiene su «Continuar»—.
    */
   href?: string | null;
 }) {
-  const t = textosActuales().banners;
-  const texto = textoDiploma(estado, t);
-  if (texto === null) return null;
+  const textos = textosActuales();
+  const t = textos.banners;
+  const td = textos.diploma;
 
-  const conseguido = estado.estado === "conseguido";
-  const total = estado.estado === "sin-curso" ? 0 : estado.total;
-  const hechas = estado.estado === "en-curso" ? estado.completadas : total;
-
-  // Solo para el lector de pantalla: la barra sin narrar es un
-  // porcentaje suelto.
-  const descripcion = conseguido
-    ? t.cursoCompletado
-    : t.faltanParaDiploma(texto.cifra ?? 0, total);
+  const conseguido = progreso?.tramo === "conseguido";
+  const hechas =
+    lecciones?.estado === "en-curso" ? lecciones.completadas : lecciones?.estado === "conseguido" ? lecciones.total : null;
+  const fecha = progreso ? formatearFechaLarga(progreso.fechaPrevista, textos.progreso.fechaLarga) : null;
+  const pie = [
+    fecha && progreso ? (conseguido ? td.conseguidoEl(fecha) : td.fechaPrevista(fecha)) : null,
+    hechas !== null && hechas > 0 ? td.leccionesHechas(hechas) : null,
+  ].filter(Boolean);
 
   return (
-    <section aria-labelledby="titulo-diploma" className={`${TARJETA} px-5 py-5 min-[900px]:px-6`}>
+    <section aria-labelledby="titulo-diploma" className={`${TARJETA} relative px-5 py-5 min-[900px]:px-6`}>
       <div className="flex items-start gap-3">
-        <span aria-hidden className="mt-[3px] grid h-8 w-8 shrink-0 place-items-center rounded-full bg-marca-verdeFondo">
+        <span aria-hidden className="mt-[6px] grid h-8 w-8 shrink-0 place-items-center rounded-full bg-marca-verdeFondo">
           <IconoDiploma conseguido={conseguido} />
         </span>
-        <TituloSeccion id="titulo-diploma" subtitulo={conseguido ? undefined : t.diplomaFrase} className="min-w-0">
+        <TituloSeccion id="titulo-diploma" className="min-w-0 flex-1 self-center">
           {conseguido ? t.diplomaConseguido : t.tuDiploma}
         </TituloSeccion>
+        <Link
+          href={hrefDiploma}
+          className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-[8px] text-[14px] font-semibold text-marca-verdeOsc after:absolute after:inset-0 after:rounded-[16px] after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-marca-verdeOsc"
+        >
+          {t.verMiDiploma}
+          <svg aria-hidden viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 3.5 10.5 8 6 12.5" />
+          </svg>
+        </Link>
       </div>
 
-      {/* LA CIFRA GRANDE ES LO QUE LLEVA, NO LO QUE FALTA. «12 de 182
-          lecciones» se lee de un vistazo y la barra dice el resto. */}
-      <p className="mt-4 flex flex-wrap items-baseline gap-x-2">
-        <span className="font-display text-[32px] font-bold leading-none tabular-nums text-marca-tinta">{hechas}</span>
-        <span className="whitespace-nowrap text-[15px] text-marca-tintaMedia">{t.deLecciones(total)}</span>
-      </p>
+      {/* La frase va a lo ancho, debajo de la fila del título: al lado
+          del enlace se quedaba en una columna de tres palabras. */}
+      {(!progreso || !conseguido) && (
+        <p className="mt-2 text-pretty text-[14.5px] leading-snug text-marca-gris">
+          {progreso ? t.diplomaFrase : td.sinFecha.texto}
+        </p>
+      )}
 
-      <div className="mt-3">
-        <Barra relleno={texto.relleno} descripcion={descripcion} conseguido={conseguido} />
-      </div>
+      {progreso && (
+        <>
+          {/* LA CIFRA GRANDE SON LOS MESES CUMPLIDOS: «3 de 6 meses». */}
+          <p className="mt-4 flex flex-wrap items-baseline gap-x-2">
+            <span className="font-display text-[32px] font-bold leading-none tabular-nums text-marca-tinta">{progreso.meses}</span>
+            <span className="whitespace-nowrap text-[15px] text-marca-tintaMedia">{td.deMeses(progreso.mesesTotales)}</span>
+          </p>
 
-      {href && !conseguido && (
+          <div className="mt-3">
+            <Barra
+              relleno={progreso.porcentaje}
+              descripcion={td.barraLector(progreso.meses, progreso.mesesTotales)}
+              conseguido={conseguido}
+            />
+          </div>
+        </>
+      )}
+
+      {pie.length > 0 && <p className="mt-3 text-[13.5px] leading-snug text-marca-gris">{pie.join(" · ")}</p>}
+
+      {href && (
         <Link
           href={href}
-          className="btn-verde-linea mt-4 flex min-h-[44px] w-full items-center justify-center rounded-full px-6 text-[15px] font-bold min-[900px]:w-fit"
+          className="btn-verde-linea relative z-10 mt-4 flex min-h-[44px] w-full items-center justify-center rounded-full px-6 text-[15px] font-bold min-[900px]:w-fit"
         >
-          {hechas === 0 ? t.empezarMiCurso : t.siguienteLeccion}
+          {hechas === null || hechas === 0 ? t.empezarMiCurso : t.siguienteLeccion}
         </Link>
       )}
     </section>
@@ -131,7 +131,7 @@ export default function BannerDiploma({
  * y está donde el ojo ya mira. Al llegar al final se convierte en el
  * sello, que es lo único que celebra en toda la pieza.
  */
-function Barra({
+export function Barra({
   relleno,
   descripcion,
   conseguido,

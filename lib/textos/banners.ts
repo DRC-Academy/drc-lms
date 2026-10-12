@@ -63,8 +63,6 @@ export type TextosBanners = {
   // --- diploma ---
   tuDiploma: string;
   diplomaConseguido: string;
-  leccionesParaTuDiploma: (n: number) => string;
-  faltanParaDiploma: (restantes: number, total: number) => string;
   /** El recuento junto al carril: es la escala de la barra. */
   progresoDiploma: (hechas: number, total: number) => string;
   // El banner del diploma de la ficha de progreso (components/progreso/Ficha, TarjetaDiploma),
@@ -76,10 +74,13 @@ export type TextosBanners = {
   /** El botón de quien no ha empezado: lleva a la lección que toca, aquí mismo. */
   empezarMiCurso: string;
   todasLasLecciones: string;
-  /** La frase del banner del diploma: para qué sirve. */
+  /**
+   * La frase del banner del diploma: cómo se consigue. Desde el
+   * 12/10/2026, seis meses de calendario; las lecciones ya no cuentan.
+   */
   diplomaFrase: string;
-  /** Detrás de la cifra grande: "de 182 lecciones". */
-  deLecciones: (total: number) => string;
+  /** El rótulo de la tarjeta del diploma, que entera lleva a «Mi diploma». */
+  verMiDiploma: string;
   /** El botón del banner del diploma, a la siguiente lección. */
   siguienteLeccion: string;
 
@@ -198,17 +199,14 @@ const ES: TextosBanners = {
 
   tuDiploma: "Tu diploma",
   diplomaConseguido: "Diploma conseguido",
-  leccionesParaTuDiploma: (n) => (n === 1 ? "lección para tu diploma" : "lecciones para tu diploma"),
-  faltanParaDiploma: (restantes, total) =>
-    `Te ${restantes === 1 ? "falta" : "faltan"} ${restantes} de ${total} lecciones para tu diploma`,
   progresoDiploma: (hechas, total) => `${hechas} de ${total}`,
   tuCaminoAlDiploma: "Tu camino al diploma",
   tuCursoTeEspera: "Tu curso te espera",
   comienzaElCamino: "Comienza ahora el camino hacia tu diploma.",
   empezarMiCurso: "Empezar mi curso →",
   todasLasLecciones: "Todas las lecciones completadas.",
-  diplomaFrase: "Completa todas las lecciones de tu curso y consigues tu diploma.",
-  deLecciones: (total) => `de ${total} ${total === 1 ? "lección" : "lecciones"}`,
+  diplomaFrase: "Lo consigues al cumplir seis meses de clases con nosotros.",
+  verMiDiploma: "Ver mi diploma",
   siguienteLeccion: "Ir a la siguiente lección",
 
   llegaMasPreparado: "Llega más preparado",
@@ -291,17 +289,14 @@ const EN: TextosBanners = {
 
   tuDiploma: "Your diploma",
   diplomaConseguido: "Diploma earned",
-  leccionesParaTuDiploma: (n) => (n === 1 ? "lesson to your diploma" : "lessons to your diploma"),
-  faltanParaDiploma: (restantes, total) =>
-    `${restantes} of ${total} ${restantes === 1 ? "lesson" : "lessons"} to go for your diploma`,
   progresoDiploma: (hechas, total) => `${hechas} of ${total}`,
   tuCaminoAlDiploma: "Your path to the diploma",
   tuCursoTeEspera: "Your course is waiting",
   comienzaElCamino: "Start the path to your diploma now.",
   empezarMiCurso: "Start my course →",
   todasLasLecciones: "All lessons completed.",
-  diplomaFrase: "Complete every lesson in your course to earn your diploma.",
-  deLecciones: (total) => `of ${total} ${total === 1 ? "lesson" : "lessons"}`,
+  diplomaFrase: "You earn it once you complete six months of classes with us.",
+  verMiDiploma: "See my diploma",
   siguienteLeccion: "Go to your next lesson",
 
   llegaMasPreparado: "Arrive better prepared",

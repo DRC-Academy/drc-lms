@@ -7,7 +7,7 @@ import { objetivoDelAlumno } from "@/lib/objetivo-servidor";
 import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
 import { rutaDeMiCurso } from "@/lib/cursos";
-import { calcularDiploma } from "@/lib/diploma";
+import { calcularDiploma, progresoDiploma } from "@/lib/diploma";
 import { conFoco } from "@/lib/foco";
 import { comoFecha } from "@/lib/fechas";
 import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
@@ -160,12 +160,11 @@ export default async function PaginaProgreso() {
         focoRecomendado={perfil?.focoRecomendado ?? null}
         clases={recorrido.clases}
         urlAmpliar={URL_AMPLIAR}
-        // LAS LECCIONES DEL DIPLOMA, con el mismo cálculo que
-        // `/api/externo/diploma` (lo que Gestión nos pide por HTTP): el curso
-        // principal manda. La CUENTA ATRÁS sale de `fechaInicio`, como en
-        // Gestión: seis meses desde que empezó.
+        // EL DIPLOMA ES DE TIEMPO: seis meses desde `fechaInicio`, con
+        // `progresoDiploma`, el mismo cálculo que «Mi diploma». Las
+        // lecciones del curso principal van como dato secundario.
         diploma={calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0)}
-        fechaInicio={perfil?.fechaInicio ?? null}
+        progresoDiploma={progresoDiploma(perfil, new Date())}
         // A dónde lleva la tarjeta del diploma: el mismo destino que la
         // pestaña «Mi curso» de la cabecera, con el foco de revisión.
         hrefCurso={principal ? conFoco(rutaDeMiCurso(principal), paraEnlaces) : "/"}

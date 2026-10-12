@@ -44,8 +44,9 @@ import type { EstadisticasAlumno } from "@/lib/estadisticas";
 export type { SeccionActiva, EnlaceSeccion } from "@/components/IconoSeccion";
 
 /**
- * Las cinco secciones del alumno, como enlaces. Una sola lista para la
- * barra y para las pestañas, y así no pueden decir cosas distintas.
+ * Las secciones del alumno, como enlaces. Una sola lista para la barra,
+ * para las pestañas y para la hoja del perfil en móvil, y así no pueden
+ * decir cosas distintas.
  *
  * «MI CURSO» RECIBE SU DESTINO HECHO, no el slug: la lección por la que va
  * el alumno, o el temario si no hay ninguna. Esa decisión vive en
@@ -77,6 +78,10 @@ export function enlacesDeSecciones({
     ...(miCurso ? [{ clave: "curso" as const, texto: t.miCurso, corto: t.cortas.curso, href: miCurso }] : []),
     { clave: "practica" as const, texto: t.paraTi, corto: t.cortas.practica, href: "/practica" },
     { clave: "progreso" as const, texto: t.miProgreso, corto: t.cortas.progreso, href: "/progreso" },
+    // «MI DIPLOMA» NO VA EN LA BARRA DE MÓVIL: con siete celdas a 320px
+    // cada una baja a 45px. Sale en la hoja del perfil, que lee esta
+    // misma lista (`enBarraMovil`).
+    { clave: "diploma" as const, texto: t.miDiploma, corto: t.cortas.diploma, href: "/diploma", enBarraMovil: false },
   ].map((enlace) => ({ ...enlace, href: conFoco(enlace.href, foco ?? null) }));
 }
 
@@ -136,6 +141,7 @@ export function PiezasDelMarco({ datos }: { datos: DatosNavegacion }) {
           <MenuPerfil
             nombre={nombre}
             variante="movil"
+            enlaces={enlaces}
             estadisticas={datos.estadisticas ?? null}
             hrefPractica={enlaces.find((e) => e.clave === "practica")?.href}
           />

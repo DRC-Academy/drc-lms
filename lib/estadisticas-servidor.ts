@@ -8,8 +8,9 @@
 //                exactamente como «Mi progreso».
 //   profesor     `profesorDelAlumno`: el de la ficha, con su nombre
 //                visible y cuántas clases ha dado él.
-//   tiempo       semanas que quedan de las 24 del temario desde
-//                `perfil.fechaInicio`.
+//   diploma      `progresoDiploma`: lo que falta para el diploma, seis
+//                meses de calendario desde `perfil.fechaInicio`. El
+//                mismo cálculo que «Mi diploma» y «Mi progreso».
 //   clases       `vista_clases_contadas` (Gestión).
 //   ejercicios   `intentos_ejercicio` (LMS), ejercicios distintos.
 //   bloques      `progreso_bloques` (LMS), bloques de «Para ti» terminados.
@@ -25,10 +26,8 @@ import { obtenerClasesContadas } from "@/lib/gestion";
 import { profesorDelAlumno } from "@/lib/profesor-servidor";
 import { ejerciciosHechos, type EstadoCurso } from "@/lib/cursos-servidor";
 import { bloquesTerminados } from "@/lib/progreso-servidor";
-import { calcularDiploma } from "@/lib/diploma";
+import { calcularDiploma, progresoDiploma } from "@/lib/diploma";
 import { nivelMostrado } from "@/lib/estimacion";
-import { comoFecha, diasNaturales } from "@/lib/fechas";
-import { MESES_MAXIMO, SEMANAS_POR_MES } from "@/lib/temario";
 import type { PerfilAlumno } from "@/lib/data";
 import type { EstadisticasAlumno } from "@/lib/estadisticas";
 
@@ -65,21 +64,5 @@ export async function estadisticasDelAlumno(
     ? { nombre: profe.nombre, conActual: profe.clasesConActual, soloConActual: profe.soloConActual }
     : null;
 
-  return { curso, nivel, clases, ejercicios, bloques, tiempo: tiempoDeCurso(perfil?.fechaInicio), profesor };
-}
-
-/**
- * Las semanas que quedan del curso: 6 meses, 24 semanas, como el temario.
- * Una fecha de inicio en el futuro cuenta como el primer día, igual que
- * en el drip. Cumplido el tiempo, 0: el drip ya lo ha abierto todo, y la
- * tarjeta lo dice así («Todo tu curso está abierto»), no como un plazo.
- */
-function tiempoDeCurso(fechaInicio: string | null | undefined): EstadisticasAlumno["tiempo"] {
-  const inicio = comoFecha(fechaInicio);
-  if (!inicio) return null;
-  const semanasTotales = MESES_MAXIMO * SEMANAS_POR_MES;
-  const dias = Math.max(0, diasNaturales(inicio, new Date()));
-  const semanasRestantes = Math.ceil((semanasTotales * 7 - dias) / 7);
-  if (semanasRestantes <= 0) return { semanasRestantes: 0, semanasTotales };
-  return { semanasRestantes: Math.min(semanasTotales, semanasRestantes), semanasTotales };
+  return { curso, nivel, clases, ejercicios, bloques, diploma: progresoDiploma(perfil, new Date()), profesor };
 }

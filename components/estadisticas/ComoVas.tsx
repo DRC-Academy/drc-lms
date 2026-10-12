@@ -6,6 +6,17 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
 import type { EstadisticasAlumno } from "@/lib/estadisticas";
 import { ESCALERA_MCER } from "@/lib/recorrido";
 import type { TextosEstadisticas } from "@/lib/textos/estadisticas";
+import type { ProgresoDiploma } from "@/lib/diploma";
+
+/**
+ * Lo que falta para el diploma, como cabe en un círculo: semanas
+ * (redondeando hacia arriba, para no dar por hecha una semana que no
+ * lo está) y, en los últimos 30 días, días. Null si ya está conseguido.
+ */
+function faltaParaDiploma(d: ProgresoDiploma): { n: number; unidad: "semanas" | "dias" } | null {
+  if (d.tramo === "conseguido") return null;
+  return d.diasRestantes <= 30 ? { n: d.diasRestantes, unidad: "dias" } : { n: Math.ceil(d.diasRestantes / 7), unidad: "semanas" };
+}
 
 /**
  * «CÓMO VAS»: la tarjeta verde (variante B2 del rediseño de septiembre
@@ -20,9 +31,10 @@ import type { TextosEstadisticas } from "@/lib/textos/estadisticas";
  *                       su profesor, «prueba de nivel» si lo midió la
  *                       prueba automática, «estimado» si es el del alta.
  *   Tres círculos       ejercicios distintos hechos, bloques de «Para ti»
- *                       terminados y las semanas que quedan de las 24
- *                       (este sí es un anillo de progreso). Pasadas las
- *                       24: «Todo tu curso está abierto».
+ *                       terminados y lo que falta para el diploma
+ *                       (`progresoDiploma`, este sí es un anillo de
+ *                       progreso): semanas, y días en el último mes.
+ *                       Cumplidos los seis meses: «Diploma conseguido».
  *
  * NINGÚN PORCENTAJE DEL CURSO: lo enseña el anillo de la barra y el
  * banner del diploma.
@@ -54,12 +66,14 @@ export function lecturasComoVas(e: EstadisticasAlumno, te: TextosEstadisticas): 
   if (e.nivel) l.push(te.lector.nivel(e.nivel.valor, e.nivel.origen, e.nivel.profesor));
   if (e.ejercicios !== null) l.push(e.ejercicios === 0 ? te.lector.ejerciciosVacio : te.lector.ejercicios(e.ejercicios));
   if (e.bloques !== null) l.push(e.bloques === 0 ? te.lector.practicaVacio : te.lector.practica(e.bloques));
-  if (e.tiempo)
+  if (e.diploma) {
+    const falta = faltaParaDiploma(e.diploma);
     l.push(
-      e.tiempo.semanasRestantes === 0
-        ? te.lector.cursoAbierto
-        : te.lector.tiempo(e.tiempo.semanasRestantes, e.tiempo.semanasTotales)
+      falta === null
+        ? te.lector.diplomaConseguido
+        : te.lector.diploma(e.diploma.meses, e.diploma.mesesTotales, `${falta.n} ${te.tarjeta.paraTuDiploma(falta.n, falta.unidad)}`)
     );
+  }
   return l;
 }
 
@@ -129,20 +143,20 @@ export default function ComoVas({
     });
   }
 
-  if (e.tiempo) {
-    const { semanasRestantes: n, semanasTotales: total } = e.tiempo;
+  if (e.diploma) {
+    const falta = faltaParaDiploma(e.diploma);
     medallas.push({
-      clave: "tiempo",
-      // Cumplidas las 24 semanas, el anillo va cerrado y dice lo que
-      // significa para el alumno —lo tiene todo abierto—, no que se acabó.
+      clave: "diploma",
+      // Cumplidos los seis meses, el anillo va cerrado y dice lo que
+      // significa para el alumno —el diploma es suyo—, no que se acabó.
       contenido:
-        n === 0 ? (
-          <Medalla movil={movil} rotulo={tt.cursoAbierto} progreso={1}>
-            <IconoAbierto />
+        falta === null ? (
+          <Medalla movil={movil} rotulo={tt.diplomaConseguido} progreso={1}>
+            <IconoDiploma />
           </Medalla>
         ) : (
-          <Medalla movil={movil} rotulo={tt.semanas(n)} progreso={(total - n) / total}>
-            {n}
+          <Medalla movil={movil} rotulo={tt.paraTuDiploma(falta.n, falta.unidad)} progreso={e.diploma.porcentaje / 100}>
+            {falta.n}
           </Medalla>
         ),
     });
@@ -231,14 +245,14 @@ export function ComoVasPlegado({ estadisticas: e }: { estadisticas: Estadisticas
           {nivel.valor}
         </span>
       )}
-      {(e.ejercicios !== null || e.bloques !== null || e.tiempo) && <span className="h-px w-6 shrink-0 bg-white/15" />}
+      {(e.ejercicios !== null || e.bloques !== null || e.diploma) && <span className="h-px w-6 shrink-0 bg-white/15" />}
       {e.ejercicios !== null && (
         <Circulo tam={30}>{e.ejercicios === 0 ? <IconoLista pequeño /> : cifra(e.ejercicios)}</Circulo>
       )}
       {e.bloques !== null && <Circulo tam={30}>{e.bloques === 0 ? <IconoLapiz pequeño /> : cifra(e.bloques)}</Circulo>}
-      {e.tiempo && (
-        <Circulo tam={30} progreso={(e.tiempo.semanasTotales - e.tiempo.semanasRestantes) / e.tiempo.semanasTotales}>
-          {e.tiempo.semanasRestantes === 0 ? <IconoAbierto pequeño /> : e.tiempo.semanasRestantes}
+      {e.diploma && (
+        <Circulo tam={30} progreso={e.diploma.porcentaje / 100}>
+          {faltaParaDiploma(e.diploma)?.n ?? <IconoDiploma pequeño />}
         </Circulo>
       )}
     </div>
@@ -335,7 +349,7 @@ function Medalla({
 /**
  * El círculo de cada dato. Los contadores no tienen total: van rellenos
  * de amarillo suave, que se lee como una cuenta y no como algo a medias.
- * Solo las semanas llevan anillo de progreso (`progreso`).
+ * Solo el diploma lleva anillo de progreso (`progreso`).
  */
 function Circulo({
   children,
@@ -415,12 +429,13 @@ export function Llama({ viva, className = "" }: { viva: boolean; className?: str
   );
 }
 
-/** El curso entero abierto: un candado abierto, no un reloj parado. */
-function IconoAbierto({ pequeño = false }: { pequeño?: boolean }) {
+/** El diploma conseguido: el pergamino con su visto, como en `BannerDiploma`. */
+function IconoDiploma({ pequeño = false }: { pequeño?: boolean }) {
   return (
     <svg aria-hidden viewBox="0 0 20 20" className={pequeño ? "h-3.5 w-3.5" : "h-[18px] w-[18px]"} fill="none" stroke="#FFC400" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="9" width="12" height="8" rx="1.6" />
-      <path d="M7 9V6.5a3 3 0 0 1 5.8-1.1" />
+      <path d="M5.6 4.2h8.6a1.9 1.9 0 0 1 1.9 1.9v7.8a1.9 1.9 0 0 1-1.9 1.9H5.6" />
+      <ellipse cx="5.6" cy="10" rx="1.8" ry="5.8" />
+      <path d="M8.9 10.2l1.7 1.7 3.2-3.4" />
     </svg>
   );
 }

@@ -1,6 +1,97 @@
-import type { TextosBanners } from "@/lib/textos/banners";
+import type { PerfilAlumno } from "@/lib/data";
+import { calcularPlazo, comoDia, sumarMeses, MESES_DE_CURSO } from "@/lib/diploma-plazo";
+import { mesesTranscurridos } from "@/lib/meses-landing";
+import { diaLocal } from "@/lib/fechas";
+
 // ---------------------------------------------------------------
-// EL DIPLOMA
+// EL DIPLOMA SE CONSIGUE CON EL TIEMPO: SEIS MESES DE CALENDARIO
+//
+// Decidido el 12/10/2026. La condición es la de la landing de
+// drcacademy.com y la de la ficha de Gestión: seis meses desde
+// `vista_perfil_alumno.fecha_inicio`. Las lecciones NO son requisito;
+// se enseñan como dato secundario, nunca como lo que falta.
+//
+// `progresoDiploma` ES EL ÚNICO CÁLCULO de ese avance. Lo leen la
+// página «Mi diploma», la tarjeta del inicio y la de «Mi curso», la de
+// «Mi progreso», «Cómo vas» (barra lateral y hoja del perfil) y la
+// landing (`/api/wp/progreso-diploma`). Por debajo, el mismo reloj que
+// Gestión: `calcularPlazo` y `mesesTranscurridos`, que suman meses con
+// `sumarMeses` y cuentan días de Madrid. No hay otro.
+//
+// EL DÍA SE CUMPLE, NO SE PASA. «Conseguido» empieza el mismo día en que
+// se cumplen los seis meses —la landing dice 6 ese día— y sigue después:
+// pasada la fecha no hay «vencido», el diploma ya es suyo.
+//
+// SIN FECHA DE INICIO, NULL. No es un cero: quien llama enseña un
+// mensaje neutro, nunca «0 de 6».
+//
+// LA APERTURA PROGRESIVA DEL CURSO (el drip, `lib/drip.ts`) es otra cosa
+// y no se toca: sigue con sus 24 semanas. Esto es solo lo que se ENSEÑA.
+// ---------------------------------------------------------------
+
+export type TramoDiploma = "empezando" | "a-mitad" | "recta-final" | "conseguido";
+
+export type ProgresoDiploma = {
+  /** Meses de calendario cumplidos, de 0 a 6. Es la cifra de «X de 6 meses». */
+  meses: number;
+  mesesTotales: number;
+  /** Relleno de la barra, 0-100, por días: se mueve cada día y no a saltos de mes. */
+  porcentaje: number;
+  /** Días naturales hasta la fecha prevista. 0 el día del diploma y después. */
+  diasRestantes: number;
+  /** La cuenta atrás en meses y días sueltos (`calcularPlazo`). 0 y 0 cuando ya está. */
+  cuenta: { meses: number; dias: number };
+  /** AAAA-MM-DD: inicio + 6 meses, acotado a fin de mes. */
+  fechaPrevista: string;
+  tramo: TramoDiploma;
+};
+
+const DIA_MS = 86_400_000;
+
+/**
+ * El avance hacia el diploma a día `hoy`, o null sin fecha de inicio
+ * válida. Una fecha de inicio futura cuenta como «empezando» con cero.
+ */
+export function progresoDiploma(
+  perfil: Pick<PerfilAlumno, "fechaInicio"> | null | undefined,
+  hoy: Date
+): ProgresoDiploma | null {
+  const inicio = comoDia(perfil?.fechaInicio);
+  if (!inicio) return null;
+  const plazo = calcularPlazo(inicio, diaLocal(hoy));
+  if (!plazo) return null;
+
+  const fechaPrevista = sumarMeses(inicio, MESES_DE_CURSO);
+  const meses = mesesTranscurridos(inicio, hoy);
+  const diasRestantes = Math.max(0, plazo.dias);
+  const totalDias = Math.round((Date.parse(`${fechaPrevista}T00:00:00Z`) - Date.parse(`${inicio}T00:00:00Z`)) / DIA_MS);
+  const porcentaje =
+    diasRestantes === 0 ? 100 : Math.min(99, Math.max(0, Math.floor(((totalDias - diasRestantes) / totalDias) * 100)));
+
+  const tramo: TramoDiploma =
+    diasRestantes === 0 ? "conseguido" : meses >= 4 ? "recta-final" : meses >= 2 ? "a-mitad" : "empezando";
+
+  return {
+    meses,
+    mesesTotales: MESES_DE_CURSO,
+    porcentaje,
+    diasRestantes,
+    cuenta: diasRestantes === 0 ? { meses: 0, dias: 0 } : { meses: plazo.meses, dias: plazo.diasSueltos },
+    fechaPrevista,
+    tramo,
+  };
+}
+
+// ---------------------------------------------------------------
+// LAS LECCIONES DEL CURSO
+//
+// Lo que sigue es la cuenta de lecciones del curso principal. Hasta el
+// 12/10/2026 era la condición del diploma; desde entonces es un dato
+// secundario («12 lecciones hechas») y lo que usan los avisos por
+// correo y `/api/externo/diploma`. Las notas de abajo son de entonces.
+//
+// ---------------------------------------------------------------
+// EL DIPLOMA (por lecciones, hasta el 12/10/2026)
 //
 // La palanca de retención más comprobada que tiene la academia: hay
 // alumnos que no se dan de baja porque el mes siguiente sacan el
@@ -129,61 +220,5 @@ export function calcularDiploma(completadas: number, total: number): EstadoDiplo
     completadas: hechas,
     total,
     porcentaje: Math.round((hechas / total) * 100),
-  };
-}
-
-// ---------------------------------------------------------------
-// LO QUE SE LEE EN EL BANNER
-//
-// Se redacta aquí y no en el componente por lo mismo que las esperas de
-// la generación: depende de datos y de reglas, y el componente solo
-// pinta. Aquí además se lee entero de una vez, que es lo que hace falta
-// para revisar el tono sin abrir tres archivos.
-//
-// UNA LÍNEA Y NADA MÁS: "12 lecciones para tu diploma". El banner tuvo
-// también un pie con el avance ("llevas 12 de 191"), una nota lateral
-// que explicaba cuándo se emite y el nombre del curso en la etiqueta.
-// Cuatro textos para un dato que se entiende sin ninguno.
-//
-// Y los cuatro decían cosas que ya están dichas: el avance lo enseña la
-// barra, el nombre del curso lo dice la franja de debajo, y la regla de
-// emisión —el curso entero— no cambia nada de lo que el alumno puede
-// hacer hoy. Lo que sí cambia algo es el número, y por eso se queda solo.
-//
-// SIGUE HABIENDO CUATRO ESTADOS, aunque ya no cuatro tonos: quien no ha
-// empezado, quien va por la mitad, a quien le queda una y quien ya lo
-// tiene. La diferencia entre los tres primeros la carga el número, que
-// es donde se ve de verdad.
-// ---------------------------------------------------------------
-
-export type TextoDiploma = {
-  /**
-   * El número grande. Null en "conseguido", que enseña una frase en su
-   * lugar: ahí no falta nada que contar, y un "0" se leería como una
-   * carencia justo en el momento del logro.
-   */
-  cifra: number | null;
-  /** Pegada a la cifra, o sola cuando no hay cifra. Concuerda con ella. */
-  unidad: string;
-  /** Relleno de la barra, 0-100. */
-  relleno: number;
-};
-
-export function textoDiploma(estado: EstadoDiploma, t: TextosBanners): TextoDiploma | null {
-  if (estado.estado === "sin-curso") return null;
-
-  // PROVISIONAL, hasta que exista el botón de descarga: reconoce el
-  // logro y no promete un archivo que todavía no se genera.
-  if (estado.estado === "conseguido") {
-    return { cifra: null, unidad: t.diplomaConseguido, relleno: 100 };
-  }
-
-  return {
-    // Sin empezar la cifra es el curso entero. Mismo número que "te
-    // faltan todas", contado como lo que es: el tamaño de lo que tiene
-    // por delante, no una deuda.
-    cifra: estado.restantes,
-    unidad: t.leccionesParaTuDiploma(estado.restantes),
-    relleno: estado.porcentaje,
   };
 }

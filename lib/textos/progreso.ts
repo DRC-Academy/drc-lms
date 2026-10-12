@@ -101,13 +101,9 @@ export type TextosProgreso = {
   cuentaDiploma: (meses: number, dias: number) => string;
   paraTuDiploma: string;
   leccionesDe: (hechas: number, total: number) => string;
-  diplomaHoy: string;
-  retomaTuCurso: string;
-  retomaTuCursoCorto: string;
   diplomaConseguido: string;
   empezarMiCurso: string;
   irAMiCurso: string;
-  continuarMiCurso: string;
   verMiCurso: string;
   /** "16 clases · la última, el 25 de septiembre: Condicionales". */
   recorridoResumen: (n: number, fecha: string | null, titulo: string | null) => string;
@@ -181,13 +177,9 @@ const ES: TextosProgreso = {
   },
   paraTuDiploma: "para tu diploma",
   leccionesDe: (hechas, total) => `${hechas} de ${total} lecciones`,
-  diplomaHoy: "Hoy es el día de tu diploma",
-  retomaTuCurso: "¡Retoma tu curso y consigue tu diploma!",
-  retomaTuCursoCorto: "¡Retoma tu curso!",
   diplomaConseguido: "Diploma conseguido",
   empezarMiCurso: "Empezar mi curso",
   irAMiCurso: "Ir a mi curso",
-  continuarMiCurso: "Continuar mi curso",
   verMiCurso: "Ver mi curso",
   recorridoResumen: (n, fecha, titulo) =>
     [`${n} ${n === 1 ? "clase" : "clases"}`, [fecha ? `la última, el ${fecha}` : "la última", titulo].filter(Boolean).join(": ")].join(" · "),
@@ -262,13 +254,9 @@ const EN: TextosProgreso = {
   },
   paraTuDiploma: "to your diploma",
   leccionesDe: (hechas, total) => `${hechas} of ${total} lessons`,
-  diplomaHoy: "Today is your diploma day",
-  retomaTuCurso: "Pick your course back up and get your diploma!",
-  retomaTuCursoCorto: "Pick your course back up!",
   diplomaConseguido: "Diploma earned",
   empezarMiCurso: "Start my course",
   irAMiCurso: "Go to my course",
-  continuarMiCurso: "Continue my course",
   verMiCurso: "See my course",
   recorridoResumen: (n, fecha, titulo) =>
     [`${n} ${n === 1 ? "class" : "classes"}`, [fecha ? `the latest on ${fecha}` : "the latest", titulo].filter(Boolean).join(": ")].join(" · "),

@@ -61,9 +61,9 @@ describe("las tres marcas del nivel", () => {
   });
 });
 
-describe("curso cumplido", () => {
-  it("dice que está abierto, no que se acabó el plazo", () => {
-    expect(es.tarjeta.cursoAbierto).toBe("Todo tu curso está abierto");
-    expect(en.tarjeta.cursoAbierto).toBe("Your whole course is open");
+describe("seis meses cumplidos", () => {
+  it("dice que el diploma está conseguido, no que se acabó el plazo", () => {
+    expect(es.tarjeta.diplomaConseguido).toBe("Diploma conseguido");
+    expect(en.tarjeta.diplomaConseguido).toBe("Diploma earned");
   });
 });
