@@ -12,7 +12,9 @@ import {
   type Periodo,
   type Vista,
 } from "@/lib/admin-servidor";
+import Link from "next/link";
 import MarcoApp from "@/components/Navegacion";
+import Chevron from "@/components/admin/Chevron";
 import PanelAdmin from "@/components/admin/PanelAdmin";
 import ListaPanel from "@/components/admin/ListaPanel";
 import ListaActivos from "@/components/admin/ListaActivos";
@@ -136,6 +138,14 @@ export default async function Home({
             Quién entra, qué práctica se genera y a quién conviene ir a buscar. Lo de las clases y
             los pagos sigue en DRC Gestión.
           </p>
+          {/* La otra sección del equipo: quién pulsa «Unirse a la clase». */}
+          <Link
+            href="/entradas"
+            className="mt-2 inline-flex min-h-[44px] items-center gap-1 text-[14px] font-semibold text-marca-verdeOsc hover:text-marca-tinta lg:mt-3 lg:min-h-0"
+          >
+            Entradas a clase
+            <Chevron />
+          </Link>
 
           {/* EL BUSCADOR DE MÓVIL: primer control de la pantalla, y busca
               entre todos. 16px de letra a propósito: iOS hace zoom al

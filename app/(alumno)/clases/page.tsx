@@ -73,6 +73,7 @@ export default async function PaginaClases({
         hrefSemana={(i) => conFoco(i === 0 ? "/clases" : `/clases?semana=${i}`, paraEnlaces)}
         hrefPractica={conFoco("/practica", paraEnlaces)}
         t={textosActuales()}
+        foco={paraEnlaces}
         recuperaciones={
           <Suspense fallback={null}>
             <RecuperacionesDeGestion alumnoId={alumnoId} resaltada={resaltada} soloLectura={sesion.rol !== "alumno"} />

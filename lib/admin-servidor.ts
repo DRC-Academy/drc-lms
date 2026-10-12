@@ -806,7 +806,7 @@ export type DiscrepanciaProfesor = {
 };
 
 /** La cuenta de pruebas de Facundo: no es un alumno. */
-const CUENTA_DE_PRUEBAS = "s_1785879819493";
+export const CUENTA_DE_PRUEBAS = "s_1785879819493";
 
 export const discrepanciasDeProfesor = unstable_cache(
   async (): Promise<DiscrepanciaProfesor[]> => {

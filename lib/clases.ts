@@ -99,6 +99,8 @@ export type ProximaClase = DiaDeClase & {
   abreEn: Date;
   /** Quien da ESTA clase, que en una recuperación puede no ser el habitual. */
   profesor: string | null;
+  /** Su `teacher_id` de Gestión: el nombre de arriba se cambia por el de la ficha, esto no. */
+  teacherId: string;
   /**
    * El `meet_link` CRUDO de la assignment de ese profesor: lo mismo que
    * abre su botón en Gestión. NO VIAJA AL NAVEGADOR tal cual: lo valida
@@ -422,6 +424,7 @@ function aClase(c: ClaseDeGestion, ahora: Date): ProximaClase {
     terminaEn,
     abreEn: new Date(empiezaEn.getTime() - MINUTOS_ANTES * 60_000),
     profesor: c.profesor?.trim() || null,
+    teacherId: c.teacherId,
     meetLink: c.meetLink,
     esRecuperacion: c.esRecuperacion,
   };
@@ -439,6 +442,20 @@ export function proximaDelAlumno(
 ): ProximaClase | null {
   const clases = clasesDelAlumno(filas, diaLocal(ahora), DIAS_HACIA_DELANTE);
   return proximaClase(clases, ahora, normalizarQuitas(excepciones));
+}
+
+/**
+ * Las clases de ayer, hoy y mañana que no tienen un 'quita', terminadas o
+ * no. Las pide la entrada a clase (`app/clase/entrar`) para saber a qué
+ * clase va un clic. Basta con hoy —la ventana empieza media hora antes y
+ * Gestión no junta clases de dos días—; el día a cada lado es margen
+ * barato contra la medianoche.
+ */
+export function clasesCercanas(filas: FilaCalendario[], excepciones: unknown, ahora: Date = new Date()): ProximaClase[] {
+  const quitas = normalizarQuitas(excepciones);
+  return clasesDelAlumno(filas, sumarDias(diaLocal(ahora), -1), 2)
+    .filter((c) => !quitas.some((q) => laQuita(q, c)))
+    .map((c) => aClase(c, ahora));
 }
 
 // ---------------------------------------------------------------

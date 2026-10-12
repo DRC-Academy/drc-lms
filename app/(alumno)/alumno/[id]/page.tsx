@@ -408,6 +408,7 @@ export default async function PerfilAlumno({
                   proxima={proxima}
                   t={tc}
                   tieneCurso={estadosCurso.length > 0}
+                  foco={foco}
                   ilustracion={
                     <MascotaBienvenida
                       id="inicio-clase"

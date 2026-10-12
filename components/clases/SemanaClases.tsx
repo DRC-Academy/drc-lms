@@ -44,6 +44,7 @@ export default function SemanaClases({
   recorrido,
   t,
   ahora,
+  foco = null,
 }: {
   /** De `semanasDelAlumno(…, { conPasadas: true })`. */
   semanas: SemanaCalendario[];
@@ -55,6 +56,8 @@ export default function SemanaClases({
   recorrido: ClaseDelRecorrido[];
   t: TextosClases;
   ahora: Date;
+  /** El alumno que revisa el equipo, o null (ver `hrefEntrada`). */
+  foco?: string | null;
 }) {
   const semana = semanas[indice];
   const clases = semana.dias.flatMap((d) => d.clases);
@@ -125,7 +128,7 @@ export default function SemanaClases({
               className="flex"
               style={{ scrollMarginTop: 24 }}
             >
-              <TarjetaClase clase={c} analisis={recorrido.find((r) => r.fechaClase === c.fecha)} t={t} ahora={ahora} />
+              <TarjetaClase clase={c} analisis={recorrido.find((r) => r.fechaClase === c.fecha)} t={t} ahora={ahora} foco={foco} />
             </li>
           ))}
         </ol>
@@ -242,11 +245,13 @@ function TarjetaClase({
   analisis,
   t,
   ahora,
+  foco,
 }: {
   clase: ClaseCalendario;
   analisis: ClaseDelRecorrido | undefined;
   t: TextosClases;
   ahora: Date;
+  foco: string | null;
 }) {
   const cancelada = clase.estado === "cancelada";
   const abierta = !cancelada && !clase.terminada && ventanaAbierta(clase, ahora);
@@ -307,7 +312,7 @@ function TarjetaClase({
 
       {abierta && (
         <div className="mt-auto [&>*]:w-full">
-          <BotonClase proxima={clase} t={t} ahora={ahora} />
+          <BotonClase proxima={clase} t={t} ahora={ahora} origen="calendario" foco={foco} />
         </div>
       )}
     </article>

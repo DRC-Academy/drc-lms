@@ -58,6 +58,7 @@ export default function PantallaClases({
   recuperaciones = null,
   autoservicio = null,
   ahora = new Date(),
+  foco = null,
 }: {
   /** «Tu horario», ya montado. Null con el interruptor apagado. */
   autoservicio?: ReactNode;
@@ -75,6 +76,8 @@ export default function PantallaClases({
   hrefPractica: string;
   t: Textos;
   ahora?: Date;
+  /** El alumno que revisa el equipo, o null: lo necesita el botón de entrar. */
+  foco?: string | null;
 }) {
   const tc = t.clases;
   const proxima = proximaDelAlumno(calendario, excepciones, ahora);
@@ -114,10 +117,10 @@ export default function PantallaClases({
             {proxima ? (
               <>
                 <div className="min-[900px]:hidden">
-                  <CtaProximaClase proxima={proxima} t={tc} ahora={ahora} />
+                  <CtaProximaClase proxima={proxima} t={tc} ahora={ahora} foco={foco} />
                 </div>
                 <div className="hidden min-[900px]:contents">
-                  <BannerClase proxima={proxima} t={tc} ahora={ahora} conMascota refresco={false} />
+                  <BannerClase proxima={proxima} t={tc} ahora={ahora} origen="mis_clases" foco={foco} conMascota refresco={false} />
                 </div>
               </>
             ) : (
@@ -138,7 +141,7 @@ export default function PantallaClases({
           </div>
 
           <div className="entra mt-[26px] min-[900px]:mt-9" style={{ animationDelay: "calc(var(--paso-escalonado) * 2)" }}>
-            <SemanaClases semanas={semanas} indice={indice} hrefSemana={hrefSemana} recorrido={recorrido} t={tc} ahora={ahora} />
+            <SemanaClases semanas={semanas} indice={indice} hrefSemana={hrefSemana} recorrido={recorrido} t={tc} ahora={ahora} foco={foco} />
           </div>
         </>
       )}

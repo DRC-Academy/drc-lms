@@ -49,6 +49,12 @@ export type TextosClases = {
   /** Lo que se lee en vez del botón cuando no hay enlace utilizable. */
   sinEnlace: string;
 
+  // --- /clase/sin-enlace: se pulsó «Unirse» y no hay sala que abrir ---
+  sinSalaTitulo: string;
+  sinSalaTexto: string;
+  sinSalaWhatsApp: string;
+  sinSalaVolver: string;
+
   /** La línea que sustituye al banner cuando no hay próxima clase. */
   sinProxima: string;
 
@@ -196,6 +202,11 @@ export const CLASES: Record<Idioma, TextosClases> = {
     seAbreAntes: "Se abre 30 minutos antes",
     sinEnlace: "Habla con tu profesor para el enlace",
 
+    sinSalaTitulo: "Tu enlace de clase está en camino",
+    sinSalaTexto: "Todavía no tenemos aquí el enlace de tu sala. Escríbenos por WhatsApp y te lo pasamos enseguida.",
+    sinSalaWhatsApp: "Pedir mi enlace por WhatsApp",
+    sinSalaVolver: "Volver a Mis clases",
+
     sinProxima: "Aún no tienes tu próxima clase programada",
 
     lineaProxima: (cuando, hora) => `Tu próxima clase: ${cuando}, ${hora}`,
@@ -267,6 +278,11 @@ export const CLASES: Record<Idioma, TextosClases> = {
     unirse: "Join the class",
     seAbreAntes: "Opens 30 minutes before",
     sinEnlace: "Ask your teacher for the link",
+
+    sinSalaTitulo: "Your class link is on its way",
+    sinSalaTexto: "We don't have your class link here yet. Message us on WhatsApp and we'll send it right away.",
+    sinSalaWhatsApp: "Get my link on WhatsApp",
+    sinSalaVolver: "Back to My classes",
 
     sinProxima: "Your next class isn't scheduled yet",
 

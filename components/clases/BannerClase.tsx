@@ -25,18 +25,21 @@
 // es `RefrescoEnCortes`, que pide al servidor que vuelva a calcularlo al
 // abrirse la sala y al terminar la clase.
 //
-// CON LA SALA CERRADA EL ENLACE NO SALE DEL SERVIDOR. El botón gris es un
-// `<button disabled>` sin enlace, y el `meet_link` no va ni en el HTML ni
-// en las props de ningún componente de cliente.
+// EL `meet_link` NO SALE DEL SERVIDOR NUNCA. Con la sala cerrada el botón
+// gris es un `<button disabled>` sin enlace; con la sala abierta lleva a
+// `/clase/entrar` (`hrefEntrada`), que apunta el clic y redirige a la
+// sala. Ni en el HTML ni en las props de ningún componente de cliente.
 //
-// EL ENLACE ES EL QUE ABRE EL PROFESOR: el `meet_link` de la assignment
+// LA SALA ES LA QUE ABRE EL PROFESOR: el `meet_link` de la assignment
 // del profesor que da esa clase (`vista_calendario_alumno`), como en el
-// botón «Ingresar a clase» de Gestión. El botón del alumno no registra
-// nada: ese clic es el del profesor, y es el que cuenta para su pago.
+// botón «Ingresar a clase» de Gestión. El clic del alumno se apunta en la
+// base del LMS (`entradas_clase`), nunca en Gestión: el `class_join_logs`
+// de allí es el del profesor, y es el que cuenta para su pago.
 // ---------------------------------------------------------------
 
 import type { ReactNode } from "react";
 import { enlaceDeClase, ventanaAbierta, type ProximaClase } from "@/lib/clases";
+import { hrefEntrada, type Origen } from "@/lib/entradas-clase";
 import { diaLocal, sumarDias } from "@/lib/fechas";
 import type { TextosClases } from "@/lib/textos/clases";
 import { textosActuales } from "@/lib/idioma-servidor";
@@ -55,11 +58,16 @@ import MascotaClase from "@/components/clases/MascotaClase";
  * `conMascota` le da su columna a la derecha, con su bocadillo encima
  * (ver `MascotaClase`); en móvil, su fila encima del botón. No va con
  * `ilustracion`: son dos formas de lo mismo.
+ *
+ * `origen` y `foco` son del botón: desde dónde se entra y, si es el
+ * equipo revisando una ficha, de quién (ver `hrefEntrada`).
  */
 export default function BannerClase({
   proxima,
   t,
   ahora,
+  origen,
+  foco = null,
   ilustracion,
   secundario,
   refresco = true,
@@ -68,6 +76,8 @@ export default function BannerClase({
   proxima: ProximaClase;
   t: TextosClases;
   ahora: Date;
+  origen: Origen;
+  foco?: string | null;
   ilustracion?: ReactNode;
   secundario?: ReactNode;
   refresco?: boolean;
@@ -122,7 +132,7 @@ export default function BannerClase({
 
   const pie = (
     <>
-      <BotonClase proxima={proxima} t={t} ahora={ahora} />
+      <BotonClase proxima={proxima} t={t} ahora={ahora} origen={origen} foco={foco} />
       {secundario && <p className="mt-3 text-[14px] text-marca-gris">{secundario}</p>}
     </>
   );
@@ -239,8 +249,9 @@ function fraseDeLaMascota(proxima: ProximaClase, abierta: boolean, ahora: Date, 
  *   sin enlace utilizable   el aviso de pedírselo al profesor, sin botón.
  *                           Un botón que no lleva a ningún sitio es peor
  *                           que no tener botón.
- *   sala abierta            el enlace, en el verde de acción, con la
- *                           sombra sólida de los discos de la ruta.
+ *   sala abierta            el enlace a `/clase/entrar`, en el verde de
+ *                           acción, con la sombra sólida de los discos
+ *                           de la ruta.
  *   sala cerrada            el botón en gris, deshabilitado y SIN enlace,
  *                           con la nota de cuándo se abre.
  */
@@ -248,10 +259,16 @@ export function BotonClase({
   proxima,
   t,
   ahora,
+  origen,
+  foco = null,
 }: {
   proxima: ProximaClase;
   t: TextosClases;
   ahora: Date;
+  /** Desde dónde se pulsa: se apunta con la entrada. */
+  origen: Origen;
+  /** El alumno que revisa el equipo, o null. */
+  foco?: string | null;
 }) {
   const enlace = enlaceDeClase(proxima.meetLink);
   const medida = "min-h-[54px] w-full whitespace-nowrap px-8 sm:w-auto";
@@ -273,7 +290,7 @@ export function BotonClase({
       <a
         data-tour="unirse"
         data-tour-estado="abierta"
-        href={enlace}
+        href={hrefEntrada(proxima, origen, foco)}
         target="_blank"
         // `noopener` no es ceremonia: sin él, la pestaña que se abre puede
         // reescribir la que deja atrás, que es la sesión del alumno.
@@ -418,6 +435,7 @@ export function FranjaClase({
   tieneCurso,
   ilustracion,
   ahora = new Date(),
+  foco = null,
 }: {
   proxima: ProximaClase;
   t: TextosClases;
@@ -425,12 +443,16 @@ export function FranjaClase({
   tieneCurso: boolean;
   ilustracion?: ReactNode;
   ahora?: Date;
+  /** El alumno que revisa el equipo, o null. */
+  foco?: string | null;
 }) {
   return (
     <BannerClase
       proxima={proxima}
       t={t}
       ahora={ahora}
+      origen="dashboard"
+      foco={foco}
       ilustracion={ilustracion}
       secundario={tieneCurso && enlaceDeClase(proxima.meetLink) ? t.cursoEnMiCurso : undefined}
       refresco={false}

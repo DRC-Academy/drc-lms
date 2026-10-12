@@ -40,10 +40,13 @@ export default function CtaProximaClase({
   proxima,
   t,
   ahora,
+  foco = null,
 }: {
   proxima: ProximaClase;
   t: TextosClases;
   ahora: Date;
+  /** El alumno que revisa el equipo, o null (ver `hrefEntrada`). */
+  foco?: string | null;
 }) {
   const abierta = ventanaAbierta(proxima, ahora);
   const rotulo = abierta ? (proxima.enCurso ? t.claseEnCurso : t.empiezaPronto) : t.proximaClase;
@@ -86,7 +89,7 @@ export default function CtaProximaClase({
 
       {abierta && (
         <div className="px-2 pb-2 pt-1">
-          <BotonClase proxima={proxima} t={t} ahora={ahora} />
+          <BotonClase proxima={proxima} t={t} ahora={ahora} origen="mis_clases" foco={foco} />
         </div>
       )}
 
