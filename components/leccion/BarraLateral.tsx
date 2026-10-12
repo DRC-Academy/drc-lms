@@ -95,6 +95,7 @@ export default function BarraLateral({
           <ComoVasDeLaBarra
             estadisticas={estadisticas}
             hrefPractica={enlaces.find((e) => e.clave === "practica")?.href}
+            hrefDiploma={enlaces.find((e) => e.clave === "diploma")?.href}
           />
         )}
 
@@ -210,7 +211,15 @@ function AnilloDeLaBarra({ curso }: { curso: NonNullable<EstadisticasAlumno["cur
  * El lector de pantalla tiene su propia lista, fuera de las dos piezas:
  * la tarjeta está oculta mientras la barra está plegada.
  */
-function ComoVasDeLaBarra({ estadisticas, hrefPractica }: { estadisticas: EstadisticasAlumno; hrefPractica?: string }) {
+function ComoVasDeLaBarra({
+  estadisticas,
+  hrefPractica,
+  hrefDiploma,
+}: {
+  estadisticas: EstadisticasAlumno;
+  hrefPractica?: string;
+  hrefDiploma?: string;
+}) {
   const { t } = usarIdioma();
   const te = t.estadisticas;
   const lecturas = lecturasComoVas(estadisticas, te);
@@ -230,7 +239,7 @@ function ComoVasDeLaBarra({ estadisticas, hrefPractica }: { estadisticas: Estadi
         {/* `relative z-[1]`: los anillos de la estrecha van posicionados y,
             sin esto, se pintarían por encima de la tarjeta. */}
         <div className="barra-rotulo relative z-[1] flex">
-          <ComoVas estadisticas={estadisticas} variante="barra" hrefPractica={hrefPractica} lector={false} />
+          <ComoVas estadisticas={estadisticas} variante="barra" hrefPractica={hrefPractica} hrefDiploma={hrefDiploma} lector={false} />
         </div>
       </div>
     </div>

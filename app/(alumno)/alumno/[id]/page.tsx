@@ -20,11 +20,8 @@ import {
 } from "@/lib/progreso-servidor";
 import { cursosDelInicio } from "@/lib/cursos-servidor";
 import { comoFecha } from "@/lib/fechas";
-import { rutaDeMiCurso } from "@/lib/cursos";
-import { calcularDiploma, progresoDiploma } from "@/lib/diploma";
 import AvatarProfesor from "@/components/AvatarProfesor";
 import BannerCurso, { cursoTerminado } from "@/components/BannerCurso";
-import BannerDiploma from "@/components/BannerDiploma";
 import PanelAlumno from "@/components/PanelAlumno";
 import ComparativaRitmo, { datosDeRitmo } from "@/components/ComparativaRitmo";
 import MascotaBienvenida from "@/components/mascota/MascotaBienvenida";
@@ -135,30 +132,10 @@ export default async function PerfilAlumno({
       )
     : [];
 
-  // ---------------------------------------------------------------
-  // EL DIPLOMA
-  //
-  // Del curso que manda en el banner, que es el mismo del que habla todo
-  // lo demás de la pantalla. Con dos cursos asignados no se suman ni se
-  // promedian: dos diplomas distintos no hacen medio diploma, y enseñar
-  // los dos rompería el principio de tener dos o tres elementos.
-  //
-  // Aquí SÍ se enseña con cero lecciones hechas, al revés que la tira de
-  // estadísticas que esto sustituye. Aquel cero no era un dato; este sí:
-  // "tu diploma son 187 lecciones" le dice a quien acaba de entrar
-  // exactamente a qué ha venido.
-  //
-  // VA FUERA DE «PanelAlumno», y por eso se pinta aquí y no se le pasa
-  // como prop: ocupa el ancho entero por encima de la rejilla, así que
-  // no es una de las dos columnas. Es también lo que le deja seguir
-  // siendo un componente de servidor puro, sin pasar por el cliente.
-  // ---------------------------------------------------------------
+  // EL DIPLOMA YA NO TIENE TARJETA AQUÍ (12/10/2026). Vive en su
+  // pantalla, «Mi diploma» (`/diploma`), y se llega desde la barra, la
+  // hoja del perfil y el anillo de «Cómo vas», que enlaza a ella.
   const principal = estadosCurso[0];
-  const diploma = calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0);
-  // EL DIPLOMA ES DE TIEMPO (12/10/2026): seis meses desde la fecha de
-  // inicio, con `progresoDiploma`. Las lecciones de arriba quedan como
-  // dato secundario de la tarjeta y para decidir su botón.
-  const caminoDiploma = progresoDiploma(perfil, new Date());
 
   // ---------------------------------------------------------------
   // SE FUE EL TEMARIO, Y CON ÉL LA CONSULTA MÁS CARA DE ESTA PANTALLA
@@ -383,41 +360,11 @@ export default async function PerfilAlumno({
             de la cara del profesor. En escritorio vive arriba de la barra
             lateral, y por eso aquí va con `min-[900px]:hidden`. */}
         <div className="entra mb-4 min-[900px]:hidden">
-          <ComoVas estadisticas={estadisticas} variante="movil" hrefPractica={conFoco("/practica", foco)} />
-        </div>
-
-        {/* EL DIPLOMA, LO PRIMERO DEBAJO DEL SALUDO. A ancho completo y
-            por encima de la rejilla: es la meta de la que cuelga todo lo
-            que viene después, y compartiendo caja con el curso se leía
-            como un dato del curso. */}
-        <div
-          className="entra mb-3 min-[900px]:mb-5"
-          style={{ animationDelay: "var(--paso-escalonado)" }}
-        >
-          {/* SIN SENDERO. Aquí iba el mapa de hitos y la barra se
-              apartaba para dejarle sitio; ahora manda la barra en las
-              dos pantallas.
-
-              El mapa contaba lo mismo con seis nodos y una curva —una
-              pieza alta, con su propia gramática— donde el carril lo
-              dice en 8px de alto: cuánto llevas y cuánto falta. Con el
-              banner sin caja, esa altura era lo único que seguía
-              haciendo del diploma un bloque en vez de una línea. */}
-          <BannerDiploma
-            progreso={caminoDiploma}
-            lecciones={diploma}
+          <ComoVas
+            estadisticas={estadisticas}
+            variante="movil"
+            hrefPractica={conFoco("/practica", foco)}
             hrefDiploma={conFoco("/diploma", foco)}
-            // SIN BOTÓN, salvo un caso. La franja de debajo ya lleva
-            // «Continuar» a la misma lección, y dos botones seguidos al
-            // mismo sitio hacen dudar de cuál pulsar. La excepción es
-            // quien no ha empezado cuando la franja es la de la clase
-            // (sala abierta): entonces no hay «Empezar» en ningún otro
-            // sitio de la pantalla, y el diploma lo conserva.
-            href={
-              diploma.estado === "en-curso" && diploma.completadas === 0 && enVentana && principal?.siguiente
-                ? conFoco(rutaDeMiCurso(principal), foco)
-                : null
-            }
           />
         </div>
 

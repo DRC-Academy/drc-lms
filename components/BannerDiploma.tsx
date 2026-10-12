@@ -131,7 +131,7 @@ export default function BannerDiploma({
  * y está donde el ojo ya mira. Al llegar al final se convierte en el
  * sello, que es lo único que celebra en toda la pieza.
  */
-export function Barra({
+function Barra({
   relleno,
   descripcion,
   conseguido,

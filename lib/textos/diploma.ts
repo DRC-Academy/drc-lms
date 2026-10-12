@@ -11,20 +11,25 @@
 // cada tramo (`lib/diploma.ts`, `TramoDiploma`) acompaña, no empuja.
 //
 // SIN DESCARGA TODAVÍA. El estado conseguido felicita y no promete una
-// fecha para el archivo: la generación del diploma es otra tarea.
+// fecha para el archivo: la generación del diploma es otra tarea. El
+// tercer paso del camino sí dice, como la landing, que se descargará en
+// esta misma página: es donde irá el botón.
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
 import type { TramoDiploma } from "@/lib/diploma";
 
 export type TextosDiploma = {
+  /** El titular de la página, el de la landing. */
   titulo: string;
   entradilla: string;
   altImagen: string;
 
   // --- el progreso ---
-  /** «3 de 6 meses»: la cifra va aparte, en grande. */
+  /** «3 de 6 meses completados»: la cifra va aparte, en grande. */
   deMeses: (total: number) => string;
+  /** Debajo de la barra: «50% completado». */
+  porcentajeCompletado: (porcentaje: number) => string;
   /** Lo que lee el lector de pantalla en la barra. */
   barraLector: (meses: number, total: number) => string;
   fechaPrevista: (fecha: string) => string;
@@ -44,20 +49,23 @@ export type TextosDiploma = {
   // --- el vídeo ---
   fluidezTitulo: string;
   fluidezTexto: string;
-  videoPie: string;
+  /** La píldora de encima del vídeo. Es una etiqueta, no un botón. */
+  videoEtiqueta: string;
   videoSinSoporte: string;
 
   // --- el camino ---
   caminoTitulo: string;
-  pasos: { cuando: string; texto: string }[];
+  /** `destacado`, si lo hay, va en negrita detrás de `texto`. */
+  pasos: { cuando: string; texto: string; destacado?: string }[];
 };
 
 const ES: TextosDiploma = {
-  titulo: "Mi diploma",
-  entradilla: "Cada clase que completas te acerca un poco más a tu Diploma DRC Academy.",
+  titulo: "Esto es lo que te espera cuando completes tu nivel",
+  entradilla: "Cada clase que completas te acerca un poco más a conseguir tu Diploma DRC Academy.",
   altImagen: "El Diploma DRC Academy",
 
-  deMeses: (total) => `de ${total} meses`,
+  deMeses: (total) => `de ${total} meses completados`,
+  porcentajeCompletado: (porcentaje) => `${porcentaje}% completado`,
   barraLector: (meses, total) => `${meses} de ${total} meses completados`,
   fechaPrevista: (fecha) => `Tu diploma, el ${fecha}`,
   conseguidoEl: (fecha) => `Desde el ${fecha}`,
@@ -104,24 +112,29 @@ const ES: TextosDiploma = {
   ],
 
   fluidezTitulo: "Podrás comprobar cómo mejora tu fluidez",
-  fluidezTexto: "Guardamos tu punto de partida para que puedas ver el cambio con tus propios ojos.",
-  videoPie: "El cambio de Mar después de 15 clases",
+  fluidezTexto: "Guardamos tu punto de partida para que tú mismo puedas ver el cambio.",
+  videoEtiqueta: "Mira el cambio de Mar después de 15 clases",
   videoSinSoporte: "Tu navegador no puede reproducir este vídeo.",
 
   caminoTitulo: "Tu camino hacia el diploma",
   pasos: [
     { cuando: "Hoy", texto: "Sigues trabajando con tu profe." },
     { cuando: "Durante estos meses", texto: "Hablas, practicas y corriges lo que te está frenando." },
-    { cuando: "A los 6 meses", texto: "Completas el periodo y consigues tu Diploma DRC Academy." },
+    {
+      cuando: "A los 6 meses",
+      texto: "Completas el periodo necesario y",
+      destacado: "podrás descargar tu diploma en esta misma página",
+    },
   ],
 };
 
 const EN: TextosDiploma = {
-  titulo: "My diploma",
-  entradilla: "Every class you complete brings you a little closer to your DRC Academy Diploma.",
+  titulo: "This is what's waiting for you when you complete your level",
+  entradilla: "Every class you complete brings you a little closer to earning your DRC Academy Diploma.",
   altImagen: "The DRC Academy Diploma",
 
-  deMeses: (total) => `of ${total} months`,
+  deMeses: (total) => `of ${total} months completed`,
+  porcentajeCompletado: (porcentaje) => `${porcentaje}% completed`,
   barraLector: (meses, total) => `${meses} of ${total} months completed`,
   fechaPrevista: (fecha) => `Your diploma: ${fecha}`,
   conseguidoEl: (fecha) => `Since ${fecha}`,
@@ -169,14 +182,18 @@ const EN: TextosDiploma = {
 
   fluidezTitulo: "You'll see your fluency improve",
   fluidezTexto: "We keep a record of your starting point so you can see the change for yourself.",
-  videoPie: "Mar's progress after 15 classes",
+  videoEtiqueta: "Watch Mar's progress after 15 classes",
   videoSinSoporte: "Your browser can't play this video.",
 
   caminoTitulo: "Your path to the diploma",
   pasos: [
     { cuando: "Today", texto: "You keep working with your teacher." },
     { cuando: "Over these months", texto: "You speak, practise and fix whatever is holding you back." },
-    { cuando: "At 6 months", texto: "You complete the period and earn your DRC Academy Diploma." },
+    {
+      cuando: "At 6 months",
+      texto: "You complete the required period and",
+      destacado: "you'll be able to download your diploma right here on this page",
+    },
   ],
 };
 

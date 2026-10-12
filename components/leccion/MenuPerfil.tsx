@@ -147,7 +147,12 @@ export default function MenuPerfil({
         >
           {estadisticas && (
             <div className="mb-5">
-              <ComoVas estadisticas={estadisticas} variante="movil" hrefPractica={hrefPractica} />
+              <ComoVas
+                estadisticas={estadisticas}
+                variante="movil"
+                hrefPractica={hrefPractica}
+                hrefDiploma={enlaces.find((enlace) => enlace.clave === "diploma")?.href}
+              />
             </div>
           )}
           {enLaHoja.length > 0 && (

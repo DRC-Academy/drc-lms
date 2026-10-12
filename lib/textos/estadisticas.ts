@@ -64,6 +64,8 @@ export type TextosEstadisticas = {
     paraTuDiploma: (n: number, unidad: "semanas" | "dias") => string;
     /** Cumplidos los seis meses. */
     diplomaConseguido: string;
+    /** El `aria-label` del anillo del diploma, que lleva a «Mi diploma». */
+    irAMiDiploma: (detalle: string) => string;
     /** El círculo de la práctica a cero, que lleva a «Para ti». */
     empiezaAqui: string;
     empiezaPractica: string;
@@ -113,6 +115,7 @@ const ES: TextosEstadisticas = {
         ? n === 1 ? "día para tu diploma" : "días para tu diploma"
         : n === 1 ? "semana para tu diploma" : "semanas para tu diploma",
     diplomaConseguido: "Diploma conseguido",
+    irAMiDiploma: (detalle) => `Ver mi diploma: ${detalle}`,
     empiezaAqui: "Empieza aquí",
     empiezaPractica: "Empieza tu primera práctica en «Para ti»",
   },
@@ -171,6 +174,7 @@ const EN: TextosEstadisticas = {
         ? n === 1 ? "day to your diploma" : "days to your diploma"
         : n === 1 ? "week to your diploma" : "weeks to your diploma",
     diplomaConseguido: "Diploma earned",
+    irAMiDiploma: (detalle) => `See my diploma: ${detalle}`,
     empiezaAqui: "Start here",
     empiezaPractica: "Start your first practice in “For you”",
   },

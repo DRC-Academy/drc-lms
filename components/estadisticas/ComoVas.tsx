@@ -90,6 +90,7 @@ export default function ComoVas({
   estadisticas: e,
   variante,
   hrefPractica,
+  hrefDiploma,
   lector = true,
 }: {
   estadisticas: EstadisticasAlumno;
@@ -97,6 +98,11 @@ export default function ComoVas({
   variante: "barra" | "movil";
   /** A dónde lleva el círculo de la práctica a cero. Sin él, no es enlace. */
   hrefPractica?: string;
+  /**
+   * «Mi diploma». El anillo del diploma es un enlace a esa pantalla: en
+   * móvil es una de sus dos entradas, con la fila de la hoja del perfil.
+   */
+  hrefDiploma?: string;
   /** La barra lleva su propia lista para el lector, visible también plegada. */
   lector?: boolean;
 }) {
@@ -145,20 +151,27 @@ export default function ComoVas({
 
   if (e.diploma) {
     const falta = faltaParaDiploma(e.diploma);
+    const rotulo = falta === null ? tt.diplomaConseguido : tt.paraTuDiploma(falta.n, falta.unidad);
+    // Cumplidos los seis meses, el anillo va cerrado y dice lo que
+    // significa para el alumno —el diploma es suyo—, no que se acabó.
+    const medalla = (
+      <Medalla movil={movil} rotulo={rotulo} progreso={falta === null ? 1 : e.diploma.porcentaje / 100} enlace={!!hrefDiploma}>
+        {falta === null ? <IconoDiploma /> : falta.n}
+      </Medalla>
+    );
     medallas.push({
       clave: "diploma",
-      // Cumplidos los seis meses, el anillo va cerrado y dice lo que
-      // significa para el alumno —el diploma es suyo—, no que se acabó.
-      contenido:
-        falta === null ? (
-          <Medalla movil={movil} rotulo={tt.diplomaConseguido} progreso={1}>
-            <IconoDiploma />
-          </Medalla>
-        ) : (
-          <Medalla movil={movil} rotulo={tt.paraTuDiploma(falta.n, falta.unidad)} progreso={e.diploma.porcentaje / 100}>
-            {falta.n}
-          </Medalla>
-        ),
+      contenido: hrefDiploma ? (
+        <Link
+          href={hrefDiploma}
+          aria-label={tt.irAMiDiploma(falta === null ? rotulo : `${falta.n} ${rotulo}`)}
+          className="group flex flex-col items-center rounded-[10px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          {medalla}
+        </Link>
+      ) : (
+        medalla
+      ),
     });
   }
 
