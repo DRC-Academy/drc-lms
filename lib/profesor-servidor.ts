@@ -4,8 +4,8 @@
 // Decisión de producto (30/09/2026): el profesor actual es el de la
 // FICHA (`vista_perfil_alumno`). Si el calendario o la última clase dicen
 // otro —un suplente, un cambio a medias—, al alumno no se le enseña nada
-// distinto: la discrepancia sale en el panel del equipo
-// (`discrepanciasDeProfesor` en `lib/admin-servidor.ts`).
+// distinto. (El panel tuvo una lista de esas discrepancias; se quitó el
+// 12/10/2026.)
 //
 // Aquí se resuelve todo lo que la pantalla necesita saber de él: su id,
 // el nombre que ve el alumno (`lib/profesor.ts`) y las dos cifras de

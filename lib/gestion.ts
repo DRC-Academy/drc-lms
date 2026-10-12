@@ -699,65 +699,6 @@ export async function clasesDelPanel(): Promise<ClasePanel[]> {
   return salida;
 }
 
-/**
- * Para el panel del equipo: qué profesores tiene cada alumno en el
- * calendario (`vista_calendario_alumno`) y quién le dio la última clase
- * (`class_analyses`), por `teacher_id`. Es lo que se compara con el
- * profesor de la ficha en «Profesor distinto del de la ficha».
- * Paginado por el tope de 1000 filas de PostgREST.
- */
-export async function profesoresFueraDeLaFicha(): Promise<{
-  calendario: Map<string, Set<string>>;
-  ultimaClase: Map<string, string>;
-}> {
-  const calendario = new Map<string, Set<string>>();
-  const ultimaClase = new Map<string, string>();
-
-  for (let desde = 0; ; desde += PAGINA) {
-    const { data, error } = await soloLectura("vista_calendario_alumno")
-      .select("alumno_id, teacher_id")
-      .order("alumno_id", { ascending: true })
-      .order("teacher_id", { ascending: true })
-      .range(desde, desde + PAGINA - 1)
-      .returns<Fila[]>();
-    if (error) {
-      console.error("[gestion] No se pudo leer el calendario para el panel:", error.message);
-      break;
-    }
-    for (const f of data ?? []) {
-      const alumno = comoTexto(f.alumno_id);
-      const profesor = comoTexto(f.teacher_id);
-      if (!alumno || !profesor) continue;
-      const suyos = calendario.get(alumno) ?? new Set<string>();
-      suyos.add(profesor);
-      calendario.set(alumno, suyos);
-    }
-    if ((data ?? []).length < PAGINA) break;
-  }
-
-  for (let desde = 0; ; desde += PAGINA) {
-    const { data, error } = await soloLectura("class_analyses")
-      .select("student_id, teacher_id, class_date")
-      .not("student_id", "is", null)
-      .order("class_date", { ascending: false })
-      .order("id", { ascending: false })
-      .range(desde, desde + PAGINA - 1)
-      .returns<Fila[]>();
-    if (error) {
-      console.error("[gestion] No se pudo leer la última clase para el panel:", error.message);
-      break;
-    }
-    for (const f of data ?? []) {
-      const alumno = comoTexto(f.student_id);
-      const profesor = comoTexto(f.teacher_id);
-      if (alumno && profesor && !ultimaClase.has(alumno)) ultimaClase.set(alumno, profesor);
-    }
-    if ((data ?? []).length < PAGINA) break;
-  }
-
-  return { calendario, ultimaClase };
-}
-
 const CAMPOS_RESUMEN = "alumno_id, nombre, email, nivel, profesor";
 
 function aResumen(fila: Fila): ResumenAlumno {
