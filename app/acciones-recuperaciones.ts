@@ -22,6 +22,7 @@ import { sesionActual } from "@/lib/sesion-servidor";
 import { idiomaActual } from "@/lib/idioma-servidor";
 import { elegirFecha, proponerHorarios, type EstadoRecuperacion, type Hueco, type HuecoConHoras, type ResultadoAccion } from "@/lib/recuperaciones";
 import { RECUPERACIONES } from "@/lib/textos/recuperaciones";
+import { olvidarLecturasDe } from "@/lib/cache-gestion";
 import { HORAS_PROPUESTA, MAX_NOTA, MAX_PROPUESTAS } from "@/lib/recuperaciones-fechas";
 
 export type RespuestaRecuperacion =
@@ -59,7 +60,12 @@ export async function elegirRecuperacion(id: unknown, indice: unknown): Promise<
   if (!alumnoId || typeof id !== "string" || !ID.test(id) || typeof indice !== "number" || !Number.isInteger(indice) || indice < 0) {
     return rechazo();
   }
-  return traducir(await elegirFecha(alumnoId, id, indice));
+  const r = await elegirFecha(alumnoId, id, indice);
+  // Salga bien o mal, Gestión puede haber cambiado algo —la recuperación,
+  // el calendario—: lo cacheado del alumno se tira antes de que la
+  // tarjeta pida su `router.refresh()`.
+  olvidarLecturasDe(alumnoId);
+  return traducir(r);
 }
 
 /**
@@ -86,5 +92,7 @@ export async function proponerRecuperacion(id: unknown, horarios: unknown, nota:
   }
 
   const textoNota = typeof nota === "string" ? nota.trim().slice(0, MAX_NOTA) : "";
-  return traducir(await proponerHorarios(alumnoId, id, limpios, textoNota === "" ? null : textoNota));
+  const r = await proponerHorarios(alumnoId, id, limpios, textoNota === "" ? null : textoNota);
+  olvidarLecturasDe(alumnoId);
+  return traducir(r);
 }

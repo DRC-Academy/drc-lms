@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo } from "react";
 import { desdeCurso } from "@/lib/ejercicio-unificado";
 import type { EjercicioVista } from "@/lib/ejercicios";
 import VisorEjercicios, { type SucesoVisor } from "@/components/ejercicios/VisorEjercicios";
@@ -9,6 +8,7 @@ import CierreEjercicios from "@/components/ejercicios/CierreEjercicios";
 import type { EstadoEjerciciosActual } from "@/components/leccion/PanelCurso";
 import BotonCompletar from "@/components/leccion/BotonCompletar";
 import { reaccionarEnCurso } from "@/components/ejercicios/reaccionesMascota";
+import { anotarEjercicioNuevo } from "@/components/estadisticas/ejercicios-en-vivo";
 
 /**
  * Los ejercicios de la lección.
@@ -38,7 +38,8 @@ import { reaccionarEnCurso } from "@/components/ejercicios/reaccionesMascota";
  * responde el último y sigue en el mismo gesto. Que falle no se le
  * cuenta a nadie: perder un intento no puede cortar la lección.
  *
- * Devuelve si el servidor lo guardó, para saber si hay algo que refrescar.
+ * Devuelve si era el PRIMER intento de ese ejercicio: solo entonces sube
+ * «Ejercicios hechos».
  */
 async function registrarIntento(ejercicioId: string, correcto: boolean): Promise<boolean> {
   try {
@@ -48,7 +49,9 @@ async function registrarIntento(ejercicioId: string, correcto: boolean): Promise
       body: JSON.stringify({ ejercicioId, correcto }),
       keepalive: true,
     });
-    return respuesta.ok;
+    if (!respuesta.ok) return false;
+    const cuerpo = (await respuesta.json()) as { guardado?: unknown; nuevo?: unknown };
+    return cuerpo.guardado === true && cuerpo.nuevo === true;
   } catch (error) {
     console.error("[leccion] No se pudo registrar el intento:", error);
     return false;
@@ -56,21 +59,14 @@ async function registrarIntento(ejercicioId: string, correcto: boolean): Promise
 }
 
 /**
- * Cuánto se espera, desde el último intento guardado, antes de refrescar.
- *
- * EL REFRESCO ES PARA LA BARRA LATERAL: cuenta los ejercicios hechos y
- * vive en el layout, que no se vuelve a renderizar al navegar. Sin él,
- * el alumno respondería cinco ejercicios, saltaría a otra sección y
- * seguiría leyendo la cifra de antes.
- *
- * Uno por racimo de respuestas y no uno por respuesta: cada refresco
- * vuelve a pintar la lección en el servidor. El estado del visor no se
- * pierde —`router.refresh()` conserva el de cliente, y el visor fija el
- * suyo al montarse—. Y el temporizador no se cancela al salir: el router
- * es de toda la aplicación, y si el alumno ya se ha ido, lo que se
- * refresca es la pantalla nueva con su barra.
+ * SIN `router.refresh()` TRAS CADA INTENTO. Lo había, 1,5 s después de
+ * cada racimo de respuestas, para que «Cómo vas» contara el ejercicio:
+ * volvía a pintar la lección y el marco en el servidor, con cuatro
+ * consultas a Gestión por ejercicio. Ahora la cifra sube en el navegador
+ * (`ejercicios-en-vivo`) y el contador de la lección lo pone el panel con
+ * lo respondido en vivo (`PanelCurso`). Al completar la lección o salir
+ * de ella ya se navega, y eso trae las cifras del servidor.
  */
-const ESPERA_REFRESCO = 1500;
 
 export default function FlujoEjercicios({
   ejercicios,
@@ -106,8 +102,6 @@ export default function FlujoEjercicios({
   foco?: string | null;
 }) {
   const unificados = useMemo(() => ejercicios.map(desdeCurso), [ejercicios]);
-  const router = useRouter();
-  const refresco = useRef<number | null>(null);
 
   function alSuceso(suceso: SucesoVisor) {
     // El curso solo guarda intentos. Ni avance ni producción: la lección
@@ -119,13 +113,9 @@ export default function FlujoEjercicios({
     }
     if (suceso.tipo !== "intento") return;
     if (registrarIntentos) {
-      void registrarIntento(suceso.ejercicio.id, suceso.correcto).then((guardado) => {
-        if (!guardado) return;
-        if (refresco.current !== null) window.clearTimeout(refresco.current);
-        refresco.current = window.setTimeout(() => {
-          refresco.current = null;
-          router.refresh();
-        }, ESPERA_REFRESCO);
+      const id = suceso.ejercicio.id;
+      void registrarIntento(id, suceso.correcto).then((nuevo) => {
+        if (nuevo) anotarEjercicioNuevo(id);
       });
     }
     reaccionarEnCurso(suceso);

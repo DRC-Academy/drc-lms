@@ -918,6 +918,24 @@ export async function guardarIntento(
 }
 
 /**
+ * Si el intento que se acaba de guardar es el PRIMERO del alumno en ese
+ * ejercicio: solo entonces sube «Ejercicios hechos», que cuenta
+ * ejercicios distintos. Lo pregunta la ruta de intentos para que «Cómo
+ * vas» se ponga al día en el navegador sin volver a pintar la página.
+ * Ante un fallo, false: mejor quedarse corto que contar dos veces.
+ */
+export async function esPrimerIntento(alumnoId: string, ejercicioId: string): Promise<boolean> {
+  const { count, error } = await baseLms()
+    .from("intentos_ejercicio")
+    .select("id", { count: "exact", head: true })
+    .eq("alumno_id", alumnoId)
+    .eq("ejercicio_id", ejercicioId);
+
+  if (!registrar("No se pudo saber si el intento era el primero", error)) return false;
+  return count === 1;
+}
+
+/**
  * Cuántos ejercicios distintos del curso ha respondido el alumno, bien o
  * mal: un ejercicio repetido cuenta una vez. Es la cifra de «Ejercicios
  * hechos» del inicio y de la barra.

@@ -4,7 +4,7 @@ import { sinProfesorDeOrigen } from "@/lib/profesor";
 import { nivelMcer } from "@/lib/recorrido";
 import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
 import { notFound } from "next/navigation";
-import { obtenerAlumno, obtenerCalendario, obtenerExcepciones, obtenerQuitas } from "@/lib/gestion";
+import { obtenerAlumno, obtenerCalendario, obtenerExcepciones } from "@/lib/gestion";
 import { proximaDelAlumno, semanasDelAlumno, ventanaAbierta } from "@/lib/clases";
 import { conFoco } from "@/lib/foco";
 import { estadisticasDelAlumno } from "@/lib/estadisticas-servidor";
@@ -74,7 +74,7 @@ export default async function PerfilAlumno({
 
   // Gestión primero: de su `plan` y su `nivel` sale qué cursos le tocan,
   // así que la consulta de cursos no puede ir en el mismo lote.
-  const [datos, progreso, generadosCrudos, ultimaGeneracion, calendarioCrudo, quitas, excepciones, profe] = await Promise.all([
+  const [datos, progreso, generadosCrudos, ultimaGeneracion, calendarioCrudo, excepciones, profe] = await Promise.all([
     obtenerAlumno(alumnoId),
     leerProgresoAlumno(alumnoId),
     // Con el rol: los bloques que el equipo genera para revisar solo
@@ -83,9 +83,9 @@ export default async function PerfilAlumno({
     leerUltimaGeneracion(alumnoId),
     // Las clases, del calendario de Gestión. Ver «LA PRÓXIMA CLASE» abajo.
     obtenerCalendario(alumnoId),
-    obtenerQuitas(alumnoId),
-    // Todas las excepciones —'quita' y 'añade'—, para el calendario de
-    // abajo: las mismas que lee «Mis clases».
+    // Todas las excepciones —'quita' y 'añade'—, una sola lectura: la
+    // próxima clase usa sus 'quita' (`normalizarQuitas` ignora el resto)
+    // y el calendario de abajo, todas. Las mismas que lee «Mis clases».
     obtenerExcepciones(alumnoId),
     // El profesor que se nombra en toda la pantalla: el de la ficha.
     profesorDelAlumno(alumnoId),
@@ -193,7 +193,7 @@ export default async function PerfilAlumno({
   // ---------------------------------------------------------------
   const tc = textosActuales().clases;
   const ahora = new Date();
-  const proxima = proximaDelAlumno(calendario, quitas, ahora);
+  const proxima = proximaDelAlumno(calendario, excepciones, ahora);
   const enVentana = proxima !== null && ventanaAbierta(proxima, ahora);
   const subtitulo = enVentana
     ? subtituloDeSiempre

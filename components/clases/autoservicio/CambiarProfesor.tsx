@@ -12,8 +12,8 @@ import { Aviso, BotonWhatsApp, ListaDeHuecos, Opcion, TituloPaso, Volver } from 
  *
  * Sin endpoint todavía. Los huecos de otros profesores son los de la
  * simulación (`huecosDeOtrosProfesores`), y la página solo pinta el botón
- * con AUTOSERVICIO_SIMULADO: con Gestión de verdad no hay nada que
- * enseñar. Confirmar no guarda nada y lo dice.
+ * con AUTOSERVICIO_PROFESOR_ACTIVO y AUTOSERVICIO_SIMULADO: con Gestión
+ * de verdad no hay nada que enseñar. Confirmar no guarda nada y lo dice.
  *
  *   1. sesion     solo si tiene más de una clase a la semana
  *   2. buscar     día y franja, y la lista con el nombre de cada profesor

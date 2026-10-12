@@ -18,6 +18,7 @@
 import { sesionActual } from "@/lib/sesion-servidor";
 import { autoservicioActivo, proveedorAutoservicio } from "@/lib/autoservicio";
 import { idSesionValido, peticionValida } from "@/lib/autoservicio/leer";
+import { olvidarLecturasDe } from "@/lib/cache-gestion";
 import type {
   HuecoLibre,
   LecturaAutoservicio,
@@ -47,7 +48,11 @@ export async function huecosAutoservicio(modo: unknown, sesionId: unknown, fecha
     return { ok: false, codigo: "GENERICO" };
   }
   try {
-    return await proveedorAutoservicio().huecos(alumnoId, modo as ModoCambio, sesionId, fechaValida);
+    const r = await proveedorAutoservicio().huecos(alumnoId, modo as ModoCambio, sesionId, fechaValida);
+    // Gestión ya no tiene esa sesión: la pantalla se va a refrescar, y
+    // tiene que leer el horario de ahora, no el cacheado.
+    if (!r.ok && r.codigo === "SESION_NO_ENCONTRADA") olvidarLecturasDe(alumnoId);
+    return r;
   } catch (error) {
     console.error("[autoservicio] Falló la lectura de huecos:", error);
     return { ok: false, codigo: "GENERICO" };
@@ -73,7 +78,12 @@ export async function cambiarHorarioAutoservicio(peticion: unknown): Promise<Res
 
   if (!alumnoId || !peticionValida(limpia)) return { ok: false, codigo: "GENERICO", mensaje: null };
   try {
-    return await proveedorAutoservicio().cambiarHorario(alumnoId, limpia);
+    const r = await proveedorAutoservicio().cambiarHorario(alumnoId, limpia);
+    // Hecho, a medias o con la sesión cambiada por otro lado: el horario
+    // de Gestión ya no es el cacheado. Se tira aquí, antes de que la
+    // pantalla haga su `router.refresh()`.
+    if (r.ok || r.codigo === "SESION_NO_ENCONTRADA" || r.codigo === "A_MEDIAS") olvidarLecturasDe(alumnoId);
+    return r;
   } catch (error) {
     console.error("[autoservicio] Falló el cambio de horario:", error);
     return { ok: false, codigo: "GENERICO", mensaje: null };

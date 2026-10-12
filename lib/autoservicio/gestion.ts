@@ -7,6 +7,12 @@
 // (`{ ok: false, codigo, mensaje }`) también al leer; sin cuerpo —no
 // contestó, o no está configurado— es `GENERICO`.
 //
+// EL ESTADO VA CON CACHÉ DE ~90 s por alumno (`lib/cache-gestion.ts`):
+// sin ella se pedía en cada flecha de semana y en cada refresco de «Mis
+// clases». Se guarda la respuesta que dice algo del alumno —elegible, o
+// por qué no—, nunca un error de Gestión. Las acciones la tiran tras un
+// cambio (`olvidarLecturasDe`). Los huecos y el cambio, sin caché.
+//
 // LA DEMO NO PREGUNTA: Diego Ruiz no existe en Gestión. Sale como no
 // elegible y ve el WhatsApp, que es lo que vería cualquier alumno al que
 // Gestión no deja cambiar nada. Para enseñar el flujo, la simulación.
@@ -15,23 +21,48 @@
 import "server-only";
 import { esIdDemo } from "@/lib/demo/cuenta";
 import { llamarGestion } from "@/lib/gestion-api";
+import { NoSeGuarda, SEGUNDOS_ALUMNO, conCache, etiquetaAlumno } from "@/lib/cache-gestion";
 import { aHuecoGestion, leerError, leerEstado, leerHuecos, leerResultadoCambio } from "@/lib/autoservicio/leer";
-import type { CuerpoCambiarHorario, ProveedorAutoservicio } from "@/lib/autoservicio/tipos";
+import type {
+  CodigoAutoservicio,
+  CuerpoCambiarHorario,
+  EstadoAutoservicio,
+  LecturaAutoservicio,
+  ProveedorAutoservicio,
+} from "@/lib/autoservicio/tipos";
 
 const PREFIJO = "autoservicio";
 const BASE = "/api/lms/autoservicio";
 
+/** Las negativas que son del alumno, no de Gestión: esas sí se guardan. */
+const NEGATIVAS_DEL_ALUMNO: CodigoAutoservicio[] = ["NO_ELEGIBLE", "RECUPERACION_PENDIENTE", "CALENDARIO_SIN_ACTUALIZAR"];
+
+/** El estado tal como lo da Gestión. Lo que no se debe guardar sale por `NoSeGuarda`. */
+async function estadoDeGestion(alumnoId: string): Promise<LecturaAutoservicio<EstadoAutoservicio>> {
+  const r = await llamarGestion(PREFIJO, `${BASE}/estado?${new URLSearchParams({ alumno_id: alumnoId })}`, { method: "GET" });
+  if (!r.ok) {
+    const respuesta: LecturaAutoservicio<EstadoAutoservicio> = { ok: false, codigo: leerError(r.cuerpo).codigo };
+    if (NEGATIVAS_DEL_ALUMNO.includes(respuesta.codigo)) return respuesta;
+    throw new NoSeGuarda(respuesta);
+  }
+  const estado = leerEstado(r.cuerpo);
+  if (!estado) {
+    console.error(`[${PREFIJO}] Gestión devolvió un estado que no se puede leer.`);
+    throw new NoSeGuarda<LecturaAutoservicio<EstadoAutoservicio>>({ ok: false, codigo: "GENERICO" });
+  }
+  return { ok: true, datos: estado };
+}
+
 export const autoservicioDeGestion: ProveedorAutoservicio = {
   async estado(alumnoId) {
     if (esIdDemo(alumnoId)) return { ok: false, codigo: "NO_ELEGIBLE" };
-    const r = await llamarGestion(PREFIJO, `${BASE}/estado?${new URLSearchParams({ alumno_id: alumnoId })}`, { method: "GET" });
-    if (!r.ok) return { ok: false, codigo: leerError(r.cuerpo).codigo };
-    const estado = leerEstado(r.cuerpo);
-    if (!estado) {
-      console.error(`[${PREFIJO}] Gestión devolvió un estado que no se puede leer.`);
-      return { ok: false, codigo: "GENERICO" };
-    }
-    return { ok: true, datos: estado };
+    return conCache<LecturaAutoservicio<EstadoAutoservicio>>(
+      ["autoservicio-estado", alumnoId],
+      SEGUNDOS_ALUMNO,
+      [etiquetaAlumno(alumnoId)],
+      () => estadoDeGestion(alumnoId),
+      { ok: false, codigo: "GENERICO" }
+    );
   },
 
   async huecos(alumnoId, modo, sesionId, fecha) {

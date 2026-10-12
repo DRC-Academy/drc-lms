@@ -1,9 +1,19 @@
 // ---------------------------------------------------------------
 // EL AUTOSERVICIO: EL INTERRUPTOR Y QUÉ IMPLEMENTACIÓN SE USA
 //
-// AUTOSERVICIO_ACTIVO=1 enseña los botones en «Mis clases». Apagado —el
-// valor por defecto, y cualquier cosa que no sea «1»—, la pantalla es la
-// de siempre y nada de esto se llama.
+// DOS INTERRUPTORES, UNO POR FUNCIÓN, para encender cada una por
+// separado:
+//
+//   AUTOSERVICIO_ACTIVO=1           «Cambiar de horario» (contrato v1).
+//   AUTOSERVICIO_PROFESOR_ACTIVO=1  «Cambiar de profesor» (fase 2). Apagado
+//                                   por defecto aunque el otro esté
+//                                   encendido. Hoy solo tiene datos con la
+//                                   simulación: con Gestión de verdad no
+//                                   se enseña hasta que exista el contrato
+//                                   v2 (rama fase2-cambio-profesor).
+//
+// Apagados —el valor por defecto, y cualquier cosa que no sea «1»—, la
+// pantalla es la de siempre y nada de esto se llama.
 //
 // AUTOSERVICIO_SIMULADO elige los datos simulados en vez de Gestión:
 // «1» es el escenario normal, y NO_ELEGIBLE, RECUPERACION_PENDIENTE o
@@ -22,8 +32,19 @@ import { autoservicioDeGestion } from "@/lib/autoservicio/gestion";
 import { autoservicioSimulado, escenarioDe } from "@/lib/autoservicio/simulacion";
 import type { ProveedorAutoservicio } from "@/lib/autoservicio/tipos";
 
+/** «Cambiar de horario». */
 export function autoservicioActivo(): boolean {
   return process.env.AUTOSERVICIO_ACTIVO?.trim() === "1";
+}
+
+/** «Cambiar de profesor». Independiente del de horario. */
+export function autoservicioProfesorActivo(): boolean {
+  return process.env.AUTOSERVICIO_PROFESOR_ACTIVO?.trim() === "1";
+}
+
+/** Si hay que montar «Tu horario»: alguna de las dos funciones encendida. */
+export function autoservicioVisible(): boolean {
+  return autoservicioActivo() || autoservicioProfesorActivo();
 }
 
 export function proveedorAutoservicio(): ProveedorAutoservicio {
@@ -37,8 +58,9 @@ export function proveedorAutoservicio(): ProveedorAutoservicio {
 }
 
 /**
- * Si se están usando los datos simulados. Es lo que enseña «Cambiar de
- * profesor», que de momento solo tiene simulación (fase 2).
+ * Si se están usando los datos simulados. Hoy es la única fuente de
+ * huecos de «Cambiar de profesor» (fase 2), así que además de su
+ * interruptor hace falta esto para que salga.
  */
 export function autoservicioSimuladoActivo(): boolean {
   return escenarioDe(process.env.AUTOSERVICIO_SIMULADO) !== null && process.env.VERCEL_ENV !== "production";

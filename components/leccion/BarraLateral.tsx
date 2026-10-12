@@ -10,6 +10,7 @@ import { usarMarco } from "@/components/leccion/MarcoCurso";
 import AnilloCurso from "@/components/estadisticas/AnilloCurso";
 import ComoVas, { ComoVasPlegado, lecturasComoVas } from "@/components/estadisticas/ComoVas";
 import type { EstadisticasAlumno } from "@/lib/estadisticas";
+import { useEstadisticasEnVivo } from "@/components/estadisticas/ejercicios-en-vivo";
 
 /**
  * La barra de iconos: la navegación de toda la aplicación en escritorio.
@@ -222,7 +223,7 @@ function ComoVasDeLaBarra({
 }) {
   const { t } = usarIdioma();
   const te = t.estadisticas;
-  const lecturas = lecturasComoVas(estadisticas, te);
+  const lecturas = lecturasComoVas(useEstadisticasEnVivo(estadisticas), te);
   if (lecturas.length === 0) return null;
 
   return (

@@ -7,6 +7,7 @@ import type { EstadisticasAlumno } from "@/lib/estadisticas";
 import { ESCALERA_MCER } from "@/lib/recorrido";
 import type { TextosEstadisticas } from "@/lib/textos/estadisticas";
 import type { ProgresoDiploma } from "@/lib/diploma";
+import { useEstadisticasEnVivo } from "@/components/estadisticas/ejercicios-en-vivo";
 
 /**
  * Lo que falta para el diploma, como cabe en un círculo: semanas
@@ -87,7 +88,7 @@ const llamaViva = (clases: number) => clases >= 5;
 const cifra = (n: number) => (n > 999 ? "999+" : String(n));
 
 export default function ComoVas({
-  estadisticas: e,
+  estadisticas,
   variante,
   hrefPractica,
   hrefDiploma,
@@ -106,6 +107,8 @@ export default function ComoVas({
   /** La barra lleva su propia lista para el lector, visible también plegada. */
   lector?: boolean;
 }) {
+  // Con los ejercicios de esta visita sumados (`ejercicios-en-vivo`).
+  const e = useEstadisticasEnVivo(estadisticas);
   const { t } = usarIdioma();
   const te = t.estadisticas;
   const tt = te.tarjeta;
@@ -239,7 +242,8 @@ export default function ComoVas({
  * debajo no se mueven al pasar el ratón. Solo cifras: las palabras
  * llegan al abrirla.
  */
-export function ComoVasPlegado({ estadisticas: e }: { estadisticas: EstadisticasAlumno }) {
+export function ComoVasPlegado({ estadisticas }: { estadisticas: EstadisticasAlumno }) {
+  const e = useEstadisticasEnVivo(estadisticas);
   const { clases, nivel } = e;
   return (
     <div aria-hidden className={`flex h-full w-11 flex-col items-center gap-2 overflow-hidden rounded-[14px] px-1 py-2.5 text-white ${FONDO}`}>

@@ -19,10 +19,18 @@
 // lecturas de TODOS los alumnos —el panel, el cron de avisos, el
 // buscador— no lo incluyen nunca: salen de Gestión y la demo no está
 // allí, que es lo que la deja fuera de métricas y correos.
+//
+// CACHÉ CORTA ENTRE PETICIONES (`lib/cache-gestion.ts`). Las lecturas de
+// UN alumno —perfil, calendario, excepciones, clases contadas, clases
+// por profesor, recorrido y última clase— se guardan 90–120 s con la
+// etiqueta del alumno, y `vista_profesores`, igual para todos, 10
+// minutos. Una lectura fallida no se guarda. La demo no pasa por la
+// caché: no toca Gestión.
 // ---------------------------------------------------------------
 
 import "server-only";
 import { cache } from "react";
+import { SEGUNDOS_ALUMNO, SEGUNDOS_CLASES, SEGUNDOS_PROFESORES, conCache, etiquetaAlumno, fallo } from "@/lib/cache-gestion";
 import { soloLectura } from "@/lib/supabase-server";
 import { escenarioDe, escenarioPorEmail, esIdDemo } from "@/lib/demo/cuenta";
 import { PROFESOR_DEMO } from "@/lib/demo/escenario";
@@ -172,19 +180,23 @@ export const obtenerPerfil = cache(async (alumnoId: string): Promise<PerfilAlumn
   const demo = await escenarioDe(alumnoId);
   if (demo) return aPerfil(demo.perfil);
 
-  const { data, error } = await soloLectura("vista_perfil_alumno")
-    .select("*")
-    .eq("alumno_id", alumnoId)
-    .order(...ORDEN_ESTADO)
-    .returns<Fila[]>();
+  return conCache(
+    ["perfil", alumnoId],
+    SEGUNDOS_ALUMNO,
+    [etiquetaAlumno(alumnoId)],
+    async () => {
+      const { data, error } = await soloLectura("vista_perfil_alumno")
+        .select("*")
+        .eq("alumno_id", alumnoId)
+        .order(...ORDEN_ESTADO)
+        .returns<Fila[]>();
+      if (error) fallo("No se pudo leer vista_perfil_alumno", error);
 
-  if (error) {
-    console.error("[gestion] No se pudo leer vista_perfil_alumno:", error.message);
-    return null;
-  }
-
-  const filas = deduplicar(data ?? []);
-  return filas.length > 0 ? aPerfil(filas[0]) : null;
+      const filas = deduplicar(data ?? []);
+      return filas.length > 0 ? aPerfil(filas[0]) : null;
+    },
+    null
+  );
 });
 
 // ---------------------------------------------------------------
@@ -278,42 +290,25 @@ export const obtenerCalendario = cache(async (alumnoId: string): Promise<FilaCal
   const demo = await escenarioDe(alumnoId);
   if (demo) return demo.calendario;
 
-  const { data, error } = await soloLectura("vista_calendario_alumno")
-    .select(CALENDARIO)
-    .eq("alumno_id", alumnoId)
-    .order("teacher_id", { ascending: true })
-    .order("celda", { ascending: true })
-    .returns<FilaCalendario[]>();
+  return conCache(
+    ["calendario", alumnoId],
+    SEGUNDOS_ALUMNO,
+    [etiquetaAlumno(alumnoId)],
+    async () => {
+      const { data, error } = await soloLectura("vista_calendario_alumno")
+        .select(CALENDARIO)
+        .eq("alumno_id", alumnoId)
+        .order("teacher_id", { ascending: true })
+        .order("celda", { ascending: true })
+        .returns<FilaCalendario[]>();
+      if (error) fallo("No se pudo leer vista_calendario_alumno", error);
 
-  if (error) {
-    console.error("[gestion] No se pudo leer vista_calendario_alumno:", error.message);
-    return [];
-  }
-  return (data ?? []).filter(
-    (f) => typeof f.teacher_id === "string" && typeof f.celda === "string" && typeof f.nombre_en_celda === "string"
+      return (data ?? []).filter(
+        (f) => typeof f.teacher_id === "string" && typeof f.celda === "string" && typeof f.nombre_en_celda === "string"
+      );
+    },
+    [] as FilaCalendario[]
   );
-});
-
-/**
- * Los 'quita' del alumno: clases que Gestión tiene anotadas como que no
- * van a ocurrir. Crudos: los valida `normalizarQuitas`.
- */
-export const obtenerQuitas = cache(async (alumnoId: string): Promise<unknown[]> => {
-  const demo = await escenarioDe(alumnoId);
-  if (demo) return demo.excepciones.filter((f) => f.tipo === "quita");
-
-  const { data, error } = await soloLectura("vista_excepciones_clase")
-    .select("tipo, fecha, hora")
-    .eq("alumno_id", alumnoId)
-    .eq("tipo", "quita")
-    .order("fecha", { ascending: true })
-    .returns<unknown[]>();
-
-  if (error) {
-    console.error("[gestion] No se pudo leer vista_excepciones_clase:", error.message);
-    return [];
-  }
-  return data ?? [];
 });
 
 /**
@@ -327,17 +322,21 @@ export const obtenerExcepciones = cache(async (alumnoId: string): Promise<unknow
   const demo = await escenarioDe(alumnoId);
   if (demo) return demo.excepciones;
 
-  const { data, error } = await soloLectura("vista_excepciones_clase")
-    .select("tipo, class_type, fecha, hora, original_date")
-    .eq("alumno_id", alumnoId)
-    .order("fecha", { ascending: true })
-    .returns<unknown[]>();
-
-  if (error) {
-    console.error("[gestion] No se pudo leer vista_excepciones_clase:", error.message);
-    return [];
-  }
-  return data ?? [];
+  return conCache(
+    ["excepciones", alumnoId],
+    SEGUNDOS_ALUMNO,
+    [etiquetaAlumno(alumnoId)],
+    async () => {
+      const { data, error } = await soloLectura("vista_excepciones_clase")
+        .select("tipo, class_type, fecha, hora, original_date")
+        .eq("alumno_id", alumnoId)
+        .order("fecha", { ascending: true })
+        .returns<unknown[]>();
+      if (error) fallo("No se pudo leer vista_excepciones_clase", error);
+      return data ?? [];
+    },
+    [] as unknown[]
+  );
 });
 
 /** Un profesor de Gestión: su usuario y, si ya se le puso, su nombre visible. */
@@ -353,27 +352,35 @@ export type ProfesorGestion = { usuario: string; visible: string | null };
  * pedirla antes haría fallar la consulta entera.
  */
 export const obtenerProfesores = cache(async (): Promise<Map<string, ProfesorGestion>> => {
-  const { data, error } = await soloLectura("vista_profesores")
-    .select("*")
-    .order("teacher_id", { ascending: true })
-    .returns<Fila[]>();
+  // En la caché van como pares: un `Map` no sobrevive a su JSON.
+  const deGestion = await conCache(
+    ["profesores"],
+    SEGUNDOS_PROFESORES,
+    ["gestion-profesores"],
+    async () => {
+      const { data, error } = await soloLectura("vista_profesores")
+        .select("*")
+        .order("teacher_id", { ascending: true })
+        .returns<Fila[]>();
+      if (error) fallo("No se pudo leer vista_profesores", error);
+
+      const pares: [string, ProfesorGestion][] = [];
+      for (const fila of data ?? []) {
+        const id = comoTexto(fila.teacher_id);
+        const usuario = comoTexto(fila.profesor);
+        if (id && usuario.trim()) pares.push([id, { usuario, visible: comoTextoOpcional(fila.nombre_visible) }]);
+      }
+      return pares;
+    },
+    [] as [string, ProfesorGestion][]
+  );
 
   // El profesor de la demo va siempre: no está en Gestión y su id
   // (`demo-t1`) no puede coincidir con ninguno de allí.
-  const profesores = new Map<string, ProfesorGestion>([
+  return new Map<string, ProfesorGestion>([
     [PROFESOR_DEMO.teacherId, { usuario: PROFESOR_DEMO.nombre, visible: null }],
+    ...deGestion,
   ]);
-
-  if (error) {
-    console.error("[gestion] No se pudo leer vista_profesores:", error.message);
-    return profesores;
-  }
-  for (const fila of data ?? []) {
-    const id = comoTexto(fila.teacher_id);
-    const usuario = comoTexto(fila.profesor);
-    if (id && usuario.trim()) profesores.set(id, { usuario, visible: comoTextoOpcional(fila.nombre_visible) });
-  }
-  return profesores;
 });
 
 /**
@@ -406,20 +413,27 @@ export const obtenerClasesPorProfesor = cache(async (alumnoId: string): Promise<
     return cuenta;
   }
 
-  for (let desde = 0; ; desde += 1000) {
-    const { data, error } = await soloLectura("class_analyses")
-      .select("teacher_id")
-      .eq("student_id", alumnoId)
-      .order("id", { ascending: true })
-      .range(desde, desde + 999)
-      .returns<Fila[]>();
-    if (error) {
-      console.error("[gestion] No se pudo contar las clases por profesor:", error.message);
-      return null;
-    }
-    for (const f of data ?? []) sumar(comoTexto(f.teacher_id));
-    if ((data ?? []).length < 1000) return cuenta;
-  }
+  // En la caché van como pares: un `Map` no sobrevive a su JSON.
+  const pares = await conCache(
+    ["clases-por-profesor", alumnoId],
+    SEGUNDOS_CLASES,
+    [etiquetaAlumno(alumnoId)],
+    async () => {
+      for (let desde = 0; ; desde += 1000) {
+        const { data, error } = await soloLectura("class_analyses")
+          .select("teacher_id")
+          .eq("student_id", alumnoId)
+          .order("id", { ascending: true })
+          .range(desde, desde + 999)
+          .returns<Fila[]>();
+        if (error) fallo("No se pudo contar las clases por profesor", error);
+        for (const f of data ?? []) sumar(comoTexto(f.teacher_id));
+        if ((data ?? []).length < 1000) return Array.from(cuenta);
+      }
+    },
+    null as [string, number][] | null
+  );
+  return pares ? new Map(pares) : null;
 });
 
 /**
@@ -436,18 +450,23 @@ export const obtenerClasesContadas = cache(async (alumnoId: string): Promise<num
   const demo = await escenarioDe(alumnoId);
   if (demo) return demo.clases.length;
 
-  const { data, error } = await soloLectura("vista_clases_contadas")
-    .select("clases_contadas")
-    .eq("alumno_id", alumnoId)
-    .limit(1)
-    .returns<Fila[]>();
+  return conCache(
+    ["clases-contadas", alumnoId],
+    SEGUNDOS_CLASES,
+    [etiquetaAlumno(alumnoId)],
+    async () => {
+      const { data, error } = await soloLectura("vista_clases_contadas")
+        .select("clases_contadas")
+        .eq("alumno_id", alumnoId)
+        .limit(1)
+        .returns<Fila[]>();
+      if (error) fallo("No se pudo leer vista_clases_contadas", error);
 
-  if (error) {
-    console.error("[gestion] No se pudo leer vista_clases_contadas:", error.message);
-    return null;
-  }
-  const n = Number(data?.[0]?.clases_contadas ?? 0);
-  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
+      const n = Number(data?.[0]?.clases_contadas ?? 0);
+      return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
+    },
+    null as number | null
+  );
 });
 
 export async function obtenerUltimaClase(alumnoId: string): Promise<UltimaClase | null> {
@@ -463,23 +482,27 @@ export async function obtenerUltimaClase(alumnoId: string): Promise<UltimaClase 
     return fila ? aUltimaClase(fila) : null;
   }
 
-  const { data, error } = await soloLectura("class_analyses")
-    .select(ULTIMA_CLASE)
-    .eq("student_id", alumnoId)
-    .eq("analysis_status", "ready")
-    .in("validation_status", VALIDACION_ACEPTADA)
-    .order("class_date", { ascending: false })
-    .order("analyzed_at", { ascending: false })
-    .limit(1)
-    .returns<Fila[]>();
+  return conCache(
+    ["ultima-clase", alumnoId],
+    SEGUNDOS_CLASES,
+    [etiquetaAlumno(alumnoId)],
+    async () => {
+      const { data, error } = await soloLectura("class_analyses")
+        .select(ULTIMA_CLASE)
+        .eq("student_id", alumnoId)
+        .eq("analysis_status", "ready")
+        .in("validation_status", VALIDACION_ACEPTADA)
+        .order("class_date", { ascending: false })
+        .order("analyzed_at", { ascending: false })
+        .limit(1)
+        .returns<Fila[]>();
+      if (error) fallo("No se pudo leer la última clase de class_analyses", error);
 
-  if (error) {
-    console.error("[gestion] No se pudo leer la última clase de class_analyses:", error.message);
-    return null;
-  }
-
-  const filas = data ?? [];
-  return filas.length > 0 ? aUltimaClase(filas[0]) : null;
+      const filas = data ?? [];
+      return filas.length > 0 ? aUltimaClase(filas[0]) : null;
+    },
+    null as UltimaClase | null
+  );
 }
 
 /**
@@ -1061,22 +1084,26 @@ export async function obtenerRecorrido(alumnoId: string): Promise<Recorrido> {
   const demo = await escenarioDe(alumnoId);
   if (demo) return aRecorrido(demo.clases.slice(0, MAXIMO_CLASES));
 
-  const { data, error } = await soloLectura("class_analyses")
-    .select("id, teacher_id, class_number, class_title, topics_covered, class_date, analyzed_at")
-    .eq("student_id", alumnoId)
-    // Hay alumnos con dos clases el mismo día; `analyzed_at` desempata
-    // para que el orden no cambie entre recargas.
-    .order("class_date", { ascending: false })
-    .order("analyzed_at", { ascending: false })
-    .limit(MAXIMO_CLASES)
-    .returns<Fila[]>();
+  return conCache(
+    ["recorrido", alumnoId],
+    SEGUNDOS_CLASES,
+    [etiquetaAlumno(alumnoId)],
+    async () => {
+      const { data, error } = await soloLectura("class_analyses")
+        .select("id, teacher_id, class_number, class_title, topics_covered, class_date, analyzed_at")
+        .eq("student_id", alumnoId)
+        // Hay alumnos con dos clases el mismo día; `analyzed_at` desempata
+        // para que el orden no cambie entre recargas.
+        .order("class_date", { ascending: false })
+        .order("analyzed_at", { ascending: false })
+        .limit(MAXIMO_CLASES)
+        .returns<Fila[]>();
+      if (error) fallo("No se pudo leer el recorrido de class_analyses", error);
 
-  if (error) {
-    console.error("[gestion] No se pudo leer el recorrido de class_analyses:", error.message);
-    return { clases: [], todas: [], totalClases: 0, clasesContadas: 0 };
-  }
-
-  return aRecorrido(data ?? []);
+      return aRecorrido(data ?? []);
+    },
+    { clases: [], todas: [], totalClases: 0, clasesContadas: 0 } as Recorrido
+  );
 }
 
 /** Las filas de `class_analyses`, de la más reciente a la más antigua, como `Recorrido`. */

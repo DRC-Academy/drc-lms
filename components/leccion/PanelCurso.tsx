@@ -55,7 +55,7 @@ export default function PanelCurso({
   modulos,
   moduloActualId,
   leccionActualId,
-  ejercicios,
+  ejercicios: ejerciciosDelServidor,
   ejerciciosActual,
   enEjercicios,
   alAbrirEjercicios,
@@ -91,6 +91,12 @@ export default function PanelCurso({
 }) {
   const { t: todos } = usarIdioma();
   const t = todos.curso;
+
+  // LA LECCIÓN ACTUAL, CON LO RESPONDIDO AHORA. La cifra del servidor es
+  // la de cuando se abrió la lección; ya no se refresca tras cada intento
+  // (ver `FlujoEjercicios`), así que aquí se toma la mayor de las dos:
+  // las que ya tenía respondidas y las que lleva en esta visita.
+  const ejercicios = conLosDeAhora(ejerciciosDelServidor, leccionActualId, ejerciciosActual);
 
   const [abierto, setAbierto] = useState<string | null>(moduloActualId);
   const [sub, setSub] = useState<"lecciones" | "ejercicios">(enEjercicios ? "ejercicios" : "lecciones");
@@ -526,3 +532,15 @@ function FilaEjercicios({
   );
 }
 
+/** Los ejercicios del módulo, con los respondidos en vivo en la lección actual. */
+function conLosDeAhora(
+  delServidor: Record<string, EjerciciosDeLeccion>,
+  leccionId: string,
+  vivo: EstadoEjerciciosActual | null
+): Record<string, EjerciciosDeLeccion> {
+  const suya = delServidor[leccionId];
+  if (!suya || !vivo) return delServidor;
+  const ahora = Math.min(suya.total, vivo.respondidos.filter(Boolean).length);
+  if (ahora <= suya.hechos) return delServidor;
+  return { ...delServidor, [leccionId]: { ...suya, hechos: ahora } };
+}

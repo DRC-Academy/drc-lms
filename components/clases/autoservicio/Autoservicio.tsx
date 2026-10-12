@@ -14,12 +14,14 @@ import { Aviso, BotonWhatsApp } from "@/components/clases/autoservicio/Piezas";
  *
  * Lo que se enseña lo decide el estado de Gestión, no esta tarjeta:
  *
- *   · Elegible: «Cambiar de horario», «Cambiar de profesor» (solo con la
- *     simulación, ver `CambiarProfesor`) y, debajo, «¿No encuentras el
- *     horario que buscas?» con el WhatsApp.
+ *   · Elegible: «Cambiar de horario» (con AUTOSERVICIO_ACTIVO),
+ *     «Cambiar de profesor» (con AUTOSERVICIO_PROFESOR_ACTIVO, y de
+ *     momento solo con la simulación, ver `CambiarProfesor`) y, debajo,
+ *     «¿No encuentras el horario que buscas?» con el WhatsApp.
  *   · No elegible, o Gestión sin contestar: en lugar de los botones, por
  *     qué —con el texto de su código— y el WhatsApp como botón principal.
- *   · El equipo mirando la ficha: el estado a la vista, ningún botón.
+ *   · El equipo mirando la ficha: una frase, ningún botón. Sin estado:
+ *     no se le pregunta a Gestión.
  *
  * Cada flujo se abre en una hoja (`HojaInferior`), desde abajo en móvil
  * y centrada en escritorio.
@@ -29,19 +31,23 @@ export default function Autoservicio({
   whatsapp,
   otrosProfesores,
   soloLectura,
+  conHorario = true,
 }: {
-  estado: LecturaAutoservicio<EstadoAutoservicio>;
+  /** Null solo en solo lectura: entonces no se pregunta a Gestión. */
+  estado: LecturaAutoservicio<EstadoAutoservicio> | null;
   whatsapp: string;
   /** Null: sin «Cambiar de profesor». */
   otrosProfesores: Record<string, HuecoConProfesor[]> | null;
   soloLectura: boolean;
+  /** «Cambiar de horario», con su interruptor (AUTOSERVICIO_ACTIVO). */
+  conHorario?: boolean;
 }) {
   const t = usarIdioma().t.autoservicio;
   const [abierto, setAbierto] = useState<"horario" | "profesor" | null>(null);
   const cerrar = useCallback(() => setAbierto(null), []);
 
-  const datos = estado.ok && estado.datos.elegible ? estado.datos : null;
-  const motivo = estado.ok ? estado.datos.motivoNoElegible ?? "GENERICO" : estado.codigo;
+  const datos = estado?.ok && estado.datos.elegible ? estado.datos : null;
+  const motivo = !estado ? "GENERICO" : estado.ok ? estado.datos.motivoNoElegible ?? "GENERICO" : estado.codigo;
 
   return (
     <section aria-labelledby="titulo-autoservicio" className={`${TARJETA} mt-[26px] p-[18px] min-[900px]:mt-9 min-[900px]:p-6`}>
@@ -54,18 +60,20 @@ export default function Autoservicio({
       ) : datos ? (
         <>
           <div className="mt-4 flex flex-col gap-2.5 min-[500px]:flex-row">
-            <button
-              type="button"
-              onClick={() => setAbierto("horario")}
-              className="btn-verde inline-flex min-h-[52px] flex-1 items-center justify-center rounded-full px-6 text-[16px] font-bold"
-            >
-              {t.cambiarHorario}
-            </button>
+            {conHorario && (
+              <button
+                type="button"
+                onClick={() => setAbierto("horario")}
+                className="btn-verde inline-flex min-h-[52px] flex-1 items-center justify-center rounded-full px-6 text-[16px] font-bold"
+              >
+                {t.cambiarHorario}
+              </button>
+            )}
             {otrosProfesores && (
               <button
                 type="button"
                 onClick={() => setAbierto("profesor")}
-                className="btn-verde-linea inline-flex min-h-[52px] flex-1 items-center justify-center rounded-full px-6 text-[16px] font-bold"
+                className={`${conHorario ? "btn-verde-linea" : "btn-verde"} inline-flex min-h-[52px] flex-1 items-center justify-center rounded-full px-6 text-[16px] font-bold`}
               >
                 {t.cambiarProfesor}
               </button>
@@ -85,9 +93,11 @@ export default function Autoservicio({
 
       {datos && (
         <>
-          <HojaInferior abierta={abierto === "horario"} alCerrar={cerrar} etiqueta={t.cambiarHorario} etiquetaCerrar={t.cerrar}>
-            <CambiarHorario estado={datos} whatsapp={whatsapp} alCerrar={cerrar} />
-          </HojaInferior>
+          {conHorario && (
+            <HojaInferior abierta={abierto === "horario"} alCerrar={cerrar} etiqueta={t.cambiarHorario} etiquetaCerrar={t.cerrar}>
+              <CambiarHorario estado={datos} whatsapp={whatsapp} alCerrar={cerrar} />
+            </HojaInferior>
+          )}
           {otrosProfesores && (
             <HojaInferior abierta={abierto === "profesor"} alCerrar={cerrar} etiqueta={t.cambiarProfesor} etiquetaCerrar={t.cerrar}>
               <CambiarProfesor estado={datos} otros={otrosProfesores} whatsapp={whatsapp} alCerrar={cerrar} />

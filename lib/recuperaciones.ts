@@ -32,6 +32,7 @@ import "server-only";
 import { cache } from "react";
 import { esIdDemo } from "@/lib/demo/cuenta";
 import { llamarGestion, type RespuestaGestion } from "@/lib/gestion-api";
+import { NoSeGuarda, SEGUNDOS_ALUMNO, conCache, etiquetaAlumno } from "@/lib/cache-gestion";
 
 export const ESTADOS = [
   "esperando_alumno",
@@ -146,25 +147,38 @@ export type Lista = { ok: true; recuperaciones: Recuperacion[] } | { ok: false }
  * pantalla lo dice en su hueco y sigue con lo demás.
  *
  * En `cache()`: si en la misma petición lo piden dos piezas, una sola
- * llamada a Gestión.
+ * llamada a Gestión. Y entre peticiones, ~90 s por alumno
+ * (`lib/cache-gestion.ts`): elegir y proponer la tiran
+ * (`app/acciones-recuperaciones.ts`). Un fallo de Gestión no se guarda.
  */
 export const listarRecuperaciones = cache(async (alumnoId: string): Promise<Lista> => {
   if (alumnoId === "" || esIdDemo(alumnoId)) return { ok: true, recuperaciones: [] };
+  return conCache<Lista>(
+    ["recuperaciones", alumnoId],
+    SEGUNDOS_ALUMNO,
+    [etiquetaAlumno(alumnoId)],
+    () => listarDeGestion(alumnoId),
+    { ok: false }
+  );
+});
 
+/** El listado tal como lo da Gestión. Un fallo sale por `NoSeGuarda`. */
+async function listarDeGestion(alumnoId: string): Promise<Lista> {
   const r = await llamar(`/api/lms/recuperaciones?alumno_id=${encodeURIComponent(alumnoId)}`, { method: "GET" });
   if (!r.ok) {
     // Un 404 del listado es un alumno que Gestión no conoce: no tiene
     // recuperaciones, no es un fallo que haya que enseñar.
-    return r.status === 404 ? { ok: true, recuperaciones: [] } : { ok: false };
+    if (r.status === 404) return { ok: true, recuperaciones: [] };
+    throw new NoSeGuarda<Lista>({ ok: false });
   }
 
   const lista = obj(r.cuerpo)?.recuperaciones;
   if (!Array.isArray(lista)) {
     console.error("[recuperaciones] Gestión devolvió un listado sin `recuperaciones`.");
-    return { ok: false };
+    throw new NoSeGuarda<Lista>({ ok: false });
   }
   return { ok: true, recuperaciones: lista.map(leerRecuperacion).filter((x): x is Recuperacion => x !== null) };
-});
+}
 
 // ---------------------------------------------------------------
 // 2 Y 3. ELEGIR Y PROPONER

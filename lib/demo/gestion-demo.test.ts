@@ -49,7 +49,7 @@ describe("lib/gestion con la cuenta demo", () => {
     expect(recorrido.todas.length).toBe(24);
 
     expect((await gestion.obtenerCalendario(ID_DEMO)).length).toBe(2);
-    expect(await gestion.obtenerQuitas(ID_DEMO)).toEqual([]);
+    expect(await gestion.obtenerExcepciones(ID_DEMO)).toEqual([]);
     expect((await gestion.buscarAlumnoPorEmail(EMAIL_DEMO))?.alumnoId).toBe(ID_DEMO);
   });
 

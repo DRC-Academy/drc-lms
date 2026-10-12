@@ -14,7 +14,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
-import { guardarIntento } from "@/lib/cursos-servidor";
+import { esPrimerIntento, guardarIntento } from "@/lib/cursos-servidor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,7 +51,9 @@ export async function POST(peticion: NextRequest) {
     return NextResponse.json({ error: "Falta correcto" }, { status: 400 });
   }
 
-  return NextResponse.json({
-    guardado: await guardarIntento(sesion.alumnoId, ejercicioId, datos.correcto),
-  });
+  // `nuevo`: era el primer intento de ese ejercicio, así que «Ejercicios
+  // hechos» sube uno. El navegador lo suma a «Cómo vas» sin refrescar.
+  const guardado = await guardarIntento(sesion.alumnoId, ejercicioId, datos.correcto);
+  const nuevo = guardado ? await esPrimerIntento(sesion.alumnoId, ejercicioId) : false;
+  return NextResponse.json({ guardado, nuevo });
 }
