@@ -1142,3 +1142,160 @@ function aRecorrido(filas: Fila[]): Recorrido {
     clasesContadas: Math.max(mayorNumero, filas.length),
   };
 }
+
+// ---------------------------------------------------------------
+// LA GARANTÍA DEL PLAN
+//
+// Cuatro lecturas de todos los alumnos a la vez, para el cron diario y
+// la pantalla `/garantia`. Las tres vistas son de
+// `supabase/gestion-vista-partes-clase.sql`.
+//
+// DEVUELVEN NULL SI FALLAN, nunca una lista vacía: sin partes, cualquier
+// alumno parecería no haber ido a clase, y sin las clases programadas,
+// haber ido a todas. Quien llama no calcula nada con un null.
+//
+// La demo no tiene clases ni partes en Gestión, y no se le inventan:
+// la garantía es de alumnos reales y la demo queda fuera.
+// ---------------------------------------------------------------
+
+export type AlumnoGarantia = {
+  alumnoId: string;
+  nombre: string;
+  plan: string;
+  nivel: string;
+  profesor: string;
+  fechaInicio: string | null;
+  /** El nombre del producto de WooCommerce. */
+  producto: string | null;
+  planContratado: string | null;
+  activo: boolean;
+  /** Las de `AlumnoPanel`: con ellas `nivelDelAlumno` decide sus cursos. */
+  nivelProfesor: string | null;
+  nivelFicha: string | null;
+  nivelPrueba: string | null;
+};
+
+export async function alumnosParaGarantia(): Promise<AlumnoGarantia[] | null> {
+  const { data, error } = await soloLectura("vista_perfil_alumno")
+    .select(
+      "alumno_id, nombre, plan, nivel, profesor, fecha_inicio, producto, plan_contratado, estado_asignacion, nivel_profesor, nivel_ficha, nivel_prueba"
+    )
+    .order("alumno_id", { ascending: true })
+    .order(...ORDEN_ESTADO)
+    .returns<Fila[]>();
+
+  if (error) {
+    console.error("[gestion] No se pudo listar para la garantía:", error.message);
+    return null;
+  }
+
+  return deduplicar(data ?? [])
+    .filter((fila) => !esIdDemo(comoTexto(fila.alumno_id)))
+    .map((fila) => ({
+      alumnoId: comoTexto(fila.alumno_id),
+      nombre: comoTexto(fila.nombre),
+      plan: comoTexto(fila.plan),
+      nivel: comoTexto(fila.nivel),
+      profesor: comoTexto(fila.profesor),
+      fechaInicio: comoTextoOpcional(fila.fecha_inicio),
+      producto: comoTextoOpcional(fila.producto),
+      planContratado: comoTextoOpcional(fila.plan_contratado),
+      activo: esAsignacionActiva(fila.estado_asignacion),
+      nivelProfesor: comoTextoOpcional(fila.nivel_profesor),
+      nivelFicha: comoTextoOpcional(fila.nivel_ficha),
+      nivelPrueba: comoTextoOpcional(fila.nivel_prueba),
+    }));
+}
+
+/** Todas las filas de una vista, por tramos de 1000. Null si falla un tramo. */
+async function todasLasFilas(
+  vista: "vista_partes_clase" | "vista_clases_programadas" | "vista_fin_plan",
+  columnas: string,
+  orden: string,
+  alumnoId?: string
+): Promise<Fila[] | null> {
+  const filas: Fila[] = [];
+  for (let desde = 0; ; desde += PAGINA) {
+    const consulta = soloLectura(vista).select(columnas);
+    const { data, error } = await (alumnoId ? consulta.eq("alumno_id", alumnoId) : consulta)
+      .order(orden, { ascending: true })
+      .order("alumno_id", { ascending: true })
+      .range(desde, desde + PAGINA - 1)
+      .returns<Fila[]>();
+
+    if (error) {
+      console.error(`[gestion] No se pudo leer ${vista}:`, error.message);
+      return null;
+    }
+    const pagina = data ?? [];
+    filas.push(...pagina);
+    if (pagina.length < PAGINA) return filas;
+  }
+}
+
+export type FilaParteGestion = {
+  alumnoId: string;
+  parteId: string | null;
+  fecha: string;
+  hora: string | null;
+  tipo: string;
+  profesor: string | null;
+  motivo: string | null;
+  rescheduledTo: string | null;
+  registradoEn: string | null;
+  avisadoEn: string | null;
+  canceladoPor: string | null;
+};
+
+/** Los partes de clase de `vista_partes_clase`: de todos, o de uno. */
+export async function partesDeClase(alumnoId?: string): Promise<FilaParteGestion[] | null> {
+  const filas = await todasLasFilas(
+    "vista_partes_clase",
+    "alumno_id, parte_id, fecha, hora, profesor, class_type, rescheduled_to, registrado_en, motivo, avisado_en, cancelado_por",
+    "parte_id",
+    alumnoId
+  );
+  if (!filas) return null;
+
+  return filas.map((fila) => ({
+    alumnoId: comoTexto(fila.alumno_id),
+    parteId: comoTextoOpcional(fila.parte_id),
+    fecha: comoTexto(fila.fecha),
+    hora: comoTextoOpcional(fila.hora),
+    tipo: comoTexto(fila.class_type),
+    profesor: comoTextoOpcional(fila.profesor),
+    motivo: comoTextoOpcional(fila.motivo),
+    rescheduledTo: comoTextoOpcional(fila.rescheduled_to),
+    registradoEn: comoTextoOpcional(fila.registrado_en),
+    avisadoEn: comoTextoOpcional(fila.avisado_en),
+    canceladoPor: comoTextoOpcional(fila.cancelado_por),
+  }));
+}
+
+export type FilaProgramadaGestion = { alumnoId: string; fecha: string; hora: string; teacherId: string | null };
+
+/** Las clases que había en el calendario cada día, desde el 23/09/2026. */
+export async function clasesProgramadas(alumnoId?: string): Promise<FilaProgramadaGestion[] | null> {
+  const filas = await todasLasFilas("vista_clases_programadas", "alumno_id, fecha, hora, teacher_id", "fecha", alumnoId);
+  if (!filas) return null;
+
+  return filas.map((fila) => ({
+    alumnoId: comoTexto(fila.alumno_id),
+    fecha: comoTexto(fila.fecha),
+    hora: comoTexto(fila.hora),
+    teacherId: comoTextoOpcional(fila.teacher_id),
+  }));
+}
+
+/** alumno_id → último día de su plan. Solo los que lo tienen. */
+export async function finesDePlan(): Promise<Map<string, string> | null> {
+  const filas = await todasLasFilas("vista_fin_plan", "alumno_id, fin_plan", "alumno_id");
+  if (!filas) return null;
+
+  const fines = new Map<string, string>();
+  for (const fila of filas) {
+    const fin = comoTextoOpcional(fila.fin_plan);
+    if (fin) fines.set(comoTexto(fila.alumno_id), fin.slice(0, 10));
+  }
+  return fines;
+}

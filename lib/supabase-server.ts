@@ -65,6 +65,13 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // sin leer nada más de `class_analyses` que el número.
 // `supabase/gestion-vista-clases-contadas.sql`.
 //
+// `vista_partes_clase`, `vista_clases_programadas` y `vista_fin_plan`
+// entraron con la garantía del plan, que decide la asistencia SOLO con
+// datos de Gestión: qué pasó con cada clase (el parte del profesor, sin
+// comentarios ni capturas), qué clases había en el calendario cada día
+// y el último día del plan. De `students` sale el id y esa fecha, nada
+// más. `supabase/gestion-vista-partes-clase.sql`.
+//
 // Añadir algo a esta lista es ampliar lo que el LMS ve de una base con
 // datos de alumnos, profesores y nóminas. Solo con un motivo escrito,
 // como este.
@@ -76,6 +83,9 @@ export const VISTAS = [
   "vista_calendario_alumno",
   "vista_profesores",
   "vista_clases_contadas",
+  "vista_partes_clase",
+  "vista_clases_programadas",
+  "vista_fin_plan",
 ] as const;
 export type Vista = (typeof VISTAS)[number];
 

@@ -136,12 +136,19 @@ export default async function Home({
             Quién entra, qué práctica se genera y a quién conviene ir a buscar. Lo de las clases y
             los pagos sigue en DRC Gestión.
           </p>
-          {/* La otra sección del equipo: quién pulsa «Unirse a la clase». */}
+          {/* Las otras secciones del equipo: quién pulsa «Unirse a la clase» y la garantía. */}
           <Link
             href="/entradas"
             className="mt-2 inline-flex min-h-[44px] items-center gap-1 text-[14px] font-semibold text-marca-verdeOsc hover:text-marca-tinta lg:mt-3 lg:min-h-0"
           >
             Entradas a clase
+            <Chevron />
+          </Link>
+          <Link
+            href="/garantia"
+            className="ml-4 mt-2 inline-flex min-h-[44px] items-center gap-1 text-[14px] font-semibold text-marca-verdeOsc hover:text-marca-tinta lg:mt-3 lg:min-h-0"
+          >
+            Garantía
             <Chevron />
           </Link>
 

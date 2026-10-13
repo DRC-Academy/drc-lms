@@ -117,3 +117,24 @@ export async function cargarEntradas(mes: string): Promise<DatosEntradas> {
   const [alumnos, filas, desde] = await Promise.all([alumnosDelPanel(), entradasDelMes(mes), primeraEntrada()]);
   return { alumnos: alumnos.filter((a) => !esCuentaDeEquipo(a.alumnoId)), filas, desde };
 }
+
+/**
+ * Los clics de un alumno, de todos los meses. Para el detalle de la
+ * garantía, donde salen APARTE y solo como dato de apoyo: no deciden
+ * nada. Null si no se pudieron leer.
+ */
+export async function entradasDelAlumno(alumnoId: string): Promise<FilaEntrada[] | null> {
+  const { data, error } = await baseLms()
+    .from("entradas_clase")
+    .select(COLUMNAS)
+    .eq("alumno_id", alumnoId)
+    .order("clicked_at", { ascending: false })
+    .limit(500)
+    .returns<FilaEntrada[]>();
+
+  if (error) {
+    console.error("[entradas] No se pudieron leer las entradas del alumno:", error.message);
+    return null;
+  }
+  return data ?? [];
+}

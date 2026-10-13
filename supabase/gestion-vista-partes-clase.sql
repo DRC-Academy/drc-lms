@@ -36,6 +36,46 @@
 --
 -- FECHAS Y HORAS: TAL CUAL, EN HORA DE MADRID. La conversión a instante
 -- la hace `lib/clases.ts` (`instanteEnMadrid`), como con las otras.
+--
+-- ---------------------------------------------------------------
+-- AMPLIACIÓN PARA LA GARANTÍA (13/10/2026)
+--
+-- Columnas nuevas, todas al final para no mover las que había:
+--
+--   parte_id       `class_records.id`. El LMS guarda copia del parte que
+--                  hizo perder la garantía; con el id se sabe cuál era.
+--   teacher_id     quién subió el parte.
+--   registrado_en  `class_records.created_at`: cuándo se REGISTRÓ, que
+--                  NO es cuándo avisó el alumno. Solo es una cota: si
+--                  el parte de una reprogramada se creó 30 h antes de
+--                  la clase, el aviso fue de al menos 30 h. Si se creó
+--                  después, no dice nada.
+--   motivo         quién la movió, sacado del texto fijo que escribe
+--                  Gestión en el comentario de una reprogramada:
+--                    'alumno_antelacion'  «El alumno avisó con anticipación»
+--                                         / «pidió cambiarla con antelación»
+--                    'alumno_sobre_hora'  «El alumno avisó sobre la hora»
+--                    'profesor'           «Yo (el profesor) necesito…»
+--                    'autoservicio'       la movió el alumno desde el LMS;
+--                                         `registrado_en` es entonces la
+--                                         hora exacta del cambio.
+--                  NULL en cualquier otro caso. El comentario en sí no
+--                  sale.
+--   recovery_for_date  la clase que recupera una 'recuperacion'.
+--   avisado_en     cuándo avisó el alumno, y
+--   cancelado_por  quién canceló ('alumno', 'profesor', 'academia').
+--                  Los dos los añade `supabase-avisado-en.sql` de
+--                  Gestión (rama `garantia-avisado-en`): ESE SCRIPT VA
+--                  ANTES QUE ESTE, o la vista no se crea.
+--
+-- Y una vista aparte, `vista_clases_programadas`, sobre
+-- `scheduled_class_snapshots`: las clases que había en el calendario
+-- cada día, guardadas por el cron nocturno de Gestión DESDE EL
+-- 23/09/2026 (antes no hay nada). Es el denominador: sin ella, una
+-- clase sin parte no existe para el LMS.
+--
+-- Con un parte duplicado se queda el PRIMERO que se registró: es el
+-- que da la cota de antelación más favorable al alumno.
 -- ===============================================================
 
 
@@ -63,7 +103,7 @@ order by ordinal_position;
 -- PRUÉBALO ANTES EN SECO:
 --
 --   begin;
---     <el create or replace view>
+--     <los tres create or replace view>
 --     <el revoke del PASO 2>
 --     <las consultas del PASO 3>
 --   rollback;
@@ -91,7 +131,24 @@ partes as (
     cr.rescheduled_to,
     substring(cr.comment from
       'Reprogramada para [0-9]{4}-[0-9]{2}-[0-9]{2} (([01][0-9]|2[0-3]):[0-5][0-9])'
-    )                                              as hora_reprogramada
+    )                                              as hora_reprogramada,
+    cr.id                                          as parte_id,
+    cr.teacher_id,
+    cr.created_at                                  as registrado_en,
+    case
+      when cr.class_type <> 'reprogramada' then null
+      when cr.comment ~* 'Motivo: el alumno la movi[oó] desde la plataforma'
+        then 'autoservicio'
+      when cr.comment ~* 'Motivo: El alumno avis[oó] sobre la hora'
+        then 'alumno_sobre_hora'
+      when cr.comment ~* 'Motivo: El alumno (avis[oó] con anticipaci[oó]n|pidi[oó] cambiarla con antelaci[oó]n)'
+        then 'alumno_antelacion'
+      when cr.comment ~* 'Motivo: Yo \(el profesor\)'
+        then 'profesor'
+    end                                            as motivo,
+    cr.recovery_for_date,
+    cr.avisado_en,
+    cr.cancelado_por
   from public.class_records cr
   cross join hoy
   where cr.reverted_at is null
@@ -114,8 +171,10 @@ alumnos as (
   group by 1
   having count(distinct a.student_id) = 1
 )
--- `distinct` colapsa los partes duplicados, como en las excepciones.
-select distinct
+-- `distinct on` colapsa los partes duplicados, como en las excepciones,
+-- y de cada grupo se queda el registrado antes.
+select distinct on (al.alumno_id, p.fecha, p.hora, p.profesor, p.class_type,
+                    p.original_date, p.rescheduled_to, p.hora_reprogramada)
   al.alumno_id,
   p.fecha,
   p.hora,
@@ -123,9 +182,76 @@ select distinct
   p.class_type,
   p.original_date,
   p.rescheduled_to,
-  p.hora_reprogramada
+  p.hora_reprogramada,
+  p.parte_id,
+  p.teacher_id,
+  p.registrado_en,
+  p.motivo,
+  p.recovery_for_date,
+  p.avisado_en,
+  p.cancelado_por
 from partes p
-join alumnos al on al.nombre_norm = p.nombre_norm;
+join alumnos al on al.nombre_norm = p.nombre_norm
+order by al.alumno_id, p.fecha, p.hora, p.profesor, p.class_type,
+         p.original_date, p.rescheduled_to, p.hora_reprogramada,
+         p.registrado_en;
+
+
+-- ---------------------------------------------------------------
+-- PASO 1 BIS — LAS CLASES QUE HABÍA EN EL CALENDARIO
+--
+-- Una fila por clase programada y día, desde el 23/09/2026. Mismo
+-- cruce por nombre. `hora` sale como 'HH:00', igual que en los partes.
+-- ---------------------------------------------------------------
+
+create or replace view public.vista_clases_programadas
+with (security_invoker = on) as
+with alumnos as (
+  select
+    regexp_replace(
+      translate(lower(btrim(a.student_name)),
+                'áàäâéèëêíìïîóòöôúùüûñç',
+                'aaaaeeeeiiiioooouuuunc'),
+      '\s+', ' ', 'g'
+    )                         as nombre_norm,
+    min(a.student_id)         as alumno_id
+  from public.assignments a
+  where a.student_id is not null
+    and btrim(coalesce(a.student_name, '')) <> ''
+  group by 1
+  having count(distinct a.student_id) = 1
+)
+select
+  al.alumno_id,
+  s.class_date                                   as fecha,
+  lpad(s.start_hour::text, 2, '0') || ':00'      as hora,
+  s.duration_hours                               as horas,
+  s.is_recovery                                  as es_recuperacion,
+  s.teacher_id
+from public.scheduled_class_snapshots s
+join alumnos al
+  on al.nombre_norm = regexp_replace(
+       translate(lower(btrim(s.student_name)),
+                 'áàäâéèëêíìïîóòöôúùüûñç',
+                 'aaaaeeeeiiiioooouuuunc'),
+       '\s+', ' ', 'g');
+
+
+-- ---------------------------------------------------------------
+-- PASO 1 TER — EL FIN DEL PLAN
+--
+-- `students.manual_active_until`, que según `lib/endingPlans.ts` de
+-- Gestión es el único fin de plan que existe hoy (WooCommerce no
+-- devuelve fechas). Solo el id y la fecha: de `students` no sale nada
+-- más. NULL = sin fin conocido, y la garantía sigue «En curso».
+-- ---------------------------------------------------------------
+
+create or replace view public.vista_fin_plan
+with (security_invoker = on) as
+select
+  s.id                     as alumno_id,
+  s.manual_active_until    as fin_plan
+from public.students s;
 
 
 -- ---------------------------------------------------------------
@@ -135,12 +261,14 @@ join alumnos al on al.nombre_norm = p.nombre_norm;
 -- ---------------------------------------------------------------
 
 revoke select on public.vista_partes_clase from anon, authenticated;
+revoke select on public.vista_clases_programadas from anon, authenticated;
+revoke select on public.vista_fin_plan from anon, authenticated;
 
 
 -- ---------------------------------------------------------------
 -- PASO 3 — COMPROBAR
 --
--- Pásame la salida de las cuatro: de ellas depende cómo se cuenta el
+-- Pásame la salida de las seis: de ellas depende cómo se cuenta el
 -- denominador del porcentaje en el panel.
 -- ---------------------------------------------------------------
 
@@ -208,22 +336,45 @@ do $$
 declare
   abiertos text;
 begin
-  select string_agg(rol, ', ' order by rol)
+  select string_agg(vista || ' → ' || rol, ', ' order by vista, rol)
     into abiertos
   from unnest(array['anon', 'authenticated']) as rol
-  where has_table_privilege(rol::name, 'public.vista_partes_clase', 'select');
+  cross join unnest(array['public.vista_partes_clase',
+                          'public.vista_clases_programadas',
+                          'public.vista_fin_plan']) as vista
+  where has_table_privilege(rol::name, vista, 'select');
 
   if abiertos is not null then
-    raise exception 'vista_partes_clase quedó legible para: %. Revócalo antes de seguir.', abiertos;
+    raise exception 'Vistas legibles: %. Revócalo antes de seguir.', abiertos;
   end if;
 
-  raise notice 'vista_partes_clase creada y cerrada a anon y authenticated.';
+  raise notice 'Las tres vistas de la garantía, creadas y cerradas a anon y authenticated.';
 end
 $$;
+
+-- 5 · El motivo de las reprogramadas. Hoy deberían salir unas 369
+-- 'alumno_antelacion', 82 'profesor' y casi ninguna NULL.
+select class_type, motivo, count(*) as filas
+from public.vista_partes_clase
+where class_type = 'reprogramada'
+group by 1, 2
+order by filas desc;
+
+-- 6 · Clases programadas sin ningún parte ese día (hasta anteayer).
+-- Son las que el LMS no podrá dar ni por asistidas ni por perdidas.
+select count(*) as programadas,
+       count(*) filter (where not exists (
+         select 1 from public.vista_partes_clase p
+         where p.alumno_id = c.alumno_id and p.fecha = c.fecha
+       )) as sin_parte
+from public.vista_clases_programadas c
+where c.fecha <= (now() at time zone 'Europe/Madrid')::date - 2;
 
 
 -- ---------------------------------------------------------------
 -- VUELTA ATRÁS
 --
 --   drop view if exists public.vista_partes_clase;
+--   drop view if exists public.vista_clases_programadas;
+--   drop view if exists public.vista_fin_plan;
 -- ---------------------------------------------------------------

@@ -4,6 +4,10 @@
     {
       "path": "/api/avisos-apertura",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/garantia",
+      "schedule": "0 4 * * *"
     }
   ]
 }

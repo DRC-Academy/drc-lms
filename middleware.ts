@@ -50,6 +50,9 @@ import { destinoSeguro } from "@/lib/volver";
  *     con `Authorization: Bearer CRON_SECRET`, que es lo que comprueba
  *     la propia ruta antes de hacer nada.
  *
+ *   · `/api/garantia` — el recálculo diario de la garantía, otro cron
+ *     con el mismo `CRON_SECRET`, que la ruta comprueba igual.
+ *
  *   · `/api/externo` — lo que consulta DRC Gestión de servidor a
  *     servidor, sin alumno delante. Lo autoriza el secreto compartido
  *     de la cabecera `x-gestion-secret`, que comprueba cada ruta antes
@@ -73,6 +76,7 @@ const PUBLICAS = [
   "/avisos",
   "/api/avisos",
   "/api/avisos-apertura",
+  "/api/garantia",
   "/api/externo",
   "/api/wp",
 ];
