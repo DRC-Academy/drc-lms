@@ -105,8 +105,10 @@ export default function BarraLateral({
         <nav data-tour="navegacion" className="flex flex-col gap-1.5 px-[18px]">
           {enlaces.map((enlace) => {
             const activo = enlace.clave === seccion;
+            // Otra web: un `<a>` normal, que el `Link` de Next es para rutas propias.
+            const Enlace = enlace.externo ? "a" : Link;
             return (
-              <Link
+              <Enlace
                 key={enlace.clave}
                 href={enlace.href}
                 aria-current={activo ? "page" : undefined}
@@ -124,7 +126,7 @@ export default function BarraLateral({
                 >
                   {enlace.texto}
                 </span>
-              </Link>
+              </Enlace>
             );
           })}
 

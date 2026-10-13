@@ -159,8 +159,10 @@ export default function MenuPerfil({
             <nav aria-label={t.navegacion.secciones} className="mb-3 border-b border-marca-nieblaOscura pb-3">
               {enLaHoja.map((enlace) => {
                 const activo = enlace.clave === seccion;
+                // Otra web: un `<a>` normal, que el `Link` de Next es para rutas propias.
+                const Enlace = enlace.externo ? "a" : Link;
                 return (
-                  <Link
+                  <Enlace
                     key={enlace.clave}
                     href={enlace.href}
                     onClick={cerrar}
@@ -174,7 +176,7 @@ export default function MenuPerfil({
                     <svg aria-hidden viewBox="0 0 16 16" className="h-[14px] w-[14px] shrink-0 text-marca-gris" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M6 3.5 10.5 8 6 12.5" />
                     </svg>
-                  </Link>
+                  </Enlace>
                 );
               })}
             </nav>

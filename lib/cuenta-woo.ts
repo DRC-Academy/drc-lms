@@ -16,6 +16,9 @@
 /** La pestaña Perfil de Mi cuenta: suscripción, pagos, facturas y datos. */
 export const PERFIL_WOO = "https://drcacademy.com/mi-cuenta/perfil/";
 
+/** La página de referidos de Mi cuenta, «Consigue un descuento». */
+export const DESCUENTO_WOO = "https://drcacademy.com/mi-cuenta/consigue-un-descuento/";
+
 /**
  * El cambio de plan. El snippet `wordpress/drc-ampliar-plan.php` convierte
  * el parámetro en el switch de la suscripción del alumno logueado. Sin

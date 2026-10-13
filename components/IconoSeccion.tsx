@@ -9,8 +9,15 @@
 
 export type SeccionActiva = "inicio" | "curso" | "clases" | "practica" | "progreso" | "diploma";
 
+/**
+ * Las claves de la lista de enlaces: las secciones y los enlaces que
+ * salen del LMS («descuento»). Estos no están en `SeccionActiva`, así que
+ * `seccionDeRuta` no puede devolverlos: nunca se marcan como actuales.
+ */
+export type ClaveEnlace = SeccionActiva | "descuento";
+
 export type EnlaceSeccion = {
-  clave: SeccionActiva;
+  clave: ClaveEnlace;
   texto: string;
   /** La etiqueta de la barra de pestañas de móvil, donde `texto` no cabe. */
   corto: string;
@@ -21,6 +28,12 @@ export type EnlaceSeccion = {
    * no hay una segunda lista de enlaces para móvil.
    */
   enBarraMovil?: boolean;
+  /**
+   * Un enlace a otra web, no una pantalla del LMS: se pinta con un `<a>`
+   * normal y no con el `Link` de Next, en la misma pestaña. Nunca es la
+   * sección actual.
+   */
+  externo?: boolean;
 };
 
 /** Las secciones de la barra de móvil, y las que van en la hoja del perfil. */
@@ -31,7 +44,7 @@ export function Icono({
   activo,
   className = "h-[18px] w-[18px]",
 }: {
-  seccion: SeccionActiva;
+  seccion: ClaveEnlace;
   activo: boolean;
   className?: string;
 }) {
@@ -87,6 +100,14 @@ export function Icono({
           <path d="M8 7.4h4.1M8 10.3h2.7" stroke={activo ? "#FFFFFF" : trazo} />
         </>
       )}
+      {/* Descuento: una etiqueta de precio, con la punta abajo a la
+          derecha y el agujero del cordel arriba. */}
+      {seccion === "descuento" && (
+        <>
+          <path d="M2.6 3.6v4.3c0 .4.2.8.5 1.1l6.3 6.3a1.4 1.4 0 0 0 2 0l4-4a1.4 1.4 0 0 0 0-2L9.1 3a1.5 1.5 0 0 0-1.1-.4H3.6a1 1 0 0 0-1 1Z" stroke={trazo} fill={relleno} />
+          <circle cx="5.9" cy="5.9" r="1.1" stroke={activo ? "#FFFFFF" : trazo} />
+        </>
+      )}
       {seccion === "progreso" && (
         <>
           <path d="M3.4 14.6v-3.1" stroke={trazo} strokeWidth="2.2" />
@@ -100,6 +121,8 @@ export function Icono({
 
 /**
  * La sección en la que está una ruta, para marcarla en la navegación.
+ * Solo devuelve secciones del LMS (`SeccionActiva`): un enlace externo
+ * no tiene ruta aquí y nunca sale marcado.
  *
  * SE DEDUCE DE LA RUTA Y NO SE PASA DESDE LA PÁGINA porque la navegación
  * vivía en el layout común, que no se vuelve a renderizar al pasar de una

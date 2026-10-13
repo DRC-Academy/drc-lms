@@ -49,12 +49,17 @@ export type TextosNavegacion = {
    */
   miDiploma: string;
   /**
+   * El enlace a la página de referidos de la web (WooCommerce): no es una
+   * sección del LMS. Como «Mi diploma», en móvil va en la hoja del perfil.
+   */
+  descuento: string;
+  /**
    * Las etiquetas de la barra de pestañas de móvil. Son seis celdas
    * —cinco secciones y el perfil— y a 375px cada una mide unos 62px:
    * "Mi progreso" no cabe y se cortaba en "Mi progr…". Aquí va sin
    * posesivo; el nombre entero sigue en el `aria-label`.
    */
-  cortas: { inicio: string; clases: string; curso: string; practica: string; progreso: string; diploma: string };
+  cortas: { inicio: string; clases: string; curso: string; practica: string; progreso: string; diploma: string; descuento: string };
   /** El `aria-label` de las dos barras, la de arriba y la de móvil. */
   secciones: string;
 
@@ -93,7 +98,8 @@ const ES: TextosNavegacion = {
   miProgreso: "Mi progreso",
   clases: "Clases",
   miDiploma: "Mi diploma",
-  cortas: { inicio: "Inicio", clases: "Clases", curso: "Curso", practica: "Para ti", progreso: "Progreso", diploma: "Diploma" },
+  descuento: "50% de descuento",
+  cortas: { inicio: "Inicio", clases: "Clases", curso: "Curso", practica: "Para ti", progreso: "Progreso", diploma: "Diploma", descuento: "Descuento" },
   secciones: "Secciones",
 
   ayuda: "Ayuda",
@@ -124,7 +130,8 @@ const EN: TextosNavegacion = {
   miProgreso: "My progress",
   clases: "Classes",
   miDiploma: "My diploma",
-  cortas: { inicio: "Home", clases: "Classes", curso: "Course", practica: "For you", progreso: "Progress", diploma: "Diploma" },
+  descuento: "50% off",
+  cortas: { inicio: "Home", clases: "Classes", curso: "Course", practica: "For you", progreso: "Progress", diploma: "Diploma", descuento: "Discount" },
   secciones: "Sections",
 
   ayuda: "Help",

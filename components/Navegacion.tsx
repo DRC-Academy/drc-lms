@@ -31,6 +31,7 @@ import Link from "next/link";
 import ChatAyuda from "@/components/ChatAyuda";
 import CabeceraIdioma from "@/components/CabeceraIdioma";
 import ContenidoApp from "@/components/ContenidoApp";
+import { DESCUENTO_WOO } from "@/lib/cuenta-woo";
 import { conFoco } from "@/lib/foco";
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { TextosNavegacion } from "@/lib/textos/navegacion";
@@ -83,7 +84,13 @@ export function enlacesDeSecciones({
     // cada una baja a 45px. Sale en la hoja del perfil, que lee esta
     // misma lista (`enBarraMovil`).
     { clave: "diploma" as const, texto: t.miDiploma, corto: t.cortas.diploma, href: "/diploma", enBarraMovil: false },
-  ].map((enlace) => ({ ...enlace, href: conFoco(enlace.href, foco ?? null) }));
+    // EL DESCUENTO NO ES DEL LMS: la página de referidos de la web, en la
+    // misma pestaña. En móvil, en la hoja del perfil como el diploma.
+    { clave: "descuento" as const, texto: t.descuento, corto: t.cortas.descuento, href: DESCUENTO_WOO, enBarraMovil: false, externo: true },
+  ].map((enlace) =>
+    // `conFoco` deja solo la ruta: a una URL de otra web le quitaría el dominio.
+    "externo" in enlace ? enlace : { ...enlace, href: conFoco(enlace.href, foco ?? null) },
+  );
 }
 
 /** Lo que el marco necesita saber de quién es la pantalla. */
