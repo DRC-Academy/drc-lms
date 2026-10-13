@@ -435,7 +435,7 @@ export function DetalleGarantiaAlumno({
                   {ETIQUETA_ESTADO[h.estado]}
                   {h.origen === "calculo" ? " (cálculo)" : h.origen === "correccion" ? ` (corregido por ${h.autor})` : ` (al cálculo, por ${h.autor})`}
                   <span className="block text-marca-grisSuave">{h.nota ? `«${h.nota}»` : h.motivo}</span>
-                  {h.estado === "perdida" && h.origen === "calculo" && (
+                  {h.estado === "perdida" && h.origen === "calculo" && h.estado_anterior !== null && (
                     <span className="block text-marca-grisSuave">{h.aviso_enviado_en ? "Aviso al equipo enviado." : "Aviso al equipo pendiente."}</span>
                   )}
                 </li>

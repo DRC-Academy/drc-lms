@@ -402,7 +402,12 @@ async function apuntarCambio(alumnoId: string, anterior: Estado | null, vigente:
 // ---------------------------------------------------------------
 // EL AVISO AL EQUIPO
 //
-// Un correo por cada paso a «Perdida» del cálculo. La fila del historial
+// Un correo por cada paso a «Perdida» del cálculo DESDE OTRO ESTADO. La
+// primera vez que se guarda a un alumno (`estado_anterior` null) no se
+// avisa: no es un cambio, es el punto de partida, y la primera pasada
+// mandaría un correo por cada alumno que ya la tenía perdida.
+//
+// La fila del historial
 // se RESERVA antes de enviar —`aviso_enviado_en` de null a ahora, solo
 // si sigue en null— y se suelta si Resend falla: así dos ejecuciones a
 // la vez no mandan dos correos, y un fallo se reintenta mañana.
@@ -426,6 +431,7 @@ async function enviarAvisosPendientes(): Promise<{ enviados: number; fallidos: n
     .select("id, alumno_id, motivo, fecha_perdida")
     .eq("estado", "perdida")
     .eq("origen", "calculo")
+    .not("estado_anterior", "is", null)
     .is("aviso_enviado_en", null)
     .order("creado_en", { ascending: true })
     .limit(100)

@@ -15,6 +15,11 @@
 //
 // Si falla una lectura no se escribe nada y la ruta devuelve 503: un
 // cálculo con datos a medias podría dar una pérdida que no es.
+//
+// APAGADO HASTA `GARANTIA_ACTIVA=1`. Una pérdida guardada es definitiva,
+// así que el cron no guarda nada hasta que las reglas estén cerradas
+// (falta decidir desde qué fecha cuenta el contenido). Mientras tanto
+// `/garantia` enseña el cálculo del día igual, y `?seco=1` funciona.
 // ---------------------------------------------------------------
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -39,6 +44,10 @@ export async function GET(peticion: NextRequest) {
   const params = peticion.nextUrl.searchParams;
   const alumno = params.get("alumno")?.trim() || undefined;
   const seco = params.get("seco") === "1";
+
+  if (!seco && process.env.GARANTIA_ACTIVA !== "1") {
+    return NextResponse.json({ desactivada: true, motivo: "Falta GARANTIA_ACTIVA=1: no se guarda ni se avisa." });
+  }
 
   const resumen = await recalcular(new Date(), { seco, alumno });
   if (!resumen) {
