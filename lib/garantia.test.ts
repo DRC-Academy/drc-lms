@@ -3,6 +3,7 @@ import {
   calcularGarantia,
   esIntensivo,
   estadoVigente,
+  incumplimientos,
   evaluarParte,
   semanasDelDrip,
   type ClaseProgramada,
@@ -362,5 +363,22 @@ describe("lo que se guarda", () => {
   it("el mismo estado con otro motivo no es un cambio", () => {
     const previo = { estado: "en_curso" as const, motivo: "otro texto", fechaPerdida: null, evidencia: null, corregido: false };
     expect(estadoVigente(previo, enCurso).cambia).toBe(false);
+  });
+});
+
+describe("todos los incumplimientos", () => {
+  it("salen todos, por fecha, y el primero es el motivo", () => {
+    const v = calcularGarantia(
+      entrada({
+        partes: [
+          parte({ fecha: "2026-10-09", tipo: "cancelacion_hora" }),
+          parte({ fecha: "2026-10-06", tipo: "falta_sin_aviso" }),
+          parte({ fecha: "2026-10-07", tipo: "normal" }),
+        ],
+      })
+    );
+    const todos = incumplimientos(v.clases, v.semanas);
+    expect(todos.map((p) => p.fecha)).toEqual(["2026-10-06", "2026-10-09"]);
+    expect(todos[0].motivo).toBe(v.motivo);
   });
 });

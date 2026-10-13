@@ -6,6 +6,8 @@ import {
   ETIQUETA_ESTADO,
   ETIQUETA_SEMANA,
   diaLegible,
+  duracionLegible,
+  incumplimientos,
   type ClaseEvaluada,
   type Estado,
   type Evidencia,
@@ -152,7 +154,8 @@ function FilaClase({ c }: { c: ClaseEvaluada }) {
   );
 }
 
-function ContenidoSemana({ s }: { s: SemanaEvaluada }) {
+function ContenidoSemana({ s, completa = false }: { s: SemanaEvaluada; completa?: boolean }) {
+  const tope = completa ? Infinity : 8;
   const hechas = s.lecciones.filter((l) => l.resultado === "a_tiempo").length;
   const aMirar = s.lecciones.filter((l) => l.resultado !== "a_tiempo");
   const tono = s.resultado === "tarde" || s.resultado === "pendiente" ? "font-semibold text-marca-tinta" : s.resultado === "a_tiempo" ? "text-marca-verdeOsc" : "text-marca-gris";
@@ -166,12 +169,12 @@ function ContenidoSemana({ s }: { s: SemanaEvaluada }) {
       </p>
       {aMirar.length > 0 && s.resultado !== "en_plazo" && (
         <ul className="mt-1 space-y-0.5">
-          {aMirar.slice(0, 8).map((l) => (
+          {aMirar.slice(0, tope).map((l) => (
             <li key={l.id} className="text-pretty text-[12px] leading-[1.4] text-marca-grisSuave">
               {l.resultado === "tarde" && l.completadaEn ? `Tarde (${diaLegible(diaLocal(new Date(l.completadaEn)))})` : "Sin completar"} · {l.curso}: {l.titulo}
             </li>
           ))}
-          {aMirar.length > 8 && <li className="text-[12px] text-marca-grisSuave">y {aMirar.length - 8} más</li>}
+          {aMirar.length > tope && <li className="text-[12px] text-marca-grisSuave">y {aMirar.length - tope} más</li>}
         </ul>
       )}
     </div>
@@ -196,17 +199,80 @@ function porSemanas(inicio: string | null, clases: ClaseEvaluada[], semanas: Sem
   return Array.from(mapa.values()).sort((a, b) => b.numero - a.numero);
 }
 
-function Prueba({ evidencia }: { evidencia: Evidencia }) {
-  if (evidencia.tipo === "clase") {
-    const c = evidencia.clase;
+/** El nombre del tipo de parte, como lo ve el profesor en Gestión. */
+const TIPO_EN_GESTION: Record<string, string> = {
+  normal: "Clase normal",
+  recuperacion: "Clase de recuperación",
+  reprogramada: "Reprogramada",
+  cancelacion_hora: "Cancelación sobre la hora",
+  falta_sin_aviso: "Falta sin aviso",
+  falta_con_aviso: "Falta con aviso",
+  cancelada_por_profesor: "Cancelada por el profesor",
+  cancelada_con_preaviso: "Cancelada con preaviso",
+};
+
+const FORMATO_HORA = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+
+/** "12 oct 2026, 17:03", en hora de España. */
+function momento(iso: string): string {
+  const d = new Date(iso);
+  return `${diaLegible(diaLocal(d))}, ${FORMATO_HORA.format(d)}`;
+}
+
+/** Qué pasó exactamente: la clase o la semana, con todos sus datos. */
+function QuePaso({ evidencia }: { evidencia: Evidencia }) {
+  if (evidencia.tipo === "semana") {
+    const s = evidencia.semana;
     return (
-      <ul>
-        <FilaClase c={c} />
-      </ul>
+      <>
+        <p className="text-pretty text-[13px] leading-[1.5] text-marca-gris">
+          Semana {s.numero} del plan: abrió el {diaLegible(s.abre)} y había que completarla antes de las 00:00 del {diaLegible(s.vence)}.
+        </p>
+        <ContenidoSemana s={s} completa />
+      </>
     );
   }
-  return <ContenidoSemana s={evidencia.semana} />;
+
+  const c = evidencia.clase;
+  const p = c.parte;
+  const aviso =
+    c.antelacionMin !== null
+      ? `${duracionLegible(c.antelacionMin)} antes de la clase${p?.avisadoEn ? ` (avisó el ${momento(p.avisadoEn)})` : ""}`
+      : c.resultado === "no_asistida"
+        ? "No avisó"
+        : "No consta la hora: cuenta lo que registró el profesor";
+  return (
+    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[13px] leading-[1.45]">
+      <dt className="text-marca-grisSuave">Clase</dt>
+      <dd className="tabular-nums text-marca-tinta">
+        {diaLegible(c.fecha)}
+        {c.hora ? `, ${c.hora}` : ""}
+      </dd>
+      <dt className="text-marca-grisSuave">Profesor</dt>
+      <dd className="text-marca-tinta">{c.profesor ?? "—"}</dd>
+      <dt className="text-marca-grisSuave">Resultado</dt>
+      <dd className="font-semibold text-marca-tinta">{ETIQUETA_CLASE[c.resultado]}</dd>
+      <dt className="text-marca-grisSuave">Aviso</dt>
+      <dd className="text-pretty text-marca-tinta">{aviso}</dd>
+      {p && (
+        <>
+          <dt className="text-marca-grisSuave">En Gestión</dt>
+          <dd className="text-pretty text-marca-gris">
+            {TIPO_EN_GESTION[p.tipo] ?? p.tipo}
+            {p.registradoEn ? ` · parte subido el ${momento(p.registradoEn)}` : ""}
+          </dd>
+        </>
+      )}
+    </dl>
+  );
 }
+
+const TITULO_MOTIVO: Record<Estado, string> = {
+  perdida: "Por qué la ha perdido",
+  sin_datos: "Por qué no se puede decidir",
+  en_curso: "Cómo va",
+  cumplida: "Cómo terminó",
+};
 
 const MENSAJES: Record<string, string> = {
   corregido: "Corrección guardada. El cálculo diario ya no la pisará.",
@@ -235,6 +301,8 @@ export function DetalleGarantiaAlumno({
 }) {
   const { fila, veredicto, guardado, evidencia, historial } = detalle;
   const semanas = porSemanas(inicio, veredicto.clases, veredicto.semanas).filter((s) => s.clases.length > 0 || s.contenido);
+  // Con los datos de hoy, todo lo que la haría perder menos el motivo ya enseñado.
+  const otros = fila.estado === "perdida" ? incumplimientos(veredicto.clases, veredicto.semanas).filter((o) => o.motivo !== fila.motivo) : [];
 
   return (
     <section aria-labelledby="titulo-detalle" className="lg:overflow-hidden lg:rounded-[16px] lg:border lg:border-marca-borde lg:bg-white">
@@ -274,44 +342,24 @@ export function DetalleGarantiaAlumno({
           </p>
         )}
 
-        {/* ------------------------- EL VEREDICTO ------------------------- */}
+        {/* ------------------------- EL MOTIVO ------------------------- */}
         <div className="rounded-[16px] border border-marca-borde bg-white px-4 py-3 lg:rounded-none lg:border-0 lg:px-[18px] lg:py-4">
           <div className="flex items-center gap-2 lg:hidden">
             <Chapa estado={fila.estado} />
             {fila.corregido && <span className="text-[12px] text-marca-grisSuave">corregido a mano</span>}
           </div>
-          <p className="mt-2 text-pretty text-[14px] leading-[1.5] text-marca-tinta lg:mt-0">{fila.motivo}</p>
-          <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[12.5px] text-marca-gris">
-            <dt className="text-marca-grisSuave">Plan</dt>
-            <dd className="min-w-0 text-pretty">
-              {fila.plan || "—"}
-              {fila.intensivo ? " · intensivo: sin cláusula de contenido" : ""}
-            </dd>
-            <dt className="text-marca-grisSuave">Inicio</dt>
-            <dd className="tabular-nums">{inicio ? diaLegible(inicio.slice(0, 10)) : "—"}</dd>
-            <dt className="text-marca-grisSuave">Fin</dt>
-            <dd className="tabular-nums">{fila.fin ? diaLegible(fila.fin) : "Sin fecha de fin"}</dd>
-            {fila.fechaPerdida && (
-              <>
-                <dt className="text-marca-grisSuave">Perdida el</dt>
-                <dd className="tabular-nums">{diaLegible(fila.fechaPerdida)}</dd>
-              </>
-            )}
-            {guardado?.calculado_en && (
-              <>
-                <dt className="text-marca-grisSuave">Guardado</dt>
-                <dd className="tabular-nums">{diaLegible(diaLocal(new Date(guardado.calculado_en)))}</dd>
-              </>
-            )}
-          </dl>
+          <p className={`mt-3 lg:mt-0 ${ROTULO}`}>{TITULO_MOTIVO[fila.estado]}</p>
+          <p className="mt-1.5 text-pretty text-[15px] font-semibold leading-[1.45] text-marca-tinta">{fila.motivo}</p>
+          {fila.fechaPerdida && <p className="mt-1 text-[13px] tabular-nums text-marca-gris">Perdida el {diaLegible(fila.fechaPerdida)}.</p>}
+          {guardado?.corregido && (
+            <p className="mt-2 text-pretty text-[12.5px] leading-[1.45] text-marca-gris">
+              Corregido por {guardado.corregido_por} el {guardado.corregido_en ? diaLegible(diaLocal(new Date(guardado.corregido_en))) : "—"}: «
+              {guardado.nota_correccion}»
+            </p>
+          )}
           {fila.estado !== veredicto.estado && (
             <p className="mt-2 text-pretty text-[12.5px] leading-[1.45] text-marca-gris">
               Con los datos de hoy, el cálculo diría «{ETIQUETA_ESTADO[veredicto.estado]}»: {veredicto.motivo}
-            </p>
-          )}
-          {guardado?.corregido && (
-            <p className="mt-2 text-pretty text-[12.5px] leading-[1.45] text-marca-gris">
-              Corregido por {guardado.corregido_por} el {guardado.corregido_en ? diaLegible(diaLocal(new Date(guardado.corregido_en))) : "—"}: «{guardado.nota_correccion}»
             </p>
           )}
           {veredicto.huecos.length > 1 && (
@@ -323,15 +371,54 @@ export function DetalleGarantiaAlumno({
           )}
         </div>
 
-        {/* LA PRUEBA, tal como se guardó el día que la perdió. */}
+        {/* QUÉ PASÓ: la clase o la semana, tal como se guardó el día que la perdió. */}
         {evidencia && fila.estado === "perdida" && (
-          <div className="rounded-[16px] border border-marca-borde bg-white px-4 py-3 lg:rounded-none lg:border-0 lg:px-[18px]">
-            <p className={ROTULO}>La prueba, tal como se guardó</p>
-            <div className="mt-1">
-              <Prueba evidencia={evidencia} />
+          <div className="rounded-[16px] border border-marca-borde bg-white px-4 py-3 lg:rounded-none lg:border-0 lg:px-[18px] lg:py-4">
+            <p className={ROTULO}>Qué pasó</p>
+            <div className="mt-2">
+              <QuePaso evidencia={evidencia} />
             </div>
           </div>
         )}
+
+        {/* Lo demás que también la habría hecho perder. */}
+        {otros.length > 0 && (
+          <div className="rounded-[16px] border border-marca-borde bg-white px-4 py-3 lg:rounded-none lg:border-0 lg:px-[18px] lg:py-4">
+            <p className={ROTULO}>Otros incumplimientos · {otros.length}</p>
+            <ul className="mt-1">
+              {otros.map((o, i) => (
+                <li
+                  key={`${o.fecha}-${i}`}
+                  className="border-b border-marca-nieblaOscura py-2 text-pretty text-[13px] leading-[1.45] text-marca-tinta last:border-b-0"
+                >
+                  {o.motivo}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* ------------------------- EL PLAN ------------------------- */}
+        <div className="rounded-[16px] border border-marca-borde bg-white px-4 py-3 lg:rounded-none lg:border-0 lg:px-[18px] lg:py-4">
+          <p className={ROTULO}>El plan</p>
+          <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[12.5px] text-marca-gris">
+            <dt className="text-marca-grisSuave">Plan</dt>
+            <dd className="min-w-0 text-pretty">
+              {fila.plan || "—"}
+              {fila.intensivo ? " · intensivo: sin cláusula de contenido" : ""}
+            </dd>
+            <dt className="text-marca-grisSuave">Inicio</dt>
+            <dd className="tabular-nums">{inicio ? diaLegible(inicio.slice(0, 10)) : "—"}</dd>
+            <dt className="text-marca-grisSuave">Fin</dt>
+            <dd className="tabular-nums">{fila.fin ? diaLegible(fila.fin) : "Sin fecha de fin"}</dd>
+            {guardado?.calculado_en && (
+              <>
+                <dt className="text-marca-grisSuave">Calculado</dt>
+                <dd className="tabular-nums">{momento(guardado.calculado_en)}</dd>
+              </>
+            )}
+          </dl>
+        </div>
 
         {/* ------------------------- SEMANA A SEMANA ------------------------- */}
         <div className="rounded-[16px] border border-marca-borde bg-white px-4 py-3 lg:rounded-none lg:border-0 lg:px-[18px]">

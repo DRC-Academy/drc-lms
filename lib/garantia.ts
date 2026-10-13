@@ -495,7 +495,8 @@ export function semanasDelDrip(
 // EL VEREDICTO
 // ---------------------------------------------------------------
 
-type Perdida = { fecha: string; motivo: string; evidencia: Evidencia };
+/** Un incumplimiento: lo que por sí solo hace perder la garantía. */
+export type Perdida = { fecha: string; motivo: string; evidencia: Evidencia };
 
 function perdidaDeClase(c: ClaseEvaluada): Perdida {
   const cuando = claseLegible(c.fecha, c.hora);
@@ -518,6 +519,17 @@ function perdidaDeSemana(s: SemanaEvaluada): Perdida {
   if (tarde.length > 0) partes.push(`${tarde.length} ${tarde.length === 1 ? "completada" : "completadas"} tarde`);
   const motivo = `Semana ${s.numero} (abrió el ${diaLegible(s.abre)}, vencía el ${diaLegible(s.vence)}): ${partes.join(" y ")}.`;
   return { fecha: s.vence, motivo, evidencia: { tipo: "semana", semana: s } };
+}
+
+/**
+ * Todo lo que por sí solo la haría perder, del más antiguo al más
+ * reciente. El primero es el motivo; el resto se enseña en el detalle.
+ */
+export function incumplimientos(clases: ClaseEvaluada[], semanas: SemanaEvaluada[]): Perdida[] {
+  return [
+    ...clases.filter((c) => RESULTADOS_DE_PERDIDA.has(c.resultado)).map(perdidaDeClase),
+    ...semanas.filter((s) => s.resultado === "tarde" || s.resultado === "pendiente").map(perdidaDeSemana),
+  ].sort((a, b) => a.fecha.localeCompare(b.fecha));
 }
 
 export function calcularGarantia(e: EntradaGarantia): Veredicto {
@@ -576,10 +588,7 @@ export function calcularGarantia(e: EntradaGarantia): Veredicto {
   }
 
   // ---- ¿Perdida? La primera prueba, por fecha. ----
-  const perdidas: Perdida[] = [
-    ...clases.filter((c) => RESULTADOS_DE_PERDIDA.has(c.resultado)).map(perdidaDeClase),
-    ...semanas.filter((s) => s.resultado === "tarde" || s.resultado === "pendiente").map(perdidaDeSemana),
-  ].sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const perdidas = incumplimientos(clases, semanas);
 
   if (perdidas.length > 0) {
     const primera = perdidas[0];
