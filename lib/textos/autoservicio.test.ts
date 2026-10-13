@@ -8,8 +8,6 @@ const TODOS: CodigoAutoservicio[] = [...CODIGOS_AUTOSERVICIO, "A_MEDIAS", "GENER
 const MISMO_TEXTO: CodigoAutoservicio[][] = [
   ["HUECO_YA_OCUPADO", "SLOT_NO_DISPONIBLE"],
   ["ERROR_LECTURA", "CALENDARIO_ILEGIBLE"],
-  // Cambio de profesor: ese profesor no vale, sea por lo que sea.
-  ["PROFESOR_NO_EXISTE", "PROFESOR_ARCHIVADO", "PROFESOR_DE_PRUEBA"],
   // Cambio de profesor: no tiene una asignación desde la que cambiar.
   ["ASIGNACION_INACTIVA", "ASIGNACION_NO_EXISTE"],
 ];
@@ -46,14 +44,15 @@ describe("textos por código de error", () => {
     });
 
     it(`${idioma}: lo que se resuelve dentro del flujo no manda fuera`, () => {
-      for (const c of ["SLOT_NO_DISPONIBLE", "MISMO_HORARIO", "EN_CURSO", "MISMO_PROFESOR", "PROFESOR_ARCHIVADO"] as const) {
+      for (const c of ["SLOT_NO_DISPONIBLE", "MISMO_HORARIO", "EN_CURSO"] as const) {
         expect(t.motivo(c)).not.toMatch(/WhatsApp/);
       }
     });
 
-    it(`${idioma}: en el cambio de profesor, el calendario sin actualizar es el del ELEGIDO: se elige otro`, () => {
-      expect(t.motivoProfesor("CALENDARIO_SIN_ACTUALIZAR")).not.toBe(t.motivo("CALENDARIO_SIN_ACTUALIZAR"));
-      expect(t.motivoProfesor("CALENDARIO_SIN_ACTUALIZAR")).not.toMatch(/WhatsApp/);
+    it(`${idioma}: en el cambio de profesor, el calendario sin actualizar no es el de SU profesor`, () => {
+      // El suyo no frena el cambio de profesor y el nuevo lo elige Gestión:
+      // si llega, no se le habla de «tu profesor».
+      expect(t.motivoProfesor("CALENDARIO_SIN_ACTUALIZAR")).toBe(t.motivo("GENERICO"));
       // Lo que no habla de su profesor ni de su horario, igual que siempre.
       expect(t.motivoProfesor("HORAS_NO_COINCIDEN")).toBe(t.motivo("HORAS_NO_COINCIDEN"));
       expect(t.motivoProfesor("A_MEDIAS")).toBe(t.motivo("A_MEDIAS"));
@@ -146,9 +145,13 @@ describe("cuándo podrá cambiar de profesor", () => {
     expect(t.profesorNoDisponible({ puede: false, motivo: "NO_ELEGIBLE", disponibleDesde: null })).toMatch(/profesor/);
   });
 
-  it("la pantalla de hecho dice lo pedido", () => {
-    expect(AUTOSERVICIO.es.hechoProfesorAviso).toBe(
-      "Tu nuevo profesor ya está avisado. Te llegará un correo de bienvenida y te pasará el enlace de la clase."
+  it("la pantalla de hecho dice lo pedido, con el nombre que asignó Gestión", () => {
+    const t = AUTOSERVICIO.es;
+    expect(`${t.hechoProfesor("Daniela")} ${t.hechoProfesorAviso}`).toBe(
+      "Tu nuevo profesor es Daniela. Ya está avisado y tiene tu ficha para preparar vuestra primera clase. Te llegará un correo de bienvenida y te pasará el enlace de la clase."
     );
+    expect(AUTOSERVICIO.en.hechoProfesor("Daniela")).toBe("Your new teacher is Daniela.");
+    // Sin nombre (no debería pasar), no queda una frase coja.
+    expect(t.hechoProfesor("")).toBe("Ya tienes nuevo profesor.");
   });
 });

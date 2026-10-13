@@ -17,9 +17,11 @@ import { Aviso, BotonWhatsApp } from "@/components/clases/autoservicio/Piezas";
  *
  *   · «Cambiar de horario», con AUTOSERVICIO_ACTIVO y si es `elegible`.
  *   · «Cambiar de profesor», con AUTOSERVICIO_PROFESOR_ACTIVO y si
- *     `puede_cambiar_profesor` lo dice (contrato v2). Si no puede, la
- *     razón y —si Gestión la sabe— desde cuándo podrá. Con Gestión en v1
- *     no viene, y el botón no sale.
+ *     `puede_cambiar_profesor` lo dice. Si todavía no puede pero
+ *     Gestión dice desde cuándo (`disponible_desde`), el botón sale
+ *     DESACTIVADO con esa fecha debajo: que no parezca que no existe. Si
+ *     no puede sin fecha, solo la razón. Con Gestión en v1 no viene, y el
+ *     botón no sale.
  *
  *   Pueden ir por separado: con el calendario de su profesor sin
  *   actualizar no puede cambiar de horario pero sí de profesor.
@@ -62,6 +64,8 @@ export default function Autoservicio({
   const horario = conHorario && leido?.elegible ? leido : null;
   const cambio = conProfesor ? leido?.cambioProfesor ?? null : null;
   const puedeProfesor = cambio?.puede === true;
+  /** Todavía no, pero con fecha: el botón se ve, desactivado. */
+  const profesorEnEspera = cambio !== null && !cambio.puede && cambio.disponibleDesde !== null;
   /** Por qué no puede cambiar de profesor ahora, cuando Gestión lo dice. */
   const profesorNo = cambio && !cambio.puede ? t.profesorNoDisponible(cambio) : null;
   const motivo = !estado ? "GENERICO" : estado.ok ? estado.datos.motivoNoElegible ?? "GENERICO" : estado.codigo;
@@ -74,7 +78,7 @@ export default function Autoservicio({
 
       {soloLectura ? (
         <p className="mt-2 text-[14px] italic text-marca-gris">{t.soloLectura}</p>
-      ) : horario || puedeProfesor ? (
+      ) : horario || puedeProfesor || profesorEnEspera ? (
         <>
           {/* Con el horario cerrado y el profesor abierto, por qué el
               horario no: que no parezca que falta un botón. */}
@@ -93,17 +97,23 @@ export default function Autoservicio({
                 {t.cambiarHorario}
               </button>
             )}
-            {puedeProfesor && (
+            {(puedeProfesor || profesorEnEspera) && (
               <button
                 type="button"
                 onClick={() => setAbierto("profesor")}
-                className={`${horario ? "btn-verde-linea" : "btn-verde"} inline-flex min-h-[52px] flex-1 items-center justify-center rounded-full px-6 text-[16px] font-bold`}
+                disabled={!puedeProfesor}
+                aria-describedby={profesorNo ? "profesor-no-disponible" : undefined}
+                className={`${horario ? "btn-verde-linea disabled:hover:bg-transparent disabled:hover:text-marca-verdeOsc" : "btn-verde"} inline-flex min-h-[52px] flex-1 items-center justify-center rounded-full px-6 text-[16px] font-bold disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 {t.cambiarProfesor}
               </button>
             )}
           </div>
-          {profesorNo && <p className="mt-2.5 text-[14px] leading-snug text-marca-gris">{profesorNo}</p>}
+          {profesorNo && (
+            <p id="profesor-no-disponible" className="mt-2.5 text-[14px] leading-snug text-marca-gris">
+              {profesorNo}
+            </p>
+          )}
           <div className="mt-5 border-t border-marca-borde pt-4">
             <p className="mb-2 text-[15px] font-semibold text-marca-tinta">{t.noEncuentras}</p>
             <BotonWhatsApp href={whatsapp} texto={t.escribenos} />

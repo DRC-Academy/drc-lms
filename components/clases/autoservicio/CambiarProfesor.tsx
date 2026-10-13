@@ -3,51 +3,50 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { usarIdioma } from "@/components/ProveedorIdioma";
-import { cambiarProfesorAutoservicio, huecosDeProfesorAutoservicio, huecosProfesoresAutoservicio } from "@/app/acciones-autoservicio";
+import { cambiarProfesorAutoservicio, horariosProfesorAutoservicio } from "@/app/acciones-autoservicio";
 import type { DiaSemana } from "@/lib/clases";
 import { DIAS_LABORABLES, FRANJAS, filtrarHuecos, horaFin, type Franja } from "@/lib/autoservicio/franjas";
-import { aDestino, agruparPorProfesor, cabe, destinosListos, estadoReparto } from "@/lib/autoservicio/profesor";
+import { aDestino, cambiarDesde, destinosListos, elegir, horariosQueValen, siguienteSesion } from "@/lib/autoservicio/profesor";
 import type {
   CodigoAutoservicio,
-  HuecoProfesor,
-  HuecosDeProfesor,
+  HorarioNuevo,
+  HorariosProfesor,
   LecturaAutoservicio,
-  ListaProfesores,
   Momento,
   PeticionCambioProfesor,
-  Profesor,
   ResultadoCambioProfesor,
   SesionOrigen,
 } from "@/lib/autoservicio/tipos";
-import type { TextosAutoservicio } from "@/lib/textos/autoservicio";
-import { Aviso, BotonWhatsApp, TituloPaso, Volver, nuevaClave } from "@/components/clases/autoservicio/Piezas";
+import { Aviso, BotonWhatsApp, ListaDeHuecos, TituloPaso, Volver, nuevaClave } from "@/components/clases/autoservicio/Piezas";
 
 /**
- * «CAMBIAR DE PROFESOR», CONTRA EL CONTRATO V2 DE GESTIÓN.
+ * «CAMBIAR DE PROFESOR», CONTRA EL CONTRATO V3 DE GESTIÓN.
  *
- * Pasa TODAS sus sesiones a otro profesor, con las mismas duraciones:
+ * EL ALUMNO NO VE PROFESORES: elige los horarios que le vienen bien y
+ * Gestión le asigna el profesor que mejor encaje. El nombre sale por
+ * primera vez en «hecho», de la respuesta del POST.
  *
- *   1. buscar     día y franja, y la lista de huecos con el nombre de cada
- *                 profesor, EN EL ORDEN DE GESTIÓN (aleatorio y estable
- *                 durante el día, nunca por puntuación). Se pide una vez
- *                 al abrir y se filtra aquí. La lista es para la duración
- *                 de su primera sesión.
- *   2. repartir   solo si tiene más de una clase a la semana. TODAS pasan
- *                 al profesor nuevo, cada una con su misma duración: una
- *                 fila por clase («Tu clase de los jueves, 2 horas») con
- *                 los huecos de ESE profesor de esa duración, y un
- *                 contador («Has elegido 2 de 3 clases»). Lo que pisa
- *                 algo ya elegido sale desactivado: Gestión rechaza los
- *                 solapes. Si para alguna clase no tiene hueco, o no
- *                 caben todas sin pisarse, se dice y se ofrece otro
- *                 profesor o el WhatsApp.
- *   3. confirmar  antes y después, con el profesor de cada lado
- *   4. hecho      el profesor nuevo está avisado, le llega un correo de
- *                 bienvenida y él le pasará el enlace
+ *   1. elegir     una fila por cada clase actual («Tu clase de 1 hora»),
+ *                 en el orden de Gestión. Se elige de una en una: la
+ *                 fila activa tiene sus filtros de día y franja y la
+ *                 lista de horarios; las de encima, lo elegido y
+ *                 «Cambiar»; las de debajo esperan. Cada horario elegido
+ *                 pide los de la siguiente mandando los `elegidos`, y
+ *                 Gestión solo devuelve los que un MISMO profesor puede
+ *                 cubrir junto con ellos. Contador «Has elegido 2 de 3
+ *                 clases» y «Continuar» solo con todas elegidas. Si para
+ *                 la siguiente no queda nada, se dice con calma y se
+ *                 ofrece cambiar lo elegido o el WhatsApp.
+ *   2. confirmar  antes y después, sin nombre: «con tu nuevo profesor»
+ *   3. hecho      «Tu nuevo profesor es Daniela», avisado, con su ficha,
+ *                 correo de bienvenida y el enlace
  *
  * LAS SESIONES SALEN DE LA RESPUESTA DE GESTIÓN, no del estado: con el
  * calendario de su profesor sin actualizar el estado llega sin sesiones
  * y, aun así, puede cambiar de profesor.
+ *
+ * LOS FILTROS SE APLICAN AQUÍ: se pide una vez por paso y filtrar no
+ * vuelve a preguntar a Gestión.
  *
  * LA CLAVE DE INTENTO como en `CambiarHorario`: una por intento al
  * entrar en «confirmar», la misma en los reintentos. Lo que no se
@@ -59,29 +58,21 @@ import { Aviso, BotonWhatsApp, TituloPaso, Volver, nuevaClave } from "@/componen
  */
 
 export type AccionesProfesor = {
-  lista: () => Promise<LecturaAutoservicio<ListaProfesores>>;
-  deProfesor: (profesorId: string) => Promise<LecturaAutoservicio<HuecosDeProfesor>>;
+  horarios: (elegidos: SesionOrigen[]) => Promise<LecturaAutoservicio<HorariosProfesor>>;
   cambiar: (peticion: PeticionCambioProfesor) => Promise<ResultadoCambioProfesor>;
 };
 
 const DE_SERVIDOR: AccionesProfesor = {
-  lista: huecosProfesoresAutoservicio,
-  deProfesor: huecosDeProfesorAutoservicio,
+  horarios: horariosProfesorAutoservicio,
   cambiar: cambiarProfesorAutoservicio,
 };
 
-type Paso = "buscar" | "repartir" | "confirmar" | "hecho";
+type Paso = "elegir" | "confirmar" | "hecho";
 type Carga<T> = { estado: "cargando" } | { estado: "listo"; datos: T } | { estado: "error"; codigo: CodigoAutoservicio };
 type Fallo = { codigo: CodigoAutoservicio; disponibleDesde: Momento | null };
 
-/** El profesor elegido no vale: se vuelve a la lista, recargada. */
-const OTRO_PROFESOR: CodigoAutoservicio[] = [
-  "MISMO_PROFESOR",
-  "PROFESOR_NO_EXISTE",
-  "PROFESOR_ARCHIVADO",
-  "PROFESOR_DE_PRUEBA",
-  "CALENDARIO_SIN_ACTUALIZAR",
-];
+/** Lo elegido ya no lo cubre nadie: se vuelve a elegir desde el principio. */
+const VOLVER_A_ELEGIR: CodigoAutoservicio[] = ["HUECO_YA_OCUPADO", "SLOT_NO_DISPONIBLE"];
 
 /** Lo que no se arregla repitiendo: se explica y solo queda cerrar o escribir. */
 const SIN_REPETIR: CodigoAutoservicio[] = [
@@ -111,44 +102,6 @@ function Chip({ activo, alPulsar, children }: { activo: boolean; alPulsar: () =>
   );
 }
 
-/** Un hueco de otro profesor: el día y el tramo, y debajo su primera clase, o por qué no se puede. */
-function BotonHueco({
-  h,
-  t,
-  alPulsar,
-  elegido = false,
-  desactivado = false,
-}: {
-  h: HuecoProfesor;
-  t: TextosAutoservicio;
-  alPulsar: () => void;
-  elegido?: boolean;
-  desactivado?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={alPulsar}
-      disabled={desactivado}
-      aria-pressed={elegido}
-      className={`flex min-h-[56px] w-full flex-col items-start justify-center rounded-[12px] border px-3.5 py-2 text-left leading-tight transition-colors ${
-        elegido
-          ? "border-marca-verde bg-marca-verde text-white"
-          : desactivado
-            ? "cursor-default border-marca-borde bg-marca-niebla text-marca-gris"
-            : "border-marca-borde bg-white text-marca-tinta hover:border-marca-verde"
-      }`}
-    >
-      <span className="text-[15.5px] font-bold">
-        {t.diaSemanal(h.dia)} {h.hora}–{horaFin(h.hora, h.duracion)}
-      </span>
-      <span className={`mt-0.5 text-[13px] ${elegido ? "text-white/90" : "text-marca-gris"}`}>
-        {elegido ? t.elegido : desactivado ? t.coincide : h.primeraClase ? t.primeraClaseCorta(h.primeraClase) : ""}
-      </span>
-    </button>
-  );
-}
-
 export default function CambiarProfesor({
   profesorActual,
   whatsapp,
@@ -167,19 +120,21 @@ export default function CambiarProfesor({
   const t = usarIdioma().t.autoservicio;
   const router = useRouter();
 
-  const [paso, setPaso] = useState<Paso>("buscar");
-  const [lista, setLista] = useState<Carga<ListaProfesores>>({ estado: "cargando" });
+  const [paso, setPaso] = useState<Paso>("elegir");
+  const [sesiones, setSesiones] = useState<SesionOrigen[] | null>(null);
+  const [elegidos, setElegidos] = useState<HorarioNuevo[]>([]);
+  /** Los horarios para la siguiente clase (la de índice `elegidos.length`). */
+  const [carga, setCarga] = useState<Carga<HorarioNuevo[]>>({ estado: "cargando" });
   const [dia, setDia] = useState<DiaSemana | null>(null);
   const [franja, setFranja] = useState<Franja | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [profesor, setProfesor] = useState<Profesor | null>(null);
-  const [suyos, setSuyos] = useState<Carga<HuecosDeProfesor> | null>(null);
-  const [destinos, setDestinos] = useState<(HuecoProfesor | null)[]>([]);
   const [clave, setClave] = useState<string | null>(null);
   const [fallo, setFallo] = useState<Fallo | null>(null);
   const [hecho, setHecho] = useState<{ profesor: string; sesiones: SesionOrigen[] } | null>(null);
   const [enviando, iniciar] = useTransition();
   const enVuelo = useRef(false);
+  /** El último pedido: si llega uno viejo (cambió de idea a mitad), se descarta. */
+  const pedido = useRef(0);
   const titulo = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -192,38 +147,54 @@ export default function CambiarProfesor({
     if (paso === "hecho") router.refresh();
   }, [paso, router]);
 
-  function cargarLista(mensaje: string | null = null) {
+  /**
+   * Deja los elegidos en `nuevos` y pide los horarios de la siguiente
+   * clase. Con todas elegidas no hace falta: el POST revalida.
+   */
+  function pedir(nuevos: HorarioNuevo[], mensaje: string | null = null) {
+    const n = ++pedido.current;
     setAviso(mensaje);
-    setProfesor(null);
-    setSuyos(null);
-    setDestinos([]);
-    setClave(null);
+    setElegidos(nuevos);
+    setDia(null);
+    setFranja(null);
     setFallo(null);
-    setLista({ estado: "cargando" });
-    setPaso("buscar");
+    setPaso("elegir");
+    if (sesiones && nuevos.length === sesiones.length) {
+      setCarga({ estado: "listo", datos: [] });
+      return;
+    }
+    setCarga({ estado: "cargando" });
     void (async () => {
-      let r: LecturaAutoservicio<ListaProfesores>;
+      let r: LecturaAutoservicio<HorariosProfesor>;
       try {
-        r = await acciones.lista();
+        r = await acciones.horarios(nuevos.map(aDestino));
       } catch {
         r = { ok: false, codigo: "GENERICO" };
       }
-      setLista(r.ok ? { estado: "listo", datos: r.datos } : { estado: "error", codigo: r.codigo });
+      if (n !== pedido.current) return;
+      if (!r.ok) {
+        setCarga({ estado: "error", codigo: r.codigo });
+        return;
+      }
+      const { sesiones: suyas, elegidosDisponibles, horarios } = r.datos;
+      // Lo elegido se ocupó mientras elegía: desde el principio, y se dice.
+      if (nuevos.length > 0 && !elegidosDisponibles) {
+        pedir([], t.elegidosOcupados);
+        return;
+      }
+      setSesiones(suyas);
+      const i = siguienteSesion(suyas, nuevos);
+      setCarga({ estado: "listo", datos: i === null ? [] : horariosQueValen(suyas[i], nuevos, horarios) });
     })();
   }
 
-  // Al abrir, la lista. Una sola vez: los filtros se aplican aquí.
+  // Al abrir, los horarios de la primera clase.
   const abierta = useRef(false);
   useEffect(() => {
     if (abierta.current) return;
     abierta.current = true;
-    cargarLista();
+    pedir([]);
   });
-
-  // Las sesiones a las que hay que dar destino: las de ese profesor si ya
-  // se han pedido, si no las de la lista.
-  const sesiones: SesionOrigen[] =
-    suyos?.estado === "listo" ? suyos.datos.sesiones.map((s) => s.sesion) : lista.estado === "listo" ? lista.datos.sesiones : [];
 
   function irAConfirmar() {
     // Un intento nuevo: clave nueva. Los toques y reintentos de este
@@ -233,64 +204,24 @@ export default function CambiarProfesor({
     setPaso("confirmar");
   }
 
-  function cargarSuyos(p: Profesor, primero: HuecoProfesor | null, mensaje: string | null = null) {
-    setAviso(mensaje);
-    setSuyos({ estado: "cargando" });
-    setDestinos([]);
-    setPaso("repartir");
-    void (async () => {
-      let r: LecturaAutoservicio<HuecosDeProfesor>;
-      try {
-        r = await acciones.deProfesor(p.id);
-      } catch {
-        r = { ok: false, codigo: "GENERICO" };
-      }
-      if (!r.ok) {
-        if (OTRO_PROFESOR.includes(r.codigo)) cargarLista(t.motivoProfesor(r.codigo));
-        else setSuyos({ estado: "error", codigo: r.codigo });
-        return;
-      }
-      setSuyos({ estado: "listo", datos: r.datos });
-      // El hueco elegido en la lista queda puesto en su primera sesión si
-      // sigue entre los suyos; el resto, por elegir.
-      const sigue = primero ? r.datos.sesiones[0]?.huecos.find((h) => h.dia === primero.dia && h.hora === primero.hora) ?? null : null;
-      setDestinos(r.datos.sesiones.map((_, i) => (i === 0 ? sigue : null)));
-    })();
-  }
-
-  function elegirHueco(h: HuecoProfesor) {
-    if (lista.estado !== "listo") return;
-    setProfesor(h.profesor);
-    if (lista.datos.sesiones.length === 1) {
-      setSuyos(null);
-      setDestinos([h]);
-      irAConfirmar();
-    } else {
-      cargarSuyos(h.profesor, h);
-    }
-  }
-
   function confirmar() {
-    if (!profesor || !clave || enVuelo.current || !destinosListos(sesiones, destinos)) return;
-    const elegidos = destinos;
+    if (!sesiones || !clave || enVuelo.current || !destinosListos(sesiones, elegidos)) return;
+    const destinos = elegidos;
     enVuelo.current = true;
     iniciar(async () => {
       let r: ResultadoCambioProfesor;
       try {
-        r = await acciones.cambiar({ profesorId: profesor.id, destinos: elegidos.map(aDestino), idempotencyKey: clave });
+        r = await acciones.cambiar({ destinos: destinos.map(aDestino), idempotencyKey: clave });
       } catch {
         r = { ok: false, codigo: "GENERICO", mensaje: null, disponibleDesde: null };
       }
       enVuelo.current = false;
       if (r.ok) {
-        setHecho({ profesor: r.profesorNuevo || profesor.nombre, sesiones: r.sesionesDespues.length > 0 ? r.sesionesDespues : elegidos });
+        setHecho({ profesor: r.profesorNuevo, sesiones: r.sesionesDespues.length > 0 ? r.sesionesDespues : destinos });
         setPaso("hecho");
-      } else if (r.codigo === "HUECO_YA_OCUPADO" || r.codigo === "SLOT_NO_DISPONIBLE") {
-        // Sin salir del flujo: los huecos otra vez, ya sin el ocupado.
-        if (sesiones.length > 1) cargarSuyos(profesor, null, t.ocupado);
-        else cargarLista(t.ocupado);
-      } else if (OTRO_PROFESOR.includes(r.codigo)) {
-        cargarLista(t.motivoProfesor(r.codigo));
+      } else if (VOLVER_A_ELEGIR.includes(r.codigo)) {
+        // Sin salir del flujo: a elegir otra vez, ya sin lo ocupado.
+        pedir([], t.elegidosOcupados);
       } else {
         // Sus clases han cambiado por otro lado: lo de debajo se pone al día.
         if (r.codigo === "ASIGNACION_CAMBIADA" || r.codigo === "SESION_NO_ENCONTRADA") router.refresh();
@@ -301,12 +232,12 @@ export default function CambiarProfesor({
 
   const tramo = (h: { hora: string; duracion: number }) => [h.hora, horaFin(h.hora, h.duracion)] as const;
   const describe = (s: SesionOrigen) => t.sesion(s.dia, ...tramo(s));
-  const resultados = lista.estado === "listo" ? filtrarHuecos(lista.datos.huecos, dia, franja) : [];
-  const listos = destinosListos(sesiones, destinos);
-  const reparto = suyos?.estado === "listo" ? estadoReparto(sesiones, suyos.datos.sesiones.map((s) => s.huecos), destinos) : null;
-  /** Las duraciones de las clases sin hueco, sin repetir: «tu clase de 2 horas» una vez. */
-  const horasSinHueco = reparto ? Array.from(new Set(reparto.sinHueco.map((i) => sesiones[i].duracion))) : [];
-  const atascado = reparto !== null && (reparto.sinHueco.length > 0 || reparto.imposible);
+  const total = sesiones?.length ?? 0;
+  const activa = sesiones ? siguienteSesion(sesiones, elegidos) : null;
+  const listos = sesiones !== null && destinosListos(sesiones, elegidos);
+  const visibles = carga.estado === "listo" ? filtrarHuecos(carga.datos, dia, franja) : [];
+  /** Sin horarios para la clase que toca: su aviso ya lleva el WhatsApp. */
+  const atascado = carga.estado === "listo" && activa !== null && carga.datos.length === 0;
   const sinRepetir = fallo !== null && SIN_REPETIR.includes(fallo.codigo);
   const textoFallo = (f: Fallo) =>
     f.codigo === "ANTELACION_INSUFICIENTE"
@@ -314,161 +245,148 @@ export default function CambiarProfesor({
       : t.motivoProfesor(f.codigo);
   const leyendo = (codigo: CodigoAutoservicio) => (codigo === "GENERICO" ? t.motivoAlLeer("GENERICO") : t.motivoProfesor(codigo));
 
-  const pieWhatsApp = (
-    <div className="mt-6 border-t border-marca-borde pt-4">
-      <p className="mb-2 text-[15px] font-semibold text-marca-tinta">{t.noEncuentras}</p>
-      <BotonWhatsApp href={whatsapp} texto={t.escribenos} />
+  const errorAlLeer = (codigo: CodigoAutoservicio) => (
+    <div className="flex flex-col gap-3">
+      <Aviso role="alert">{leyendo(codigo)}</Aviso>
+      <BotonWhatsApp href={whatsapp} texto={t.escribenos} principal />
     </div>
   );
+
+  /** La fila de la clase a la que le toca: filtros y horarios. */
+  function filaActiva(i: number) {
+    if (carga.estado === "cargando") return <p className="mt-3 text-[15px] text-marca-gris">{t.cargandoHorarios}</p>;
+    if (carga.estado === "error") return <div className="mt-3">{errorAlLeer(carga.codigo)}</div>;
+    if (carga.datos.length === 0) {
+      // Para la primera, nadie tiene nada; para otra, con lo elegido no queda nadie.
+      return i === 0 ? (
+        <div className="mt-3 flex flex-col gap-3">
+          <Aviso>{t.sinHorarios}</Aviso>
+          <BotonWhatsApp href={whatsapp} texto={t.escribenos} principal />
+        </div>
+      ) : (
+        <div className="mt-3 flex flex-col gap-3">
+          <Aviso role="status">{t.sinHorariosParaOtra(total - i)}</Aviso>
+          <div className="flex flex-col gap-2.5 min-[500px]:flex-row">
+            <button
+              type="button"
+              onClick={() => pedir([])}
+              className="btn-verde inline-flex min-h-[48px] w-full items-center justify-center rounded-full px-6 text-[15.5px] font-bold min-[500px]:w-auto"
+            >
+              {t.cambiarElegidos}
+            </button>
+            <BotonWhatsApp href={whatsapp} texto={t.escribenos} />
+          </div>
+        </div>
+      );
+    }
+    return (
+      <>
+        <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={t.cualquierDia}>
+          <Chip activo={dia === null} alPulsar={() => setDia(null)}>
+            {t.cualquierDia}
+          </Chip>
+          {DIAS_LABORABLES.map((d) => (
+            <Chip key={d} activo={dia === d} alPulsar={() => setDia(d)}>
+              {t.diaSemanal(d)}
+            </Chip>
+          ))}
+        </div>
+        <div className="mt-2.5 flex flex-wrap gap-2" role="group" aria-label={t.cualquierHora}>
+          <Chip activo={franja === null} alPulsar={() => setFranja(null)}>
+            {t.cualquierHora}
+          </Chip>
+          {FRANJAS.map((f) => (
+            <Chip key={f} activo={franja === f} alPulsar={() => setFranja(f)}>
+              {t.franja[f]}
+            </Chip>
+          ))}
+        </div>
+        <div className="mt-4">
+          {visibles.length === 0 ? (
+            <Aviso>{t.sinResultados}</Aviso>
+          ) : (
+            <ListaDeHuecos huecos={visibles} t={t} alElegir={(h) => pedir(elegir(elegidos, h))} />
+          )}
+        </div>
+      </>
+    );
+  }
 
   return (
     <div>
       <div ref={titulo} tabIndex={-1} className="outline-none" />
       {simulado && <p className="mb-3 rounded-[10px] bg-marca-niebla px-3 py-2 text-[13px] font-semibold text-marca-gris">{t.simulacion}</p>}
 
-      {paso === "buscar" && (
+      {paso === "elegir" && (
         <>
-          <TituloPaso>{t.buscaTitulo}</TituloPaso>
-          <p className="mt-1 text-[15px] text-marca-gris">{t.buscaDetalle}</p>
-
-          <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label={t.cualquierDia}>
-            <Chip activo={dia === null} alPulsar={() => setDia(null)}>
-              {t.cualquierDia}
-            </Chip>
-            {DIAS_LABORABLES.map((d) => (
-              <Chip key={d} activo={dia === d} alPulsar={() => setDia(d)}>
-                {t.diaSemanal(d)}
-              </Chip>
-            ))}
-          </div>
-          <div className="mt-2.5 flex flex-wrap gap-2" role="group" aria-label={t.cualquierHora}>
-            <Chip activo={franja === null} alPulsar={() => setFranja(null)}>
-              {t.cualquierHora}
-            </Chip>
-            {FRANJAS.map((f) => (
-              <Chip key={f} activo={franja === f} alPulsar={() => setFranja(f)}>
-                {t.franja[f]}
-              </Chip>
-            ))}
-          </div>
-
-          <p className="mt-4 text-[14px] text-marca-gris">{t.horaPeninsular}</p>
-          {aviso && (
-            <div className="mt-3">
-              <Aviso role="status">{aviso}</Aviso>
-            </div>
-          )}
-          <div className="mt-3" aria-busy={lista.estado === "cargando"}>
-            {lista.estado === "cargando" && <p className="text-[15px] text-marca-gris">{t.cargandoProfesores}</p>}
-            {lista.estado === "error" && (
-              <div className="flex flex-col gap-3">
-                <Aviso role="alert">{leyendo(lista.codigo)}</Aviso>
-                <BotonWhatsApp href={whatsapp} texto={t.escribenos} principal />
-              </div>
-            )}
-            {lista.estado === "listo" &&
-              (lista.datos.huecos.length === 0 ? (
-                <Aviso>{t.sinProfesores}</Aviso>
-              ) : resultados.length === 0 ? (
-                <Aviso>{t.sinResultados}</Aviso>
-              ) : (
-                <div className="flex flex-col gap-5">
-                  {agruparPorProfesor(resultados).map((g) => (
-                    <section key={g.profesor.id} aria-label={g.profesor.nombre}>
-                      <h3 className="text-[16px] font-bold text-marca-tinta">{g.profesor.nombre}</h3>
-                      <ul className="mt-2 grid grid-cols-1 gap-2 min-[500px]:grid-cols-2">
-                        {g.huecos.map((h) => (
-                          <li key={`${h.dia}-${h.hora}`}>
-                            <BotonHueco h={h} t={t} alPulsar={() => elegirHueco(h)} />
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  ))}
-                </div>
-              ))}
-          </div>
-          {lista.estado !== "error" && pieWhatsApp}
-        </>
-      )}
-
-      {paso === "repartir" && profesor && suyos && (
-        <>
-          <Volver texto={t.volver} alPulsar={() => setPaso("buscar")} />
-          <TituloPaso>{t.repartirTitulo(profesor.nombre)}</TituloPaso>
-          {sesiones.length > 1 && <p className="mt-1 text-[15px] text-marca-gris">{t.repartirDetalle(sesiones.length)}</p>}
+          <TituloPaso>{t.profesorTitulo}</TituloPaso>
+          <p className="mt-1 text-[15px] text-marca-gris">{t.profesorIntro}</p>
           <p className="mt-1 text-[14px] text-marca-gris">{t.horaPeninsular}</p>
           {aviso && (
             <div className="mt-3">
               <Aviso role="status">{aviso}</Aviso>
             </div>
           )}
-          <div className="mt-4" aria-busy={suyos.estado === "cargando"}>
-            {suyos.estado === "cargando" && <p className="text-[15px] text-marca-gris">{t.cargando}</p>}
-            {suyos.estado === "error" && (
-              <div className="flex flex-col gap-3">
-                <Aviso role="alert">{leyendo(suyos.codigo)}</Aviso>
-                <BotonWhatsApp href={whatsapp} texto={t.escribenos} principal />
-              </div>
-            )}
-            {suyos.estado === "listo" && reparto && (
-              <div className="flex flex-col gap-6">
-                {atascado && (
-                  <div className="flex flex-col gap-3">
-                    <Aviso role="alert">
-                      {reparto.imposible ? t.noCabenTodas : horasSinHueco.map((h) => <p key={h}>{t.sinHuecoPara(h)}</p>)}
-                    </Aviso>
-                    <div className="flex flex-col gap-2.5 min-[500px]:flex-row">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAviso(null);
-                          setPaso("buscar");
-                        }}
-                        className="btn-verde inline-flex min-h-[48px] w-full items-center justify-center rounded-full px-6 text-[15.5px] font-bold min-[500px]:w-auto"
-                      >
-                        {t.otroProfesor}
-                      </button>
-                      <BotonWhatsApp href={whatsapp} texto={t.escribenos} />
-                    </div>
-                  </div>
-                )}
-                {suyos.datos.sesiones.map(({ sesion, huecos }, i) => (
-                  <fieldset key={i}>
-                    <legend className="text-[16px] font-bold text-marca-tinta">{t.tuClaseDe(sesion.dia, sesion.duracion)}</legend>
-                    <p className="text-[14px] text-marca-gris">{t.ahora(...tramo(sesion))}</p>
-                    {huecos.length === 0 ? (
-                      <div className="mt-2">
-                        <Aviso>{t.sinHuecoPara(sesion.duracion)}</Aviso>
+
+          <div className="mt-4" aria-busy={carga.estado === "cargando"}>
+            {!sesiones ? (
+              carga.estado === "error" ? (
+                errorAlLeer(carga.codigo)
+              ) : (
+                <p className="text-[15px] text-marca-gris">{t.cargandoHorarios}</p>
+              )
+            ) : (
+              <div className="flex flex-col gap-4">
+                {sesiones.map((s, i) => {
+                  const elegido = elegidos[i];
+                  return (
+                    <section
+                      key={i}
+                      aria-labelledby={`clase-${i}`}
+                      className={`rounded-[14px] border px-4 py-3.5 ${i === activa ? "border-marca-verde bg-white" : "border-marca-borde bg-white"}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 id={`clase-${i}`} className="text-[16px] font-bold text-marca-tinta">
+                            {t.tuClaseDe(s.duracion)}
+                          </h3>
+                          <p className="text-[14px] text-marca-gris">{t.ahora(s.dia, ...tramo(s))}</p>
+                        </div>
+                        {elegido && (
+                          <button
+                            type="button"
+                            onClick={() => pedir(cambiarDesde(elegidos, i))}
+                            aria-label={t.cambiarEsteEtiqueta(s.duracion)}
+                            className="-mr-1 inline-flex min-h-[44px] shrink-0 items-center px-1 text-[15px] font-semibold text-marca-verdeOsc"
+                          >
+                            {t.cambiarEste}
+                          </button>
+                        )}
                       </div>
-                    ) : (
-                      <ul className="mt-2 grid grid-cols-1 gap-2 min-[500px]:grid-cols-2">
-                        {huecos.map((h) => {
-                          const elegido = destinos[i]?.dia === h.dia && destinos[i]?.hora === h.hora;
-                          return (
-                            <li key={`${h.dia}-${h.hora}`}>
-                              <BotonHueco
-                                h={h}
-                                t={t}
-                                elegido={elegido}
-                                desactivado={!elegido && !cabe(h, i, destinos)}
-                                alPulsar={() => setDestinos((ds) => ds.map((d, j) => (j === i ? h : d)))}
-                              />
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </fieldset>
-                ))}
+                      {elegido ? (
+                        <div className="mt-2 rounded-[10px] bg-marca-niebla px-3 py-2">
+                          <p className="text-[15.5px] font-bold text-marca-tinta">{describe(elegido)}</p>
+                          {elegido.primeraClase && <p className="text-[13.5px] text-marca-gris">{t.primeraClaseCorta(elegido.primeraClase)}</p>}
+                        </div>
+                      ) : i === activa ? (
+                        filaActiva(i)
+                      ) : (
+                        <p className="mt-2 text-[14px] text-marca-gris">{t.despuesDeLaAnterior}</p>
+                      )}
+                    </section>
+                  );
+                })}
+
                 <div className="flex flex-col gap-2.5">
-                  <p aria-live="polite" className="text-center text-[15px] font-semibold text-marca-tinta">
-                    {t.contadorClases(reparto.elegidas, reparto.total)}
-                  </p>
+                  {total > 1 && (
+                    <p aria-live="polite" className="text-center text-[15px] font-semibold text-marca-tinta">
+                      {t.contadorClases(elegidos.length, total)}
+                    </p>
+                  )}
                   <button
                     type="button"
                     onClick={irAConfirmar}
-                    disabled={!reparto.listo}
+                    disabled={!listos}
                     className="btn-verde inline-flex min-h-[52px] w-full items-center justify-center rounded-full px-6 text-[16px] font-bold disabled:opacity-50"
                   >
                     {t.continuar}
@@ -477,13 +395,19 @@ export default function CambiarProfesor({
               </div>
             )}
           </div>
-          {suyos.estado !== "error" && !atascado && pieWhatsApp}
+
+          {carga.estado !== "error" && !atascado && (
+            <div className="mt-6 border-t border-marca-borde pt-4">
+              <p className="mb-2 text-[15px] font-semibold text-marca-tinta">{t.noEncuentras}</p>
+              <BotonWhatsApp href={whatsapp} texto={t.escribenos} />
+            </div>
+          )}
         </>
       )}
 
-      {paso === "confirmar" && profesor && listos && (
+      {paso === "confirmar" && sesiones && listos && (
         <>
-          {fallo?.codigo !== "A_MEDIAS" && <Volver texto={t.volver} alPulsar={() => setPaso(sesiones.length > 1 ? "repartir" : "buscar")} />}
+          {fallo?.codigo !== "A_MEDIAS" && <Volver texto={t.volver} alPulsar={() => setPaso("elegir")} />}
           <TituloPaso>{t.confirmaTitulo}</TituloPaso>
           <dl className="mt-4 overflow-hidden rounded-[14px] border border-marca-borde">
             <div className="bg-marca-niebla px-4 py-3">
@@ -497,20 +421,19 @@ export default function CambiarProfesor({
             </div>
             <div className="border-t border-marca-borde bg-white px-4 py-3">
               <dt className="text-[13px] font-semibold uppercase tracking-[0.06em] text-marca-verdeOsc">{t.despues}</dt>
-              {destinos.map((d, i) =>
-                d ? (
-                  <dd key={i} className="mt-0.5">
-                    <span className="block text-[17px] font-bold text-marca-tinta">{describe(d)}</span>
-                    {d.primeraClase && <span className="block text-[13.5px] text-marca-gris">{t.primeraClaseCorta(d.primeraClase)}</span>}
-                  </dd>
-                ) : null
-              )}
+              {elegidos.map((d, i) => (
+                <dd key={i} className="mt-0.5">
+                  <span className="block text-[17px] font-bold text-marca-tinta">{describe(d)}</span>
+                  {d.primeraClase && <span className="block text-[13.5px] text-marca-gris">{t.primeraClaseCorta(d.primeraClase)}</span>}
+                </dd>
+              ))}
               <dd className="mt-1 text-[14px] text-marca-gris">
-                {t.desdeAhora} · {t.conProfesor(profesor.nombre)}
+                {t.desdeAhora} · {t.conNuevoProfesor}
               </dd>
             </div>
           </dl>
-          <p className="mt-2 text-[13.5px] text-marca-gris">{t.enlaceCambia}</p>
+          <p className="mt-2 text-[13.5px] text-marca-gris">{t.asignamosAlConfirmar}</p>
+          <p className="text-[13.5px] text-marca-gris">{t.enlaceCambia}</p>
           <p className="text-[13.5px] text-marca-gris">{t.horaPeninsular}</p>
 
           {fallo && (
@@ -547,12 +470,13 @@ export default function CambiarProfesor({
           <div className="mt-3">
             <Aviso tono="ok" role="status">
               <p className="font-semibold">{t.hechoProfesor(hecho.profesor)}</p>
-              <ul className="mt-1">
+              <p className="mt-1">{t.hechoProfesorAviso}</p>
+              <p className="mt-2 font-semibold">{t.tusClasesDesdeAhora}</p>
+              <ul className="mt-0.5">
                 {hecho.sesiones.map((s, i) => (
                   <li key={i}>{describe(s)}</li>
                 ))}
               </ul>
-              <p className="mt-2">{t.hechoProfesorAviso}</p>
             </Aviso>
           </div>
           <button

@@ -17,10 +17,9 @@ import {
   type CodigoAutoservicio,
   type EstadoAutoservicio,
   type HuecoGestion,
+  type HorarioNuevo,
+  type HorariosProfesor,
   type HuecoLibre,
-  type HuecoProfesor,
-  type HuecosDeProfesor,
-  type ListaProfesores,
   type ModoCambio,
   type Momento,
   type Movilidad,
@@ -44,7 +43,7 @@ function dia(v: unknown): DiaSemana | null {
 }
 
 function duracion(v: unknown): number | null {
-  return typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 4 ? v : null;
+  return typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 5 ? v : null;
 }
 
 const esFecha = (v: unknown): v is string => typeof v === "string" && FECHA.test(v);
@@ -71,7 +70,7 @@ export function idSesionValido(v: unknown): v is string {
  * Un cuerpo de error del contrato: `{ ok: false, codigo, mensaje }`.
  *
  * EL CAMBIO A MEDIAS no tiene código propio: llega con el del paso que
- * falló y `a_medias: true` (contrato v2; Gestión lo manda desde 2cf4ad9).
+ * falló y `a_medias: true` (desde el contrato v2; Gestión lo manda desde 2cf4ad9).
  * Se reconoce también por su `mensaje`, que pide no reintentar, por si
  * llegara de una Gestión anterior: tratarlo como un error más invitaría
  * a repetir un cambio que ya ha escrito algo.
@@ -197,15 +196,10 @@ export function peticionValida(p: PeticionCambio): boolean {
 }
 
 // ---------------------------------------------------------------
-// v2: EL CAMBIO DE PROFESOR
+// v3: EL CAMBIO DE PROFESOR. El alumno elige horarios, Gestión asigna
+// el profesor. NADA DE LO QUE SE LEE ANTES DEL CAMBIO LLEVA PROFESOR: si
+// Gestión mandara un id o un nombre con un horario, aquí se pierde.
 // ---------------------------------------------------------------
-
-const ID_PROFESOR = /^[A-Za-z0-9_-]{1,64}$/;
-
-/** El id de un profesor tal como lo manda el navegador: se valida entero. */
-export function idProfesorValido(v: unknown): v is string {
-  return typeof v === "string" && ID_PROFESOR.test(v);
-}
 
 /** Una sesión sin id: lo que se mueve y a dónde. */
 function sesionOrigen(v: unknown): SesionOrigen | null {
@@ -215,68 +209,46 @@ function sesionOrigen(v: unknown): SesionOrigen | null {
   return o && d && esHora(o.hora) && h ? { dia: d, hora: o.hora, duracion: h } : null;
 }
 
-function huecoProfesor(v: unknown): HuecoProfesor | null {
+/** Un horario semanal: día, hora, duración y la primera clase. Solo eso. */
+function horarioNuevo(v: unknown): HorarioNuevo | null {
   const o = obj(v);
-  const p = obj(o?.profesor);
   const base = sesionOrigen(o);
-  if (!o || !p || !base || !idProfesorValido(p.id) || typeof p.nombre !== "string" || p.nombre.trim() === "") return null;
-  return {
-    ...base,
-    fecha: null,
-    primeraClase: esFecha(o.fecha_primera_clase) ? o.fecha_primera_clase : null,
-    profesor: { id: p.id, nombre: p.nombre.trim() },
-  };
+  if (!o || !base) return null;
+  return { ...base, fecha: null, primeraClase: esFecha(o.fecha_primera_clase) ? o.fecha_primera_clase : null };
 }
-
-const huecosProfesor = (v: unknown): HuecoProfesor[] =>
-  (Array.isArray(v) ? v : []).map(huecoProfesor).filter((x): x is HuecoProfesor => x !== null);
 
 /**
- * La lista de todos los profesores (`tipo: "lista"`). LOS HUECOS SALEN EN
- * EL ORDEN DE GESTIÓN: aleatorio y estable durante el día, con los de
- * cada profesor juntos. Aquí no se reordena nada.
+ * Los horarios para la siguiente de sus sesiones. Una sesión torcida
+ * invalida la respuesta: el cambio tiene que darles destino a TODAS, y
+ * los elegidos van por su posición. Solo se quedan los horarios de la
+ * duración de la sesión siguiente (una de 2 h no se parte en dos de 1 h).
  */
-export function leerListaProfesores(v: unknown): ListaProfesores | null {
+export function leerHorariosProfesor(v: unknown): HorariosProfesor | null {
   const o = obj(v);
-  if (!o || o.ok === false || !Array.isArray(o.sesiones) || !Array.isArray(o.huecos)) return null;
+  if (!o || o.ok === false || !Array.isArray(o.sesiones) || !Array.isArray(o.horarios)) return null;
   const sesiones = o.sesiones.map(sesionOrigen).filter((x): x is SesionOrigen => x !== null);
-  // Una sesión torcida no se puede dejar fuera: el cambio tiene que darles
-  // destino a todas.
   if (sesiones.length === 0 || sesiones.length !== o.sesiones.length) return null;
-  return { sesiones, huecos: huecosProfesor(o.huecos) };
-}
-
-/** Los huecos de un profesor para cada sesión (`tipo: "profesor"`), por `indice`. */
-export function leerHuecosDeProfesor(v: unknown): HuecosDeProfesor | null {
-  const o = obj(v);
-  const p = obj(o?.profesor);
-  if (!o || o.ok === false || !p || !idProfesorValido(p.id) || typeof p.nombre !== "string" || !Array.isArray(o.sesiones)) return null;
-  const sesiones: { indice: number; sesion: SesionOrigen; huecos: HuecoProfesor[] }[] = [];
-  for (const crudo of o.sesiones) {
-    const c = obj(crudo);
-    const s = sesionOrigen(c);
-    if (!c || !s || typeof c.indice !== "number") return null;
-    // Cada clase pasa entera: solo huecos de SU duración, aunque llegara
-    // alguno de otra (una de 2 h no se parte en dos de 1 h).
-    sesiones.push({ indice: c.indice, sesion: s, huecos: huecosProfesor(c.huecos).filter((h) => h.duracion === s.duracion) });
-  }
-  if (sesiones.length === 0) return null;
-  sesiones.sort((a, b) => a.indice - b.indice);
-  return {
-    profesor: { id: p.id, nombre: p.nombre.trim() },
-    sesiones: sesiones.map(({ sesion: s, huecos }) => ({ sesion: s, huecos })),
-  };
+  const siguiente = obj(o.siguiente);
+  const indice = typeof siguiente?.indice === "number" ? siguiente.indice : null;
+  const sesion = indice !== null ? sesiones[indice] : undefined;
+  const horarios = sesion
+    ? o.horarios
+        .map(horarioNuevo)
+        .filter((x): x is HorarioNuevo => x !== null && x.duracion === sesion.duracion)
+    : [];
+  return { sesiones, elegidosDisponibles: o.elegidos_disponibles !== false, horarios };
 }
 
 /**
  * La respuesta del POST de cambiar de profesor. Como en el de horario,
- * solo un `ok: true` explícito es un cambio hecho. Un error trae su
- * código, y con ANTELACION_INSUFICIENTE, desde cuándo podrá.
+ * solo un `ok: true` explícito es un cambio hecho; trae el profesor que
+ * asignó Gestión en `profesor.nombre`. Un error trae su código, y con
+ * ANTELACION_INSUFICIENTE, desde cuándo podrá.
  */
 export function leerResultadoCambioProfesor(v: unknown): ResultadoCambioProfesor {
   const o = obj(v);
   if (o?.ok === true) {
-    const nuevo = obj(o.profesor_nuevo)?.nombre;
+    const nuevo = obj(o.profesor)?.nombre;
     const despues = (Array.isArray(o.sesiones_despues) ? o.sesiones_despues : [])
       .map(sesionOrigen)
       .filter((x): x is SesionOrigen => x !== null);
@@ -285,10 +257,16 @@ export function leerResultadoCambioProfesor(v: unknown): ResultadoCambioProfesor
   return { ok: false, ...leerError(o), disponibleDesde: momento(o?.disponible_desde) };
 }
 
+/** Los elegidos que manda el navegador, campo a campo. Lo torcido, null. */
+export function leerElegidos(v: unknown): SesionOrigen[] | null {
+  if (!Array.isArray(v) || v.length > 7) return null;
+  const elegidos = v.map(sesionOrigen);
+  return elegidos.every((x): x is SesionOrigen => x !== null) ? elegidos : null;
+}
+
 /** La petición de cambio de profesor, validada en su forma antes de salir hacia Gestión. */
 export function peticionProfesorValida(p: PeticionCambioProfesor, sesiones: number | null = null): boolean {
   return (
-    idProfesorValido(p.profesorId) &&
     Array.isArray(p.destinos) &&
     p.destinos.length > 0 &&
     p.destinos.length <= 7 &&

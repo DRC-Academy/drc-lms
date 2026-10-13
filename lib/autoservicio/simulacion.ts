@@ -32,32 +32,27 @@
 //       (a medias)               el del miércoles a las 20:00
 //       (genérico)               el del viernes a las 18:00 (ERROR_INTERNO)
 //
-// EL CAMBIO DE PROFESOR (v2): Daniela, Ignacio, Sol, Maribel, Bruno y
-// Elena, en un orden que cambia cada día y no entre recargas, como en
-// Gestión. Los mismos destinos de arriba dan los mismos errores, y además:
-//       PROFESOR_ARCHIVADO       pedir los huecos de Maribel
+// EL CAMBIO DE PROFESOR (v3): el alumno elige horarios y la simulación
+// le asigna a Daniela, Ignacio, Sol, Bruno o Maribel, sin decir a quién
+// hasta el final. Los mismos destinos de arriba dan los mismos errores,
+// y además:
 //       ASIGNACION_CAMBIADA      un destino el jueves a las 17:00
-//       sin hueco de 2 h         Bruno: solo tiene huecos a las 21:00
-//       no caben las dos         Elena: solo el lunes a las 10:00, que
-//                                vale para las dos clases y las pisa
+//       nadie para la otra       el lunes a las 21:00 solo lo tiene Bruno,
+//                                que no tiene dos horas seguidas para la
+//                                clase del jueves
 // ---------------------------------------------------------------
 
 import "server-only";
 import { DIAS } from "@/lib/clases";
 import { diaLocal, sumarDias } from "@/lib/fechas";
 import { horaFin } from "@/lib/autoservicio/franjas";
-import { leerError, leerEstado, leerHuecos, leerResultadoCambio } from "@/lib/autoservicio/leer";
-import { seSolapan } from "@/lib/autoservicio/profesor";
-import {
-  leerHuecosDeProfesor,
-  leerListaProfesores,
-  leerResultadoCambioProfesor,
-} from "@/lib/autoservicio/leer";
+import { leerError, leerEstado, leerHorariosProfesor, leerHuecos, leerResultadoCambio, leerResultadoCambioProfesor } from "@/lib/autoservicio/leer";
+import { chocan } from "@/lib/autoservicio/profesor";
 import type {
   ClaseProximaGestion,
   EstadoGestion,
+  HorarioProfesorGestion,
   HuecoGestion,
-  HuecoProfesorGestion,
   ModoCambio,
   MovilidadGestion,
   ProveedorAutoservicio,
@@ -294,83 +289,60 @@ export function autoservicioSimulado(escenario: EscenarioSimulado): ProveedorAut
       if (!conHorario(escenario)) return { ...bloqueo, mensaje: null };
       return leerResultadoCambio(cambioSimulado(p.modo, p.fechaOrigen, { ...p.destino, fecha: p.destino.fecha ?? p.destino.primeraClase }));
     },
-    async huecosProfesores() {
+    async horariosProfesor(_alumnoId, elegidos) {
       await esperar();
-      const cuerpo = bloqueoProfesor() ?? listaProfesoresSimulada();
-      const lista = leerListaProfesores(cuerpo);
-      return lista ? { ok: true, datos: lista } : { ok: false, codigo: leerError(cuerpo).codigo };
-    },
-    async huecosDeProfesor(_alumnoId, profesorId) {
-      await esperar();
-      const cuerpo = bloqueoProfesor() ?? huecosDeProfesorSimulados(profesorId);
-      const huecos = leerHuecosDeProfesor(cuerpo);
-      return huecos ? { ok: true, datos: huecos } : { ok: false, codigo: leerError(cuerpo).codigo };
+      const cuerpo = bloqueoProfesor() ?? horariosProfesorSimulados(elegidos);
+      const horarios = leerHorariosProfesor(cuerpo);
+      return horarios ? { ok: true, datos: horarios } : { ok: false, codigo: leerError(cuerpo).codigo };
     },
     async cambiarProfesor(_alumnoId, p) {
       await esperar();
-      return leerResultadoCambioProfesor(bloqueoProfesor() ?? cambioProfesorSimulado(p.profesorId, p.destinos));
+      return leerResultadoCambioProfesor(bloqueoProfesor() ?? cambioProfesorSimulado(p.destinos));
     },
   };
 }
 
 // ---------------------------------------------------------------
-// CAMBIO DE PROFESOR (v2), EN LA FORMA DEL CONTRATO
+// CAMBIO DE PROFESOR (v3), EN LA FORMA DEL CONTRATO
+//
+// Como Gestión: el alumno elige horarios y nunca ve un profesor. Los
+// horarios de la siguiente clase son los que tiene libres algún profesor
+// que además tiene libres TODOS los elegidos, sin chocar con ellos. Al
+// confirmar se le asigna el primero que lo cubre todo.
 // ---------------------------------------------------------------
 
-const OTROS: { id: string; nombre: string; libres: { dia: string; hora: string }[] }[] = [
-  {
-    id: "t21",
-    nombre: "Daniela",
-    libres: [
-      { dia: "Lunes", hora: "08:00" },
-      { dia: "Martes", hora: "20:00" },
-      { dia: "Jueves", hora: "17:00" },
-      { dia: "Viernes", hora: "10:00" },
-    ],
-  },
-  {
-    id: "t22",
-    nombre: "Ignacio",
-    libres: [
-      { dia: "Lunes", hora: "19:00" },
-      { dia: "Miércoles", hora: "17:00" },
-      { dia: "Viernes", hora: "18:00" },
-      { dia: "Sábado", hora: "11:00" },
-    ],
-  },
-  {
-    id: "t23",
-    nombre: "Sol",
-    libres: [
-      { dia: "Martes", hora: "12:00" },
-      { dia: "Miércoles", hora: "20:00" },
-      { dia: "Jueves", hora: "13:00" },
-      { dia: "Sábado", hora: "10:00" },
-    ],
-  },
-  {
-    id: "t25",
-    nombre: "Bruno",
-    libres: [
-      { dia: "Lunes", hora: "21:00" },
-      { dia: "Miércoles", hora: "21:00" },
-    ],
-  },
-  {
-    id: "t26",
-    nombre: "Elena",
-    libres: [{ dia: "Lunes", hora: "10:00" }],
-  },
-  {
-    id: "t24",
-    nombre: "Maribel",
-    libres: [
-      { dia: "Lunes", hora: "13:00" },
-      { dia: "Miércoles", hora: "09:00" },
-      { dia: "Jueves", hora: "21:00" },
-    ],
-  },
+/** Un profesor simulado: las horas libres de cada día. */
+export type ProfesorSimulado = { nombre: string; libres: Partial<Record<string, number[]>> };
+
+const OTROS: ProfesorSimulado[] = [
+  { nombre: "Daniela", libres: { Lunes: [8, 9, 10], Martes: [20, 21], Jueves: [17, 18], Viernes: [10, 11] } },
+  { nombre: "Ignacio", libres: { Lunes: [19, 20], Miércoles: [17, 18], Viernes: [18, 19], Sábado: [11, 12] } },
+  { nombre: "Sol", libres: { Martes: [12, 13], Miércoles: [20, 21], Jueves: [13, 14], Sábado: [10, 11] } },
+  // Solo tiene las 21:00: una hora suelta. Quien elija el lunes a las
+  // 21:00 se queda sin nadie para su clase de dos horas.
+  { nombre: "Bruno", libres: { Lunes: [21] } },
+  { nombre: "Maribel", libres: { Lunes: [13, 14], Miércoles: [9, 10] } },
 ];
+
+const SESIONES_ORIGEN: SesionOrigen[] = SESIONES.map(({ dia, hora, duracion }) => ({ dia: dia as SesionOrigen["dia"], hora, duracion }));
+
+const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
+
+/** Si tiene libre ese bloque entero: todas sus horas. */
+function tieneLibre(p: ProfesorSimulado, b: SesionOrigen): boolean {
+  const horas = p.libres[b.dia] ?? [];
+  const inicio = Number(b.hora.slice(0, 2));
+  return Array.from({ length: b.duracion }, (_, k) => inicio + k).every((h) => horas.includes(h));
+}
+
+/** Sus bloques libres de una duración. */
+function bloquesDe(p: ProfesorSimulado, duracion: number): SesionOrigen[] {
+  return Object.entries(p.libres).flatMap(([dia, horas = []]) =>
+    horas
+      .map((h) => ({ dia: dia as SesionOrigen["dia"], hora: hh(h), duracion }))
+      .filter((b) => tieneLibre(p, b))
+  );
+}
 
 /** La primera fecha de ese día de la semana con más de 24 h de antelación. */
 function primeraFecha(dia: string, hoy: string): string {
@@ -381,53 +353,51 @@ function primeraFecha(dia: string, hoy: string): string {
   return sumarDias(hoy, DIAS_ANTELACION);
 }
 
-/** Los huecos de un profesor para una duración. Dos horas seguidas no caben a las 21:00. */
-function huecosDe(o: (typeof OTROS)[number], duracion: number, hoy: string): HuecoProfesorGestion[] {
-  return o.libres
-    .filter((l) => duracion === 1 || l.hora < "21:00")
-    .map((l) => ({ profesor: { id: o.id, nombre: o.nombre }, ...l, duracion, fecha_primera_clase: primeraFecha(l.dia, hoy) }));
-}
+const ORDEN_DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
-/** Un orden que cambia cada día y no entre recargas, como el de Gestión. */
-function ordenDelDia(hoy: string): (typeof OTROS)[number][] {
-  const giro = Number(hoy.replaceAll("-", "")) % OTROS.length;
-  return [...OTROS.slice(giro), ...OTROS.slice(0, giro)];
-}
+type OpcionesSimulacion = { sesiones?: SesionOrigen[]; profesores?: ProfesorSimulado[]; ahora?: Date };
 
-const SESIONES_ORIGEN = SESIONES.map(({ dia, hora, duracion }) => ({ dia, hora, duracion }));
-
-export function listaProfesoresSimulada(ahora: Date = new Date()): unknown {
+/** GET huecos-profesores simulado: los horarios para la siguiente clase, sin profesor. */
+export function horariosProfesorSimulados(elegidos: SesionOrigen[], opciones: OpcionesSimulacion = {}): unknown {
+  const { sesiones = SESIONES_ORIGEN, profesores = OTROS, ahora = new Date() } = opciones;
+  if (elegidos.length > sesiones.length || elegidos.some((e, i) => e.duracion !== sesiones[i].duracion)) {
+    return { ok: false, codigo: "SESIONES_NO_COINCIDEN", mensaje: "Los horarios elegidos no coinciden con tus clases." };
+  }
+  if (elegidos.some((e, i) => elegidos.some((o, j) => i !== j && chocan(e, o)))) {
+    return { ok: false, codigo: "DATOS_INVALIDOS", mensaje: "Dos horarios elegidos chocan." };
+  }
   const hoy = diaLocal(ahora);
-  const primera = SESIONES_ORIGEN[0];
+  const validos = profesores.filter((p) => elegidos.every((e) => tieneLibre(p, e)));
+  const i = elegidos.length < sesiones.length ? elegidos.length : null;
+  const vistos = new Map<string, HorarioProfesorGestion>();
+  if (i !== null) {
+    for (const p of validos) {
+      for (const b of bloquesDe(p, sesiones[i].duracion)) {
+        if (elegidos.some((e) => chocan(e, b))) continue;
+        const k = `${b.dia}|${b.hora}`;
+        if (!vistos.has(k)) vistos.set(k, { ...b, fecha_primera_clase: primeraFecha(b.dia, hoy) });
+      }
+    }
+  }
   return {
     ok: true,
-    tipo: "lista",
-    sesiones: SESIONES_ORIGEN,
-    huecos: ordenDelDia(hoy).flatMap((o) => huecosDe(o, primera.duracion, hoy)),
+    sesiones,
+    siguiente: i === null ? null : { indice: i, duracion: sesiones[i].duracion },
+    elegidos_disponibles: validos.length > 0,
+    horarios: Array.from(vistos.values()).sort(
+      (a, b) => ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia) || a.hora.localeCompare(b.hora)
+    ),
   };
 }
 
-export function huecosDeProfesorSimulados(profesorId: string, ahora: Date = new Date()): unknown {
-  const o = OTROS.find((x) => x.id === profesorId);
-  if (!o) return { ok: false, codigo: "PROFESOR_NO_EXISTE", mensaje: "No existe ese profesor." };
-  if (o.id === "t24") return { ok: false, codigo: "PROFESOR_ARCHIVADO", mensaje: "Ese profesor ya no está en la academia." };
-  const hoy = diaLocal(ahora);
-  return {
-    ok: true,
-    tipo: "profesor",
-    profesor: { id: o.id, nombre: o.nombre },
-    sesiones: SESIONES_ORIGEN.map((s, indice) => ({ indice, ...s, huecos: huecosDe(o, s.duracion, hoy) })),
-  };
-}
-
-/** La respuesta del POST simulado de cambiar de profesor. */
-export function cambioProfesorSimulado(profesorId: string, destinos: { dia: string; hora: string; duracion: number }[]): unknown {
-  const o = OTROS.find((x) => x.id === profesorId);
-  if (!o) return { ok: false, codigo: "PROFESOR_NO_EXISTE", mensaje: "No existe ese profesor." };
-  if (o.id === "t24") return { ok: false, codigo: "PROFESOR_ARCHIVADO", mensaje: "Ese profesor ya no está en la academia." };
-  if (destinos.length !== SESIONES_ORIGEN.length) return { ok: false, codigo: "DATOS_INVALIDOS", mensaje: "Faltan destinos." };
-  if (destinos.some((d, i) => destinos.some((e, j) => i !== j && seSolapan(d as SesionOrigen, e as SesionOrigen)))) {
-    return { ok: false, codigo: "DATOS_INVALIDOS", mensaje: "Dos destinos se solapan." };
+/** POST cambiar-profesor simulado: asigna el primer profesor que lo cubre todo. */
+export function cambioProfesorSimulado(destinos: SesionOrigen[], opciones: OpcionesSimulacion = {}): unknown {
+  const { sesiones = SESIONES_ORIGEN, profesores = OTROS } = opciones;
+  if (destinos.length !== sesiones.length || destinos.some((d, i) => d.duracion !== sesiones[i].duracion)) {
+    return { ok: false, codigo: "SESIONES_NO_COINCIDEN", mensaje: "Los horarios no coinciden con tus clases." };
+  }
+  if (destinos.some((d, i) => destinos.some((e, j) => i !== j && chocan(d, e)))) {
+    return { ok: false, codigo: "DATOS_INVALIDOS", mensaje: "Dos horarios chocan." };
   }
   for (const d of destinos) {
     const r = cambioSimulado("fijo", null, d);
@@ -439,11 +409,12 @@ export function cambioProfesorSimulado(profesorId: string, destinos: { dia: stri
       return { ok: false, codigo: "ASIGNACION_CAMBIADA", mensaje: "Tu asignación ha cambiado mientras guardábamos. No se ha cambiado nada." };
     }
   }
+  const asignado = profesores.find((p) => destinos.every((d) => tieneLibre(p, d)));
+  if (!asignado) return { ok: false, codigo: "SLOT_NO_DISPONIBLE", mensaje: "Ningún profesor tiene libres a la vez esos horarios." };
   return {
     ok: true,
-    profesor_anterior: { nombre: PROFESOR },
-    profesor_nuevo: { id: o.id, nombre: o.nombre },
-    sesiones_antes: SESIONES_ORIGEN,
+    profesor: { nombre: asignado.nombre },
+    sesiones_antes: sesiones,
     sesiones_despues: destinos,
   };
 }

@@ -73,43 +73,52 @@ export type TextosAutoservicio = {
   hechoAviso: string;
   ocupado: string;
 
-  // --- cambiar de profesor (v2) ---
-  buscaTitulo: string;
-  buscaDetalle: string;
+  // --- cambiar de profesor (v3: elige horarios; el profesor lo asigna Gestión) ---
+  // NINGÚN TEXTO DE ANTES DE CONFIRMAR LLEVA NOMBRE DE PROFESOR.
+  profesorTitulo: string;
+  profesorIntro: string;
   cualquierDia: string;
   cualquierHora: string;
   sinResultados: string;
   /** Solo con la simulación: lo que se elija no se guarda. */
   simulacion: string;
-  cargandoProfesores: string;
-  sinProfesores: string;
-  /** Debajo de un hueco de otro profesor: «1.ª clase: lunes 12 de octubre». */
+  cargandoHorarios: string;
+  /** Ni un horario para su primera clase. */
+  sinHorarios: string;
+  /** Con lo elegido, ningún profesor puede con la siguiente; `quedan`, las clases sin elegir. */
+  sinHorariosParaOtra: (quedan: number) => string;
+  /** Vuelve a empezar la elección. */
+  cambiarElegidos: string;
+  /** Lo elegido se ocupó mientras elegía (o al confirmar): a elegir de nuevo. */
+  elegidosOcupados: string;
+  /** Debajo de un horario: «1.ª clase: lunes 12 de octubre». */
   primeraClaseCorta: (fecha: string) => string;
-  /** El paso de repartir sus sesiones: «Elige tus horarios con Daniela». */
-  repartirTitulo: (profesor: string) => string;
-  repartirDetalle: (sesiones: number) => string;
-  /** Cabecera de cada clase al repartir: «Tu clase de los martes, 1 hora». */
-  tuClaseDe: (dia: DiaSemana, horas: number) => string;
-  /** Debajo de la cabecera: el horario de ahora, «Ahora: 18:00–19:00». */
-  ahora: (desde: string, hasta: string) => string;
+  /** Cabecera de cada clase: «Tu clase de 1 hora». */
+  tuClaseDe: (horas: number) => string;
+  /** Debajo de la cabecera: el horario de ahora, «Ahora: los martes, 18:00–19:00». */
+  ahora: (dia: DiaSemana, desde: string, hasta: string) => string;
+  /** Una clase cuyo horario se elige después del de la anterior. */
+  despuesDeLaAnterior: string;
+  /** El botón de una clase ya elegida, para cambiar su horario (y los de después). */
+  cambiarEste: string;
+  /** Lo mismo, para lectores de pantalla: «Cambiar el horario de tu clase de 1 hora». */
+  cambiarEsteEtiqueta: (horas: number) => string;
   /** «Has elegido 2 de 3 clases» */
   contadorClases: (elegidas: number, total: number) => string;
-  /** «Este profesor no tiene hueco para tu clase de 2 horas.» */
-  sinHuecoPara: (horas: number) => string;
-  /** Hay hueco para cada clase, pero no caben todas sin coincidir. */
-  noCabenTodas: string;
-  otroProfesor: string;
-  /** Un hueco que pisa otro ya elegido. */
-  coincide: string;
-  elegido: string;
   continuar: string;
+  /** En el «Después» de confirmar, en lugar del nombre. */
+  conNuevoProfesor: string;
+  /** Debajo del «Después»: el profesor se asigna al confirmar. */
+  asignamosAlConfirmar: string;
   /** Debajo del «Después» del cambio de profesor. */
   enlaceCambia: string;
   hechoProfesorTitulo: string;
-  /** «Desde ahora tus clases son con Daniela:» */
+  /** «Tu nuevo profesor es Daniela.» El nombre sale aquí y solo aquí. */
   hechoProfesor: (profesor: string) => string;
-  /** El texto pedido: profesor avisado, correo de bienvenida y el enlace. */
+  /** Avisado, con su ficha, correo de bienvenida y el enlace. */
   hechoProfesorAviso: string;
+  /** Encima de sus horarios nuevos. */
+  tusClasesDesdeAhora: string;
   /**
    * Por qué no puede cambiar de profesor ahora (`puede_cambiar_profesor`)
    * y, si Gestión lo sabe, desde cuándo podrá.
@@ -222,30 +231,34 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     hechoAviso: "Tu profesor ya está avisado y te llega un correo con el cambio.",
     ocupado: "Ese hueco se acaba de ocupar, aquí tienes los que siguen libres.",
 
-    buscaTitulo: "Busca un horario con otro profesor",
-    buscaDetalle: "Elige el día y la franja que mejor te vengan.",
+    profesorTitulo: "Elige tus nuevos horarios",
+    profesorIntro: "Elige los horarios que te vienen bien y te asignamos el profesor que mejor encaje.",
     cualquierDia: "Cualquier día",
     cualquierHora: "Cualquier hora",
-    sinResultados: "Con estos filtros no hay huecos. Prueba con otro día u otra franja.",
+    sinResultados: "Con estos filtros no hay horarios. Prueba con otro día u otra franja.",
     simulacion: "Datos de prueba: este cambio no se guarda.",
-    cargandoProfesores: "Buscando profesores con huecos libres…",
-    sinProfesores: "Ahora mismo no hay otros profesores con huecos libres para tu clase.",
+    cargandoHorarios: "Buscando horarios libres…",
+    sinHorarios: "Ahora mismo no hay ningún profesor con horarios libres para tu clase. Escríbenos por WhatsApp y lo buscamos contigo.",
+    sinHorariosParaOtra: (quedan) =>
+      `Con estos horarios no hay ningún profesor libre para ${quedan === 1 ? "tu otra clase" : "el resto de tus clases"}. Puedes cambiar los que has elegido o escribirnos por WhatsApp y lo buscamos contigo.`,
+    cambiarElegidos: "Cambiar los horarios elegidos",
+    elegidosOcupados: "Alguno de los horarios que habías elegido se acaba de ocupar. Vuelve a elegir: aquí tienes los que siguen libres.",
     primeraClaseCorta: (fecha) => `1.ª clase: ${fechaEs(fecha)}`,
-    repartirTitulo: (profesor) => `Elige tus horarios con ${profesor}`,
-    repartirDetalle: (n) => `Tienes ${n} clases a la semana y pasan todas a tu nuevo profesor: elige un hueco para cada una, de su misma duración. No pueden coincidir.`,
-    tuClaseDe: (dia, horas) => `Tu clase de los ${diaPluralEs(dia)}, ${horasEs(horas)}`,
-    ahora: (desde, hasta) => `Ahora: ${desde}–${hasta}`,
+    tuClaseDe: (horas) => `Tu clase de ${horasEs(horas)}`,
+    ahora: (dia, desde, hasta) => `Ahora: los ${diaPluralEs(dia)}, ${desde}–${hasta}`,
+    despuesDeLaAnterior: "Elige antes el horario de la clase de arriba.",
+    cambiarEste: "Cambiar",
+    cambiarEsteEtiqueta: (horas) => `Cambiar el horario de tu clase de ${horasEs(horas)}`,
     contadorClases: (n, total) => `Has elegido ${n} de ${total} ${total === 1 ? "clase" : "clases"}`,
-    sinHuecoPara: (horas) => `Este profesor no tiene hueco para tu clase de ${horasEs(horas)}.`,
-    noCabenTodas: "Con los huecos de este profesor no caben todas tus clases sin que coincidan.",
-    otroProfesor: "Elegir otro profesor",
-    coincide: "Coincide con otra que has elegido",
-    elegido: "Elegido",
     continuar: "Continuar",
+    conNuevoProfesor: "Con tu nuevo profesor",
+    asignamosAlConfirmar: "Al confirmar te asignamos el profesor que mejor encaje con estos horarios.",
     enlaceCambia: "El enlace de la clase cambia: te lo pasará tu nuevo profesor.",
     hechoProfesorTitulo: "¡Ya tienes nuevo profesor!",
-    hechoProfesor: (profesor) => `Desde ahora tus clases son con ${profesor}:`,
-    hechoProfesorAviso: "Tu nuevo profesor ya está avisado. Te llegará un correo de bienvenida y te pasará el enlace de la clase.",
+    hechoProfesor: (profesor) => (profesor ? `Tu nuevo profesor es ${profesor}.` : "Ya tienes nuevo profesor."),
+    hechoProfesorAviso:
+      "Ya está avisado y tiene tu ficha para preparar vuestra primera clase. Te llegará un correo de bienvenida y te pasará el enlace de la clase.",
+    tusClasesDesdeAhora: "Tus clases desde ahora:",
     profesorNoDisponible: (c) =>
       c.motivo === "ANTELACION_INSUFICIENTE" && c.disponibleDesde
         ? `Tu próxima clase está muy cerca. Podrás cambiar de profesor a partir del ${momentoEs(c.disponibleDesde)}.`
@@ -257,7 +270,9 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
         case "RECUPERACION_PENDIENTE":
           return "Tienes una clase por recuperar. Cuando la tengas resuelta podrás cambiar de profesor desde aquí; si te corre prisa, escríbenos por WhatsApp.";
         case "CALENDARIO_SIN_ACTUALIZAR":
-          return "El calendario de ese profesor no está al día. Elige a otro de la lista.";
+          // El de SU profesor no frena el cambio de profesor: si llega, es
+          // de Gestión, no del alumno.
+          return AUTOSERVICIO.es.motivo("GENERICO");
         case "ANTELACION_INSUFICIENTE":
           return "Tu próxima clase está muy cerca para cambiar de profesor ahora. Prueba cuando haya pasado, o escríbenos por WhatsApp.";
         default:
@@ -307,12 +322,6 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
           return "Ahora mismo no podemos consultar tu horario. Prueba otra vez en unos minutos o escríbenos por WhatsApp y lo vemos contigo.";
         case "A_MEDIAS":
           return "Algo no ha terminado bien al guardar tu cambio y el equipo ya está avisado. No hace falta que lo repitas: te escribimos nosotros. Si quieres, también puedes escribirnos por WhatsApp.";
-        case "MISMO_PROFESOR":
-          return "Ese ya es tu profesor. Elige a otro de la lista.";
-        case "PROFESOR_NO_EXISTE":
-        case "PROFESOR_ARCHIVADO":
-        case "PROFESOR_DE_PRUEBA":
-          return "Ese profesor ya no tiene huecos disponibles. Elige a otro de la lista.";
         case "HORAS_NO_COINCIDEN":
           return "Tu plan tiene otras horas a la semana que las que estás eligiendo. Escríbenos por WhatsApp y lo ajustamos contigo.";
         case "ASIGNACION_CAMBIADA":
@@ -370,30 +379,34 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     hechoAviso: "Your teacher already knows, and you'll get an email with the change.",
     ocupado: "That slot has just been taken, here are the ones still free.",
 
-    buscaTitulo: "Find a time with another teacher",
-    buscaDetalle: "Pick the day and time of day that suit you best.",
+    profesorTitulo: "Choose your new times",
+    profesorIntro: "Choose the times that suit you and we'll assign the teacher who fits best.",
     cualquierDia: "Any day",
     cualquierHora: "Any time",
-    sinResultados: "No slots match these filters. Try another day or time of day.",
+    sinResultados: "No times match these filters. Try another day or time of day.",
     simulacion: "Test data: this change isn't saved.",
-    cargandoProfesores: "Looking for teachers with free slots…",
-    sinProfesores: "There are no other teachers with free slots for your class right now.",
+    cargandoHorarios: "Looking for free times…",
+    sinHorarios: "There's no teacher with free times for your class right now. Message us on WhatsApp and we'll find one with you.",
+    sinHorariosParaOtra: (quedan) =>
+      `With these times there's no teacher free for ${quedan === 1 ? "your other class" : "the rest of your classes"}. You can change the ones you chose, or message us on WhatsApp and we'll find one with you.`,
+    cambiarElegidos: "Change the times I chose",
+    elegidosOcupados: "One of the times you'd chosen has just been taken. Choose again: here are the ones still free.",
     primeraClaseCorta: (fecha) => `First class: ${fechaEn(fecha)}`,
-    repartirTitulo: (profesor) => `Choose your times with ${profesor}`,
-    repartirDetalle: (n) => `You have ${n} classes a week and they all move to your new teacher: choose a slot for each one, of the same length. They can't overlap.`,
-    tuClaseDe: (dia, horas) => `Your ${DIAS_EN[dia]} class, ${horasEn(horas)}`,
-    ahora: (desde, hasta) => `Now: ${desde}–${hasta}`,
+    tuClaseDe: (horas) => `Your ${horas}-hour class`,
+    ahora: (dia, desde, hasta) => `Now: ${DIAS_EN[dia]}s, ${desde}–${hasta}`,
+    despuesDeLaAnterior: "Choose the time for the class above first.",
+    cambiarEste: "Change",
+    cambiarEsteEtiqueta: (horas) => `Change the time of your ${horas}-hour class`,
     contadorClases: (n, total) => `You've chosen ${n} of ${total} ${total === 1 ? "class" : "classes"}`,
-    sinHuecoPara: (horas) => `This teacher has no slot for your ${horas}-hour class.`,
-    noCabenTodas: "With this teacher's slots, your classes can't all fit without overlapping.",
-    otroProfesor: "Choose another teacher",
-    coincide: "Overlaps with another one you chose",
-    elegido: "Chosen",
     continuar: "Continue",
+    conNuevoProfesor: "With your new teacher",
+    asignamosAlConfirmar: "When you confirm, we'll assign the teacher who best fits these times.",
     enlaceCambia: "Your class link changes: your new teacher will send it to you.",
     hechoProfesorTitulo: "You have a new teacher!",
-    hechoProfesor: (profesor) => `From now on your classes are with ${profesor}:`,
-    hechoProfesorAviso: "Your new teacher already knows. You'll get a welcome email, and they'll send you the class link.",
+    hechoProfesor: (profesor) => (profesor ? `Your new teacher is ${profesor}.` : "You have a new teacher."),
+    hechoProfesorAviso:
+      "They already know and have your file to prepare your first class. You'll get a welcome email, and they'll send you the class link.",
+    tusClasesDesdeAhora: "Your classes from now on:",
     profesorNoDisponible: (c) =>
       c.motivo === "ANTELACION_INSUFICIENTE" && c.disponibleDesde
         ? `Your next class is very close. You'll be able to change teacher from ${momentoEn(c.disponibleDesde)}.`
@@ -405,7 +418,7 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
         case "RECUPERACION_PENDIENTE":
           return "You have a class to make up. Once it's sorted you'll be able to change teacher here; if it's urgent, message us on WhatsApp.";
         case "CALENDARIO_SIN_ACTUALIZAR":
-          return "That teacher's calendar isn't up to date. Pick another one from the list.";
+          return AUTOSERVICIO.en.motivo("GENERICO");
         case "ANTELACION_INSUFICIENTE":
           return "Your next class is too close to change teacher now. Try again once it's over, or message us on WhatsApp.";
         default:
@@ -455,12 +468,6 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
           return "We can't check your schedule just now. Try again in a few minutes, or message us on WhatsApp and we'll sort it out with you.";
         case "A_MEDIAS":
           return "Something didn't finish properly while saving your change, and the team already knows. No need to repeat it: we'll write to you. You can also message us on WhatsApp if you like.";
-        case "MISMO_PROFESOR":
-          return "That's already your teacher. Pick another one from the list.";
-        case "PROFESOR_NO_EXISTE":
-        case "PROFESOR_ARCHIVADO":
-        case "PROFESOR_DE_PRUEBA":
-          return "That teacher no longer has free slots. Pick another one from the list.";
         case "HORAS_NO_COINCIDEN":
           return "Your plan has a different number of hours a week than the ones you're choosing. Message us on WhatsApp and we'll sort it out with you.";
         case "ASIGNACION_CAMBIADA":

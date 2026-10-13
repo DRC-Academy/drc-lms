@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { destinosListos, estadoReparto, hayCombinacion } from "@/lib/autoservicio/profesor";
-import { leerHuecosDeProfesor } from "@/lib/autoservicio/leer";
-import { huecosDeProfesorSimulados } from "@/lib/autoservicio/simulacion";
+import { chocan, destinosListos, elegir, siguienteSesion } from "@/lib/autoservicio/profesor";
+import { leerHorariosProfesor, leerResultadoCambioProfesor } from "@/lib/autoservicio/leer";
+import { cambioProfesorSimulado, horariosProfesorSimulados, type ProfesorSimulado } from "@/lib/autoservicio/simulacion";
 import { AUTOSERVICIO } from "@/lib/textos/autoservicio";
 import type { DiaSemana } from "@/lib/clases";
-import type { SesionOrigen } from "@/lib/autoservicio/tipos";
+import type { HorarioNuevo, SesionOrigen } from "@/lib/autoservicio/tipos";
 
-// «Cambiar de profesor»: TODAS sus clases semanales pasan al profesor
-// nuevo, cada una con su misma duración. Un plan de 3 h en 1+1+1 elige
-// tres huecos de 1 h; uno de 2+1, uno de 2 h seguidas y otro de 1 h.
+// «Cambiar de profesor» en v3: TODAS sus clases semanales pasan a un
+// profesor nuevo, cada una con su misma duración, y el alumno solo elige
+// horarios. Un plan de 3 h en 1+1+1 elige tres horarios de 1 h; uno de
+// 2+1, uno de 2 h seguidas y otro de 1 h. Gestión (aquí, la simulación)
+// solo ofrece para cada clase lo que un mismo profesor puede cubrir con
+// lo ya elegido.
 
 const DIAS: DiaSemana[] = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
 const s = (dia: DiaSemana, hora: string, duracion: number): SesionOrigen => ({ dia, hora, duracion });
@@ -38,147 +41,80 @@ const FORMAS: number[][] = [
 ];
 
 const sesionesDe = (forma: number[]) => forma.map((h, i) => s(DIAS[i], "18:00", h));
-
-/**
- * Los huecos del profesor nuevo para cada clase: dos de su duración (a
- * las 9:00 de su día y del siguiente, que no se pisan con los de las
- * demás) y uno de otra duración, que no vale.
- */
-const huecosDe = (forma: number[]) =>
-  forma.map((h, i) => [s(DIAS[i], "09:00", h), s(DIAS[(i + 1) % 5], "14:00", h), s(DIAS[i], "16:00", h === 1 ? 2 : 1)]);
-
 const horas = (forma: number[]) => forma.reduce((a, b) => a + b, 0);
 
-describe("planes de 1 a 5 horas: todas las clases, cada una con su duración", () => {
+/** Un profesor con el martes y el miércoles libres de 8:00 a 22:00: cabe cualquier plan. */
+const AMPLIO: ProfesorSimulado = {
+  nombre: "Amplio",
+  libres: { Martes: Array.from({ length: 15 }, (_, i) => 8 + i), Miércoles: Array.from({ length: 15 }, (_, i) => 8 + i) },
+};
+
+const lunes = new Date("2026-10-12T10:00:00Z");
+const pedir = (elegidos: SesionOrigen[], sesiones: SesionOrigen[], profesores: ProfesorSimulado[]) =>
+  leerHorariosProfesor(horariosProfesorSimulados(elegidos, { sesiones, profesores, ahora: lunes }))!;
+
+describe("planes de 1 a 5 horas: todas las clases, una detrás de otra, cada una con su duración", () => {
   for (const forma of FORMAS) {
     const nombre = `${horas(forma)} h en ${forma.join("+")}`;
     const sesiones = sesionesDe(forma);
-    const huecos = huecosDe(forma);
 
-    it(`${nombre}: el contador cuenta, y solo está listo con TODAS elegidas`, () => {
-      const destinos: (SesionOrigen | null)[] = sesiones.map(() => null);
-      for (let i = 0; i < sesiones.length; i++) {
-        const r = estadoReparto(sesiones, huecos, destinos);
-        expect(r.total).toBe(forma.length);
-        expect(r.elegidas).toBe(i);
-        expect(r.listo).toBe(false);
-        destinos[i] = huecos[i][0];
+    it(`${nombre}: se eligen todas, el contador cuenta y solo está listo al final`, () => {
+      let elegidos: HorarioNuevo[] = [];
+      for (let i = 0; i < forma.length; i++) {
+        expect(siguienteSesion(sesiones, elegidos)).toBe(i);
+        expect(destinosListos(sesiones, elegidos)).toBe(false);
+        expect(AUTOSERVICIO.es.contadorClases(elegidos.length, forma.length)).toBe(
+          `Has elegido ${i} de ${forma.length} ${forma.length === 1 ? "clase" : "clases"}`
+        );
+        const r = pedir(elegidos, sesiones, [AMPLIO]);
+        expect(r.sesiones).toEqual(sesiones);
+        expect(r.horarios.length).toBeGreaterThan(0);
+        // Todos de la duración de SU clase, y ninguno choca con lo elegido.
+        expect(r.horarios.every((h) => h.duracion === forma[i])).toBe(true);
+        expect(r.horarios.some((h) => elegidos.some((e) => chocan(h, e)))).toBe(false);
+        elegidos = elegir(elegidos, r.horarios[0]);
       }
-      const final = estadoReparto(sesiones, huecos, destinos);
-      expect(final).toMatchObject({ elegidas: forma.length, listo: true, sinHueco: [], imposible: false });
-    });
-
-    it(`${nombre}: un hueco de otra duración no vale`, () => {
-      const destinos = huecos.map((h) => h[0]);
-      destinos[0] = huecos[0][2];
-      expect(destinosListos(sesiones, destinos)).toBe(false);
-      expect(estadoReparto(sesiones, huecos, destinos).elegidas).toBe(forma.length - 1);
+      expect(siguienteSesion(sesiones, elegidos)).toBeNull();
+      expect(destinosListos(sesiones, elegidos)).toBe(true);
+      expect(pedir(elegidos, sesiones, [AMPLIO]).horarios).toEqual([]);
+      expect(leerResultadoCambioProfesor(cambioProfesorSimulado(elegidos, { sesiones, profesores: [AMPLIO] }))).toMatchObject({
+        ok: true,
+        profesorNuevo: "Amplio",
+      });
     });
 
     if (forma.length > 1) {
-      it(`${nombre}: dos huecos que se pisan no valen`, () => {
-        // La segunda clase, en el mismo sitio que la primera.
-        const destinos = huecos.map((h) => h[0]);
-        destinos[1] = s(destinos[0]!.dia, destinos[0]!.hora, forma[1]);
-        expect(destinosListos(sesiones, destinos)).toBe(false);
+      it(`${nombre}: si con lo elegido no queda nadie para la siguiente, llega vacío`, () => {
+        // Solo «Justo» tiene el lunes a las 10:00, y nada más.
+        const justo: ProfesorSimulado = {
+          nombre: "Justo",
+          libres: { Lunes: Array.from({ length: forma[0] }, (_, k) => 10 + k) },
+        };
+        const r = pedir([s("Lunes", "10:00", forma[0])], sesiones, [AMPLIO, justo]);
+        expect(r).toMatchObject({ elegidosDisponibles: true, horarios: [] });
       });
     }
-
-    it(`${nombre}: sin hueco de una duración, lo dice y no hay combinación`, () => {
-      const sinUna = huecos.map((h, i) => (i === forma.length - 1 ? h.filter((x) => x.duracion !== forma[i]) : h));
-      const r = estadoReparto(sesiones, sinUna, sesiones.map(() => null));
-      expect(r.sinHueco).toEqual([forma.length - 1]);
-      expect(r.imposible).toBe(false);
-      expect(hayCombinacion(sesiones, sinUna)).toBe(false);
-    });
   }
 });
 
-describe("hay hueco para cada una, pero no caben todas", () => {
-  it("2+1 con un único hueco de 2 h que pisa el único de 1 h", () => {
-    const sesiones = [s("Martes", "18:00", 2), s("Jueves", "09:00", 1)];
-    const huecos = [[s("Lunes", "10:00", 2)], [s("Lunes", "11:00", 1)]];
-    const r = estadoReparto(sesiones, huecos, [null, null]);
-    expect(r).toMatchObject({ sinHueco: [], imposible: true, listo: false });
-  });
-
-  it("1+1+1 con solo dos huecos distintos: falta uno", () => {
-    const sesiones = [s("Lunes", "18:00", 1), s("Martes", "18:00", 1), s("Miércoles", "18:00", 1)];
-    const dos = [s("Viernes", "09:00", 1), s("Viernes", "10:00", 1)];
-    expect(hayCombinacion(sesiones, [dos, dos, dos])).toBe(false);
-    expect(hayCombinacion(sesiones, [dos, dos, [...dos, s("Viernes", "11:00", 1)]])).toBe(true);
-  });
-
-  it("encuentra el reparto aunque el primer hueco de cada una lleve a un callejón", () => {
-    // La de 2 h solo cabe a las 10:00; la de 1 h tiene que ir a las 12:00.
-    const sesiones = [s("Lunes", "18:00", 1), s("Martes", "18:00", 2)];
-    const huecos = [
-      [s("Viernes", "10:00", 1), s("Viernes", "12:00", 1)],
-      [s("Viernes", "10:00", 2)],
-    ];
-    expect(hayCombinacion(sesiones, huecos)).toBe(true);
-  });
-});
-
-describe("la lectura no deja pasar huecos de otra duración", () => {
-  it("una clase de 2 h no recibe huecos de 1 h aunque Gestión los mande", () => {
-    const h = leerHuecosDeProfesor({
-      ok: true,
-      tipo: "profesor",
-      profesor: { id: "t15", nombre: "Carla" },
-      sesiones: [
-        {
-          indice: 0,
-          dia: "Jueves",
-          hora: "09:00",
-          duracion: 2,
-          huecos: [
-            { profesor: { id: "t15", nombre: "Carla" }, dia: "Lunes", hora: "10:00", duracion: 2, fecha_primera_clase: "2026-10-19" },
-            { profesor: { id: "t15", nombre: "Carla" }, dia: "Lunes", hora: "13:00", duracion: 1, fecha_primera_clase: "2026-10-19" },
-          ],
-        },
-      ],
-    })!;
-    expect(h.sesiones[0].huecos.map((x) => x.hora)).toEqual(["10:00"]);
-  });
-});
-
-describe("la simulación: los dos callejones sin salida", () => {
-  const lunes = new Date("2026-10-12T10:00:00Z");
-  const reparto = (id: string) => {
-    const h = leerHuecosDeProfesor(huecosDeProfesorSimulados(id, lunes))!;
-    const sesiones = h.sesiones.map((x) => x.sesion);
-    return estadoReparto(sesiones, h.sesiones.map((x) => x.huecos), sesiones.map(() => null));
-  };
-
-  it("Bruno no tiene hueco para la clase de 2 horas", () => {
-    expect(reparto("t25")).toMatchObject({ sinHueco: [1], imposible: false });
-  });
-
-  it("con Elena no caben las dos sin pisarse", () => {
-    expect(reparto("t26")).toMatchObject({ sinHueco: [], imposible: true });
-  });
-
-  it("con Daniela se puede", () => {
-    expect(reparto("t21")).toMatchObject({ sinHueco: [], imposible: false });
-  });
-});
-
-describe("los textos del reparto", () => {
+describe("los textos de la elección", () => {
   it("es", () => {
     const t = AUTOSERVICIO.es;
-    expect(t.tuClaseDe("Martes", 1)).toBe("Tu clase de los martes, 1 hora");
-    expect(t.tuClaseDe("Jueves", 2)).toBe("Tu clase de los jueves, 2 horas");
-    expect(t.tuClaseDe("Sábado", 2)).toBe("Tu clase de los sábados, 2 horas");
+    expect(t.profesorIntro).toBe("Elige los horarios que te vienen bien y te asignamos el profesor que mejor encaje.");
+    expect(t.tuClaseDe(1)).toBe("Tu clase de 1 hora");
+    expect(t.tuClaseDe(2)).toBe("Tu clase de 2 horas");
+    expect(t.ahora("Sábado", "10:00", "12:00")).toBe("Ahora: los sábados, 10:00–12:00");
     expect(t.contadorClases(2, 3)).toBe("Has elegido 2 de 3 clases");
-    expect(t.sinHuecoPara(2)).toBe("Este profesor no tiene hueco para tu clase de 2 horas.");
-    expect(t.sinHuecoPara(1)).toBe("Este profesor no tiene hueco para tu clase de 1 hora.");
+    expect(t.sinHorariosParaOtra(1)).toMatch(/^Con estos horarios no hay ningún profesor libre para tu otra clase\./);
+    expect(t.sinHorariosParaOtra(2)).toMatch(/para el resto de tus clases\./);
+    expect(t.sinHorariosParaOtra(1)).toMatch(/WhatsApp/);
   });
 
   it("en", () => {
     const t = AUTOSERVICIO.en;
-    expect(t.tuClaseDe("Martes", 1)).toBe("Your Tuesday class, 1 hour");
+    expect(t.tuClaseDe(1)).toBe("Your 1-hour class");
+    expect(t.ahora("Martes", "18:00", "19:00")).toBe("Now: Tuesdays, 18:00–19:00");
     expect(t.contadorClases(2, 3)).toBe("You've chosen 2 of 3 classes");
-    expect(t.sinHuecoPara(2)).toBe("This teacher has no slot for your 2-hour class.");
+    expect(t.sinHorariosParaOtra(1)).toMatch(/^With these times there's no teacher free for your other class\./);
   });
 });

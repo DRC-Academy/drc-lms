@@ -26,12 +26,12 @@ import {
   aHuecoGestion,
   leerError,
   leerEstado,
+  leerHorariosProfesor,
   leerHuecos,
-  leerHuecosDeProfesor,
-  leerListaProfesores,
   leerResultadoCambio,
   leerResultadoCambioProfesor,
 } from "@/lib/autoservicio/leer";
+import { aDestino } from "@/lib/autoservicio/profesor";
 import type {
   CodigoAutoservicio,
   CuerpoCambiarHorario,
@@ -109,39 +109,29 @@ export const autoservicioDeGestion: ProveedorAutoservicio = {
     return resultado;
   },
 
-  // --- v2: cambio de profesor. Sin caché: se piden al abrir el flujo. ---
+  // --- v3: cambio de profesor. Sin caché: cada paso depende de lo elegido. ---
 
-  async huecosProfesores(alumnoId) {
+  async horariosProfesor(alumnoId, elegidos) {
     if (esIdDemo(alumnoId)) return { ok: false, codigo: "NO_ELEGIBLE" };
-    const r = await llamarGestion(PREFIJO, `${BASE}/huecos-profesores?${new URLSearchParams({ alumno_id: alumnoId })}`, { method: "GET" });
-    if (!r.ok) return { ok: false, codigo: leerError(r.cuerpo).codigo };
-    const lista = leerListaProfesores(r.cuerpo);
-    if (!lista) {
-      console.error(`[${PREFIJO}] Gestión devolvió una lista de profesores que no se puede leer.`);
-      return { ok: false, codigo: "GENERICO" };
-    }
-    return { ok: true, datos: lista };
-  },
-
-  async huecosDeProfesor(alumnoId, profesorId) {
-    if (esIdDemo(alumnoId)) return { ok: false, codigo: "NO_ELEGIBLE" };
-    const consulta = new URLSearchParams({ alumno_id: alumnoId, profesor_id: profesorId });
+    // Los elegidos van como JSON en la URL; los filtros de día y franja
+    // se aplican en el LMS, sin volver a preguntar.
+    const consulta = new URLSearchParams({ alumno_id: alumnoId });
+    if (elegidos.length > 0) consulta.set("elegidos", JSON.stringify(elegidos.map(aDestino)));
     const r = await llamarGestion(PREFIJO, `${BASE}/huecos-profesores?${consulta}`, { method: "GET" });
     if (!r.ok) return { ok: false, codigo: leerError(r.cuerpo).codigo };
-    const huecos = leerHuecosDeProfesor(r.cuerpo);
-    if (!huecos) {
-      console.error(`[${PREFIJO}] Gestión devolvió los huecos de un profesor que no se pueden leer.`);
+    const horarios = leerHorariosProfesor(r.cuerpo);
+    if (!horarios) {
+      console.error(`[${PREFIJO}] Gestión devolvió unos horarios para cambiar de profesor que no se pueden leer.`);
       return { ok: false, codigo: "GENERICO" };
     }
-    return { ok: true, datos: huecos };
+    return { ok: true, datos: horarios };
   },
 
   async cambiarProfesor(alumnoId, p) {
     if (esIdDemo(alumnoId)) return { ok: false, codigo: "NO_ELEGIBLE", mensaje: null, disponibleDesde: null };
     const cuerpo: CuerpoCambiarProfesor = {
       alumno_id: alumnoId,
-      profesor_id: p.profesorId,
-      destinos: p.destinos.map((d) => ({ dia: d.dia, hora: d.hora, duracion: d.duracion })),
+      destinos: p.destinos.map(aDestino),
       idempotency_key: p.idempotencyKey,
     };
     const r = await llamarGestion(PREFIJO, `${BASE}/cambiar-profesor`, { method: "POST", cuerpo });

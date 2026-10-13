@@ -1,137 +1,82 @@
 // ---------------------------------------------------------------
 // «CAMBIAR DE PROFESOR»: LAS REGLAS QUE DECIDE EL LMS
 //
-// Casi todo lo decide Gestión. Aquí solo lo que el contrato v2 deja del
-// lado del LMS:
+// Contrato v3: el alumno NO elige profesor, elige horarios, y Gestión le
+// asigna el profesor que mejor encaje. Se elige una clase detrás de
+// otra: con cada horario elegido se piden los de la siguiente mandando
+// los `elegidos`, y Gestión solo devuelve horarios que un MISMO profesor
+// puede cubrir junto con los ya elegidos. Así que aquí queda poco:
 //
-//   · NO DEJAR ELEGIR DOS DESTINOS QUE SE SOLAPEN. Gestión calcula los
-//     huecos de cada sesión por separado y rechaza el solape en el POST
-//     (DATOS_INVALIDOS); la pantalla no debe llegar ahí.
-//   · RESPETAR EL ORDEN DE GESTIÓN. La lista de profesores llega en un
-//     orden aleatorio y estable durante el día, con los huecos de cada
-//     profesor juntos, y no se ordena por puntuación. Aquí se agrupa por
-//     profesor sin reordenar.
+//   · EN ORDEN. Los elegidos son siempre un principio de sus sesiones:
+//     el primero para la primera, el segundo para la segunda… Cambiar
+//     uno ya elegido deshace también los de detrás, porque se eligieron
+//     contando con él.
+//   · NO MANDAR NADA QUE NO CUADRE. Uno por sesión, de su misma duración
+//     y sin chocar: Gestión lo rechazaría igualmente.
+//
+// Ni rastro de profesores: ni ids ni nombres hasta que el cambio está
+// hecho.
 //
 // Puro y sin `server-only`: lo usan la pantalla y las pruebas.
 // ---------------------------------------------------------------
 
-import type { HuecoProfesor, Profesor, SesionOrigen } from "@/lib/autoservicio/tipos";
+import type { SesionOrigen } from "@/lib/autoservicio/tipos";
 
 const enHoras = (hora: string): number => Number(hora.slice(0, 2));
 
-/** Si dos bloques del mismo día se pisan. «15–17» y «16–18», sí; «15–16» y «16–17», no. */
-export function seSolapan(a: SesionOrigen, b: SesionOrigen): boolean {
+/**
+ * Si dos bloques del mismo día chocan, con la regla de Gestión: se pisan
+ * O VAN SEGUIDOS. «15–17» y «16–18» chocan, y «15–16» y «16–17» también:
+ * en el calendario serían una sola clase de dos horas y el alumno dejaría
+ * de tener las clases que tiene.
+ */
+export function chocan(a: SesionOrigen, b: SesionOrigen): boolean {
   if (a.dia !== b.dia) return false;
   const inicioA = enHoras(a.hora);
   const inicioB = enHoras(b.hora);
-  return inicioA < inicioB + b.duracion && inicioB < inicioA + a.duracion;
+  return inicioA <= inicioB + b.duracion && inicioB <= inicioA + a.duracion;
 }
 
 /**
- * Si un hueco se puede elegir para la sesión `indice`, con los destinos
- * ya elegidos para las demás: no puede pisar ninguno.
+ * Si los elegidos están bien encaminados: no más que sesiones, cada uno
+ * de la duración de SU sesión y sin chocar entre ellos.
  */
-export function cabe(hueco: SesionOrigen, indice: number, elegidos: (SesionOrigen | null)[]): boolean {
-  return elegidos.every((otro, i) => i === indice || otro === null || !seSolapan(hueco, otro));
+export function elegidosValidos(sesiones: SesionOrigen[], elegidos: SesionOrigen[]): boolean {
+  if (elegidos.length > sesiones.length) return false;
+  return elegidos.every(
+    (e, i) => e.duracion === sesiones[i].duracion && elegidos.every((otro, j) => j === i || !chocan(e, otro))
+  );
+}
+
+/** Si ya tiene horario para todas sus clases y se puede confirmar. */
+export function destinosListos(sesiones: SesionOrigen[], elegidos: SesionOrigen[]): boolean {
+  return sesiones.length > 0 && elegidos.length === sesiones.length && elegidosValidos(sesiones, elegidos);
+}
+
+/** La sesión a la que le toca elegir horario, o null si ya están todas. */
+export function siguienteSesion(sesiones: SesionOrigen[], elegidos: SesionOrigen[]): number | null {
+  return elegidos.length < sesiones.length ? elegidos.length : null;
+}
+
+/** Elegir un horario para la siguiente sesión. */
+export function elegir<H extends SesionOrigen>(elegidos: H[], horario: H): H[] {
+  return [...elegidos, horario];
+}
+
+/** Cambiar el horario de la sesión `indice`: se deshacen ese y los de detrás. */
+export function cambiarDesde<H extends SesionOrigen>(elegidos: H[], indice: number): H[] {
+  return elegidos.slice(0, Math.max(0, indice));
 }
 
 /**
- * Si los destinos están completos y son válidos: uno por sesión, con su
- * misma duración y sin solaparse entre ellos.
+ * Los horarios que valen para una sesión: de su duración y sin chocar
+ * con lo elegido. Gestión ya los manda así; esto es para no fiarse.
  */
-export function destinosListos(sesiones: SesionOrigen[], destinos: (SesionOrigen | null)[]): destinos is SesionOrigen[] {
-  if (destinos.length !== sesiones.length) return false;
-  for (let i = 0; i < destinos.length; i++) {
-    const d = destinos[i];
-    if (!d || d.duracion !== sesiones[i].duracion) return false;
-    if (!cabe(d, i, destinos)) return false;
-  }
-  return true;
+export function horariosQueValen<H extends SesionOrigen>(sesion: SesionOrigen, elegidos: SesionOrigen[], horarios: H[]): H[] {
+  return horarios.filter((h) => h.duracion === sesion.duracion && !elegidos.some((e) => chocan(h, e)));
 }
 
-/**
- * Si hay alguna forma de dar destino a TODAS las sesiones sin que se
- * pisen, con estos huecos (uno por sesión, de su misma duración).
- *
- * Búsqueda con vuelta atrás, empezando por la sesión con menos huecos.
- * Son cinco sesiones como mucho y unas decenas de huecos cada una, así que
- * acaba enseguida; aun así lleva un tope de pasos y, si lo alcanza, dice
- * que sí: mejor dejar probar al alumno que cerrarle la puerta por una
- * cuenta que no ha terminado.
- */
-export function hayCombinacion(sesiones: SesionOrigen[], huecos: SesionOrigen[][], tope = 50_000): boolean {
-  const validos = sesiones.map((s, i) => (huecos[i] ?? []).filter((h) => h.duracion === s.duracion));
-  if (validos.some((v) => v.length === 0)) return false;
-  const orden = validos.map((_, i) => i).sort((a, b) => validos[a].length - validos[b].length);
-  const elegidos: (SesionOrigen | null)[] = sesiones.map(() => null);
-  let pasos = 0;
-
-  const probar = (k: number): boolean => {
-    if (k === orden.length) return true;
-    const i = orden[k];
-    for (const h of validos[i]) {
-      if (++pasos > tope) return true;
-      if (!cabe(h, i, elegidos)) continue;
-      elegidos[i] = h;
-      if (probar(k + 1)) return true;
-      elegidos[i] = null;
-    }
-    return false;
-  };
-  return probar(0);
-}
-
-/** Cómo va el reparto de sus clases con un profesor, para pintarlo. */
-export type Reparto = {
-  /** Sus clases semanales: todas tienen que pasar al profesor nuevo. */
-  total: number;
-  /** Las que ya tienen destino. */
-  elegidas: number;
-  /** Todas elegidas, cada una de su duración y sin pisarse. */
-  listo: boolean;
-  /** Las sesiones para las que este profesor no tiene ningún hueco de su duración. */
-  sinHueco: number[];
-  /** Hay huecos para cada una, pero no caben todas sin pisarse. */
-  imposible: boolean;
-};
-
-export function estadoReparto(sesiones: SesionOrigen[], huecos: SesionOrigen[][], destinos: (SesionOrigen | null)[]): Reparto {
-  const sinHueco = sesiones
-    .map((s, i) => ((huecos[i] ?? []).some((h) => h.duracion === s.duracion) ? -1 : i))
-    .filter((i) => i >= 0);
-  return {
-    total: sesiones.length,
-    elegidas: destinos.filter((d, i) => d !== null && d !== undefined && d.duracion === sesiones[i]?.duracion).length,
-    listo: destinosListos(sesiones, destinos),
-    sinHueco,
-    imposible: sinHueco.length === 0 && !hayCombinacion(sesiones, huecos),
-  };
-}
-
-export type GrupoProfesor = { profesor: Profesor; huecos: HuecoProfesor[] };
-
-/**
- * Los huecos por profesor, en el orden en que llegaron: el primer
- * profesor que aparece va primero, y los huecos de cada uno, en su orden.
- * Si Gestión mandara los de un profesor separados, se juntan en el sitio
- * de su primera aparición.
- */
-export function agruparPorProfesor(huecos: HuecoProfesor[]): GrupoProfesor[] {
-  const grupos: GrupoProfesor[] = [];
-  const porId = new Map<string, GrupoProfesor>();
-  for (const h of huecos) {
-    let g = porId.get(h.profesor.id);
-    if (!g) {
-      g = { profesor: h.profesor, huecos: [] };
-      porId.set(h.profesor.id, g);
-      grupos.push(g);
-    }
-    g.huecos.push(h);
-  }
-  return grupos;
-}
-
-/** Un hueco como destino del POST: solo lo que pide el contrato. */
+/** Un horario como destino del POST, o como elegido en la consulta: solo lo que pide el contrato. */
 export function aDestino(h: SesionOrigen): SesionOrigen {
   return { dia: h.dia, hora: h.hora, duracion: h.duracion };
 }

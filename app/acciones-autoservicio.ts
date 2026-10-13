@@ -19,19 +19,17 @@
 
 import { sesionActual } from "@/lib/sesion-servidor";
 import { autoservicioActivo, autoservicioProfesorActivo, proveedorAutoservicio } from "@/lib/autoservicio";
-import { idProfesorValido, idSesionValido, peticionProfesorValida, peticionValida } from "@/lib/autoservicio/leer";
+import { idSesionValido, leerElegidos, peticionProfesorValida, peticionValida } from "@/lib/autoservicio/leer";
 import { olvidarLecturasDe } from "@/lib/cache-gestion";
 import type {
+  HorariosProfesor,
   HuecoLibre,
-  HuecosDeProfesor,
   LecturaAutoservicio,
-  ListaProfesores,
   ModoCambio,
   PeticionCambio,
   PeticionCambioProfesor,
   ResultadoCambio,
   ResultadoCambioProfesor,
-  SesionOrigen,
 } from "@/lib/autoservicio/tipos";
 
 async function alumnoDeLaSesion(activo: () => boolean = autoservicioActivo): Promise<string | null> {
@@ -98,29 +96,21 @@ export async function cambiarHorarioAutoservicio(peticion: unknown): Promise<Res
 }
 
 // ---------------------------------------------------------------
-// v2: CAMBIAR DE PROFESOR
+// v3: CAMBIAR DE PROFESOR. Elige horarios; el profesor lo asigna Gestión
 // ---------------------------------------------------------------
 
-/** Todos los profesores disponibles, con sus huecos, en el orden de Gestión. */
-export async function huecosProfesoresAutoservicio(): Promise<LecturaAutoservicio<ListaProfesores>> {
+/**
+ * Los horarios para la siguiente de sus clases, que un mismo profesor
+ * puede cubrir junto con los ya `elegidos` (la primera, sin elegidos).
+ */
+export async function horariosProfesorAutoservicio(elegidos: unknown = []): Promise<LecturaAutoservicio<HorariosProfesor>> {
   const alumnoId = await alumnoDeLaSesion(autoservicioProfesorActivo);
-  if (!alumnoId) return { ok: false, codigo: "GENERICO" };
+  const limpios = leerElegidos(elegidos);
+  if (!alumnoId || !limpios) return { ok: false, codigo: "GENERICO" };
   try {
-    return await proveedorAutoservicio().huecosProfesores(alumnoId);
+    return await proveedorAutoservicio().horariosProfesor(alumnoId, limpios);
   } catch (error) {
-    console.error("[autoservicio] Falló la lectura de los huecos de profesores:", error);
-    return { ok: false, codigo: "GENERICO" };
-  }
-}
-
-/** Los huecos de un profesor para cada una de sus sesiones. */
-export async function huecosDeProfesorAutoservicio(profesorId: unknown): Promise<LecturaAutoservicio<HuecosDeProfesor>> {
-  const alumnoId = await alumnoDeLaSesion(autoservicioProfesorActivo);
-  if (!alumnoId || !idProfesorValido(profesorId)) return { ok: false, codigo: "GENERICO" };
-  try {
-    return await proveedorAutoservicio().huecosDeProfesor(alumnoId, profesorId);
-  } catch (error) {
-    console.error("[autoservicio] Falló la lectura de los huecos de un profesor:", error);
+    console.error("[autoservicio] Falló la lectura de los horarios para cambiar de profesor:", error);
     return { ok: false, codigo: "GENERICO" };
   }
 }
@@ -133,11 +123,7 @@ export async function cambiarProfesorAutoservicio(peticion: unknown): Promise<Re
   const rechazo: ResultadoCambioProfesor = { ok: false, codigo: "GENERICO", mensaje: null, disponibleDesde: null };
   const alumnoId = await alumnoDeLaSesion(autoservicioProfesorActivo);
   const o = typeof peticion === "object" && peticion !== null ? (peticion as Record<string, unknown>) : {};
-  const destinos = (Array.isArray(o.destinos) ? o.destinos : []).map((d) => {
-    const x = typeof d === "object" && d !== null ? (d as Record<string, unknown>) : {};
-    return { dia: x.dia, hora: x.hora, duracion: x.duracion } as SesionOrigen;
-  });
-  const limpia = { profesorId: o.profesorId, destinos, idempotencyKey: o.idempotencyKey } as PeticionCambioProfesor;
+  const limpia = { destinos: leerElegidos(o.destinos) ?? [], idempotencyKey: o.idempotencyKey } as PeticionCambioProfesor;
 
   if (!alumnoId || !peticionProfesorValida(limpia)) return rechazo;
   try {

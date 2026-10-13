@@ -5,7 +5,7 @@
 // separado:
 //
 //   AUTOSERVICIO_ACTIVO=1           «Cambiar de horario» (contrato v1).
-//   AUTOSERVICIO_PROFESOR_ACTIVO=1  «Cambiar de profesor» (contrato v2).
+//   AUTOSERVICIO_PROFESOR_ACTIVO=1  «Cambiar de profesor» (contrato v3).
 //                                   Apagado por defecto aunque el otro
 //                                   esté encendido. Con Gestión en la v1
 //                                   el estado no trae
