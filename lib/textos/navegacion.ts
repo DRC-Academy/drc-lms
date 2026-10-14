@@ -51,6 +51,7 @@ export type TextosNavegacion = {
   /**
    * El enlace a la página de referidos de la web (WooCommerce): no es una
    * sección del LMS. Como «Mi diploma», en móvil va en la hoja del perfil.
+   * Entre el 50 y el € va un espacio duro: que no se separen en dos líneas.
    */
   descuento: string;
   /**
@@ -98,7 +99,7 @@ const ES: TextosNavegacion = {
   miProgreso: "Mi progreso",
   clases: "Clases",
   miDiploma: "Mi diploma",
-  descuento: "50% de descuento",
+  descuento: "50\u00A0€ de descuento",
   cortas: { inicio: "Inicio", clases: "Clases", curso: "Curso", practica: "Para ti", progreso: "Progreso", diploma: "Diploma", descuento: "Descuento" },
   secciones: "Secciones",
 
@@ -130,7 +131,7 @@ const EN: TextosNavegacion = {
   miProgreso: "My progress",
   clases: "Classes",
   miDiploma: "My diploma",
-  descuento: "50% off",
+  descuento: "€50 off",
   cortas: { inicio: "Home", clases: "Classes", curso: "Course", practica: "For you", progreso: "Progress", diploma: "Diploma", descuento: "Discount" },
   secciones: "Sections",
 
