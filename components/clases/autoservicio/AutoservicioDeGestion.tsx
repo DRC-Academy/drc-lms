@@ -1,5 +1,5 @@
 import "server-only";
-import { autoservicioActivo, autoservicioProfesorActivo, autoservicioSimuladoActivo, proveedorAutoservicio } from "@/lib/autoservicio";
+import { autoservicioActivo, autoservicioProfesorActivo, proveedorAutoservicio } from "@/lib/autoservicio";
 import type { EstadoAutoservicio, LecturaAutoservicio } from "@/lib/autoservicio/tipos";
 import { enlaceWhatsAppHorarios } from "@/lib/soporte";
 import { idiomaActual } from "@/lib/idioma-servidor";
@@ -46,7 +46,6 @@ export default async function AutoservicioDeGestion({ alumnoId, soloLectura }: {
       soloLectura={false}
       conHorario={conHorario}
       conProfesor={conProfesor}
-      simulado={autoservicioSimuladoActivo()}
     />
   );
 }

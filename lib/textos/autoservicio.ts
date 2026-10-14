@@ -34,8 +34,38 @@ export type TextosAutoservicio = {
   cerrar: string;
   volver: string;
 
+  // --- las páginas de los flujos (/clases/cambiar-horario y /clases/cambiar-profesor) ---
+  volverAMisClases: string;
+  /** «Paso 2 de 4» */
+  pasoDe: (paso: number, total: number) => string;
+  /** El de la barra en escritorio: «Paso 3 de 4 · Elegir hueco». */
+  pasoNombre: (paso: number, total: number, nombre: string) => string;
+  probarOtraVez: string;
+  /** Título del aviso cuando no se pudo leer (Gestión no contesta). */
+  sinConexionTitulo: string;
+  sinConexionTexto: string;
+  /** Debajo del aviso: lo elegido sigue en la página. */
+  sigueGuardado: string;
+  /** Debajo de «Guardando el cambio…». */
+  guardandoNota: string;
+  aMediasTitulo: string;
+  aMediasTexto: string;
+  /** Filtros de los huecos. */
+  etiquetaDia: string;
+  etiquetaFranja: string;
+  /** El chip de cada día: «L», «X»… en móvil; el nombre entero va de etiqueta. */
+  diaCorto: (dia: DiaSemana) => string;
+  /** «1 hora», «2 horas» */
+  horas: (n: number) => string;
+  /** En la tarjeta «Tu horario»: «Martes · 18:00–19:00». */
+  sesionCorta: (dia: DiaSemana, desde: string, hasta: string) => string;
+
   // --- cambiar de horario ---
   queClase: string;
+  /** Debajo de cada clase en «¿Qué clase quieres cambiar?»: «1 hora, cada semana». */
+  cadaSemana: (horas: number) => string;
+  /** «Tu clase de los martes, 18:00–19:00», encima de la pregunta. */
+  tuClaseDeLos: (dia: DiaSemana, desde: string, hasta: string) => string;
   /** «Los martes, 18:00–19:00» */
   sesion: (dia: DiaSemana, desde: string, hasta: string) => string;
   queCambio: string;
@@ -48,7 +78,11 @@ export type TextosAutoservicio = {
   sinProximas: string;
   /** «martes 13 de octubre, 18:00–19:00» */
   clase: (fecha: string, desde: string, hasta: string) => string;
-  huecosDe: (profesor: string) => string;
+  /** El paso de los huecos. */
+  eligeNuevoHorario: string;
+  /** Debajo: para qué clase y con quién, en fijo y en puntual. */
+  contextoFijo: (dia: DiaSemana, desde: string, hasta: string, profesor: string) => string;
+  contextoPuntual: (fecha: string, desde: string, hasta: string, profesor: string) => string;
   horaPeninsular: string;
   cargando: string;
   sinHuecos: string;
@@ -57,26 +91,48 @@ export type TextosAutoservicio = {
   diaSemanal: (dia: DiaSemana) => string;
   /** Cabecera de un día con fecha: «Lunes 12 de octubre». */
   diaConFecha: (fecha: string) => string;
+  /** Abajo, con un hueco elegido: «Has elegido lunes, 10:00–11:00». */
+  hasElegido: (que: string) => string;
+  eligeUnHueco: string;
+  /** El panel de escritorio con el resumen de lo elegido. */
+  tuCambio: string;
   confirmaTitulo: string;
   antes: string;
   despues: string;
-  /** «Los martes, 18:00–19:00» o «martes 13 de octubre, 18:00–19:00», con «desde ahora» si es fijo. */
+  /** «Desde ahora, cada semana» */
   desdeAhora: string;
+  /** «Cada semana, con Laura», en el «Antes». */
+  cadaSemanaCon: (profesor: string) => string;
+  /** «Desde ahora, cada semana, con Laura», en el «Después» de un cambio fijo. */
+  desdeAhoraCon: (profesor: string) => string;
+  /** En el «Después» de una clase suelta. */
+  soloEsaClase: string;
   conProfesor: (profesor: string) => string;
   /** En fijo, cuándo es la primera clase con el horario nuevo. */
   primeraClase: (fecha: string) => string;
+  /** Debajo de «Revisa el cambio». */
+  avisoAlConfirmar: (profesor: string) => string;
   confirmar: string;
   enviando: string;
   hechoTitulo: string;
+  hechoAviso: string;
   hechoFijo: (cuando: string) => string;
   hechoPuntual: (cuando: string) => string;
-  hechoAviso: string;
   ocupado: string;
 
   // --- cambiar de profesor (v3: elige horarios; el profesor lo asigna Gestión) ---
   // NINGÚN TEXTO DE ANTES DE CONFIRMAR LLEVA NOMBRE DE PROFESOR.
-  profesorTitulo: string;
   profesorIntro: string;
+  loQueNoCambia: string;
+  nivelEHistorial: string;
+  /** «Sigues con tus 3 horas a la semana, en 2 clases.» */
+  mismasHoras: (horas: number, clases: number) => string;
+  comoFunciona: string;
+  comoFunciona1: string;
+  comoFunciona2: string;
+  comoFunciona3: string;
+  prefieresHablarlo: string;
+  elegirMisHorarios: string;
   cualquierDia: string;
   cualquierHora: string;
   sinResultados: string;
@@ -93,12 +149,21 @@ export type TextosAutoservicio = {
   elegidosOcupados: string;
   /** Debajo de un horario: «1.ª clase: lunes 12 de octubre». */
   primeraClaseCorta: (fecha: string) => string;
+  /** «Tus clases», la lista de arriba en el paso de los horarios. */
+  tusClases: string;
+  /** El mismo resumen, en el panel de escritorio. */
+  tusNuevosHorarios: string;
   /** Cabecera de cada clase: «Tu clase de 1 hora». */
   tuClaseDe: (horas: number) => string;
-  /** Debajo de la cabecera: el horario de ahora, «Ahora: los martes, 18:00–19:00». */
+  /** El horario de ahora: «Ahora: los martes, 18:00–19:00». */
   ahora: (dia: DiaSemana, desde: string, hasta: string) => string;
-  /** Una clase cuyo horario se elige después del de la anterior. */
-  despuesDeLaAnterior: string;
+  sinElegir: string;
+  /** La marca de la clase a la que le toca elegir. */
+  ahoraToca: string;
+  /** «Horario para tu clase de 2 horas» */
+  horarioParaTuClase: (horas: number) => string;
+  /** Debajo, a partir de la segunda: solo salen los que encajan con lo elegido. */
+  soloCompatibles: string;
   /** El botón de una clase ya elegida, para cambiar su horario (y los de después). */
   cambiarEste: string;
   /** Lo mismo, para lectores de pantalla: «Cambiar el horario de tu clase de 1 hora». */
@@ -106,13 +171,12 @@ export type TextosAutoservicio = {
   /** «Has elegido 2 de 3 clases» */
   contadorClases: (elegidas: number, total: number) => string;
   continuar: string;
-  /** En el «Después» de confirmar, en lugar del nombre. */
-  conNuevoProfesor: string;
+  /** El «Antes» del cambio de profesor. */
+  ahoraRotulo: string;
   /** Debajo del «Después»: el profesor se asigna al confirmar. */
   asignamosAlConfirmar: string;
   /** Debajo del «Después» del cambio de profesor. */
   enlaceCambia: string;
-  hechoProfesorTitulo: string;
   /** «Tu nuevo profesor es Daniela.» El nombre sale aquí y solo aquí. */
   hechoProfesor: (profesor: string) => string;
   /** Avisado, con su ficha, correo de bienvenida y el enlace. */
@@ -153,6 +217,25 @@ const DIAS_EN: Record<DiaSemana, string> = {
   Jueves: "Thursday",
   Viernes: "Friday",
   Sábado: "Saturday",
+};
+/** Los chips de día: una letra, como en los calendarios de España (X es miércoles). */
+const DIA_CORTO_ES: Record<DiaSemana, string> = {
+  Domingo: "D",
+  Lunes: "L",
+  Martes: "M",
+  Miércoles: "X",
+  Jueves: "J",
+  Viernes: "V",
+  Sábado: "S",
+};
+const DIA_CORTO_EN: Record<DiaSemana, string> = {
+  Domingo: "Sun",
+  Lunes: "Mon",
+  Martes: "Tue",
+  Miércoles: "Wed",
+  Jueves: "Thu",
+  Viernes: "Fri",
+  Sábado: "Sat",
 };
 const MESES_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -200,65 +283,111 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     cerrar: "Cerrar",
     volver: "Volver",
 
+    volverAMisClases: "Volver a mis clases",
+    pasoDe: (paso, total) => `Paso ${paso} de ${total}`,
+    pasoNombre: (paso, total, nombre) => `Paso ${paso} de ${total} · ${nombre}`,
+    probarOtraVez: "Probar otra vez",
+    sinConexionTitulo: "Ahora mismo no podemos enseñarte los horarios libres",
+    sinConexionTexto: "Prueba otra vez en un rato. Si te corre prisa, escríbenos y lo hacemos contigo.",
+    sigueGuardado: "Lo que ya habías elegido sigue guardado en esta página.",
+    guardandoNota: "Tarda unos segundos. No hace falta pulsar otra vez.",
+    aMediasTitulo: "Tu cambio no ha terminado de guardarse",
+    aMediasTexto:
+      "El equipo ya está avisado y lo está revisando. No hace falta que lo repitas: te escribimos nosotros en cuanto esté resuelto.",
+    etiquetaDia: "Día",
+    etiquetaFranja: "Momento del día",
+    diaCorto: (dia) => DIA_CORTO_ES[dia],
+    horas: (n) => horasEs(n),
+    sesionCorta: (dia, desde, hasta) => `${dia} · ${desde}–${hasta}`,
+
     queClase: "¿Qué clase quieres cambiar?",
+    cadaSemana: (horas) => `${horasEs(horas)}, cada semana`,
+    tuClaseDeLos: (dia, desde, hasta) => `Tu clase de los ${diaPluralEs(dia)}, ${desde}–${hasta}`,
     sesion: (dia, desde, hasta) => `Los ${diaPluralEs(dia)}, ${desde}–${hasta}`,
     queCambio: "¿Qué quieres cambiar?",
     soloEsta: "Solo una clase",
-    soloEstaDetalle: "Mueves una fecha concreta y el resto sigue igual.",
+    soloEstaDetalle: "Mueves una fecha concreta y el resto de semanas sigue igual.",
     todas: "Desde ahora, todas mis clases",
-    todasDetalle: "Tu horario semanal pasa a ser el nuevo.",
-    queFecha: "¿Qué clase quieres mover?",
+    todasDetalle: "Tu horario de cada semana pasa a ser el nuevo.",
+    queFecha: "¿Qué fecha quieres mover?",
     sinProximas: "No tienes clases de este horario en las próximas semanas.",
     clase: (fecha, desde, hasta) => `${mayuscula(fechaEs(fecha))}, ${desde}–${hasta}`,
-    huecosDe: (profesor) => (profesor ? `Huecos libres de ${profesor}` : "Huecos libres"),
-    horaPeninsular: "Horas en hora peninsular española.",
+    eligeNuevoHorario: "Elige tu nuevo horario",
+    contextoFijo: (dia, desde, hasta, profesor) =>
+      `Para tu clase de los ${diaPluralEs(dia)}, ${desde}–${hasta}. Desde ahora, cada semana${profesor ? `, con ${profesor}` : ""}.`,
+    contextoPuntual: (fecha, desde, hasta, profesor) =>
+      `Para tu clase del ${fechaEs(fecha)}, ${desde}–${hasta}${profesor ? `, con ${profesor}` : ""}. El resto de semanas sigue igual.`,
+    horaPeninsular: "Horas de España peninsular",
     cargando: "Buscando huecos libres…",
-    sinHuecos: "Ahora mismo no quedan huecos libres para esta clase.",
+    sinHuecos: "Ahora mismo no quedan huecos libres para esta clase. Escríbenos por WhatsApp y lo buscamos contigo.",
     franja: { manana: "Mañana", mediodia: "Mediodía", tarde: "Tarde", noche: "Noche" },
     diaSemanal: (dia) => dia,
     diaConFecha: (fecha) => mayuscula(fechaEs(fecha)),
+    hasElegido: (que) => `Has elegido ${que.charAt(0).toLowerCase()}${que.slice(1)}`,
+    eligeUnHueco: "Elige un hueco para continuar",
+    tuCambio: "Tu cambio",
     confirmaTitulo: "Revisa el cambio",
     antes: "Antes",
     despues: "Después",
     desdeAhora: "Desde ahora, cada semana",
+    cadaSemanaCon: (profesor) => (profesor ? `Cada semana, con ${profesor}` : "Cada semana"),
+    desdeAhoraCon: (profesor) => (profesor ? `Desde ahora, cada semana, con ${profesor}` : "Desde ahora, cada semana"),
+    soloEsaClase: "Solo esa clase: el resto de semanas sigue igual.",
     conProfesor: (profesor) => `Con ${profesor}`,
     primeraClase: (fecha) => `Primera clase: ${fechaEs(fecha)}`,
+    avisoAlConfirmar: (profesor) =>
+      `${profesor || "Tu profesor"} recibe un aviso al momento y a ti te llega un correo con el cambio.`,
     confirmar: "Confirmar el cambio",
     enviando: "Guardando el cambio…",
-    hechoTitulo: "¡Hecho!",
+    hechoTitulo: "Listo",
+    hechoAviso: "Tu profesor ya está avisado y te hemos enviado un correo de confirmación.",
     hechoFijo: (cuando) => `Desde ahora tus clases son ${cuando.charAt(0).toLowerCase() + cuando.slice(1)}.`,
     hechoPuntual: (cuando) => `Tu clase pasa al ${cuando.charAt(0).toLowerCase() + cuando.slice(1)}.`,
-    hechoAviso: "Tu profesor ya está avisado y te llega un correo con el cambio.",
     ocupado: "Ese hueco se acaba de ocupar, aquí tienes los que siguen libres.",
 
-    profesorTitulo: "Elige tus nuevos horarios",
     profesorIntro: "Elige los horarios que te vienen bien y te asignamos el profesor que mejor encaje.",
-    cualquierDia: "Cualquier día",
-    cualquierHora: "Cualquier hora",
-    sinResultados: "Con estos filtros no hay horarios. Prueba con otro día u otra franja.",
+    loQueNoCambia: "Lo que no cambia",
+    nivelEHistorial: "Tu nivel y tu historial de clases se mantienen.",
+    mismasHoras: (horas, clases) =>
+      clases === 1
+        ? `Sigues con tu clase de ${horasEs(horas)} a la semana.`
+        : `Sigues con tus ${horasEs(horas)} a la semana, en ${clases} clases.`,
+    comoFunciona: "Cómo funciona",
+    comoFunciona1: "Eliges un horario para cada clase.",
+    comoFunciona2: "Revisas el cambio y lo confirmas.",
+    comoFunciona3: "Te decimos al momento quién es tu profesor.",
+    prefieresHablarlo: "¿Prefieres hablarlo con nosotros?",
+    elegirMisHorarios: "Elegir mis horarios",
+    cualquierDia: "Todos",
+    cualquierHora: "Todo el día",
+    sinResultados: "Con estos filtros no hay horarios. Prueba con otro día u otro momento del día.",
     simulacion: "Datos de prueba: este cambio no se guarda.",
     cargandoHorarios: "Buscando horarios libres…",
     sinHorarios: "Ahora mismo no hay ningún profesor con horarios libres para tu clase. Escríbenos por WhatsApp y lo buscamos contigo.",
     sinHorariosParaOtra: (quedan) =>
       `Con estos horarios no hay ningún profesor libre para ${quedan === 1 ? "tu otra clase" : "el resto de tus clases"}. Puedes cambiar los que has elegido o escribirnos por WhatsApp y lo buscamos contigo.`,
-    cambiarElegidos: "Cambiar los horarios elegidos",
+    cambiarElegidos: "Cambiar lo que elegí",
     elegidosOcupados: "Alguno de los horarios que habías elegido se acaba de ocupar. Vuelve a elegir: aquí tienes los que siguen libres.",
-    primeraClaseCorta: (fecha) => `1.ª clase: ${fechaEs(fecha)}`,
+    primeraClaseCorta: (fecha) => `Primera clase: ${fechaEs(fecha)}`,
+    tusClases: "Tus clases",
+    tusNuevosHorarios: "Tus nuevos horarios",
     tuClaseDe: (horas) => `Tu clase de ${horasEs(horas)}`,
     ahora: (dia, desde, hasta) => `Ahora: los ${diaPluralEs(dia)}, ${desde}–${hasta}`,
-    despuesDeLaAnterior: "Elige antes el horario de la clase de arriba.",
+    sinElegir: "Sin elegir",
+    ahoraToca: "Ahora",
+    horarioParaTuClase: (horas) => `Horario para tu clase de ${horasEs(horas)}`,
+    soloCompatibles: "Solo te enseñamos horarios que encajan con lo que ya has elegido.",
     cambiarEste: "Cambiar",
     cambiarEsteEtiqueta: (horas) => `Cambiar el horario de tu clase de ${horasEs(horas)}`,
     contadorClases: (n, total) => `Has elegido ${n} de ${total} ${total === 1 ? "clase" : "clases"}`,
     continuar: "Continuar",
-    conNuevoProfesor: "Con tu nuevo profesor",
-    asignamosAlConfirmar: "Al confirmar te asignamos el profesor que mejor encaje con estos horarios.",
+    ahoraRotulo: "Ahora",
+    asignamosAlConfirmar: "Te asignaremos un profesor con estos horarios y te diremos quién es al momento.",
     enlaceCambia: "El enlace de la clase cambia: te lo pasará tu nuevo profesor.",
-    hechoProfesorTitulo: "¡Ya tienes nuevo profesor!",
     hechoProfesor: (profesor) => (profesor ? `Tu nuevo profesor es ${profesor}.` : "Ya tienes nuevo profesor."),
     hechoProfesorAviso:
       "Ya está avisado y tiene tu ficha para preparar vuestra primera clase. Te llegará un correo de bienvenida y te pasará el enlace de la clase.",
-    tusClasesDesdeAhora: "Tus clases desde ahora:",
+    tusClasesDesdeAhora: "Tus clases desde ahora",
     profesorNoDisponible: (c) =>
       c.motivo === "ANTELACION_INSUFICIENTE" && c.disponibleDesde
         ? `Tu próxima clase está muy cerca. Podrás cambiar de profesor a partir del ${momentoEs(c.disponibleDesde)}.`
@@ -348,65 +477,109 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     cerrar: "Close",
     volver: "Back",
 
+    volverAMisClases: "Back to my classes",
+    pasoDe: (paso, total) => `Step ${paso} of ${total}`,
+    pasoNombre: (paso, total, nombre) => `Step ${paso} of ${total} · ${nombre}`,
+    probarOtraVez: "Try again",
+    sinConexionTitulo: "We can't show you the free times just now",
+    sinConexionTexto: "Try again in a while. If it's urgent, message us and we'll do it with you.",
+    sigueGuardado: "What you'd already chosen is still saved on this page.",
+    guardandoNota: "It takes a few seconds. No need to tap again.",
+    aMediasTitulo: "Your change hasn't finished saving",
+    aMediasTexto:
+      "The team already knows and is looking into it. No need to repeat it: we'll write to you as soon as it's sorted.",
+    etiquetaDia: "Day",
+    etiquetaFranja: "Time of day",
+    diaCorto: (dia) => DIA_CORTO_EN[dia],
+    horas: (n) => horasEn(n),
+    sesionCorta: (dia, desde, hasta) => `${DIAS_EN[dia]} · ${desde}–${hasta}`,
+
     queClase: "Which class do you want to change?",
+    cadaSemana: (horas) => `${horasEn(horas)}, every week`,
+    tuClaseDeLos: (dia, desde, hasta) => `Your ${DIAS_EN[dia]} class, ${desde}–${hasta}`,
     sesion: (dia, desde, hasta) => `${DIAS_EN[dia]}s, ${desde}–${hasta}`,
     queCambio: "What would you like to change?",
     soloEsta: "Just one class",
-    soloEstaDetalle: "You move one date and everything else stays the same.",
+    soloEstaDetalle: "You move one date and the other weeks stay the same.",
     todas: "All my classes from now on",
-    todasDetalle: "Your weekly schedule becomes the new one.",
-    queFecha: "Which class do you want to move?",
+    todasDetalle: "Your weekly time becomes the new one.",
+    queFecha: "Which date do you want to move?",
     sinProximas: "You have no classes at this time in the coming weeks.",
     clase: (fecha, desde, hasta) => `${fechaEn(fecha)}, ${desde}–${hasta}`,
-    huecosDe: (profesor) => (profesor ? `${profesor}'s free slots` : "Free slots"),
-    horaPeninsular: "Times are in mainland Spain time.",
+    eligeNuevoHorario: "Choose your new time",
+    contextoFijo: (dia, desde, hasta, profesor) =>
+      `For your ${DIAS_EN[dia]} class, ${desde}–${hasta}. From now on, every week${profesor ? `, with ${profesor}` : ""}.`,
+    contextoPuntual: (fecha, desde, hasta, profesor) =>
+      `For your class on ${fechaEn(fecha)}, ${desde}–${hasta}${profesor ? `, with ${profesor}` : ""}. The other weeks stay the same.`,
+    horaPeninsular: "Times in mainland Spain",
     cargando: "Looking for free slots…",
-    sinHuecos: "There are no free slots for this class right now.",
+    sinHuecos: "There are no free slots for this class right now. Message us on WhatsApp and we'll find one with you.",
     franja: { manana: "Morning", mediodia: "Midday", tarde: "Afternoon", noche: "Evening" },
     diaSemanal: (dia) => DIAS_EN[dia],
     diaConFecha: (fecha) => fechaEn(fecha),
+    hasElegido: (que) => `You've chosen ${que}`,
+    eligeUnHueco: "Choose a slot to continue",
+    tuCambio: "Your change",
     confirmaTitulo: "Check the change",
     antes: "Before",
     despues: "After",
     desdeAhora: "From now on, every week",
+    cadaSemanaCon: (profesor) => (profesor ? `Every week, with ${profesor}` : "Every week"),
+    desdeAhoraCon: (profesor) => (profesor ? `From now on, every week, with ${profesor}` : "From now on, every week"),
+    soloEsaClase: "Just that class: the other weeks stay the same.",
     conProfesor: (profesor) => `With ${profesor}`,
     primeraClase: (fecha) => `First class: ${fechaEn(fecha)}`,
+    avisoAlConfirmar: (profesor) =>
+      `${profesor || "Your teacher"} gets a notice straight away, and you'll get an email with the change.`,
     confirmar: "Confirm the change",
     enviando: "Saving the change…",
-    hechoTitulo: "Done!",
+    hechoTitulo: "All set",
+    hechoAviso: "Your teacher already knows, and we've sent you a confirmation email.",
     hechoFijo: (cuando) => `From now on your classes are on ${cuando}.`,
     hechoPuntual: (cuando) => `Your class moves to ${cuando}.`,
-    hechoAviso: "Your teacher already knows, and you'll get an email with the change.",
     ocupado: "That slot has just been taken, here are the ones still free.",
 
-    profesorTitulo: "Choose your new times",
     profesorIntro: "Choose the times that suit you and we'll assign the teacher who fits best.",
-    cualquierDia: "Any day",
-    cualquierHora: "Any time",
+    loQueNoCambia: "What stays the same",
+    nivelEHistorial: "Your level and your class history are kept.",
+    mismasHoras: (horas, clases) =>
+      clases === 1 ? `You keep your ${horas}-hour class each week.` : `You keep your ${horasEn(horas)} a week, in ${clases} classes.`,
+    comoFunciona: "How it works",
+    comoFunciona1: "You choose a time for each class.",
+    comoFunciona2: "You check the change and confirm it.",
+    comoFunciona3: "We tell you straight away who your teacher is.",
+    prefieresHablarlo: "Would you rather talk it through with us?",
+    elegirMisHorarios: "Choose my times",
+    cualquierDia: "All",
+    cualquierHora: "All day",
     sinResultados: "No times match these filters. Try another day or time of day.",
     simulacion: "Test data: this change isn't saved.",
     cargandoHorarios: "Looking for free times…",
     sinHorarios: "There's no teacher with free times for your class right now. Message us on WhatsApp and we'll find one with you.",
     sinHorariosParaOtra: (quedan) =>
       `With these times there's no teacher free for ${quedan === 1 ? "your other class" : "the rest of your classes"}. You can change the ones you chose, or message us on WhatsApp and we'll find one with you.`,
-    cambiarElegidos: "Change the times I chose",
+    cambiarElegidos: "Change what I chose",
     elegidosOcupados: "One of the times you'd chosen has just been taken. Choose again: here are the ones still free.",
     primeraClaseCorta: (fecha) => `First class: ${fechaEn(fecha)}`,
+    tusClases: "Your classes",
+    tusNuevosHorarios: "Your new times",
     tuClaseDe: (horas) => `Your ${horas}-hour class`,
     ahora: (dia, desde, hasta) => `Now: ${DIAS_EN[dia]}s, ${desde}–${hasta}`,
-    despuesDeLaAnterior: "Choose the time for the class above first.",
+    sinElegir: "Not chosen yet",
+    ahoraToca: "Now",
+    horarioParaTuClase: (horas) => `Time for your ${horas}-hour class`,
+    soloCompatibles: "We only show times that fit with what you've already chosen.",
     cambiarEste: "Change",
     cambiarEsteEtiqueta: (horas) => `Change the time of your ${horas}-hour class`,
     contadorClases: (n, total) => `You've chosen ${n} of ${total} ${total === 1 ? "class" : "classes"}`,
     continuar: "Continue",
-    conNuevoProfesor: "With your new teacher",
-    asignamosAlConfirmar: "When you confirm, we'll assign the teacher who best fits these times.",
+    ahoraRotulo: "Now",
+    asignamosAlConfirmar: "We'll assign you a teacher with these times and tell you who it is straight away.",
     enlaceCambia: "Your class link changes: your new teacher will send it to you.",
-    hechoProfesorTitulo: "You have a new teacher!",
     hechoProfesor: (profesor) => (profesor ? `Your new teacher is ${profesor}.` : "You have a new teacher."),
     hechoProfesorAviso:
       "They already know and have your file to prepare your first class. You'll get a welcome email, and they'll send you the class link.",
-    tusClasesDesdeAhora: "Your classes from now on:",
+    tusClasesDesdeAhora: "Your classes from now on",
     profesorNoDisponible: (c) =>
       c.motivo === "ANTELACION_INSUFICIENTE" && c.disponibleDesde
         ? `Your next class is very close. You'll be able to change teacher from ${momentoEn(c.disponibleDesde)}.`

@@ -1,27 +1,27 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import Link from "next/link";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { TARJETA, TITULO_SECCION } from "@/components/base/Seccion";
-import HojaInferior from "@/components/base/HojaInferior";
+import { horaFin } from "@/lib/autoservicio/franjas";
 import type { EstadoAutoservicio, LecturaAutoservicio } from "@/lib/autoservicio/tipos";
-import CambiarHorario from "@/components/clases/autoservicio/CambiarHorario";
-import CambiarProfesor, { type AccionesProfesor } from "@/components/clases/autoservicio/CambiarProfesor";
-import { Aviso, BotonWhatsApp } from "@/components/clases/autoservicio/Piezas";
+import { Aviso, BOTON_APAGADO, BOTON_LINEA, BOTON_VERDE, BotonWhatsApp, PieWhatsApp } from "@/components/clases/autoservicio/Piezas";
 
 /**
- * «TU HORARIO» EN «MIS CLASES»: los dos botones y el WhatsApp.
+ * «TU HORARIO» EN «MIS CLASES»: sus clases de cada semana, los dos
+ * enlaces y el WhatsApp.
  *
  * Lo que se enseña lo decide el estado de Gestión, no esta tarjeta, y
- * cada botón por su lado:
+ * cada enlace por su lado:
  *
- *   · «Cambiar de horario», con AUTOSERVICIO_ACTIVO y si es `elegible`.
- *   · «Cambiar de profesor», con AUTOSERVICIO_PROFESOR_ACTIVO y si
- *     `puede_cambiar_profesor` lo dice. Si todavía no puede pero
- *     Gestión dice desde cuándo (`disponible_desde`), el botón sale
- *     DESACTIVADO con esa fecha debajo: que no parezca que no existe. Si
- *     no puede sin fecha, solo la razón. Con Gestión en v1 no viene, y el
- *     botón no sale.
+ *   · «Cambiar de horario» (principal), con AUTOSERVICIO_ACTIVO y si es
+ *     `elegible`. Lleva a /clases/cambiar-horario.
+ *   · «Cambiar de profesor» (secundario), con AUTOSERVICIO_PROFESOR_ACTIVO
+ *     y si `puede_cambiar_profesor` lo dice. Lleva a
+ *     /clases/cambiar-profesor. Si todavía no puede pero Gestión dice
+ *     desde cuándo, el botón sale DESACTIVADO, en gris, con esa fecha
+ *     debajo: que no parezca que no existe. Si no puede sin fecha, solo
+ *     la razón. Con Gestión en v1 no viene, y no sale.
  *
  *   Pueden ir por separado: con el calendario de su profesor sin
  *   actualizar no puede cambiar de horario pero sí de profesor.
@@ -30,9 +30,6 @@ import { Aviso, BotonWhatsApp } from "@/components/clases/autoservicio/Piezas";
  *     WhatsApp como botón principal.
  *   · El equipo mirando la ficha: una frase, ningún botón. Sin estado:
  *     no se le pregunta a Gestión.
- *
- * Cada flujo se abre en una hoja (`HojaInferior`), desde abajo en móvil
- * y centrada en escritorio.
  */
 export default function Autoservicio({
   estado,
@@ -40,8 +37,6 @@ export default function Autoservicio({
   soloLectura,
   conHorario = true,
   conProfesor = false,
-  simulado = false,
-  accionesProfesor,
 }: {
   /** Null solo en solo lectura: entonces no se pregunta a Gestión. */
   estado: LecturaAutoservicio<EstadoAutoservicio> | null;
@@ -51,14 +46,8 @@ export default function Autoservicio({
   conHorario?: boolean;
   /** «Cambiar de profesor», con el suyo (AUTOSERVICIO_PROFESOR_ACTIVO). */
   conProfesor?: boolean;
-  /** Con AUTOSERVICIO_SIMULADO: el cambio de profesor avisa de que no se guarda. */
-  simulado?: boolean;
-  /** Solo para el arnés de pruebas: ver `CambiarProfesor`. */
-  accionesProfesor?: AccionesProfesor;
 }) {
   const t = usarIdioma().t.autoservicio;
-  const [abierto, setAbierto] = useState<"horario" | "profesor" | null>(null);
-  const cerrar = useCallback(() => setAbierto(null), []);
 
   const leido = estado?.ok ? estado.datos : null;
   const horario = conHorario && leido?.elegible ? leido : null;
@@ -69,78 +58,75 @@ export default function Autoservicio({
   /** Por qué no puede cambiar de profesor ahora, cuando Gestión lo dice. */
   const profesorNo = cambio && !cambio.puede ? t.profesorNoDisponible(cambio) : null;
   const motivo = !estado ? "GENERICO" : estado.ok ? estado.datos.motivoNoElegible ?? "GENERICO" : estado.codigo;
+  const sesiones = leido?.sesiones ?? [];
 
   return (
-    <section aria-labelledby="titulo-autoservicio" className={`${TARJETA} mt-[26px] p-[18px] min-[900px]:mt-9 min-[900px]:p-6`}>
+    <section aria-labelledby="titulo-autoservicio" className={`${TARJETA} mt-[26px] flex flex-col gap-4 p-[18px] min-[900px]:mt-9 min-[900px]:p-6`}>
       <h2 id="titulo-autoservicio" className={TITULO_SECCION}>
         {t.titulo}
       </h2>
 
       {soloLectura ? (
-        <p className="mt-2 text-[14px] italic text-marca-gris">{t.soloLectura}</p>
-      ) : horario || puedeProfesor || profesorEnEspera ? (
+        <p className="text-[14px] italic text-marca-gris">{t.soloLectura}</p>
+      ) : (
         <>
-          {/* Con el horario cerrado y el profesor abierto, por qué el
-              horario no: que no parezca que falta un botón. */}
-          {conHorario && !horario && (
-            <div className="mt-3">
-              <Aviso>{t.motivoAlLeer(motivo)}</Aviso>
+          {sesiones.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-2">
+                {sesiones.map((s) => (
+                  <li key={s.id} className="flex items-baseline justify-between gap-3 rounded-[12px] bg-marca-niebla px-3.5 py-3">
+                    <span className="text-[17px] font-semibold text-marca-tinta">{t.sesionCorta(s.dia, s.hora, horaFin(s.hora, s.duracion))}</span>
+                    <span className="shrink-0 text-[14px] text-marca-gris">{t.horas(s.duracion)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[14px] text-marca-gris">
+                {leido?.profesor ? `${t.conProfesor(leido.profesor)} · ` : ""}
+                {t.horaPeninsular}
+              </p>
             </div>
           )}
-          <div className="mt-4 flex flex-col gap-2.5 min-[500px]:flex-row">
-            {horario && (
-              <button
-                type="button"
-                onClick={() => setAbierto("horario")}
-                className="btn-verde inline-flex min-h-[52px] flex-1 items-center justify-center rounded-full px-6 text-[16px] font-bold"
-              >
-                {t.cambiarHorario}
-              </button>
-            )}
-            {(puedeProfesor || profesorEnEspera) && (
-              <button
-                type="button"
-                onClick={() => setAbierto("profesor")}
-                disabled={!puedeProfesor}
-                aria-describedby={profesorNo ? "profesor-no-disponible" : undefined}
-                className={`${horario ? "btn-verde-linea disabled:hover:bg-transparent disabled:hover:text-marca-verdeOsc" : "btn-verde"} inline-flex min-h-[52px] flex-1 items-center justify-center rounded-full px-6 text-[16px] font-bold disabled:cursor-not-allowed disabled:opacity-50`}
-              >
-                {t.cambiarProfesor}
-              </button>
-            )}
-          </div>
-          {profesorNo && (
-            <p id="profesor-no-disponible" className="mt-2.5 text-[14px] leading-snug text-marca-gris">
-              {profesorNo}
-            </p>
-          )}
-          <div className="mt-5 border-t border-marca-borde pt-4">
-            <p className="mb-2 text-[15px] font-semibold text-marca-tinta">{t.noEncuentras}</p>
-            <BotonWhatsApp href={whatsapp} texto={t.escribenos} />
-          </div>
-        </>
-      ) : (
-        <div className="mt-3 flex flex-col gap-3">
-          <Aviso>{conHorario || !profesorNo ? t.motivoAlLeer(motivo) : profesorNo}</Aviso>
-          <BotonWhatsApp href={whatsapp} texto={t.escribenos} principal />
-        </div>
-      )}
 
-      {horario && (
-        <HojaInferior abierta={abierto === "horario"} alCerrar={cerrar} etiqueta={t.cambiarHorario} etiquetaCerrar={t.cerrar}>
-          <CambiarHorario estado={horario} whatsapp={whatsapp} alCerrar={cerrar} />
-        </HojaInferior>
-      )}
-      {puedeProfesor && leido && (
-        <HojaInferior abierta={abierto === "profesor"} alCerrar={cerrar} etiqueta={t.cambiarProfesor} etiquetaCerrar={t.cerrar}>
-          <CambiarProfesor
-            profesorActual={leido.profesor}
-            whatsapp={whatsapp}
-            alCerrar={cerrar}
-            simulado={simulado}
-            acciones={accionesProfesor}
-          />
-        </HojaInferior>
+          {horario || puedeProfesor || profesorEnEspera ? (
+            <>
+              {/* Con el horario cerrado y el profesor abierto, por qué el
+                  horario no: que no parezca que falta un botón. */}
+              {conHorario && !horario && <Aviso>{t.motivoAlLeer(motivo)}</Aviso>}
+              <div className="flex flex-col gap-2.5 min-[500px]:flex-row">
+                {horario && (
+                  <Link href="/clases/cambiar-horario" className={`${BOTON_VERDE} min-[500px]:flex-1`}>
+                    {t.cambiarHorario}
+                  </Link>
+                )}
+                {puedeProfesor && (
+                  <Link href="/clases/cambiar-profesor" className={`${horario ? BOTON_LINEA : BOTON_VERDE} min-[500px]:flex-1`}>
+                    {t.cambiarProfesor}
+                  </Link>
+                )}
+                {profesorEnEspera && (
+                  <button type="button" disabled aria-describedby="profesor-no-disponible" className={`${BOTON_APAGADO} min-[500px]:flex-1`}>
+                    {t.cambiarProfesor}
+                  </button>
+                )}
+              </div>
+              {profesorNo && (
+                <p id="profesor-no-disponible" className="-mt-1 flex items-start gap-2 text-[15px] leading-snug text-marca-tintaMedia">
+                  <svg aria-hidden viewBox="0 0 24 24" className="mt-0.5 h-[18px] w-[18px] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 2" />
+                  </svg>
+                  <span>{profesorNo}</span>
+                </p>
+              )}
+              <PieWhatsApp href={whatsapp} pregunta={t.noEncuentras} texto={t.escribenos} />
+            </>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <Aviso>{conHorario || !profesorNo ? t.motivoAlLeer(motivo) : profesorNo}</Aviso>
+              <BotonWhatsApp href={whatsapp} texto={t.escribenos} principal />
+            </div>
+          )}
+        </>
       )}
     </section>
   );
