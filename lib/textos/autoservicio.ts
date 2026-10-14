@@ -131,6 +131,7 @@ export type TextosAutoservicio = {
   comoFunciona1: string;
   comoFunciona2: string;
   comoFunciona3: string;
+  comoFunciona4: string;
   prefieresHablarlo: string;
   elegirMisHorarios: string;
   cualquierDia: string;
@@ -177,9 +178,9 @@ export type TextosAutoservicio = {
   asignamosAlConfirmar: string;
   /** Debajo del «Después» del cambio de profesor. */
   enlaceCambia: string;
-  /** «Tu nuevo profesor es Daniela.» El nombre sale aquí y solo aquí. */
+  /** «Tu nuevo profe es Daniela.» El nombre sale aquí y solo aquí. */
   hechoProfesor: (profesor: string) => string;
-  /** Avisado, con su ficha, correo de bienvenida y el enlace. */
+  /** Tiene su ficha e historial y le escribe por email. */
   hechoProfesorAviso: string;
   /** Encima de sus horarios nuevos. */
   tusClasesDesdeAhora: string;
@@ -355,7 +356,8 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     comoFunciona: "Cómo funciona",
     comoFunciona1: "Eliges un horario para cada clase.",
     comoFunciona2: "Revisas el cambio y lo confirmas.",
-    comoFunciona3: "Te decimos al momento quién es tu profesor.",
+    comoFunciona3: "Tu profe recibe tu ficha de alumno e historial para continuar justo por donde lo dejaste.",
+    comoFunciona4: "Tu nuevo profe se pone en contacto contigo por email.",
     prefieresHablarlo: "¿Prefieres hablarlo con nosotros?",
     elegirMisHorarios: "Elegir mis horarios",
     cualquierDia: "Todos",
@@ -384,9 +386,9 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     ahoraRotulo: "Ahora",
     asignamosAlConfirmar: "Te asignaremos un profesor con estos horarios y te diremos quién es al momento.",
     enlaceCambia: "El enlace de la clase cambia: te lo pasará tu nuevo profesor.",
-    hechoProfesor: (profesor) => (profesor ? `Tu nuevo profesor es ${profesor}.` : "Ya tienes nuevo profesor."),
+    hechoProfesor: (profesor) => (profesor ? `Tu nuevo profe es ${profesor}.` : "Ya tienes nuevo profe."),
     hechoProfesorAviso:
-      "Ya está avisado y tiene tu ficha para preparar vuestra primera clase. Te llegará un correo de bienvenida y te pasará el enlace de la clase.",
+      "Ya tiene tu ficha e historial y se pondrá en contacto contigo por email.",
     tusClasesDesdeAhora: "Tus clases desde ahora",
     profesorNoDisponible: (c) =>
       c.motivo === "ANTELACION_INSUFICIENTE" && c.disponibleDesde
@@ -545,9 +547,10 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     mismasHoras: (horas, clases) =>
       clases === 1 ? `You keep your ${horas}-hour class each week.` : `You keep your ${horasEn(horas)} a week, in ${clases} classes.`,
     comoFunciona: "How it works",
-    comoFunciona1: "You choose a time for each class.",
-    comoFunciona2: "You check the change and confirm it.",
-    comoFunciona3: "We tell you straight away who your teacher is.",
+    comoFunciona1: "Choose a time for each class.",
+    comoFunciona2: "Review the change and confirm it.",
+    comoFunciona3: "Your teacher receives your student profile and history to pick up right where you left off.",
+    comoFunciona4: "Your new teacher will get in touch with you by email.",
     prefieresHablarlo: "Would you rather talk it through with us?",
     elegirMisHorarios: "Choose my times",
     cualquierDia: "All",
@@ -578,7 +581,7 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     enlaceCambia: "Your class link changes: your new teacher will send it to you.",
     hechoProfesor: (profesor) => (profesor ? `Your new teacher is ${profesor}.` : "You have a new teacher."),
     hechoProfesorAviso:
-      "They already know and have your file to prepare your first class. You'll get a welcome email, and they'll send you the class link.",
+      "They already have your profile and history and will get in touch with you by email.",
     tusClasesDesdeAhora: "Your classes from now on",
     profesorNoDisponible: (c) =>
       c.motivo === "ANTELACION_INSUFICIENTE" && c.disponibleDesde

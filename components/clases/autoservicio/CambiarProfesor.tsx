@@ -446,7 +446,7 @@ export default function CambiarProfesor({
             {t.comoFunciona}
           </h2>
           <ol className="flex flex-col gap-3">
-            {[t.comoFunciona1, t.comoFunciona2, t.comoFunciona3].map((texto, i) => (
+            {[t.comoFunciona1, t.comoFunciona2, t.comoFunciona3, t.comoFunciona4].map((texto, i) => (
               <li key={i} className="flex items-center gap-3 text-[16px] text-marca-tinta">
                 <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-marca-verdeFondo text-[15px] font-bold text-marca-verdeOsc">
                   {i + 1}

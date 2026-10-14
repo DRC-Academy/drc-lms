@@ -148,10 +148,12 @@ describe("cuándo podrá cambiar de profesor", () => {
   it("la pantalla de hecho dice lo pedido, con el nombre que asignó Gestión", () => {
     const t = AUTOSERVICIO.es;
     expect(`${t.hechoProfesor("Daniela")} ${t.hechoProfesorAviso}`).toBe(
-      "Tu nuevo profesor es Daniela. Ya está avisado y tiene tu ficha para preparar vuestra primera clase. Te llegará un correo de bienvenida y te pasará el enlace de la clase."
+      "Tu nuevo profe es Daniela. Ya tiene tu ficha e historial y se pondrá en contacto contigo por email."
     );
-    expect(AUTOSERVICIO.en.hechoProfesor("Daniela")).toBe("Your new teacher is Daniela.");
+    expect(`${AUTOSERVICIO.en.hechoProfesor("Daniela")} ${AUTOSERVICIO.en.hechoProfesorAviso}`).toBe(
+      "Your new teacher is Daniela. They already have your profile and history and will get in touch with you by email."
+    );
     // Sin nombre (no debería pasar), no queda una frase coja.
-    expect(t.hechoProfesor("")).toBe("Ya tienes nuevo profesor.");
+    expect(t.hechoProfesor("")).toBe("Ya tienes nuevo profe.");
   });
 });
