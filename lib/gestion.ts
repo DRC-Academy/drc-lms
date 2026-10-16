@@ -1207,17 +1207,24 @@ export async function alumnosParaGarantia(): Promise<AlumnoGarantia[] | null> {
     }));
 }
 
-/** Todas las filas de una vista, por tramos de 1000. Null si falla un tramo. */
+/**
+ * Todas las filas de una vista, por tramos de 1000. Null si falla un tramo.
+ * `fechas` acota por la columna `fecha`: de `desde` incluido a `hasta`
+ * excluido, días "AAAA-MM-DD".
+ */
 async function todasLasFilas(
   vista: "vista_partes_clase" | "vista_clases_programadas" | "vista_fin_plan",
   columnas: string,
   orden: string,
-  alumnoId?: string
+  alumnoId?: string,
+  fechas?: { desde: string; hasta: string }
 ): Promise<Fila[] | null> {
   const filas: Fila[] = [];
   for (let desde = 0; ; desde += PAGINA) {
-    const consulta = soloLectura(vista).select(columnas);
-    const { data, error } = await (alumnoId ? consulta.eq("alumno_id", alumnoId) : consulta)
+    let consulta = soloLectura(vista).select(columnas);
+    if (alumnoId) consulta = consulta.eq("alumno_id", alumnoId);
+    if (fechas) consulta = consulta.gte("fecha", fechas.desde).lt("fecha", fechas.hasta);
+    const { data, error } = await consulta
       .order(orden, { ascending: true })
       .order("alumno_id", { ascending: true })
       .range(desde, desde + PAGINA - 1)
@@ -1247,13 +1254,20 @@ export type FilaParteGestion = {
   canceladoPor: string | null;
 };
 
-/** Los partes de clase de `vista_partes_clase`: de todos, o de uno. */
-export async function partesDeClase(alumnoId?: string): Promise<FilaParteGestion[] | null> {
+/**
+ * Los partes de clase de `vista_partes_clase`: de todos, o de uno; y con
+ * `fechas`, solo los de esos días (de `desde` incluido a `hasta` excluido).
+ */
+export async function partesDeClase(
+  alumnoId?: string,
+  fechas?: { desde: string; hasta: string }
+): Promise<FilaParteGestion[] | null> {
   const filas = await todasLasFilas(
     "vista_partes_clase",
     "alumno_id, parte_id, fecha, hora, profesor, class_type, rescheduled_to, registrado_en, motivo, avisado_en, cancelado_por",
     "parte_id",
-    alumnoId
+    alumnoId,
+    fechas
   );
   if (!filas) return null;
 

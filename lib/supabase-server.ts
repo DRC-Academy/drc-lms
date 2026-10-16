@@ -193,6 +193,13 @@ type Consulta = {
    * un `eq`. Acota el SELECT; no escribe nada.
    */
   in(columna: string, valores: readonly string[]): Consulta;
+  /**
+   * Un rango de fechas: `gte("fecha", desde).lt("fecha", hasta)`. Lo pide
+   * el porcentaje de entradas a clase, que lee los partes de un mes y no
+   * los de siempre. Acota el SELECT; no escribe nada.
+   */
+  gte(columna: string, valor: string): Consulta;
+  lt(columna: string, valor: string): Consulta;
   order(columna: string, opciones: { ascending: boolean }): Consulta;
   /**
    * Tope de filas. Lo pide la lectura del historial de clases, que es la

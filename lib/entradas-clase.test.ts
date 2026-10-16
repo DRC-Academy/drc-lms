@@ -8,11 +8,13 @@ import {
   hrefEntrada,
   idDeClase,
   limitesDelMes,
+  medirBoton,
   mesVecino,
   minutosDesdeInicio,
   resolverEntrada,
   resumirEntradas,
   type FilaEntrada,
+  type ParteParaMedir,
 } from "@/lib/entradas-clase";
 
 /**
@@ -200,5 +202,85 @@ describe("el mes", () => {
     expect(mesVecino("2026-12", 1)).toBe("2027-01");
     expect(mesVecino("2026-01", -1)).toBe("2025-12");
     expect(limitesDelMes("2026-12")).toEqual({ desde: "2026-12-01", hasta: "2027-01-01" });
+  });
+});
+
+describe("medirBoton", () => {
+  const clic = (alumno: string, claseId: string, extra: Partial<FilaEntrada> = {}): FilaEntrada => ({
+    alumno_id: alumno,
+    clase_id: claseId,
+    clase_inicio: "2026-10-13T15:00:00.000Z",
+    profesor: "Jimena",
+    clicked_at: "2026-10-13T14:55:00.000Z",
+    origen: "dashboard",
+    minutos_desde_inicio: -5,
+    ...extra,
+  });
+  const parte = (alumnoId: string, fecha: string, hora: string | null, tipo: string): ParteParaMedir => ({
+    alumnoId,
+    fecha,
+    hora,
+    tipo,
+    profesor: "Jimena",
+  });
+
+  it("cuenta las dadas con al menos un clic, una vez por clase", () => {
+    const m = medirBoton(
+      [
+        parte("a1", "2026-10-13", "17:00", "normal"),
+        parte("a1", "2026-10-15", "17:00", "recuperacion"),
+        parte("a2", "2026-10-13", "18:00", "normal"),
+      ],
+      [clic("a1", "2026-10-13T17:00|t1"), clic("a1", "2026-10-13T17:00|t1", { clicked_at: "2026-10-13T15:02:00.000Z" })]
+    );
+    expect(m).toMatchObject({ clases: 3, clasesConEntrada: 1, alumnos: 2, alumnosConEntrada: 1 });
+    expect(m.porAlumno).toEqual({ a1: { clases: 2, conEntrada: 1 }, a2: { clases: 1, conEntrada: 0 } });
+  });
+
+  it("casa por alumno, día y hora, no por profesor", () => {
+    const m = medirBoton([parte("a1", "2026-10-13", "17:00", "normal")], [clic("a1", "2026-10-13T17:00|otro")]);
+    expect(m.clasesConEntrada).toBe(1);
+    expect(medirBoton([parte("a1", "2026-10-13", "18:00", "normal")], [clic("a1", "2026-10-13T17:00|t1")]).clasesConEntrada).toBe(0);
+    expect(medirBoton([parte("a2", "2026-10-13", "17:00", "normal")], [clic("a1", "2026-10-13T17:00|t1")]).clasesConEntrada).toBe(0);
+  });
+
+  it("canceladas, reprogramadas y faltas no están en el denominador", () => {
+    const m = medirBoton(
+      ["cancelacion_hora", "reprogramada", "falta_con_aviso", "cancelada_por_profesor", "falta_sin_aviso"].map((t, i) =>
+        parte("a1", `2026-10-1${i}`, "17:00", t)
+      ),
+      []
+    );
+    expect(m).toMatchObject({ clases: 0, alumnos: 0 });
+  });
+
+  it("una falta sin aviso con clic sale aparte y no suma", () => {
+    const m = medirBoton(
+      [parte("a1", "2026-10-15", "17:00", "falta_sin_aviso"), parte("a1", "2026-10-16", "17:00", "falta_sin_aviso")],
+      [
+        clic("a1", "2026-10-15T17:00|t1", { minutos_desde_inicio: 4, origen: "mis_clases" }),
+        clic("a1", "2026-10-15T17:00|t1", { clicked_at: "2026-10-13T15:10:00.000Z" }),
+      ]
+    );
+    expect(m.clases).toBe(0);
+    expect(m.faltasConClic).toEqual([
+      { alumnoId: "a1", profesor: "Jimena", fecha: "2026-10-15", hora: "17:00", minutos: 4, origen: "mis_clases", clics: 2 },
+    ]);
+  });
+
+  it("con un parte de dada y otro de falta a la misma hora, manda la dada", () => {
+    const m = medirBoton(
+      [parte("a1", "2026-10-15", "17:00", "falta_sin_aviso"), parte("a1", "2026-10-15", "17:00", "normal")],
+      [clic("a1", "2026-10-15T17:00|t1")]
+    );
+    expect(m).toMatchObject({ clases: 1, clasesConEntrada: 1, faltasConClic: [] });
+  });
+
+  it("dos partes de la misma clase son una; un parte sin hora cuenta pero no casa", () => {
+    const m = medirBoton(
+      [parte("a1", "2026-10-13", "17:00", "normal"), parte("a1", "2026-10-13", "17:00", "normal"), parte("a1", "2026-10-14", null, "normal"), parte("a1", "2026-10-14", null, "normal")],
+      [clic("a1", "2026-10-13T17:00|t1"), clic("a1", "sin-formato")]
+    );
+    expect(m).toMatchObject({ clases: 3, clasesConEntrada: 1 });
   });
 });

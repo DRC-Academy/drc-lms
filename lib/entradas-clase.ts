@@ -161,6 +161,8 @@ export type ResumenEntradas = {
   sueltos: FilaEntrada[];
   /** ISO del último clic, con clase o sin ella. */
   ultima: string | null;
+  /** Desde qué pantalla fue ese último clic. */
+  ultimaOrigen: Origen | null;
 };
 
 /**
@@ -197,6 +199,7 @@ export function resumirEntradas(filas: FilaEntrada[]): ResumenEntradas {
     clases: Array.from(porClase.values()).sort((a, b) => b.inicio.localeCompare(a.inicio)),
     sueltos: sueltos.reverse(),
     ultima: ordenadas.length > 0 ? ordenadas[ordenadas.length - 1].clicked_at : null,
+    ultimaOrigen: ordenadas.length > 0 ? comoOrigen(ordenadas[ordenadas.length - 1].origen) : null,
   };
 }
 
@@ -226,4 +229,158 @@ export function mesVecino(mes: string, paso: -1 | 1): string {
 /** El primer día del mes y el del siguiente, "2026-10-01" y "2026-11-01". */
 export function limitesDelMes(mes: string): { desde: string; hasta: string } {
   return { desde: `${mes}-01`, hasta: `${mesVecino(mes, 1)}-01` };
+}
+
+// ---------------------------------------------------------------
+// EL PORCENTAJE: CLASES DADAS CON ENTRADA POR EL BOTÓN
+//
+// Una sola cuenta para el panel y para «Entradas a clase»: cada pantalla
+// pone su rango —7 / 30 días / todo, o un mes— y las dos llaman aquí.
+//
+// EL DENOMINADOR ES GESTIÓN: las clases dadas según el parte del
+// profesor (`vista_partes_clase`), tipos `normal` y `recuperacion`. Las
+// canceladas, las reprogramadas y las faltas no entran: si no hubo clase,
+// no había a qué entrar. Una clase sin parte todavía no está en ningún
+// lado, ni arriba ni abajo, y entra sola cuando el profesor lo sube.
+//
+// EL NUMERADOR, las de ese denominador con al menos un clic asociado.
+// Tres clics a la misma clase son una.
+//
+// EL CRUCE ES POR ALUMNO, DÍA Y HORA DE INICIO, en hora de Madrid: el
+// parte trae `fecha` y `hora`, y el clic los lleva en su `clase_id`
+// ("2026-10-12T17:00|t-123"). El profesor no entra en la clave: en una
+// sustitución el parte lo sube otro.
+//
+// LOS CLICS A UNA CLASE QUE FIGURA COMO `falta_sin_aviso` no se tiran
+// en silencio: salen aparte, como alerta. Tampoco cuentan.
+// ---------------------------------------------------------------
+
+/** Los tipos de parte que son una clase dada. */
+export const TIPOS_DADA: ReadonlySet<string> = new Set(["normal", "recuperacion"]);
+
+/** El parte de una clase a la que el alumno no fue sin avisar. */
+export const TIPO_FALTA_SIN_AVISO = "falta_sin_aviso";
+
+/** Lo que hace falta de un parte de Gestión para la cuenta. */
+export type ParteParaMedir = {
+  alumnoId: string;
+  /** "AAAA-MM-DD", en Madrid. */
+  fecha: string;
+  /** "HH:MM", en Madrid, o null si el parte no la trae. */
+  hora: string | null;
+  tipo: string;
+  profesor: string | null;
+};
+
+/** Un clic que casa con una clase que figura como falta sin aviso. */
+export type FaltaConClic = {
+  alumnoId: string;
+  /** El profesor del parte. */
+  profesor: string | null;
+  fecha: string;
+  hora: string;
+  /** Del primer clic, respecto al inicio programado. */
+  minutos: number | null;
+  origen: Origen;
+  clics: number;
+};
+
+export type MedidaBoton = {
+  /** Clases dadas en el rango. */
+  clases: number;
+  /** De ellas, con al menos una entrada por el botón. */
+  clasesConEntrada: number;
+  /** Alumnos con alguna clase dada en el rango. */
+  alumnos: number;
+  /** De ellos, los que entraron por el botón al menos a una. */
+  alumnosConEntrada: number;
+  /** alumno_id → sus dadas y cuántas con entrada. Solo quien tuvo alguna. */
+  porAlumno: Record<string, { clases: number; conEntrada: number }>;
+  /** Más antigua primero. */
+  faltasConClic: FaltaConClic[];
+};
+
+/** "2026-10-12T17:00": el día y la hora de inicio, en Madrid. */
+function claveDeParte(fecha: string, hora: string): string {
+  return `${fecha}T${hora}`;
+}
+
+/** El día y la hora del `clase_id` de un clic, o null si no tiene clase. */
+export function claveDeEntrada(fila: Pick<FilaEntrada, "clase_id">): string | null {
+  const clave = fila.clase_id?.split("|")[0] ?? "";
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(clave) ? clave : null;
+}
+
+/**
+ * La cuenta. Los partes y los clics tienen que llegar ya acotados al
+ * rango y sin las cuentas del equipo; aquí solo se cruzan.
+ */
+export function medirBoton(partes: ParteParaMedir[], entradas: FilaEntrada[]): MedidaBoton {
+  // Los clics por alumno y clase, con el primero de cada una.
+  const clics = new Map<string, { primera: FilaEntrada; clics: number }>();
+  for (const f of [...entradas].sort((a, b) => a.clicked_at.localeCompare(b.clicked_at))) {
+    const clave = claveDeEntrada(f);
+    if (!clave) continue;
+    const k = `${f.alumno_id}|${clave}`;
+    const ya = clics.get(k);
+    if (ya) ya.clics += 1;
+    else clics.set(k, { primera: f, clics: 1 });
+  }
+
+  // Las dadas, una por alumno, día y hora aunque haya dos partes. Un
+  // parte sin hora cuenta como dada, pero ningún clic puede casar con él.
+  const dadas = new Map<string, string>();
+  const faltas = new Map<string, ParteParaMedir>();
+  let sinHora = 0;
+  for (const p of partes) {
+    if (TIPOS_DADA.has(p.tipo)) {
+      const k = p.hora ? `${p.alumnoId}|${claveDeParte(p.fecha, p.hora)}` : `${p.alumnoId}|${p.fecha}|sin-hora-${sinHora++}`;
+      dadas.set(k, p.alumnoId);
+    } else if (p.tipo === TIPO_FALTA_SIN_AVISO && p.hora) {
+      faltas.set(`${p.alumnoId}|${claveDeParte(p.fecha, p.hora)}`, p);
+    }
+  }
+
+  const porAlumno: MedidaBoton["porAlumno"] = {};
+  let clasesConEntrada = 0;
+  dadas.forEach((alumnoId, k) => {
+    const cuenta = (porAlumno[alumnoId] ??= { clases: 0, conEntrada: 0 });
+    cuenta.clases += 1;
+    if (clics.has(k)) {
+      cuenta.conEntrada += 1;
+      clasesConEntrada += 1;
+    }
+  });
+
+  // Si la misma clase tiene un parte de dada y otro de falta, manda el de dada.
+  const faltasConClic: FaltaConClic[] = [];
+  faltas.forEach((p, k) => {
+    const c = clics.get(k);
+    if (!c || dadas.has(k) || !p.hora) return;
+    faltasConClic.push({
+      alumnoId: p.alumnoId,
+      profesor: p.profesor,
+      fecha: p.fecha,
+      hora: p.hora,
+      minutos: c.primera.minutos_desde_inicio,
+      origen: comoOrigen(c.primera.origen),
+      clics: c.clics,
+    });
+  });
+  faltasConClic.sort((a, b) => claveDeParte(a.fecha, a.hora).localeCompare(claveDeParte(b.fecha, b.hora)));
+
+  const cuentas = Object.values(porAlumno);
+  return {
+    clases: dadas.size,
+    clasesConEntrada,
+    alumnos: cuentas.length,
+    alumnosConEntrada: cuentas.filter((c) => c.conEntrada > 0).length,
+    porAlumno,
+    faltasConClic,
+  };
+}
+
+/** Un porcentaje redondeado, o null si no hay base. */
+export function porcentaje(valor: number, de: number): number | null {
+  return de > 0 ? Math.round((valor / de) * 100) : null;
 }

@@ -9,12 +9,14 @@
 // ---------------------------------------------------------------
 
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { baseLms } from "@/lib/supabase-lms";
-import { alumnosDelPanel, type AlumnoPanel } from "@/lib/gestion";
+import { alumnosDelPanel, partesDeClase, type AlumnoPanel } from "@/lib/gestion";
 import { esIdDemo } from "@/lib/demo/cuenta";
-import { CUENTA_DE_PRUEBAS } from "@/lib/admin-servidor";
+import { CUENTA_DE_PRUEBAS, type Periodo } from "@/lib/admin-servidor";
 import { instanteEnMadrid } from "@/lib/clases";
-import { limitesDelMes, type FilaEntrada, type Origen } from "@/lib/entradas-clase";
+import { diaLocal, sumarDias } from "@/lib/fechas";
+import { limitesDelMes, medirBoton, type FilaEntrada, type MedidaBoton, type Origen } from "@/lib/entradas-clase";
 
 /**
  * Lo que espera el alumno, como mucho, a que se apunte su clic. Pasado
@@ -83,8 +85,11 @@ async function entradasDelMes(mes: string): Promise<FilaEntrada[] | null> {
   }
 }
 
-/** El primer clic que hay guardado: desde cuándo hay datos. */
-async function primeraEntrada(): Promise<string | null> {
+/**
+ * El primer clic que hay guardado: desde cuándo hay datos. `undefined`
+ * si no se pudo leer; null si todavía no hay ninguno.
+ */
+async function primeraEntrada(): Promise<string | null | undefined> {
   const { data, error } = await baseLms()
     .from("entradas_clase")
     .select("clicked_at")
@@ -94,7 +99,7 @@ async function primeraEntrada(): Promise<string | null> {
 
   if (error) {
     console.error("[entradas] No se pudo leer la primera entrada:", error.message);
-    return null;
+    return undefined;
   }
   return data?.[0]?.clicked_at ?? null;
 }
@@ -109,13 +114,12 @@ export type DatosEntradas = {
   alumnos: AlumnoPanel[];
   /** Los clics del mes, de todos. Null si no se pudieron leer. */
   filas: FilaEntrada[] | null;
-  /** ISO del primer clic guardado, o null si todavía no hay ninguno. */
-  desde: string | null;
 };
 
+/** Desde cuándo hay datos lo dice `usoDelBoton`, que lo necesita para recortar el rango. */
 export async function cargarEntradas(mes: string): Promise<DatosEntradas> {
-  const [alumnos, filas, desde] = await Promise.all([alumnosDelPanel(), entradasDelMes(mes), primeraEntrada()]);
-  return { alumnos: alumnos.filter((a) => !esCuentaDeEquipo(a.alumnoId)), filas, desde };
+  const [alumnos, filas] = await Promise.all([alumnosDelPanel(), entradasDelMes(mes)]);
+  return { alumnos: alumnos.filter((a) => !esCuentaDeEquipo(a.alumnoId)), filas };
 }
 
 /**
@@ -137,4 +141,125 @@ export async function entradasDelAlumno(alumnoId: string): Promise<FilaEntrada[]
     return null;
   }
   return data ?? [];
+}
+
+// ---------------------------------------------------------------
+// EL PORCENTAJE DEL BOTÓN, PARA UN RANGO DE DÍAS
+//
+// La cuenta está en `medirBoton` (`lib/entradas-clase.ts`); esto lee lo
+// que necesita y le pone el rango. Lo llaman el panel (7 / 30 días /
+// todo) y «Entradas a clase» (un mes), cada uno con el suyo.
+//
+// EL RANGO NUNCA EMPIEZA ANTES DEL PRIMER CLIC: antes no se apuntaba
+// nada, y contar esas clases como «sin entrada» hundiría el porcentaje
+// por un hueco de la medición. Se recorta al día del primer clic y la
+// pantalla lo dice («Datos desde el 13 oct»).
+//
+// Y NUNCA LLEGA MÁS ALLÁ DE HOY: algún parte se sube por adelantado.
+// ---------------------------------------------------------------
+
+/** Días "AAAA-MM-DD": `desde` incluido, `hasta` excluido. `desde` null: desde el principio. */
+export type RangoDias = { desde: string | null; hasta: string };
+
+export type UsoDelBoton =
+  | {
+      estado: "ok";
+      /** Primer día contado. */
+      desde: string;
+      /** Último día contado, incluido. */
+      hasta: string;
+      /** El rango pedido empezaba antes que los datos y se ha recortado. */
+      recortado: boolean;
+      medida: MedidaBoton;
+    }
+  /** El rango cae entero antes del primer clic, o todavía no hay ninguno. */
+  | { estado: "sin_datos"; primerDia: string | null }
+  /** Falló alguna lectura: no son ceros. */
+  | { estado: "error" };
+
+/** Los clics cuya clase empieza en el rango, por páginas. Null si falla. */
+async function entradasConClaseEntre(desde: string, hasta: string): Promise<FilaEntrada[] | null> {
+  const inicio = instanteEnMadrid(desde, "00:00").toISOString();
+  const fin = instanteEnMadrid(hasta, "00:00").toISOString();
+  const PAGINA = 1000;
+  const filas: FilaEntrada[] = [];
+
+  for (let n = 0; ; n += PAGINA) {
+    const { data, error } = await baseLms()
+      .from("entradas_clase")
+      .select(COLUMNAS)
+      .gte("clase_inicio", inicio)
+      .lt("clase_inicio", fin)
+      .order("id", { ascending: true })
+      .range(n, n + PAGINA - 1)
+      .returns<FilaEntrada[]>();
+
+    if (error) {
+      console.error("[entradas] No se pudieron leer las entradas del rango:", error.message);
+      return null;
+    }
+    filas.push(...(data ?? []));
+    if ((data ?? []).length < PAGINA) return filas;
+  }
+}
+
+/** La cuenta, sin caché. Para las pantallas, `usoDelBoton`. */
+export async function medirUsoDelBoton(rango: RangoDias, ahora = new Date()): Promise<UsoDelBoton> {
+  const primera = await primeraEntrada();
+  if (primera === undefined) return { estado: "error" };
+  if (primera === null) return { estado: "sin_datos", primerDia: null };
+
+  const primerDia = diaLocal(new Date(primera));
+  const manana = sumarDias(diaLocal(ahora), 1);
+  const desde = rango.desde && rango.desde > primerDia ? rango.desde : primerDia;
+  const hasta = rango.hasta < manana ? rango.hasta : manana;
+  if (desde >= hasta) return { estado: "sin_datos", primerDia };
+
+  const [partes, entradas] = await Promise.all([partesDeClase(undefined, { desde, hasta }), entradasConClaseEntre(desde, hasta)]);
+  if (!partes || !entradas) return { estado: "error" };
+
+  const medida = medirBoton(
+    partes.filter((p) => !esCuentaDeEquipo(p.alumnoId)),
+    entradas.filter((e) => !esCuentaDeEquipo(e.alumno_id))
+  );
+  return {
+    estado: "ok",
+    desde,
+    hasta: sumarDias(hasta, -1),
+    recortado: rango.desde === null || rango.desde < primerDia,
+    medida,
+  };
+}
+
+/**
+ * La cuenta, cacheada cinco minutos como el panel: cada carga lee un mes
+ * de partes de Gestión, y Gestión no está para lecturas de más. Lo que
+ * falla no se guarda.
+ */
+export async function usoDelBoton(rango: RangoDias): Promise<UsoDelBoton> {
+  try {
+    return await unstable_cache(
+      async () => {
+        const uso = await medirUsoDelBoton(rango);
+        if (uso.estado === "error") throw new Error("lectura fallida");
+        return uso;
+      },
+      ["uso-boton-clase", rango.desde ?? "todo", rango.hasta],
+      { revalidate: 300, tags: ["panel-admin"] }
+    )();
+  } catch {
+    return { estado: "error" };
+  }
+}
+
+/** El rango de un periodo del panel: los últimos N días naturales, hoy incluido. */
+export function rangoDelPeriodo(periodo: Periodo, ahora = new Date()): RangoDias {
+  const hoy = diaLocal(ahora);
+  const hasta = sumarDias(hoy, 1);
+  return periodo === "todo" ? { desde: null, hasta } : { desde: sumarDias(hoy, 1 - Number(periodo)), hasta };
+}
+
+/** El rango de un mes "2026-10". */
+export function rangoDelMes(mes: string): RangoDias {
+  return limitesDelMes(mes);
 }

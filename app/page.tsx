@@ -17,6 +17,7 @@ import Chevron from "@/components/admin/Chevron";
 import PanelAdmin from "@/components/admin/PanelAdmin";
 import ListaPanel from "@/components/admin/ListaPanel";
 import ListaActivos from "@/components/admin/ListaActivos";
+import { rangoDelPeriodo, usoDelBoton } from "@/lib/entradas-clase-servidor";
 
 export const dynamic = "force-dynamic";
 
@@ -97,7 +98,7 @@ export default async function Home({
   /** Si la vista venía en la URL. Solo lo mira móvil. */
   const explicita = esVista(searchParams.ver);
 
-  const datos = await cargarPanel(periodo);
+  const [datos, boton] = await Promise.all([cargarPanel(periodo), usoDelBoton(rangoDelPeriodo(periodo))]);
   const detalle = detalleDeVista(datos, vista, orden);
 
   // El buscador mira DENTRO de la lista que hay delante, no en todos.
@@ -187,6 +188,7 @@ export default async function Home({
           <div className="mt-3 lg:mt-8">
             <PanelAdmin
               datos={datos}
+              boton={boton}
               periodo={periodo}
               vista={vista}
               orden={orden}

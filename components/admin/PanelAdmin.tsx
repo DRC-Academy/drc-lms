@@ -9,6 +9,8 @@ import {
   type Vista,
 } from "@/lib/admin-servidor";
 import Chevron from "@/components/admin/Chevron";
+import TarjetaUsoDelBoton from "@/components/admin/UsoDelBoton";
+import type { UsoDelBoton } from "@/lib/entradas-clase-servidor";
 
 /**
  * LAS MÉTRICAS DEL PANEL DEL EQUIPO.
@@ -105,12 +107,15 @@ import Chevron from "@/components/admin/Chevron";
  */
 export default function PanelAdmin({
   datos,
+  boton,
   periodo,
   vista,
   orden,
   busqueda,
 }: {
   datos: DatosPanel;
+  /** Las clases con entrada por el botón, en el mismo periodo. */
+  boton: UsoDelBoton;
   periodo: Periodo;
   /** La métrica seleccionada. Pinta el estado y decide la lista. */
   vista: Vista;
@@ -315,6 +320,20 @@ export default function PanelAdmin({
           />
         </div>
       </section>
+
+      {/* -------------------- LAS ENTRADAS A CLASE --------------------
+          Debajo de las pilas para no mover las siete cifras de la primera
+          pantalla del móvil. Sigue al periodo, y como en móvil el
+          selector queda arriba, dentro del embudo, la tarjeta lo repite
+          en su rótulo. Ver `components/admin/UsoDelBoton.tsx`. */}
+      <div className="mt-4 lg:mt-5">
+        <TarjetaUsoDelBoton
+          uso={boton}
+          contexto={ETIQUETA_PERIODO[periodo]}
+          hrefDetalle="/entradas"
+          hrefFaltas="/entradas#faltas"
+        />
+      </div>
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { esCuentaDeEquipo, type DatosEntradas } from "@/lib/entradas-clase-servidor";
+import { esCuentaDeEquipo, type DatosEntradas, type UsoDelBoton } from "@/lib/entradas-clase-servidor";
 import { mesVecino, resumirEntradas, type FilaEntrada } from "@/lib/entradas-clase";
 import MarcoApp from "@/components/Navegacion";
 import Chevron from "@/components/admin/Chevron";
-import { DetalleEntradas, ListaEntradas, fechaLarga, nombreDelMes, type FilaResumen } from "@/components/admin/EntradasClase";
+import TarjetaUsoDelBoton from "@/components/admin/UsoDelBoton";
+import { DetalleEntradas, FaltasConClic, ListaEntradas, nombreDelMes, type FilaResumen } from "@/components/admin/EntradasClase";
 
 /**
  * La pantalla de «Entradas a clase», con los datos ya leídos. La carga y
@@ -12,6 +13,7 @@ import { DetalleEntradas, ListaEntradas, fechaLarga, nombreDelMes, type FilaResu
  */
 export default function PantallaEntradas({
   datos,
+  uso,
   mes,
   mesActual,
   profesor,
@@ -19,6 +21,8 @@ export default function PantallaEntradas({
   elegido,
 }: {
   datos: DatosEntradas;
+  /** El porcentaje del mes (`usoDelBoton`), sin filtros. */
+  uso: UsoDelBoton;
   /** "2026-10" */
   mes: string;
   mesActual: string;
@@ -34,6 +38,14 @@ export default function PantallaEntradas({
     porAlumno.set(f.alumno_id, lista);
   }
 
+  // El porcentaje de cada uno y sus clases con clic que figuran como
+  // falta sin aviso, del mismo `medirBoton` que el resumen.
+  const medida = uso.estado === "ok" ? uso.medida : null;
+  const extra = (alumnoId: string): Pick<FilaResumen, "boton" | "faltas"> => ({
+    boton: medida ? medida.porAlumno[alumnoId] ?? { clases: 0, conEntrada: 0 } : null,
+    faltas: (medida?.faltasConClic ?? []).filter((f) => f.alumnoId === alumnoId).map((f) => `${f.fecha}T${f.hora}`),
+  });
+
   // Todos los alumnos activos, con entradas o sin ellas; y quien pulsó y
   // ya no está en la lista de Gestión, con su id por nombre.
   const conocidos = new Set(datos.alumnos.map((a) => a.alumnoId));
@@ -42,7 +54,8 @@ export default function PantallaEntradas({
     ...Array.from(porAlumno.keys())
       .filter((id) => !conocidos.has(id) && !esCuentaDeEquipo(id))
       .map((id) => ({ alumnoId: id, nombre: id, profesor: "" })),
-  ].map((a) => ({ ...a, resumen: resumirEntradas(porAlumno.get(a.alumnoId) ?? []), programadas: null }));
+  ].map((a) => ({ ...a, resumen: resumirEntradas(porAlumno.get(a.alumnoId) ?? []), ...extra(a.alumnoId) }));
+  const nombres = new Map(filas.map((f) => [f.alumnoId, f.nombre]));
 
   const profesores = Array.from(new Set(datos.alumnos.map((a) => a.profesor.trim()).filter(Boolean))).sort((a, b) =>
     a.localeCompare(b, "es")
@@ -65,7 +78,7 @@ export default function PantallaEntradas({
         nombre: elegido,
         profesor: "",
         resumen: resumirEntradas(porAlumno.get(elegido) ?? []),
-        programadas: null,
+        ...extra(elegido),
       }
     : null;
 
@@ -97,13 +110,11 @@ export default function PantallaEntradas({
             Entradas a clase
           </h1>
 
-          {/* LA NOTA: discreta, pero arriba y siempre. */}
+          {/* LA NOTA: discreta, pero arriba y siempre. Desde cuándo hay
+              datos y lo que no se cuenta lo dice la tarjeta del resumen. */}
           <p className="mt-2 max-w-[70ch] text-pretty text-[13px] leading-[1.5] text-marca-gris lg:text-[14px]">
-            Solo cuenta las entradas desde el botón de la plataforma. Un alumno puede haber ido a clase entrando por
-            otro enlace.{" "}
-            <span className="text-marca-grisSuave">
-              {datos.desde ? `Hay datos desde el ${fechaLarga(datos.desde)}.` : "Todavía no hay ninguna entrada registrada."}
-            </span>
+            Solo cuenta las entradas desde el botón «Unirse a la clase» de la plataforma. Un alumno puede haber ido a
+            clase entrando por otro enlace.
           </p>
 
           {datos.filas === null && (
@@ -178,6 +189,18 @@ export default function PantallaEntradas({
               plataforma · {clasesConEntrada} {clasesConEntrada === 1 ? "clase" : "clases"} con entrada
             </p>
           </section>
+
+          {/* EL RESUMEN: el mes entero, sin los filtros de arriba. Es la
+              misma cuenta que la tarjeta del panel. */}
+          <div className="mt-4 lg:mt-6">
+            <TarjetaUsoDelBoton uso={uso} contexto={`${nombreDelMes(mes)} · todos los alumnos`} hrefFaltas="#faltas" />
+          </div>
+
+          {medida && medida.faltasConClic.length > 0 && (
+            <div className="mt-4 lg:mt-6">
+              <FaltasConClic faltas={medida.faltasConClic} nombres={nombres} hrefAlumno={(id) => href({ alumno: id })} />
+            </div>
+          )}
         </div>
 
         {detalle && (
