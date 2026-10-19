@@ -44,6 +44,13 @@ export const ESTADOS = [
 ] as const;
 export type EstadoRecuperacion = (typeof ESTADOS)[number];
 
+/**
+ * De dónde sale (contrato 1.1): «profesor», que pulsó «No puedo dar esta
+ * clase»; «ausencia», que no se conectó y Gestión la creó sola. Sin el
+ * campo —Gestión con el contrato 1— es «profesor».
+ */
+export type OrigenRecuperacion = "profesor" | "ausencia";
+
 /** Una fecha y hora de España: "2026-10-12" y "17:00". */
 export type Hueco = { fecha: string; hora: string };
 export type HuecoConHoras = Hueco & { horas: number };
@@ -52,10 +59,12 @@ export type Opcion = HuecoConHoras & { indice: number };
 export type Recuperacion = {
   id: string;
   estado: EstadoRecuperacion;
+  origen: OrigenRecuperacion;
   profesor: string;
   claseCancelada: HuecoConHoras;
   parte: { numero: number; de: number };
   ronda: number;
+  /** De 0 a 4 (contrato 1.1): no se cuenta con un número fijo. */
   opciones: Opcion[];
   misPropuestas: Hueco[];
   miNota: string | null;
@@ -122,6 +131,7 @@ export function leerRecuperacion(v: unknown): Recuperacion | null {
   return {
     id: o.id,
     estado: o.estado,
+    origen: o.origen === "ausencia" ? "ausencia" : "profesor",
     profesor: typeof o.profesor === "string" && o.profesor.trim() !== "" ? o.profesor.trim() : "",
     claseCancelada,
     parte: { numero, de },
@@ -189,7 +199,11 @@ export type ResultadoAccion =
   | { ok: true; estado: EstadoRecuperacion; fecha?: HuecoConHoras }
   | { ok: false; status: number; error: string; mensaje: string | null; problemas: string[] };
 
-/** «Elegir» una de las fechas que propuso el profesor. */
+/**
+ * «Elegir» una de las fechas que propuso el profesor. Las de una
+ * ausencia no están reservadas: si otro se ha quedado el hueco, Gestión
+ * contesta 409 `hueco_no_disponible` y sale como cualquier otro error.
+ */
 export async function elegirFecha(alumnoId: string, id: string, indice: number): Promise<ResultadoAccion> {
   const r = await llamar(`/api/lms/recuperaciones/${encodeURIComponent(id)}/elegir`, {
     method: "POST",

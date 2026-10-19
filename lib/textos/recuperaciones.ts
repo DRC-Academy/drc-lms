@@ -28,6 +28,15 @@ export type TextosRecuperaciones = {
   claseCancelada: string;
   /** "Ignacio no puede dar tu clase del jueves 8 de octubre a las 17:00. Te propone dos fechas para recuperarla:" */
   noPuede: (profesor: string, fecha: string, hora: string, opciones: number) => string;
+
+  // --- el profesor no se conectó (origen «ausencia») ---
+  /** La chapa, en vez de «Clase cancelada». */
+  clasePerdida: string;
+  /** El título de la tarjeta; debajo va `deLaClase`. */
+  noSeConecto: string;
+  sinCoste: string;
+  /** Sin fechas que elegir: el formulario de proponer, directo. */
+  sinHoras: string;
   /** En la segunda vuelta, después de que el alumno propusiera. */
   rondaDos: string;
   /** El botón de cada fecha: "Lunes 12 de octubre · 17:00". */
@@ -127,8 +136,8 @@ function cortaEn(fecha: string): string {
   return `${DIAS_EN[p.diaSemana]} ${p.numero}`;
 }
 
-const NUMEROS_ES = ["", "una fecha", "dos fechas", "tres fechas"];
-const NUMEROS_EN = ["", "one date", "two dates", "three dates"];
+const NUMEROS_ES = ["", "una fecha", "dos fechas", "tres fechas", "cuatro fechas"];
+const NUMEROS_EN = ["", "one date", "two dates", "three dates", "four dates"];
 
 export const RECUPERACIONES: Record<Idioma, TextosRecuperaciones> = {
   es: {
@@ -138,8 +147,13 @@ export const RECUPERACIONES: Record<Idioma, TextosRecuperaciones> = {
 
     claseCancelada: "Clase cancelada",
     noPuede: (profesor, fecha, hora, opciones) =>
-      `${profesor || "Tu profesor"} no puede dar tu clase del ${largaEs(fecha)} a las ${hora}. ` +
-      `Te propone ${NUMEROS_ES[opciones] ?? `${opciones} fechas`} para recuperarla:`,
+      `${profesor || "Tu profesor"} no puede dar tu clase del ${largaEs(fecha)} a las ${hora}.` +
+      (opciones > 0 ? ` Te propone ${NUMEROS_ES[opciones] ?? `${opciones} fechas`} para recuperarla:` : ""),
+
+    clasePerdida: "Clase perdida",
+    noSeConecto: "Tu profe no se ha conectado a tu clase. Elige cuándo quieres recuperarla",
+    sinCoste: "La recuperación no tiene ningún coste",
+    sinHoras: "Tu profe no tiene horas libres estos días. Dinos cuándo te viene bien a ti y se lo pasamos.",
     rondaDos: "Tu profesor te propone dos fechas nuevas",
     opcion: (fecha, hora) => `${mayuscula(largaEs(fecha))} · ${hora}`,
     ninguna: "Ninguna me viene bien",
@@ -216,8 +230,13 @@ export const RECUPERACIONES: Record<Idioma, TextosRecuperaciones> = {
 
     claseCancelada: "Class cancelled",
     noPuede: (profesor, fecha, hora, opciones) =>
-      `${profesor || "Your teacher"} can't teach your class on ${largaEn(fecha)} at ${hora}. ` +
-      `Here ${opciones === 1 ? "is" : "are"} ${NUMEROS_EN[opciones] ?? `${opciones} dates`} to make it up:`,
+      `${profesor || "Your teacher"} can't teach your class on ${largaEn(fecha)} at ${hora}.` +
+      (opciones > 0 ? ` Here ${opciones === 1 ? "is" : "are"} ${NUMEROS_EN[opciones] ?? `${opciones} dates`} to make it up:` : ""),
+
+    clasePerdida: "Missed class",
+    noSeConecto: "Your teacher didn't join your class. Choose when you'd like to make it up",
+    sinCoste: "The make-up class is free of charge",
+    sinHoras: "Your teacher has no free slots these days. Tell us when suits you and we'll pass it on.",
     rondaDos: "Your teacher is suggesting two new dates",
     opcion: (fecha, hora) => `${largaEn(fecha)} · ${hora}`,
     ninguna: "None of these work for me",

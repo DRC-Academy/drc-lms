@@ -6,6 +6,7 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
 import { TARJETA } from "@/components/base/Seccion";
 import { elegirRecuperacion, proponerRecuperacion, type RespuestaRecuperacion } from "@/app/acciones-recuperaciones";
 import { HORAS_PROPUESTA, MAX_NOTA, MAX_PROPUESTAS } from "@/lib/recuperaciones-fechas";
+import { proponerDirecto } from "@/lib/recuperaciones-vista";
 import type { Hueco, Opcion, Recuperacion } from "@/lib/recuperaciones";
 import type { TextosRecuperaciones } from "@/lib/textos/recuperaciones";
 
@@ -21,6 +22,13 @@ import type { TextosRecuperaciones } from "@/lib/textos/recuperaciones";
  * tarjeta vuelve a pintarse con lo que diga Gestión en ese momento. El
  * «¡Hecho!» se queda puesto por encima de lo que llegue: es la respuesta
  * a lo que acaba de pulsar, y que desaparezca al recargar lo haría dudar.
+ *
+ * DOS ORÍGENES. «profesor» canceló la clase y propone fechas; «ausencia»
+ * no se conectó y Gestión buscó de 0 a 4 huecos libres, sin reservarlos.
+ * Si al elegir uno ya no está, Gestión contesta 409
+ * `hueco_no_disponible`: sale su mensaje y el `router.refresh()` trae
+ * las opciones de ahora, sin reintentar la misma. Sin opciones, el
+ * formulario de proponer va directo.
  */
 
 type Modo = { tipo: "ver" } | { tipo: "confirmar"; opcion: Opcion } | { tipo: "formulario" };
@@ -99,7 +107,7 @@ export default function TarjetaRecuperacion({
   const cabecera = (
     <div className="flex flex-wrap items-center gap-2">
       {rec.estado === "esperando_alumno" || rec.estado === "sin_acuerdo" ? (
-        <Chapa tono="aviso">{t.claseCancelada}</Chapa>
+        <Chapa tono="aviso">{rec.origen === "ausencia" ? t.clasePerdida : t.claseCancelada}</Chapa>
       ) : rec.estado === "confirmada" ? (
         <Chapa tono="verde">{t.recuperacionConfirmada}</Chapa>
       ) : null}
@@ -206,18 +214,33 @@ function Cuerpo({
 
   switch (rec.estado) {
     case "esperando_alumno": {
-      if (modo.tipo === "formulario" && !soloLectura) {
+      const directo = proponerDirecto(rec);
+      if (modo.tipo === "formulario" && !soloLectura && !directo) {
         return <FormularioNinguna rec={rec} t={t} dias={dias} enviando={enviando} alProponer={alProponer} alVolver={alCambiar} />;
       }
       const puedeElegir = rec.puedeElegir && !soloLectura;
       return (
         <>
           {rec.ronda >= 2 && <p className="mt-3 text-[14px] font-bold text-marca-verdeOsc">{t.rondaDos}</p>}
-          <p className="mt-3 text-pretty text-[16px] leading-[1.5] text-marca-tinta">
-            {t.noPuede(rec.profesor, cc.fecha, cc.hora, rec.opciones.length)}
-          </p>
+          {rec.origen === "ausencia" ? (
+            <>
+              <h3 className="mt-3 text-pretty font-display text-[19px] font-bold leading-tight text-marca-tinta">{t.noSeConecto}</h3>
+              {deLaClase}
+              <p className="mt-2 text-[15px] font-semibold leading-snug text-marca-verdeOsc">{t.sinCoste}</p>
+            </>
+          ) : (
+            <p className="mt-3 text-pretty text-[16px] leading-[1.5] text-marca-tinta">
+              {t.noPuede(rec.profesor, cc.fecha, cc.hora, rec.opciones.length)}
+            </p>
+          )}
 
-          {modo.tipo === "confirmar" && puedeElegir ? (
+          {directo ? (
+            soloLectura ? (
+              <p className="mt-3 text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia">{t.sinHoras}</p>
+            ) : (
+              <FormularioNinguna rec={rec} t={t} dias={dias} enviando={enviando} alProponer={alProponer} alVolver={alCambiar} directo />
+            )
+          ) : modo.tipo === "confirmar" && puedeElegir ? (
             <div className="aparece mt-4 rounded-[14px] border border-marca-borde bg-marca-niebla p-4">
               <p className="text-[16px] font-semibold leading-snug text-marca-tinta">{t.confirmas(modo.opcion.fecha, modo.opcion.hora)}</p>
               <div className="mt-3 flex flex-col gap-2 min-[500px]:flex-row">
@@ -261,7 +284,7 @@ function Cuerpo({
             </ul>
           )}
 
-          {rec.puedeDecirNinguna && !soloLectura && modo.tipo !== "confirmar" && (
+          {rec.puedeDecirNinguna && !soloLectura && !directo && modo.tipo !== "confirmar" && (
             <button
               type="button"
               onClick={alNinguna}
@@ -330,6 +353,9 @@ function Cuerpo({
 // ---------------------------------------------------------------
 // «NINGUNA ME VIENE BIEN»
 //
+// O, `directo`, cuando no hay fechas que elegir: entonces va dentro de
+// la tarjeta, debajo de su encabezado, sin título propio ni «Volver».
+//
 // De 1 a 3 horarios: un día de los próximos 7 (de lunes a sábado), una
 // hora en punto de 09:00 a 21:00 y «Añadir». La nota es opcional. Lo
 // que se comprueba aquí es lo que se ve sin preguntar —no repetir, no
@@ -344,6 +370,7 @@ function FormularioNinguna({
   enviando,
   alProponer,
   alVolver,
+  directo = false,
 }: {
   rec: Recuperacion;
   t: TextosRecuperaciones;
@@ -351,6 +378,7 @@ function FormularioNinguna({
   enviando: boolean;
   alProponer: (horarios: Hueco[], nota: string) => Promise<RespuestaRecuperacion>;
   alVolver: () => void;
+  directo?: boolean;
 }) {
   const [dia, setDia] = useState<string | null>(null);
   const [hora, setHora] = useState<string>("");
@@ -384,8 +412,14 @@ function FormularioNinguna({
 
   return (
     <div className="aparece mt-3">
-      <h3 className="font-display text-[19px] font-bold leading-tight text-marca-tinta">{t.tituloFormulario}</h3>
-      <p className="mt-1.5 text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia">{t.explicacionFormulario(rec.profesor)}</p>
+      {directo ? (
+        <p className="text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia">{t.sinHoras}</p>
+      ) : (
+        <>
+          <h3 className="font-display text-[19px] font-bold leading-tight text-marca-tinta">{t.tituloFormulario}</h3>
+          <p className="mt-1.5 text-pretty text-[15px] leading-[1.5] text-marca-tintaMedia">{t.explicacionFormulario(rec.profesor)}</p>
+        </>
+      )}
 
       <fieldset className="mt-4">
         <legend className="text-[14px] font-semibold text-marca-gris">{t.dia}</legend>
@@ -498,14 +532,16 @@ function FormularioNinguna({
         >
           {enviando ? t.enviando : t.enviarA(rec.profesor)}
         </button>
-        <button
-          type="button"
-          onClick={alVolver}
-          disabled={enviando}
-          className="inline-flex min-h-[44px] items-center justify-center text-[15px] font-semibold text-marca-verdeOsc underline-offset-4 hover:underline"
-        >
-          {t.volverAOpciones}
-        </button>
+        {!directo && (
+          <button
+            type="button"
+            onClick={alVolver}
+            disabled={enviando}
+            className="inline-flex min-h-[44px] items-center justify-center text-[15px] font-semibold text-marca-verdeOsc underline-offset-4 hover:underline"
+          >
+            {t.volverAOpciones}
+          </button>
+        )}
       </div>
     </div>
   );
