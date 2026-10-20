@@ -1321,3 +1321,91 @@ export async function finesDePlan(): Promise<Map<string, string> | null> {
   }
   return fines;
 }
+
+// ---------------------------------------------------------------
+// LO QUE LEE EL PANEL DEL EQUIPO (`lib/panel-metricas.ts`)
+// ---------------------------------------------------------------
+
+export type AlumnoMetricas = {
+  alumnoId: string;
+  nombre: string;
+  profesor: string;
+  /** Plan activo en Gestión: `estado_asignacion = 'active'`. */
+  activo: boolean;
+};
+
+/**
+ * Todos los alumnos con ficha, con su estado de plan, por tramos. Null
+ * si falla un tramo. Sin filtrar la demo ni la cuenta de pruebas: eso lo
+ * hace la base del LMS (`metricas_quitar_excluidos`), que es la única
+ * lista.
+ */
+export async function alumnosParaMetricas(): Promise<AlumnoMetricas[] | null> {
+  const filas: Fila[] = [];
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await soloLectura("vista_perfil_alumno")
+      .select("alumno_id, nombre, profesor, estado_asignacion")
+      .order("alumno_id", { ascending: true })
+      .order(...ORDEN_ESTADO)
+      .range(desde, desde + PAGINA - 1)
+      .returns<Fila[]>();
+
+    if (error) {
+      console.error("[gestion] No se pudo listar para las métricas:", error.message);
+      return null;
+    }
+    filas.push(...(data ?? []));
+    if ((data ?? []).length < PAGINA) break;
+  }
+
+  return deduplicar(filas).map((fila) => ({
+    alumnoId: comoTexto(fila.alumno_id),
+    nombre: comoTexto(fila.nombre),
+    profesor: comoTexto(fila.profesor),
+    activo: esAsignacionActiva(fila.estado_asignacion),
+  }));
+}
+
+export type ClasesNuevasSemana = {
+  alumnoId: string;
+  /** El lunes, "AAAA-MM-DD". */
+  semana: string;
+  clasesNuevas: number;
+  /** Instantes ISO: la primera y la última de la semana que pasaron a estar disponibles. */
+  primeraDisponibleEn: string;
+  ultimaDisponibleEn: string;
+};
+
+/**
+ * Las filas de `vista_clases_nuevas_semana` de las semanas que empiezan
+ * entre `primerLunes` (incluido) y `hasta` (excluido), por tramos. Null
+ * si falla un tramo.
+ */
+export async function clasesNuevasEntre(primerLunes: string, hasta: string): Promise<ClasesNuevasSemana[] | null> {
+  const filas: Fila[] = [];
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await soloLectura("vista_clases_nuevas_semana")
+      .select("alumno_id, semana, clases_nuevas, primera_disponible_en, ultima_disponible_en")
+      .gte("semana", primerLunes)
+      .lt("semana", hasta)
+      .order("semana", { ascending: true })
+      .order("alumno_id", { ascending: true })
+      .range(desde, desde + PAGINA - 1)
+      .returns<Fila[]>();
+
+    if (error) {
+      console.error("[gestion] No se pudo leer vista_clases_nuevas_semana:", error.message);
+      return null;
+    }
+    filas.push(...(data ?? []));
+    if ((data ?? []).length < PAGINA) break;
+  }
+
+  return filas.map((fila) => ({
+    alumnoId: comoTexto(fila.alumno_id),
+    semana: comoTexto(fila.semana),
+    clasesNuevas: Number(fila.clases_nuevas) || 0,
+    primeraDisponibleEn: comoTexto(fila.primera_disponible_en),
+    ultimaDisponibleEn: comoTexto(fila.ultima_disponible_en),
+  }));
+}

@@ -483,6 +483,148 @@ $$;
 
 
 -- ===============================================================
+-- LO QUE AÑADIÓ LA CAPA DE DATOS DEL PANEL (20-10-2026)
+--
+-- Las funciones de arriba cubren las series y los totales. El panel
+-- necesita además cinco cosas que tampoco se pueden contar en el
+-- servidor sin traer filas.
+-- ===============================================================
+
+-- Eventos sueltos (banner y chat), sin excluidos. `detalle` es lo único
+-- de `datos` que el panel agrupa: la pregunta vista, la pantalla del
+-- banner o el motivo del paso a WhatsApp.
+create or replace view public.metricas_eventos
+with (security_invoker = on) as
+select e.alumno_id, e.tipo, e.creado_en,
+       case e.tipo
+         when 'chat_pregunta_vista' then e.datos->>'pregunta'
+         when 'banner_ampliar_clic' then e.datos->>'pantalla'
+         when 'chat_a_whatsapp'     then e.datos->>'motivo'
+       end as detalle
+  from public.eventos e
+ where not public.metricas_excluido(e.alumno_id);
+
+revoke all on public.metricas_eventos from anon, authenticated;
+
+
+-- 1. La regla de exclusión, para listas que vienen de fuera (Gestión).
+--    El servidor la pide aquí en vez de repetir en TypeScript qué es
+--    una cuenta demo o de pruebas: la regla sigue en un solo sitio.
+create or replace function public.metricas_quitar_excluidos(p_alumnos text[])
+returns text[]
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(array_agg(distinct a order by a), '{}')
+    from unnest(p_alumnos) as a
+   where a is not null and not public.metricas_excluido(a);
+$$;
+
+
+-- 2. Desde cuándo hay datos de lo que no existió siempre. El panel lo
+--    usa para decir «parcial desde…» o «sin datos en este rango» en vez
+--    de enseñar ceros que no lo son.
+--      entradas_clase   el primer clic en «Ingresar a clase» (13 oct 2026)
+--      instrumentacion  el despliegue de visitas, pantalla de origen,
+--                       banner y chat: la primera fila de cualquiera
+--                       de las tres. Si se prueba contra esta base
+--                       antes de desplegar, hay que borrar esas filas.
+create or replace function public.panel_inicio_datos()
+returns table (fuente text, desde timestamptz)
+language sql
+stable
+set search_path = ''
+as $$
+  select 'entradas_clase'::text, (select min(e.clicked_at) from public.entradas_clase e)
+  union all
+  select 'instrumentacion'::text, least(
+    (select min(a.iniciado_en) from public.accesos a),
+    (select min(e.creado_en)   from public.eventos e),
+    (select min(b.generado_en) from public.bloques_generados b where b.pantalla_origen is not null)
+  );
+$$;
+
+
+-- 3. El primer bloque de cada alumno: de los que generaron el PRIMERO
+--    de su vida en el rango, cuántos lo han terminado (cuando sea).
+create or replace function public.panel_primer_bloque(
+  p_desde date,
+  p_hasta date,
+  p_alumnos text[] default null
+)
+returns table (primeros int, completaron int)
+language sql
+stable
+set search_path = ''
+as $$
+  with primero as (
+    select distinct on (b.alumno_id) b.alumno_id, b.generado_en, b.completado_en
+      from public.metricas_bloques b
+     where p_alumnos is null or b.alumno_id = any (p_alumnos)
+     order by b.alumno_id, b.generado_en, b.bloque_clave
+  )
+  select count(*)::int,
+         (count(*) filter (where pr.completado_en is not null))::int
+    from primero pr
+   where pr.generado_en >= (p_desde::timestamp at time zone 'Europe/Madrid')
+     and pr.generado_en <  ((p_hasta + 1)::timestamp at time zone 'Europe/Madrid');
+$$;
+
+
+-- 4. Una fila por alumno con actividad alguna vez: su última actividad
+--    en la plataforma (de siempre; las entradas a clase no cuentan, que
+--    pueden venir del correo) y lo que hizo en el rango. Son recuentos
+--    por alumno, no únicos: el servidor solo los pinta.
+create or replace function public.panel_alumnos(p_desde date, p_hasta date)
+returns table (alumno_id text, ultima_actividad timestamptz, entradas int, bloques int, lecciones int)
+language sql
+stable
+set search_path = ''
+as $$
+  with r as (
+    select (p_desde::timestamp at time zone 'Europe/Madrid')       as ini,
+           ((p_hasta + 1)::timestamp at time zone 'Europe/Madrid') as fin
+  )
+  select a.alumno_id,
+         max(a.en) filter (where a.tipo <> 'entrada_clase'),
+         (count(*) filter (where a.tipo = 'entrada_clase'   and a.en >= r.ini and a.en < r.fin))::int,
+         (count(*) filter (where a.tipo = 'bloque_generado' and a.en >= r.ini and a.en < r.fin))::int,
+         (count(*) filter (where a.tipo = 'leccion'         and a.en >= r.ini and a.en < r.fin))::int
+    from public.metricas_actividad a
+   cross join r
+   group by a.alumno_id
+   order by a.alumno_id;
+$$;
+
+
+-- 5. Eventos del rango: por tipo (`es_total`) y por tipo y detalle, con
+--    los alumnos únicos de cada grupo contados aquí.
+create or replace function public.panel_eventos(
+  p_desde date,
+  p_hasta date,
+  p_alumnos text[] default null
+)
+returns table (tipo text, detalle text, es_total boolean, total int, alumnos int)
+language sql
+stable
+set search_path = ''
+as $$
+  select e.tipo,
+         e.detalle,
+         grouping(e.detalle) = 1,
+         count(*)::int,
+         count(distinct e.alumno_id)::int
+    from public.metricas_eventos e
+   where e.creado_en >= (p_desde::timestamp at time zone 'Europe/Madrid')
+     and e.creado_en <  ((p_hasta + 1)::timestamp at time zone 'Europe/Madrid')
+     and (p_alumnos is null or e.alumno_id = any (p_alumnos))
+   group by grouping sets ((e.tipo), (e.tipo, e.detalle))
+   order by 1, 3 desc, 4 desc;
+$$;
+
+
+-- ===============================================================
 -- PERMISOS
 --
 -- Como las tablas: solo el servidor (secret key = service_role). Supabase
@@ -496,6 +638,11 @@ revoke execute on function public.panel_serie(date, date, text, text[])         
 revoke execute on function public.panel_totales(date, date, text[])                from public, anon, authenticated;
 revoke execute on function public.panel_embudo(date, date, text, text[])           from public, anon, authenticated;
 revoke execute on function public.panel_top(date, date, text, int, text[])         from public, anon, authenticated;
+revoke execute on function public.metricas_quitar_excluidos(text[])                from public, anon, authenticated;
+revoke execute on function public.panel_inicio_datos()                             from public, anon, authenticated;
+revoke execute on function public.panel_primer_bloque(date, date, text[])          from public, anon, authenticated;
+revoke execute on function public.panel_alumnos(date, date)                        from public, anon, authenticated;
+revoke execute on function public.panel_eventos(date, date, text[])                from public, anon, authenticated;
 
 grant execute on function public.metricas_excluido(text)                           to service_role;
 grant execute on function public.panel_agregado(date, date, text, text[])          to service_role;
@@ -503,6 +650,11 @@ grant execute on function public.panel_serie(date, date, text, text[])          
 grant execute on function public.panel_totales(date, date, text[])                 to service_role;
 grant execute on function public.panel_embudo(date, date, text, text[])            to service_role;
 grant execute on function public.panel_top(date, date, text, int, text[])          to service_role;
+grant execute on function public.metricas_quitar_excluidos(text[])                 to service_role;
+grant execute on function public.panel_inicio_datos()                              to service_role;
+grant execute on function public.panel_primer_bloque(date, date, text[])           to service_role;
+grant execute on function public.panel_alumnos(date, date)                         to service_role;
+grant execute on function public.panel_eventos(date, date, text[])                 to service_role;
 
 
 -- ===============================================================
@@ -516,11 +668,11 @@ select p.proname as funcion,
        has_function_privilege('anon', p.oid, 'execute')          as anon_ejecuta,
        has_function_privilege('authenticated', p.oid, 'execute') as authenticated_ejecuta
 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-where n.nspname = 'public' and (p.proname like 'panel\_%' or p.proname = 'metricas_excluido')
+where n.nspname = 'public' and (p.proname like 'panel\_%' or p.proname like 'metricas\_%')
 order by 1;
 
 select v as vista, has_table_privilege('anon', ('public.' || v)::regclass, 'select') as anon_lee
-from unnest(array['metricas_lecciones', 'metricas_bloques', 'metricas_actividad']) as v;
+from unnest(array['metricas_lecciones', 'metricas_bloques', 'metricas_actividad', 'metricas_eventos']) as v;
 
 -- 2. Semana del 12 al 18 oct 2026, en hora de Madrid. Esperado:
 --      entradas_alumnos = 34, entradas = 78,
@@ -541,10 +693,29 @@ select
   (select activos      from public.panel_agregado('2026-07-27', '2026-10-18', 'total'))  as unicos_del_rango;
 
 
+-- 4. Lo añadido para la capa de datos. Esperado:
+--      quitar_excluidos → {s_x} (la demo, la de pruebas y el nulo fuera);
+--      inicio_datos     → entradas_clase el 13 oct; instrumentacion
+--                         vacía hasta el despliegue de la Etapa 2;
+--      primer_bloque y panel_alumnos con filas; eventos vacío por ahora.
+select public.metricas_quitar_excluidos(array['s_x', 'demo-diego-ruiz', 's_1785879819493', null]) as quedan;
+select * from public.panel_inicio_datos();
+select * from public.panel_primer_bloque('2026-10-12', '2026-10-18');
+select count(*) as alumnos, sum(bloques) as bloques, sum(lecciones) as lecciones, sum(entradas) as entradas
+from public.panel_alumnos('2026-10-12', '2026-10-18');
+select * from public.panel_eventos('2026-10-12', '2026-10-18');
+
+
 -- ===============================================================
 -- DESHACER (comentado). No toca ningún dato: solo vistas y funciones.
 -- ===============================================================
 
+-- drop function if exists public.panel_eventos(date, date, text[]);
+-- drop function if exists public.panel_alumnos(date, date);
+-- drop function if exists public.panel_primer_bloque(date, date, text[]);
+-- drop function if exists public.panel_inicio_datos();
+-- drop function if exists public.metricas_quitar_excluidos(text[]);
+-- drop view if exists public.metricas_eventos;
 -- drop function if exists public.panel_top(date, date, text, int, text[]);
 -- drop function if exists public.panel_embudo(date, date, text, text[]);
 -- drop function if exists public.panel_totales(date, date, text[]);

@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel del equipo · prototipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Radio+Canada+Big:wght@500;600;700&family=Radio+Canada:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --verde: #1E9E3A;
+    --verde-osc: #14722A;
+    --amarillo: #FFC400;
+    --tinta: #12211A;
+    --niebla: #F4F7F4;
+    --borde: #E2E8E4;
+    --superficie: #FFFFFF;
+    --texto-2: #4B5A52;
+    --texto-3: #74827A;
+    --rejilla: #EDF1EE;
+    --serie-2: #2F6FB0;
+    --baja: #A5432F;
+    --sombra-banda: #EEF5EF;
+    --apagado: #F7F9F7;
+    --gutter: 20px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--niebla);
+    color: var(--tinta);
+    font: 400 15px/1.5 "Radio Canada", system-ui, sans-serif;
+  }
+  h1, h2, h3 { font-family: "Radio Canada Big", "Radio Canada", sans-serif; margin: 0; letter-spacing: -0.01em; }
+  button { font: inherit; color: inherit; }
+
+  .franja {
+    background: #FFF7DA;
+    border-bottom: 1px solid #F1E3A8;
+    font-size: 13px;
+    color: var(--texto-2);
+    padding: 7px var(--gutter);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .franja::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--amarillo); flex: none; }
+
+  main { max-width: 1240px; margin: 0 auto; padding: 28px var(--gutter) 72px; }
+  @media (min-width: 1024px) { main { padding: 36px 40px 96px; } }
+
+  /* --- Cabecera --- */
+  .cabecera { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; }
+  .antetitulo { font-size: 11.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--verde-osc); margin: 0 0 8px; }
+  h1 { font-size: 30px; font-weight: 700; line-height: 1.1; }
+  @media (min-width: 1024px) { h1 { font-size: 36px; } }
+  .comparada { margin: 8px 0 0; color: var(--texto-2); font-size: 14.5px; }
+  .controles { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+  .segmentado { display: inline-flex; background: var(--superficie); border: 1px solid var(--borde); border-radius: 999px; padding: 3px; gap: 2px; }
+  .segmentado button {
+    border: 0; background: transparent; border-radius: 999px; padding: 6px 13px; font-size: 13.5px; font-weight: 500;
+    color: var(--texto-2); cursor: pointer; min-height: 32px; white-space: nowrap;
+  }
+  .segmentado button:hover { color: var(--tinta); background: var(--niebla); }
+  .segmentado button[aria-pressed="true"] { background: var(--verde); color: #fff; }
+  .segmentado button[aria-pressed="true"]:hover { background: var(--verde-osc); }
+  .segmentado.suave button[aria-pressed="true"] { background: var(--tinta); }
+  .segmentado.suave button[aria-pressed="true"]:hover { background: #24382D; }
+  button:focus-visible, [tabindex]:focus-visible, input:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+
+  /* --- Rejillas --- */
+  .kpis { display: grid; gap: 12px; margin-top: 24px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .kpis { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 1100px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+  .dos { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 960px) { .dos { grid-template-columns: 1fr 1fr; } }
+
+  .tarjeta { background: var(--superficie); border: 1px solid var(--borde); border-radius: 14px; padding: 18px; min-width: 0; }
+  @media (min-width: 1024px) { .tarjeta { padding: 22px; } }
+  .seccion { margin-top: 12px; }
+  .tarjeta h2 { font-size: 18px; font-weight: 600; line-height: 1.25; }
+  .tarjeta .sub { margin: 4px 0 0; color: var(--texto-2); font-size: 13.5px; max-width: 68ch; }
+  .cab-tarjeta { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; }
+
+  /* --- KPI --- */
+  .kpi { display: flex; flex-direction: column; gap: 6px; }
+  .kpi .etiqueta { font-size: 13.5px; color: var(--texto-2); font-weight: 500; }
+  .kpi .valor { font-size: 34px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; }
+  .kpi .valor small { font-size: 15px; font-weight: 500; color: var(--texto-2); letter-spacing: 0; margin-left: 4px; }
+  .kpi .base { font-size: 13px; color: var(--texto-3); min-height: 19px; }
+  .delta { font-size: 13px; font-weight: 600; display: inline-flex; gap: 4px; align-items: baseline; }
+  .delta.sube { color: var(--verde-osc); }
+  .delta.baja { color: var(--baja); }
+  .delta.igual, .delta.nada { color: var(--texto-3); font-weight: 500; }
+  .delta .contra { color: var(--texto-3); font-weight: 400; }
+  .chispa { margin-top: 4px; height: 38px; }
+  .nota-hoy { display: none; font-size: 12.5px; color: var(--texto-2); background: var(--apagado); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 9px; }
+  body.hoy .nota-hoy { display: block; }
+  body.hoy .solo-diseno { display: none !important; }
+  .solo-hoy { display: none !important; }
+  body.hoy .solo-hoy { display: block !important; }
+
+  /* --- Gráficos --- */
+  .grafico { position: relative; margin-top: 14px; }
+  .grafico svg { display: block; overflow: visible; }
+  .eje { font-size: 11.5px; fill: var(--texto-3); font-variant-numeric: tabular-nums; }
+  .eje.sel { fill: var(--tinta); font-weight: 600; }
+  .valor-directo { font-size: 12px; fill: var(--tinta); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--texto-2); margin-top: 12px; }
+  .leyenda > span { display: inline-flex; align-items: center; gap: 6px; }
+  .muestra { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+  .zona { cursor: default; }
+  .zona:focus { outline: none; }
+  .zona:focus-visible + .foco { stroke: var(--verde); }
+
+  #tip {
+    position: fixed; z-index: 10; pointer-events: none; opacity: 0; transition: opacity .08s;
+    background: var(--tinta); color: #fff; border-radius: 8px; padding: 8px 10px; font-size: 12.5px; line-height: 1.45;
+    max-width: 240px; box-shadow: 0 4px 16px rgba(18,33,26,.18);
+  }
+  #tip b { font-weight: 600; }
+  #tip .fila { display: flex; align-items: center; gap: 6px; }
+  #tip .muestra { width: 8px; height: 8px; }
+
+  details.tabla-vista { margin-top: 12px; font-size: 13px; }
+  details.tabla-vista summary { cursor: pointer; color: var(--verde-osc); font-weight: 500; width: max-content; }
+  details.tabla-vista .envoltura { overflow-x: auto; margin-top: 8px; }
+  details.tabla-vista table { border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 100%; }
+  details.tabla-vista th, details.tabla-vista td { padding: 4px 10px; text-align: right; border-bottom: 1px solid var(--rejilla); white-space: nowrap; }
+  details.tabla-vista th:first-child, details.tabla-vista td:first-child { text-align: left; }
+  details.tabla-vista th { color: var(--texto-3); font-weight: 500; }
+
+  /* --- Cifras sueltas --- */
+  .cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+  .cifra { background: var(--apagado); border-radius: 10px; padding: 10px 12px; }
+  .cifra .n { font-size: 24px; font-weight: 600; line-height: 1.1; }
+  .cifra .t { font-size: 12.5px; color: var(--texto-2); margin-top: 3px; line-height: 1.35; }
+  .pequena { color: var(--texto-3) !important; }
+  .chip-pequena { display: inline-block; font-size: 11px; font-weight: 500; color: var(--texto-3); border: 1px solid var(--borde); border-radius: 999px; padding: 0 7px; margin-left: 4px; vertical-align: 2px; white-space: nowrap; }
+  .aclaracion { font-size: 12.5px; color: var(--texto-3); margin: 12px 0 0; max-width: 72ch; }
+
+  .bloque-sub { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--rejilla); }
+  .bloque-sub h3 { font-size: 14.5px; font-weight: 600; }
+  .linea-dato { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; font-size: 14px; padding: 6px 0; }
+  .linea-dato + .linea-dato { border-top: 1px solid var(--rejilla); }
+  .linea-dato .der { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .linea-dato .izq { color: var(--texto-2); }
+
+  /* --- Pendiente de instrumentar --- */
+  .pendiente { background: var(--apagado); border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; }
+  .pendiente .estado { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--texto-2); }
+  .pendiente .estado::before { content: ""; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--texto-3); }
+  .pendiente .vacio { font-size: 26px; font-weight: 600; color: #B5C0BA; line-height: 1.1; margin-top: 6px; }
+  .pendiente p { margin: 6px 0 0; font-size: 13px; color: var(--texto-2); }
+  .pendiente .falta { color: var(--texto-3); font-size: 12.5px; }
+
+  /* --- Embudo --- */
+  .embudo { margin-top: 16px; display: grid; gap: 10px; }
+  .paso { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline; }
+  .paso .nombre { font-size: 13.5px; color: var(--texto-2); }
+  .paso .num { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+  .paso .pista { grid-column: 1 / -1; height: 14px; background: var(--rejilla); border-radius: 4px; overflow: hidden; }
+  .paso .relleno { height: 100%; background: var(--verde); border-radius: 0 4px 4px 0; }
+  .paso .conv { grid-column: 1 / -1; font-size: 12px; color: var(--texto-3); }
+
+  /* --- Top 5 --- */
+  .top { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 10px; }
+  .top li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13.5px; }
+  .top .pista { grid-column: 1 / -1; height: 8px; border-radius: 4px; background: var(--rejilla); overflow: hidden; }
+  .top .relleno { height: 100%; background: var(--verde); border-radius: 0 4px 4px 0; }
+  .top .num { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .top .ctx { color: var(--texto-3); }
+
+  /* --- Tabla de alumnos --- */
+  .herramientas { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-top: 14px; }
+  .buscador { position: relative; flex: 1 1 260px; max-width: 360px; }
+  .buscador input {
+    width: 100%; height: 40px; border: 1px solid var(--borde); border-radius: 999px; padding: 0 14px 0 38px;
+    font: inherit; font-size: 16px; color: var(--tinta); background: var(--superficie); outline: none;
+  }
+  .buscador input:focus { border-color: var(--verde); }
+  .buscador svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--texto-3); }
+  .recuento { font-size: 13px; color: var(--texto-3); }
+  .tabla-envoltura { overflow-x: auto; margin: 12px -18px 0; padding: 0 18px; }
+  @media (min-width: 1024px) { .tabla-envoltura { margin: 12px -22px 0; padding: 0 22px; } }
+  table.alumnos { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 14px; }
+  table.alumnos th {
+    text-align: left; font-weight: 500; font-size: 12.5px; color: var(--texto-3); padding: 8px 10px; border-bottom: 1px solid var(--borde); white-space: nowrap;
+  }
+  table.alumnos th.num, table.alumnos td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.alumnos th button { border: 0; background: none; padding: 2px 0; cursor: pointer; color: inherit; font-size: inherit; font-weight: inherit; display: inline-flex; gap: 4px; align-items: center; }
+  table.alumnos th button:hover { color: var(--tinta); }
+  table.alumnos th[aria-sort] button { color: var(--tinta); font-weight: 600; }
+  table.alumnos td { padding: 9px 10px; border-bottom: 1px solid var(--rejilla); white-space: nowrap; }
+  table.alumnos tbody tr:hover { background: #FAFCFA; }
+  .nombre-alumno { font-weight: 500; }
+  .quieto { display: inline-block; margin-left: 8px; font-size: 11.5px; color: var(--texto-2); background: var(--apagado); border: 1px solid var(--borde); border-radius: 999px; padding: 0 8px; vertical-align: 1px; }
+  .cuando { color: var(--texto-3); font-size: 12.5px; margin-left: 4px; }
+  .cero { color: #B5C0BA; }
+  .sin-resultados { padding: 20px 10px; color: var(--texto-3); }
+
+  /* --- Estados --- */
+  .estados { display: grid; gap: 12px; margin-top: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .estados { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 1100px) { .estados { grid-template-columns: repeat(3, 1fr); } }
+  .estado-caja { border: 1px solid var(--borde); border-radius: 12px; padding: 14px; background: var(--superficie); }
+  .estado-caja .tipo { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--texto-3); font-weight: 600; margin-bottom: 10px; }
+  .error-lectura { display: flex; gap: 8px; align-items: baseline; font-size: 13px; color: var(--baja); font-weight: 500; }
+
+  h2.titulo-seccion { font-size: 20px; font-weight: 600; margin-top: 40px; }
+  .pie { margin-top: 32px; font-size: 12.5px; color: var(--texto-3); }
+
+  @media (max-width: 480px) {
+    .segmentado { flex-wrap: wrap; border-radius: 18px; max-width: 100%; }
+    .segmentado button { padding: 6px 10px; }
+    .kpi .valor { font-size: 30px; }
+    .cifras { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .cifra { padding: 8px 9px; }
+    .cifra .n { font-size: 20px; }
+    .tabla-envoltura { margin: 12px -18px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="franja" role="note">Prototipo — datos de ejemplo. Nada de esta página sale de la base.</div>
+
+<main>
+  <!-- 1. CABECERA -->
+  <header class="cabecera">
+    <div>
+      <p class="antetitulo">DRC Práctica · equipo</p>
+      <h1>Cómo va la plataforma</h1>
+      <p class="comparada" id="comparada"></p>
+    </div>
+    <div class="controles">
+      <div class="segmentado" role="group" aria-label="Periodo" id="periodo">
+        <button type="button" data-n="1" aria-pressed="true">Esta semana</button>
+        <button type="button" data-n="4" aria-pressed="false">Últimas 4</button>
+        <button type="button" data-n="12" aria-pressed="false">Últimas 12</button>
+      </div>
+      <div class="segmentado suave" role="group" aria-label="Qué enseñar" id="modo">
+        <button type="button" data-modo="diseno" aria-pressed="true">Diseño completo</button>
+        <button type="button" data-modo="hoy" aria-pressed="false">Con lo que hay hoy</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. KPI -->
+  <section class="kpis" aria-label="Cifras principales">
+    <article class="tarjeta kpi" id="kpi-activos"></article>
+    <article class="tarjeta kpi" id="kpi-entradas"></article>
+    <article class="tarjeta kpi" id="kpi-practica"></article>
+    <article class="tarjeta kpi" id="kpi-sesiones"></article>
+  </section>
+
+  <!-- 3. SEMANA A SEMANA -->
+  <section class="tarjeta seccion" aria-labelledby="t-semanas">
+    <div class="cab-tarjeta">
+      <div>
+        <h2 id="t-semanas">Semana a semana</h2>
+        <p class="sub">Las 12 últimas semanas completas, de lunes a domingo. Lo resaltado es el periodo elegido arriba.</p>
+      </div>
+      <div class="segmentado suave" role="group" aria-label="Métrica" id="metrica">
+        <button type="button" data-m="activos" aria-pressed="true">Activos</button>
+        <button type="button" data-m="sesiones" aria-pressed="false">Sesiones</button>
+        <button type="button" data-m="entradas" aria-pressed="false">Entradas a clase</button>
+        <button type="button" data-m="bloques" aria-pressed="false">Bloques</button>
+      </div>
+    </div>
+    <div class="leyenda" id="leyenda-semanas"></div>
+    <div class="grafico" id="g-semanas"></div>
+    <p class="nota-hoy" id="nota-semanas" style="margin-top:10px"></p>
+    <details class="tabla-vista"><summary>Ver como tabla</summary><div class="envoltura" id="tabla-semanas"></div></details>
+  </section>
+
+  <div class="dos">
+    <!-- 4. ENTRAR A CLASE -->
+    <section class="tarjeta" aria-labelledby="t-clase">
+      <h2 id="t-clase">Entrar a clase desde la plataforma</h2>
+      <p class="sub">Clases programadas en Gestión (normales y recuperaciones) frente a las que se abrieron con «Ingresar a clase». Una clase abierta con varios clics cuenta una vez.</p>
+      <div class="cifras" id="cifras-clase"></div>
+      <div class="grafico" id="g-clase"></div>
+      <p class="nota-hoy">Hoy: se registra desde el 13 oct, así que las cifras de arriba son solo de la semana del 12 oct sea cual sea el periodo. La tendencia de 12 semanas estará completa a principios de enero; hasta entonces las semanas anteriores salen vacías, no a cero.</p>
+      <p class="aclaracion">No es asistencia: quien entra por el enlace del correo o del calendario de Gestión no aparece aquí.</p>
+      <details class="tabla-vista"><summary>Ver como tabla</summary><div class="envoltura" id="tabla-clase"></div></details>
+    </section>
+
+    <!-- 5. PRÁCTICA CON IA -->
+    <section class="tarjeta" aria-labelledby="t-practica">
+      <h2 id="t-practica">Práctica generada con IA</h2>
+      <p class="sub">Bloques de 10 ejercicios creados a partir de la última clase analizada. «Completado» es un bloque terminado al menos una vez.</p>
+      <div class="leyenda" id="leyenda-practica"></div>
+      <div class="grafico" id="g-practica"></div>
+
+      <div class="bloque-sub">
+        <h3>Desde dónde se generan</h3>
+        <div class="solo-diseno">
+          <div class="grafico" id="g-origen" style="margin-top:10px"></div>
+          <div class="leyenda" id="leyenda-origen"></div>
+        </div>
+        <div class="solo-hoy" style="margin-top:10px">
+          <div class="pendiente">
+            <span class="estado">Pendiente de instrumentar</span>
+            <div class="vacio">—</div>
+            <p>Aún no se registra desde qué pantalla se pide cada bloque.</p>
+            <p class="falta">Falta: que el botón mande su origen al generar y guardarlo en <code>bloques_generados</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bloque-sub">
+        <h3>Quién podía y quién lo hizo</h3>
+        <div id="lineas-practica" style="margin-top:6px"></div>
+        <p class="nota-hoy" style="margin-top:8px">Hoy: «podían generar» se calcula cruzando las clases analizadas de Gestión con la fecha de clase que lleva cada bloque. No hay una columna que lo diga.</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="dos">
+    <!-- 6. EMBUDO -->
+    <section class="tarjeta" aria-labelledby="t-embudo">
+      <h2 id="t-embudo">Embudo de uso</h2>
+      <p class="sub" id="sub-embudo"></p>
+      <div class="embudo" id="embudo"></div>
+      <p class="nota-hoy" style="margin-top:12px">Hoy: «entraron» solo ve a quien inició sesión o hizo algo. La sesión dura 30 días y no se apunta cada visita, así que quien solo mira sin hacer nada se queda fuera.</p>
+    </section>
+
+    <!-- 7. USO DEL CURSO -->
+    <section class="tarjeta" aria-labelledby="t-curso">
+      <div class="cab-tarjeta">
+        <div>
+          <h2 id="t-curso">Uso del curso</h2>
+          <p class="sub">Lecciones completadas en la plataforma. No cuenta el historial importado de LearnDash.</p>
+        </div>
+      </div>
+      <div class="grafico" id="g-lecciones"></div>
+      <div class="bloque-sub">
+        <div class="cab-tarjeta">
+          <h3 id="t-top">Con más actividad</h3>
+          <div class="segmentado suave" role="group" aria-label="Agrupar por" id="agrupar">
+            <button type="button" data-a="cursos" aria-pressed="true">Cursos</button>
+            <button type="button" data-a="modulos" aria-pressed="false">Módulos</button>
+          </div>
+        </div>
+        <ol class="top" id="top"></ol>
+      </div>
+    </section>
+  </div>
+
+  <!-- 8. TABLA DE ALUMNOS -->
+  <section class="tarjeta seccion" aria-labelledby="t-alumnos">
+    <h2 id="t-alumnos">Alumnos</h2>
+    <p class="sub">Las cifras son del periodo elegido; la última entrada, de siempre. Pulsa una cabecera para ordenar.</p>
+    <div class="herramientas">
+      <label class="buscador">
+        <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Buscar por nombre o profesor</span>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="5.4"/><path d="M13 13l3.5 3.5"/></svg>
+        <input type="search" id="buscar" placeholder="Buscar por nombre o profesor" autocomplete="off">
+      </label>
+      <span class="recuento" id="recuento"></span>
+    </div>
+    <div class="tabla-envoltura">
+      <table class="alumnos">
+        <thead>
+          <tr>
+            <th data-c="nombre"><button type="button">Nombre</button></th>
+            <th data-c="profesor"><button type="button">Profesor</button></th>
+            <th data-c="dias"><button type="button">Última entrada</button></th>
+            <th class="num" data-c="entradas"><button type="button">Entradas a clase</button></th>
+            <th class="num" data-c="bloques"><button type="button">Bloques generados</button></th>
+            <th class="num" data-c="lecciones"><button type="button">Lecciones</button></th>
+          </tr>
+        </thead>
+        <tbody id="cuerpo-alumnos"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 9. ESTADOS -->
+  <h2 class="titulo-seccion" id="t-estados">Estados</h2>
+  <p class="sub" style="margin:6px 0 0;color:var(--texto-2);font-size:14px;max-width:72ch">Cómo se ve una cifra cuando no hay dato, cuando hay poco o cuando no se ha podido leer. Un cero y un «no lo sé» no pueden parecerse.</p>
+  <section class="estados" aria-labelledby="t-estados">
+    <div class="estado-caja">
+      <div class="tipo">Sin datos</div>
+      <div class="pendiente">
+        <span class="estado">Pendiente de instrumentar</span>
+        <div class="vacio">—</div>
+        <p>Clics en «Quiero ir más rápido». Aún no se registra.</p>
+        <p class="falta">Falta: apuntar el clic en <code>/ampliar-plan</code> antes de redirigir.</p>
+      </div>
+    </div>
+    <div class="estado-caja">
+      <div class="tipo">Sin datos</div>
+      <div class="pendiente">
+        <span class="estado">Pendiente de instrumentar</span>
+        <div class="vacio">—</div>
+        <p>Uso de la ayuda (abrir el chat, preguntas vistas, paso a WhatsApp). Aún no se registra.</p>
+        <p class="falta">Falta: la ayuda vive entera en el navegador; no manda nada al servidor.</p>
+      </div>
+    </div>
+    <div class="estado-caja">
+      <div class="tipo">Histórico parcial</div>
+      <div class="kpi">
+        <span class="etiqueta">Entradas a clase con el botón</span>
+        <span class="valor">34<small>alumnos</small></span>
+        <span class="delta nada">Sin semana anterior para comparar</span>
+        <div class="chispa" id="chispa-parcial"></div>
+        <span class="base">Se registra desde el 13 oct · 1 semana de 12</span>
+      </div>
+    </div>
+    <div class="estado-caja">
+      <div class="tipo">Muestra pequeña</div>
+      <div class="kpi">
+        <span class="etiqueta">Completaron su primer bloque</span>
+        <span class="valor pequena">57&nbsp;%</span>
+        <span class="base">4 de 7 que generaron por primera vez <span class="chip-pequena">muestra pequeña</span></span>
+      </div>
+      <p class="aclaracion">Con una base menor que 10 el porcentaje va en gris: un alumno más o menos lo mueve 10 puntos.</p>
+    </div>
+    <div class="estado-caja">
+      <div class="tipo">Cero real</div>
+      <div class="kpi">
+        <span class="etiqueta">Bloques generados</span>
+        <span class="valor">0</span>
+        <span class="delta baja">▼ −6 (−100&nbsp;%) <span class="contra">vs. 6</span></span>
+        <span class="base">Se ha leído bien y no hubo ninguno.</span>
+      </div>
+    </div>
+    <div class="estado-caja">
+      <div class="tipo">No se pudo leer</div>
+      <div class="kpi">
+        <span class="etiqueta">Sesiones</span>
+        <span class="valor" style="color:#B5C0BA">—</span>
+        <span class="error-lectura">No se ha podido leer la tabla de sesiones. Vuelve a cargar en unos minutos.</span>
+        <span class="base">No se enseña un cero en su lugar.</span>
+      </div>
+    </div>
+  </section>
+
+  <p class="pie">Semanas de lunes a domingo, hora de Madrid. Fuera de todas las cifras: cuentas de demostración, la cuenta de pruebas y lo que genera el equipo revisando una ficha. Datos calculados hace 3 min (ejemplo).</p>
+</main>
+
+<div id="tip" role="tooltip"></div>
+
+<script>
+// ---------------------------------------------------------------
+// DATOS DE EJEMPLO
+//
+// Doce semanas completas, de la del 27 jul a la del 12 oct. La forma
+// copia la de la base real: la plataforma abre el 14 ago, sube en
+// septiembre y se estabiliza en octubre. Los números son inventados.
+// ---------------------------------------------------------------
+const SEMANAS = ["27 jul", "3 ago", "10 ago", "17 ago", "24 ago", "31 ago", "7 sep", "14 sep", "21 sep", "28 sep", "5 oct", "12 oct"];
+const CON_PLAN = 210; // alumnos con plan activo en Gestión
+
+const S = {
+  activos:      [0, 0, 1, 5, 5, 17, 37, 44, 46, 88, 81, 94],
+  hicieron:     [0, 0, 1, 4, 3, 11, 22, 26, 28, 49, 45, 52],
+  volvieron:    [0, 0, 0, 1, 2, 3, 10, 14, 17, 27, 30, 34],
+  sesiones:     [0, 0, 1, 10, 8, 44, 84, 102, 126, 274, 194, 210],
+  conSesion:    [0, 0, 1, 5, 4, 15, 36, 41, 41, 85, 65, 71],
+  clases:       [281, 290, 276, 262, 270, 201, 264, 292, 317, 315, 341, 343],
+  clics:        [0, 0, 0, 4, 6, 11, 19, 27, 36, 48, 60, 78],
+  alumnosClic:  [0, 0, 0, 3, 4, 8, 12, 17, 22, 27, 31, 34],
+  clasesBoton:  [0, 0, 0, 3, 5, 9, 15, 22, 30, 38, 46, 58],
+  generados:    [0, 0, 1, 7, 2, 6, 10, 12, 33, 24, 32, 34],
+  completados:  [0, 0, 0, 5, 3, 2, 8, 10, 16, 14, 20, 25],
+  generaron:    [0, 0, 1, 3, 2, 5, 8, 11, 16, 14, 18, 18],
+  elegibles:    [0, 0, 3, 12, 15, 30, 44, 52, 58, 60, 59, 61],
+  elGeneraron:  [0, 0, 1, 3, 2, 4, 7, 10, 14, 13, 16, 17],
+  banco:        [0, 0, 1, 4, 1, 6, 3, 6, 17, 10, 14, 19],
+  camino:       [0, 0, 1, 4, 1, 4, 6, 8, 21, 15, 20, 21],
+  primeros:     [0, 0, 1, 2, 1, 3, 4, 5, 8, 5, 6, 7],
+  primerosOk:   [0, 0, 0, 1, 1, 1, 3, 3, 5, 3, 4, 4],
+  lecciones:    [0, 0, 4, 27, 28, 84, 221, 142, 191, 202, 305, 192],
+};
+
+// Alumnos DISTINTOS en varias semanas: no se pueden sumar semana a
+// semana. [periodo, periodo anterior]; null = no hay anterior.
+const UNICOS = {
+  4:  { activos: [146, 61], hicieron: [88, 38], volvieron: [51, 17], conSesion: [121, 52], alumnosClic: [52, 22], generaron: [37, 18], elegibles: [97, 70], elGeneraron: [33, 16] },
+  12: { activos: [171, null], hicieron: [112, null], volvieron: [64, null], conSesion: [148, null], alumnosClic: [58, null], generaron: [54, null], elegibles: [118, null], elGeneraron: [48, null] },
+};
+const SUMABLES = new Set(["sesiones", "clases", "clics", "clasesBoton", "generados", "completados", "banco", "camino", "lecciones", "primeros", "primerosOk"]);
+
+const COMPARADA = {
+  1: "Semana del 12 al 18 oct · vs. semana del 5 oct",
+  4: "Del 21 sep al 18 oct · vs. las 4 anteriores (24 ago – 20 sep)",
+  12: "Del 27 jul al 18 oct · sin periodo anterior con datos: la plataforma abrió el 14 ago",
+};
+const CONTRA = { 1: "semana del 5 oct", 4: "4 semanas anteriores", 12: "" };
+
+const COLOR = { s1: "#1E9E3A", s2: "#2F6FB0", gris: "#A9B4AE" };
+
+let estado = { n: 1, metrica: "activos", agrupar: "cursos", orden: { c: "dias", dir: 1 }, hoy: false };
+
+// ---------------------------------------------------------------
+// UTILIDADES
+// ---------------------------------------------------------------
+const fmt = (v) => v.toLocaleString("es-ES");
+const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
+const suma = (arr, desde, hasta) => arr.slice(desde, hasta).reduce((x, y) => x + y, 0);
+
+/** Lo que hoy solo existe desde el 13 oct: en modo «hoy» cuenta la última semana. */
+const DESDE_13_OCT = new Set(["clics", "alumnosClic", "clasesBoton"]);
+
+/** Valor del periodo y del anterior, sumando o tirando de los únicos. */
+function valor(clave, n = estado.n) {
+  const arr = S[clave];
+  if (estado.hoy && DESDE_13_OCT.has(clave)) return [arr[arr.length - 1], null];
+  const fin = arr.length;
+  if (n === 1) return [arr[fin - 1], arr[fin - 2]];
+  if (SUMABLES.has(clave)) {
+    const anterior = fin - 2 * n >= 0 ? suma(arr, fin - 2 * n, fin - n) : null;
+    return [suma(arr, fin - n, fin), anterior];
+  }
+  return UNICOS[n][clave];
+}
+
+/** Porcentaje con su base. Base < 10: gris y «muestra pequeña». */
+function pctConBase(a, b, { conChip = true } = {}) {
+  const p = pct(a, b);
+  const pequena = b < 10;
+  return `<span class="${pequena ? "pequena" : ""}">${p}&nbsp;%</span>` +
+    (pequena && conChip ? ` <span class="chip-pequena">muestra pequeña</span>` : "");
+}
+
+function delta(actual, anterior, { pp = false, unidad = "" } = {}) {
+  if (anterior === null || anterior === undefined) return `<span class="delta nada">Sin periodo anterior para comparar</span>`;
+  const d = actual - anterior;
+  if (d === 0) return `<span class="delta igual">= sin cambios <span class="contra">vs. ${CONTRA[estado.n]}</span></span>`;
+  const flecha = d > 0 ? "▲" : "▼";
+  const signo = d > 0 ? "+" : "−";
+  const clase = d > 0 ? "sube" : "baja";
+  let rel = "";
+  if (pp) rel = "";
+  else if (anterior > 0) rel = ` (${signo}${Math.abs(Math.round((d / anterior) * 100))}&nbsp;%)`;
+  return `<span class="delta ${clase}">${flecha} ${signo}${fmt(Math.abs(d))}${unidad}${rel} <span class="contra">vs. ${fmt(anterior)}${unidad}</span></span>`;
+}
+
+function pasoLimpio(x) {
+  if (x <= 0) return 1;
+  const pot = Math.pow(10, Math.floor(Math.log10(x)));
+  const f = x / pot;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * pot;
+}
+function escala(max, divisiones = 4) {
+  const paso = Math.max(1, pasoLimpio(max / divisiones));
+  const tope = Math.max(paso, Math.ceil(max / paso) * paso);
+  const ticks = [];
+  for (let t = 0; t <= tope + 1e-9; t += paso) ticks.push(t);
+  return { tope, ticks };
+}
+/** Columna con 4px redondeados arriba y base recta. */
+function columna(x, y, w, h, r = 4) {
+  if (h <= 0) return "";
+  r = Math.min(r, h, w / 2);
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+
+// --- Tooltip compartido ---
+const tip = document.getElementById("tip");
+function enseñarTip(html, x, y) {
+  tip.innerHTML = html;
+  tip.style.opacity = "1";
+  const r = tip.getBoundingClientRect();
+  let left = x + 14, top = y - r.height - 10;
+  if (left + r.width > window.innerWidth - 8) left = x - r.width - 14;
+  if (left < 8) left = 8;
+  if (top < 8) top = y + 16;
+  tip.style.left = left + "px";
+  tip.style.top = top + "px";
+}
+function ocultarTip() { tip.style.opacity = "0"; }
+function engancharTip(svgBox, contenido) {
+  svgBox.querySelectorAll("[data-i]").forEach((zona) => {
+    const i = Number(zona.dataset.i);
+    const marca = (on) => {
+      const foco = zona.nextElementSibling;
+      if (foco && foco.classList.contains("foco")) foco.setAttribute("opacity", on ? "1" : "0");
+    };
+    zona.addEventListener("mousemove", (e) => { enseñarTip(contenido(i), e.clientX, e.clientY); marca(true); });
+    zona.addEventListener("mouseleave", () => { ocultarTip(); marca(false); });
+    zona.addEventListener("focus", () => {
+      const r = zona.getBoundingClientRect();
+      enseñarTip(contenido(i), r.left + r.width / 2, r.top + 20); marca(true);
+    });
+    zona.addEventListener("blur", () => { ocultarTip(); marca(false); });
+  });
+}
+
+// ---------------------------------------------------------------
+// GRÁFICOS
+// ---------------------------------------------------------------
+
+/** Columnas agrupadas, 1 o 2 series, una sola escala. */
+function columnas(box, { series, nombres, colores, alto = 230, aria, formatoTip }) {
+  const W = Math.max(280, box.clientWidth);
+  const m = { t: 22, r: 4, b: 30, l: 36 };
+  const pw = W - m.l - m.r, ph = alto - m.t - m.b;
+  const n = SEMANAS.length, banda = pw / n, k = series.length;
+  const { tope, ticks } = escala(Math.max(1, ...series.flat()));
+  const gap = 2;
+  const bw = Math.max(4, Math.min(k === 1 ? 24 : 16, (banda * 0.72 - (k - 1) * gap) / k));
+  const desde = n - estado.n;
+  const y = (v) => m.t + ph - (v / tope) * ph;
+  const cada = banda < 46 ? 2 : 1;
+
+  let s = `<svg width="${W}" height="${alto}" role="img" aria-label="${aria}">`;
+  for (const t of ticks) {
+    s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}" stroke="${t === 0 ? "#D5DDD8" : "#EDF1EE"}" stroke-width="1"/>`;
+    s += `<text class="eje" x="${m.l - 8}" y="${y(t) + 4}" text-anchor="end">${fmt(t)}</text>`;
+  }
+  // Acento amarillo: subraya las semanas del periodo bajo el eje.
+  s += `<rect x="${m.l + desde * banda + 4}" y="${m.t + ph + 25}" width="${estado.n * banda - 8}" height="3" rx="1.5" fill="#FFC400"/>`;
+
+  for (let i = 0; i < n; i++) {
+    const sel = i >= desde;
+    const x0 = m.l + i * banda + (banda - (k * bw + (k - 1) * gap)) / 2;
+    series.forEach((serie, j) => {
+      const v = serie[i];
+      const h = (v / tope) * ph;
+      s += `<path d="${columna(x0 + j * (bw + gap), y(v), bw, h)}" fill="${colores[j]}" opacity="${sel ? 1 : 0.32}"/>`;
+    });
+    if (i % cada === (n - 1) % cada) {
+      s += `<text class="eje ${sel ? "sel" : ""}" x="${m.l + i * banda + banda / 2}" y="${m.t + ph + 17}" text-anchor="middle">${SEMANAS[i]}</text>`;
+    }
+  }
+  // Valor directo: solo la última semana, encima de cada columna.
+  const ult = n - 1;
+  const x0u = m.l + ult * banda + (banda - (k * bw + (k - 1) * gap)) / 2;
+  series.forEach((serie, j) => {
+    s += `<text class="valor-directo" x="${x0u + j * (bw + gap) + bw / 2}" y="${y(serie[ult]) - 6}" text-anchor="middle">${fmt(serie[ult])}</text>`;
+  });
+  // Zonas de hover: la banda entera de la semana.
+  for (let i = 0; i < n; i++) {
+    s += `<rect class="zona" data-i="${i}" tabindex="0" x="${m.l + i * banda}" y="${m.t}" width="${banda}" height="${ph}" fill="transparent" aria-label="Semana del ${SEMANAS[i]}"/>`;
+    s += `<rect class="foco" x="${m.l + i * banda + 1}" y="${m.t - 4}" width="${banda - 2}" height="${ph + 4}" rx="6" fill="none" stroke="#C5D2C8" opacity="0" pointer-events="none"/>`;
+  }
+  s += `</svg>`;
+  box.innerHTML = s;
+  engancharTip(box, formatoTip || ((i) =>
+    `<b>Semana del ${SEMANAS[i]}</b>` + series.map((serie, j) =>
+      `<div class="fila"><span class="muestra" style="background:${colores[j]}"></span>${nombres[j]}: <b>${fmt(serie[i])}</b></div>`).join("")));
+}
+
+/** Línea de porcentaje con su base en el tooltip. */
+function lineaPct(box, { num, den, alto = 170, aria, conDatosDesde = 0 }) {
+  const W = Math.max(260, box.clientWidth);
+  const m = { t: 16, r: 34, b: 30, l: 36 };
+  const pw = W - m.l - m.r, ph = alto - m.t - m.b;
+  const n = SEMANAS.length;
+  const vals = num.map((v, i) => (i < conDatosDesde ? null : den[i] > 0 ? (v / den[i]) * 100 : 0));
+  const { tope, ticks } = escala(Math.max(5, ...vals.filter((v) => v !== null)), 3);
+  const paso = pw / (n - 1);
+  const x = (i) => m.l + i * paso;
+  const y = (v) => m.t + ph - (v / tope) * ph;
+  const desde = n - estado.n;
+
+  let s = `<svg width="${W}" height="${alto}" role="img" aria-label="${aria}">`;
+  s += `<rect x="${x(Math.max(0, desde)) - (estado.n === 1 ? 10 : 0)}" y="${m.t}" width="${estado.n === 1 ? 20 : x(n - 1) - x(desde)}" height="${ph}" fill="#EEF5EF" rx="4"/>`;
+  for (const t of ticks) {
+    s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}" stroke="${t === 0 ? "#D5DDD8" : "#EDF1EE"}"/>`;
+    s += `<text class="eje" x="${m.l - 8}" y="${y(t) + 4}" text-anchor="end">${t}&nbsp;%</text>`;
+  }
+  const pts = vals.map((v, i) => (v === null ? null : [x(i), y(v)])).filter(Boolean);
+  if (pts.length > 1) {
+    const d = pts.map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join("");
+    s += `<path d="${d}L${pts[pts.length - 1][0]},${y(0)}L${pts[0][0]},${y(0)}Z" fill="${COLOR.s1}" opacity="0.1"/>`;
+    s += `<path d="${d}" fill="none" stroke="${COLOR.s1}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  for (let i = 0; i < n; i++) {
+    if (vals[i] === null) {
+      s += `<line x1="${x(i)}" x2="${x(i)}" y1="${y(0) - 3}" y2="${y(0) + 3}" stroke="#C5D2C8"/>`;
+    } else if (i >= desde) {
+      s += `<circle cx="${x(i)}" cy="${y(vals[i])}" r="4.5" fill="${COLOR.s1}" stroke="#fff" stroke-width="2"/>`;
+    }
+    if (i % 2 === 1) s += `<text class="eje ${i >= desde ? "sel" : ""}" x="${x(i)}" y="${m.t + ph + 18}" text-anchor="middle">${SEMANAS[i]}</text>`;
+  }
+  const ult = n - 1;
+  s += `<text class="valor-directo" x="${x(ult) + 8}" y="${y(vals[ult]) + 4}">${Math.round(vals[ult])}&nbsp;%</text>`;
+  for (let i = 0; i < n; i++) {
+    s += `<rect class="zona" data-i="${i}" tabindex="0" x="${x(i) - paso / 2}" y="${m.t}" width="${paso}" height="${ph}" fill="transparent" aria-label="Semana del ${SEMANAS[i]}"/>`;
+    s += `<line class="foco" x1="${x(i)}" x2="${x(i)}" y1="${m.t}" y2="${m.t + ph}" stroke="#9AA8A0" opacity="0" pointer-events="none"/>`;
+  }
+  s += `</svg>`;
+  box.innerHTML = s;
+  engancharTip(box, (i) => vals[i] === null
+    ? `<b>Semana del ${SEMANAS[i]}</b><div>Aún no se registraba</div>`
+    : `<b>Semana del ${SEMANAS[i]}</b><div>${pct(num[i], den[i])}&nbsp;% · ${fmt(num[i])} de ${fmt(den[i])} clases</div>`);
+}
+
+/** Sparkline de 12 semanas: gris, con el periodo en verde. */
+function chispa(box, arr, { conDatosDesde = 0 } = {}) {
+  const W = Math.max(160, box.clientWidth), H = 38, pad = 5;
+  const n = arr.length;
+  const max = Math.max(1, ...arr.slice(conDatosDesde));
+  const x = (i) => pad + (i * (W - 2 * pad)) / (n - 1);
+  const y = (v) => H - pad - (v / max) * (H - 2 * pad);
+  const desde = n - estado.n;
+  let s = `<svg width="${W}" height="${H}" aria-hidden="true">`;
+  if (estado.n > 1) s += `<rect x="${x(desde)}" y="0" width="${x(n - 1) - x(desde)}" height="${H}" rx="4" fill="#EEF5EF"/>`;
+  const visibles = arr.map((v, i) => (i < conDatosDesde ? null : [x(i), y(v)])).filter(Boolean);
+  if (conDatosDesde > 0) {
+    s += `<line x1="${x(0)}" x2="${x(conDatosDesde - 1)}" y1="${H - pad}" y2="${H - pad}" stroke="#E2E8E4" stroke-width="2" stroke-linecap="round"/>`;
+  }
+  if (visibles.length > 1) {
+    s += `<path d="${visibles.map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join("")}" fill="none" stroke="${COLOR.gris}" stroke-width="1.5" stroke-linejoin="round"/>`;
+    const sel = arr.map((v, i) => (i >= Math.max(desde, conDatosDesde) ? [x(i), y(v)] : null)).filter(Boolean);
+    if (sel.length > 1) s += `<path d="${sel.map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join("")}" fill="none" stroke="${COLOR.s1}" stroke-width="2" stroke-linejoin="round"/>`;
+  }
+  s += `<circle cx="${x(n - 1)}" cy="${y(arr[n - 1])}" r="4" fill="${COLOR.s1}" stroke="#fff" stroke-width="2"/>`;
+  s += `</svg>`;
+  box.innerHTML = s;
+}
+
+/** Barra apilada horizontal con hueco de 2px entre tramos. */
+function apilada(box, partes) {
+  const W = Math.max(240, box.clientWidth), H = 28;
+  const total = partes.reduce((a, p) => a + p.v, 0) || 1;
+  let s = `<svg width="${W}" height="${H}" role="img" aria-label="${partes.map((p) => `${p.nombre}: ${p.v}`).join(", ")}">`;
+  let x = 0;
+  partes.forEach((p, i) => {
+    const w = (p.v / total) * W - (i < partes.length - 1 ? 2 : 0);
+    const r = 4;
+    const izq = i === 0, der = i === partes.length - 1;
+    // Extremos redondeados solo por fuera.
+    s += `<path d="M${x + (izq ? r : 0)},0H${x + w - (der ? r : 0)}${der ? `Q${x + w},0 ${x + w},${r}V${H - r}Q${x + w},${H} ${x + w - r},${H}` : `V${H}`}H${x + (izq ? r : 0)}${izq ? `Q${x},${H} ${x},${H - r}V${r}Q${x},0 ${x + r},0` : `V0`}Z" fill="${p.color}"/>`;
+    const etiqueta = `${fmt(p.v)}`;
+    if (w > 40) s += `<text x="${x + 10}" y="${H / 2 + 4.5}" fill="#fff" font-size="13" font-weight="600">${etiqueta}</text>`;
+    x += w + 2;
+  });
+  s += `</svg>`;
+  box.innerHTML = s;
+}
+
+function tablaVista(box, cabeceras, filas) {
+  box.innerHTML = `<table><thead><tr>${cabeceras.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${
+    filas.map((f) => `<tr>${f.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+
+// ---------------------------------------------------------------
+// SECCIONES
+// ---------------------------------------------------------------
+function pintarCabecera() {
+  document.getElementById("comparada").textContent = COMPARADA[estado.n];
+}
+
+function pintarKpis() {
+  const n = estado.n;
+
+  // Activos
+  const [act, actAnt] = valor("activos");
+  const kA = document.getElementById("kpi-activos");
+  kA.innerHTML = `
+    <span class="etiqueta">Alumnos activos en la plataforma</span>
+    <span class="valor">${fmt(act)}<small>de ${fmt(CON_PLAN)}</small></span>
+    ${delta(act, actAnt)}
+    <div class="chispa"></div>
+    <span class="base">${pct(act, CON_PLAN)}&nbsp;% de los alumnos con plan activo en Gestión</span>
+    <p class="nota-hoy">Hoy: parcial. Se deduce de lo que hicieron (inicio de sesión, lecciones, ejercicios, bloques); quien solo mira no cuenta.</p>`;
+  chispa(kA.querySelector(".chispa"), S.activos);
+
+  // Entradas a clase
+  const [alu, aluAnt] = valor("alumnosClic");
+  const [cl] = valor("clics");
+  const kE = document.getElementById("kpi-entradas");
+  const desdeEntradas = estado.hoy ? 11 : 0;
+  kE.innerHTML = `
+    <span class="etiqueta">Entradas con «Ingresar a clase»</span>
+    <span class="valor">${fmt(alu)}<small>alumnos</small></span>
+    ${estado.hoy ? `<span class="delta nada">${n === 1 ? "Sin semana anterior para comparar" : "Solo hay 1 semana registrada"}</span>` : delta(alu, aluAnt)}
+    <div class="chispa"></div>
+    <span class="base">${fmt(cl)} clics en total${estado.hoy ? " · se registra desde el 13 oct" : ""}</span>`;
+  chispa(kE.querySelector(".chispa"), S.alumnosClic, { conDatosDesde: desdeEntradas });
+
+  // Práctica
+  const [gen, genAnt] = valor("generaron");
+  const p = pct(gen, act), pAnt = actAnt ? pct(genAnt, actAnt) : null;
+  const kP = document.getElementById("kpi-practica");
+  const dp = pAnt === null ? `<span class="delta nada">Sin periodo anterior para comparar</span>`
+    : p === pAnt ? `<span class="delta igual">= sin cambios <span class="contra">vs. ${CONTRA[n]}</span></span>`
+    : `<span class="delta ${p > pAnt ? "sube" : "baja"}">${p > pAnt ? "▲" : "▼"} ${p > pAnt ? "+" : "−"}${Math.abs(p - pAnt)} puntos <span class="contra">vs. ${pAnt}&nbsp;% (${fmt(genAnt)} de ${fmt(actAnt)})</span></span>`;
+  kP.innerHTML = `
+    <span class="etiqueta">Activos que generaron práctica con IA</span>
+    <span class="valor ${act < 10 ? "pequena" : ""}">${p}&nbsp;%</span>
+    ${dp}
+    <div class="chispa"></div>
+    <span class="base">${fmt(gen)} de ${fmt(act)} alumnos activos${act < 10 ? ' <span class="chip-pequena">muestra pequeña</span>' : ""}</span>`;
+  chispa(kP.querySelector(".chispa"), S.generaron.map((g, i) => (S.activos[i] ? (g / S.activos[i]) * 100 : 0)));
+
+  // Sesiones
+  const [ses, sesAnt] = valor("sesiones");
+  const [conSes] = valor("conSesion");
+  const kS = document.getElementById("kpi-sesiones");
+  kS.innerHTML = `
+    <span class="etiqueta">Sesiones</span>
+    <span class="valor">${fmt(ses)}</span>
+    ${delta(ses, sesAnt)}
+    <div class="chispa"></div>
+    <span class="base">De ${fmt(conSes)} alumnos distintos</span>
+    <p class="nota-hoy">Hoy: solo se guardan los inicios de sesión. La sesión dura 30 días, así que volver con la sesión abierta no suma.</p>`;
+  chispa(kS.querySelector(".chispa"), S.sesiones);
+}
+
+const METRICAS = {
+  activos: {
+    series: () => [S.activos, S.hicieron], nombres: ["Entraron", "Hicieron algo (lección, ejercicio o bloque)"],
+    hoy: "Hoy: parcial. «Entraron» se deduce de la actividad; las visitas sin acción no se apuntan.",
+  },
+  sesiones: {
+    series: () => [S.sesiones, S.conSesion], nombres: ["Sesiones", "Alumnos distintos"],
+    hoy: "Hoy: parcial. Son inicios de sesión, no visitas.",
+  },
+  entradas: {
+    series: () => [S.clics, S.alumnosClic], nombres: ["Clics en «Ingresar a clase»", "Alumnos distintos"],
+    hoy: "Hoy: hay datos desde el 13 oct. Las semanas anteriores saldrían vacías.",
+  },
+  bloques: {
+    series: () => [S.generados, S.completados], nombres: ["Generados", "Completados"],
+    hoy: "",
+  },
+};
+
+function pintarSemanas() {
+  const def = METRICAS[estado.metrica];
+  const series = def.series();
+  const colores = [COLOR.s1, COLOR.s2];
+  document.getElementById("leyenda-semanas").innerHTML = def.nombres
+    .map((nm, j) => `<span><i class="muestra" style="background:${colores[j]}"></i>${nm}</span>`).join("");
+  columnas(document.getElementById("g-semanas"), {
+    series, nombres: def.nombres, colores, alto: 250,
+    aria: `${def.nombres.join(" y ")} por semana, 12 semanas`,
+  });
+  const nota = document.getElementById("nota-semanas");
+  nota.textContent = def.hoy;
+  nota.style.visibility = def.hoy ? "visible" : "hidden";
+  tablaVista(document.getElementById("tabla-semanas"), ["Semana", ...def.nombres],
+    SEMANAS.map((s, i) => [s, ...series.map((x) => fmt(x[i]))]));
+}
+
+function pintarClase() {
+  // En modo «hoy» el numerador solo tiene una semana: el denominador también.
+  const [clases] = estado.hoy ? [S.clases[11]] : valor("clases");
+  const [abiertas] = valor("clasesBoton");
+  document.getElementById("cifras-clase").innerHTML = `
+    <div class="cifra"><div class="n">${fmt(clases)}</div><div class="t">clases programadas (Gestión)</div></div>
+    <div class="cifra"><div class="n">${fmt(abiertas)}</div><div class="t">abiertas desde el botón</div></div>
+    <div class="cifra"><div class="n">${pctConBase(abiertas, clases, { conChip: false })}</div><div class="t">${fmt(abiertas)} de ${fmt(clases)}</div></div>`;
+  lineaPct(document.getElementById("g-clase"), {
+    num: S.clasesBoton, den: S.clases, aria: "Porcentaje de clases abiertas desde el botón, 12 semanas",
+    conDatosDesde: estado.hoy ? 11 : 0,
+  });
+  tablaVista(document.getElementById("tabla-clase"), ["Semana", "Clases", "Desde el botón", "%"],
+    SEMANAS.map((s, i) => [s, fmt(S.clases[i]), fmt(S.clasesBoton[i]), pct(S.clasesBoton[i], S.clases[i]) + "&nbsp;%"]));
+}
+
+function pintarPractica() {
+  const colores = [COLOR.s1, COLOR.s2];
+  const nombres = ["Generados", "Completados"];
+  document.getElementById("leyenda-practica").innerHTML = nombres
+    .map((nm, j) => `<span><i class="muestra" style="background:${colores[j]}"></i>${nm}</span>`).join("");
+  columnas(document.getElementById("g-practica"), {
+    series: [S.generados, S.completados], nombres, colores, alto: 190,
+    aria: "Bloques generados y completados por semana",
+  });
+
+  const [gen] = valor("generados");
+  const [cam] = valor("camino");
+  const ti = gen - cam;
+  apilada(document.getElementById("g-origen"), [
+    { nombre: "Mi camino", v: cam, color: COLOR.s1 },
+    { nombre: "Para ti", v: ti, color: COLOR.s2 },
+  ]);
+  document.getElementById("leyenda-origen").innerHTML = `
+    <span><i class="muestra" style="background:${COLOR.s1}"></i>Mi camino: <b style="color:var(--tinta)">${fmt(cam)}</b>&nbsp;(${pctConBase(cam, gen, { conChip: false })})</span>
+    <span><i class="muestra" style="background:${COLOR.s2}"></i>Para ti: <b style="color:var(--tinta)">${fmt(ti)}</b>&nbsp;(${pctConBase(ti, gen, { conChip: false })})</span>
+    ${gen < 10 ? '<span class="chip-pequena">muestra pequeña</span>' : ""}`;
+
+  const [eleg] = valor("elegibles");
+  const [elGen] = valor("elGeneraron");
+  const [banco] = valor("banco");
+  const [prim] = valor("primeros");
+  const [primOk] = valor("primerosOk");
+  document.getElementById("lineas-practica").innerHTML = `
+    <div class="linea-dato"><span class="izq">Tenían una clase analizada nueva y generaron</span><span class="der">${fmt(elGen)} de ${fmt(eleg)} · ${pctConBase(elGen, eleg)}</span></div>
+    <div class="linea-dato"><span class="izq">Completaron su primer bloque</span><span class="der">${fmt(primOk)} de ${fmt(prim)} · ${pctConBase(primOk, prim)}</span></div>
+    <div class="linea-dato"><span class="izq">Servidos del banco de reserva (la IA no respondió a tiempo)</span><span class="der">${fmt(banco)} de ${fmt(gen)} · ${pctConBase(banco, gen)}</span></div>`;
+}
+
+function pintarEmbudo() {
+  const n = estado.n;
+  const [entraron] = valor("activos");
+  const [hicieron] = valor("hicieron");
+  const [volvieron] = valor("volvieron");
+  document.getElementById("sub-embudo").textContent = n === 1
+    ? "Semana del 12 oct. Cada paso está dentro del anterior."
+    : `Últimas ${n} semanas, alumnos distintos. Cada paso está dentro del anterior.`;
+  const pasos = [
+    { nombre: "Tienen acceso (plan activo en Gestión)", v: CON_PLAN },
+    { nombre: "Entraron", v: entraron },
+    { nombre: "Hicieron algo: lección, ejercicio o bloque", v: hicieron },
+    { nombre: n === 1 ? "Volvieron: también hicieron algo otra semana" : "Volvieron: hicieron algo en más de una semana", v: volvieron },
+  ];
+  document.getElementById("embudo").innerHTML = pasos.map((p, i) => `
+    <div class="paso">
+      <span class="nombre">${p.nombre}</span>
+      <span class="num">${fmt(p.v)}</span>
+      <div class="pista"><div class="relleno" style="width:${Math.max(0.5, (p.v / CON_PLAN) * 100)}%"></div></div>
+      ${i > 0 ? `<span class="conv">${pctConBase(p.v, pasos[i - 1].v)} del paso anterior · ${pct(p.v, CON_PLAN)}&nbsp;% del total</span>` : ""}
+    </div>`).join("");
+}
+
+const TOP = {
+  cursos: [
+    ["FCE (B2 Cambridge)", "", 58], ["Inglés general B1", "", 52], ["Inglés general A2", "", 37],
+    ["Inglés general B2", "", 26], ["CAE (C1 Cambridge)", "", 19],
+  ],
+  modulos: [
+    ["Use of English, parte 1", "FCE (B2 Cambridge)", 31], ["Present perfect vs. past simple", "Inglés general B1", 24],
+    ["Rutinas y presente simple", "Inglés general A2", 21], ["Writing: el email formal", "FCE (B2 Cambridge)", 18],
+    ["Phrasal verbs del trabajo", "Inglés general B2", 14],
+  ],
+};
+
+function pintarCurso() {
+  columnas(document.getElementById("g-lecciones"), {
+    series: [S.lecciones], nombres: ["Lecciones completadas"], colores: [COLOR.s1], alto: 190,
+    aria: "Lecciones completadas por semana",
+  });
+  const factor = valor("lecciones")[0] / S.lecciones[11];
+  const lista = TOP[estado.agrupar].map(([t, ctx, v]) => [t, ctx, Math.round(v * factor)]);
+  const max = Math.max(...lista.map((x) => x[2]));
+  document.getElementById("top").innerHTML = lista.map(([t, ctx, v]) => `
+    <li><span>${t}${ctx ? ` <span class="ctx">· ${ctx}</span>` : ""}</span><span class="num">${fmt(v)}</span>
+    <div class="pista"><div class="relleno" style="width:${(v / max) * 100}%"></div></div></li>`).join("");
+}
+
+// ---------------------------------------------------------------
+// TABLA DE ALUMNOS
+// ---------------------------------------------------------------
+const NOMBRES = ["Lucía Fernández", "Marcos Gil", "Ana Belén Ruiz", "Javier Ortega", "Elena Castro", "Pablo Navarro",
+  "Marta Iglesias", "Andrés Romero", "Irene Molina", "Sergio Delgado", "Nuria Vidal", "Álvaro Serrano", "Cristina Prieto",
+  "Raúl Méndez", "Patricia Lozano", "Hugo Cabrera", "Silvia Herrero", "Adrián Pascual", "Rocío Santana", "Iván Fuentes",
+  "Beatriz León", "Óscar Rubio", "Clara Benítez", "Daniel Peña", "Laura Gallego", "Tomás Vega"];
+const PROFES = ["Emma W.", "Daniel K.", "Sarah L.", "Mike R.", "Olivia T."];
+// Días desde la última entrada, contados desde el lunes 19 oct. null = aún no ha entrado.
+const DIAS = [0, 1, 1, 2, 3, 0, 5, 6, 2, 9, 12, 16, 21, 4, 1, 30, null, 3, 8, 0, 18, 2, 45, null, 6, 11];
+
+function azar(semilla) {
+  let a = semilla;
+  return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+const ALUMNOS = NOMBRES.map((nombre, i) => {
+  const r = azar(i + 7);
+  return { nombre, profesor: PROFES[i % PROFES.length], dias: DIAS[i], ritmo: [r(), r(), r()] };
+});
+
+function cifrasDe(a) {
+  const semanas = estado.n;
+  if (a.dias === null || a.dias >= semanas * 7) return { entradas: 0, bloques: 0, lecciones: 0 };
+  const activas = Math.max(1, Math.min(semanas, Math.ceil((semanas * 7 - a.dias) / 7)));
+  return {
+    entradas: Math.round(a.ritmo[0] * 2.2 * activas),
+    bloques: Math.round(a.ritmo[1] * 1.6 * activas),
+    lecciones: Math.round(a.ritmo[2] * 5 * activas),
+  };
+}
+function fechaDe(dias) {
+  const d = new Date(2026, 9, 18 - dias);
+  return `${d.getDate()} ${["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"][d.getMonth()]}`;
+}
+
+function pintarAlumnos() {
+  const q = document.getElementById("buscar").value.trim().toLowerCase();
+  const filas = ALUMNOS.map((a) => ({ ...a, ...cifrasDe(a) }))
+    .filter((a) => !q || a.nombre.toLowerCase().includes(q) || a.profesor.toLowerCase().includes(q));
+  const { c, dir } = estado.orden;
+  filas.sort((x, y) => {
+    let a = x[c], b = y[c];
+    if (c === "dias") { a = a === null ? Infinity : a; b = b === null ? Infinity : b; }
+    if (typeof a === "string") return a.localeCompare(b, "es") * dir;
+    return (a - b) * dir || x.nombre.localeCompare(y.nombre, "es");
+  });
+  const quietos = filas.filter((a) => a.dias !== null && a.dias >= 14).length;
+  document.getElementById("recuento").textContent =
+    `${filas.length} de ${CON_PLAN} (muestra de ejemplo) · ${quietos} sin actividad en 14 días`;
+  const cel = (v) => (v === 0 ? `<span class="cero">0</span>` : fmt(v));
+  document.getElementById("cuerpo-alumnos").innerHTML = filas.length === 0
+    ? `<tr><td colspan="6" class="sin-resultados">Nadie coincide con «${q.replace(/</g, "&lt;")}».</td></tr>`
+    : filas.map((a) => `
+      <tr>
+        <td><span class="nombre-alumno">${a.nombre}</span>${a.dias !== null && a.dias >= 14 ? `<span class="quieto">Sin actividad en 14 días</span>` : ""}</td>
+        <td>${a.profesor}</td>
+        <td>${a.dias === null ? `<span class="cero">Aún no ha entrado</span>` : `${fechaDe(a.dias)}<span class="cuando">${a.dias === 0 ? "ayer" : `hace ${a.dias + 1} d`}</span>`}</td>
+        <td class="num">${cel(a.entradas)}</td>
+        <td class="num">${cel(a.bloques)}</td>
+        <td class="num">${cel(a.lecciones)}</td>
+      </tr>`).join("");
+  document.querySelectorAll("table.alumnos th").forEach((th) => {
+    const activa = th.dataset.c === c;
+    if (activa) th.setAttribute("aria-sort", dir === 1 ? "ascending" : "descending"); else th.removeAttribute("aria-sort");
+    const b = th.querySelector("button");
+    b.textContent = b.textContent.replace(/ [↑↓]$/, "") + (activa ? (dir === 1 ? " ↑" : " ↓") : "");
+  });
+}
+
+// ---------------------------------------------------------------
+// ESTADOS DE EJEMPLO
+// ---------------------------------------------------------------
+function pintarEstados() {
+  const guardado = estado.n;
+  estado.n = 1;
+  chispa(document.getElementById("chispa-parcial"), S.alumnosClic, { conDatosDesde: 11 });
+  estado.n = guardado;
+}
+
+// ---------------------------------------------------------------
+// MONTAJE
+// ---------------------------------------------------------------
+function pintarTodo() {
+  pintarCabecera();
+  pintarKpis();
+  pintarSemanas();
+  pintarClase();
+  pintarPractica();
+  pintarEmbudo();
+  pintarCurso();
+  pintarAlumnos();
+  pintarEstados();
+}
+
+function segmentado(id, alElegir) {
+  const grupo = document.getElementById(id);
+  grupo.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    grupo.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    alElegir(b);
+  });
+}
+segmentado("periodo", (b) => { estado.n = Number(b.dataset.n); pintarTodo(); });
+segmentado("metrica", (b) => { estado.metrica = b.dataset.m; pintarSemanas(); });
+segmentado("agrupar", (b) => { estado.agrupar = b.dataset.a; pintarCurso(); });
+segmentado("modo", (b) => { estado.hoy = b.dataset.modo === "hoy"; document.body.classList.toggle("hoy", estado.hoy); pintarTodo(); });
+
+document.getElementById("buscar").addEventListener("input", pintarAlumnos);
+document.querySelectorAll("table.alumnos th").forEach((th) => {
+  th.querySelector("button").addEventListener("click", () => {
+    const c = th.dataset.c;
+    estado.orden = estado.orden.c === c ? { c, dir: -estado.orden.dir } : { c, dir: c === "nombre" || c === "profesor" || c === "dias" ? 1 : -1 };
+    pintarAlumnos();
+  });
+});
+
+let espera;
+window.addEventListener("resize", () => { clearTimeout(espera); espera = setTimeout(pintarTodo, 120); });
+window.addEventListener("scroll", ocultarTip, { passive: true });
+document.fonts ? document.fonts.ready.then(pintarTodo) : pintarTodo();
+pintarTodo();
+</script>
+</body>
+</html>

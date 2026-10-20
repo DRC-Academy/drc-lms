@@ -178,7 +178,7 @@ export type UsoDelBoton =
   | { estado: "error" };
 
 /** Los clics cuya clase empieza en el rango, por páginas. Null si falla. */
-async function entradasConClaseEntre(desde: string, hasta: string): Promise<FilaEntrada[] | null> {
+export async function entradasConClaseEntre(desde: string, hasta: string): Promise<FilaEntrada[] | null> {
   const inicio = instanteEnMadrid(desde, "00:00").toISOString();
   const fin = instanteEnMadrid(hasta, "00:00").toISOString();
   const PAGINA = 1000;

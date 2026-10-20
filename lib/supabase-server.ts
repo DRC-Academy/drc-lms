@@ -72,6 +72,12 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // y el último día del plan. De `students` sale el id y esa fecha, nada
 // más. `supabase/gestion-vista-partes-clase.sql`.
 //
+// `vista_clases_nuevas_semana` entró con el panel del equipo: por alumno
+// y semana, cuántas clases analizadas pasaron a ser utilizables y eran
+// más nuevas que lo que ya tenía. Es el denominador de «podían generar
+// práctica». Solo ids, fechas y un recuento; nada del contenido de la
+// clase. `supabase/gestion-vista-clases-nuevas.sql`.
+//
 // Añadir algo a esta lista es ampliar lo que el LMS ve de una base con
 // datos de alumnos, profesores y nóminas. Solo con un motivo escrito,
 // como este.
@@ -86,6 +92,7 @@ export const VISTAS = [
   "vista_partes_clase",
   "vista_clases_programadas",
   "vista_fin_plan",
+  "vista_clases_nuevas_semana",
 ] as const;
 export type Vista = (typeof VISTAS)[number];
 
