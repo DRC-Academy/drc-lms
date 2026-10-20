@@ -153,6 +153,8 @@ export type MetricasPanel = {
   granularidad: Granularidad;
   calculadoEn: string;
   disponibilidad: Record<Fuente, Comparado<Disponibilidad>> | null;
+  /** El primer día con datos de cada fuente, para decidir periodo a periodo. */
+  inicioDatos: Record<Fuente, string | null> | null;
   /** Con plan activo hoy, y con ficha en Gestión (sin excluidos). */
   alumnos: { conPlan: number; conFicha: number } | null;
   /** Todos menos los excluidos. */
@@ -414,6 +416,7 @@ async function calcular(rango: Rango): Promise<MetricasPanel> {
           }
         : null
     ),
+    inicioDatos: inicio,
     alumnos: anotar(
       "alumnos de Gestión",
       fichasQueCuentan && conPlan ? { conPlan: conPlan.length, conFicha: fichasQueCuentan.length } : null

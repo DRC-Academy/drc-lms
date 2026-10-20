@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  atajosDeFechas,
   diasDelRango,
   esDia,
   granularidadDe,
@@ -9,6 +10,7 @@ import {
   rangoPorDefecto,
 } from "@/lib/panel-rango";
 import type { FilaEntrada } from "@/lib/entradas-clase";
+import { contraQue, diaCorto, etiquetaPeriodo, mesLargo, rangoLegible, tituloPeriodo } from "@/lib/panel-formato";
 import { alumnosQuePodian, disponibilidad, medirClase, periodosDelRango, recortar } from "@/lib/panel-calculos";
 
 // Hoy es martes 20 oct 2026 en todos los casos.
@@ -125,5 +127,46 @@ describe("las clases con entrada", () => {
       alumnos: 1,
       alumnosConEntrada: 1,
     });
+  });
+});
+
+describe("los atajos del selector", () => {
+  const por = (hoy: string) => Object.fromEntries(atajosDeFechas(hoy).map((a) => [a.id, a.rango]));
+  it("semanas completas que acaban el domingo pasado; este mes y esta semana hasta hoy", () => {
+    expect(por(HOY)).toEqual({
+      "esta-semana": { desde: "2026-10-19", hasta: "2026-10-20" },
+      "semana-pasada": { desde: "2026-10-12", hasta: "2026-10-18" },
+      "4-semanas": { desde: "2026-09-21", hasta: "2026-10-18" },
+      "12-semanas": { desde: "2026-07-27", hasta: "2026-10-18" },
+      "este-mes": { desde: "2026-10-01", hasta: "2026-10-20" },
+      "mes-pasado": { desde: "2026-09-01", hasta: "2026-09-30" },
+    });
+  });
+  it("en enero, el mes pasado es diciembre del año anterior", () => {
+    expect(por("2027-01-05")["mes-pasado"]).toEqual({ desde: "2026-12-01", hasta: "2026-12-31" });
+  });
+  it("todos cumplen las reglas del rango", () => {
+    for (const a of atajosDeFechas(HOY)) expect(leerRango(a.rango.desde, a.rango.hasta, HOY).porDefecto).toBe(false);
+  });
+});
+
+describe("cómo se escriben las fechas", () => {
+  it("el rango en corto", () => {
+    expect(rangoLegible({ desde: "2026-10-12", hasta: "2026-10-18" })).toBe("12 – 18 oct 2026");
+    expect(rangoLegible({ desde: "2026-09-28", hasta: "2026-10-04" })).toBe("28 sep – 4 oct 2026");
+    expect(rangoLegible({ desde: "2025-12-28", hasta: "2026-01-03" })).toBe("28 dic 2025 – 3 ene 2026");
+    expect(rangoLegible({ desde: "2026-10-15", hasta: "2026-10-15" })).toBe("15 oct 2026");
+    expect(rangoLegible({ desde: "2026-10-05", hasta: "2026-10-11" }, false)).toBe("5 – 11 oct");
+  });
+  it("contra qué se compara, con año solo si cambia", () => {
+    expect(contraQue({ desde: "2026-10-05", hasta: "2026-10-11" }, { desde: "2026-10-12", hasta: "2026-10-18" })).toBe("vs. 5 – 11 oct");
+    expect(contraQue({ desde: "2025-12-29", hasta: "2026-01-04" }, { desde: "2026-01-05", hasta: "2026-01-11" })).toBe("vs. 29 dic 2025 – 4 ene 2026");
+  });
+  it("periodos y meses", () => {
+    expect(diaCorto("2026-09-07")).toBe("7 sep");
+    expect(etiquetaPeriodo("2026-10-12")).toBe("12 oct");
+    expect(tituloPeriodo("2026-10-13", "dia")).toBe("Martes 13 oct");
+    expect(tituloPeriodo("2026-10-12", "semana")).toBe("Semana del 12 oct");
+    expect(mesLargo("2026-10-01")).toBe("Octubre de 2026");
   });
 });

@@ -96,3 +96,33 @@ export function leerRango(
     ? { rango: pedido, porDefecto: false }
     : { rango: rangoPorDefecto(hoy), porDefecto: true };
 }
+
+// ---------------------------------------------------------------
+// LOS ATAJOS DEL SELECTOR DE FECHAS
+//
+// «Últimas 4 / 12 semanas» son semanas COMPLETAS, de lunes a domingo, que
+// acaban el domingo pasado: la misma regla que el rango por defecto, y
+// la comparación con el periodo anterior sale semana contra semana.
+// «Esta semana» y «Este mes» llegan hasta hoy, a medias por definición.
+// ---------------------------------------------------------------
+
+export type Atajo = { id: string; nombre: string; rango: Rango };
+
+/** El día 1 del mes de un día. */
+function primeroDeMes(dia: string): string {
+  return `${dia.slice(0, 8)}01`;
+}
+
+export function atajosDeFechas(hoy: string): Atajo[] {
+  const semanaPasada = rangoPorDefecto(hoy);
+  const semanasHasta = (n: number): Rango => ({ desde: sumarDias(semanaPasada.desde, -7 * (n - 1)), hasta: semanaPasada.hasta });
+  const finMesPasado = sumarDias(primeroDeMes(hoy), -1);
+  return [
+    { id: "esta-semana", nombre: "Esta semana", rango: { desde: lunesDe(hoy), hasta: hoy } },
+    { id: "semana-pasada", nombre: "Semana pasada", rango: semanaPasada },
+    { id: "4-semanas", nombre: "Últimas 4 semanas", rango: semanasHasta(4) },
+    { id: "12-semanas", nombre: "Últimas 12 semanas", rango: semanasHasta(12) },
+    { id: "este-mes", nombre: "Este mes", rango: { desde: primeroDeMes(hoy), hasta: hoy } },
+    { id: "mes-pasado", nombre: "Mes pasado", rango: { desde: primeroDeMes(finMesPasado), hasta: finMesPasado } },
+  ];
+}
