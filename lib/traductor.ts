@@ -16,13 +16,13 @@
 // ---------------------------------------------------------------
 // POR QUÉ ESTO NO VIVE DENTRO DE LA GENERACIÓN
 //
-// Porque no cabe. La generación de un bloque tarda entre 43 y 52
-// segundos medidos, contra un techo de 60 del plan, y ese presupuesto ya
-// está tan apretado que la revisión pedagógica corre solo con lo que
-// sobra. Pedirle al mismo turno cuarenta y pico cadenas más no habría
-// dado "un poco más lento": habría cortado la generación a mitad y
-// servido el banco, o sea cambiar la personalización del bloque por una
-// traducción. Ver el presupuesto en `app/api/generar-bloque/route.ts`.
+// Porque no cabe. La generación de un bloque tarda entre 50 y 56
+// segundos medidos, y la revisión pedagógica corre solo con lo que sobra
+// del presupuesto de la ruta. Pedirle al mismo turno cuarenta y pico
+// cadenas más no habría dado "un poco más lento": habría alargado cada
+// generación en lo que tarda una traducción entera, o la habría cortado
+// a mitad y servido el banco, o sea cambiar la personalización del
+// bloque por una traducción. Ver el presupuesto en `app/api/generar-bloque/route.ts`.
 //
 // Así que se traduce APARTE y CUANDO SE PIDE. Y una sola vez: lo que
 // sale de aquí se guarda en `traducciones_bloque`, de modo que la

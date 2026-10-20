@@ -48,25 +48,24 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // ---------------------------------------------------------------
-// EL TECHO, Y POR QUÉ NO SE MUEVE
+// EL TECHO: 120 SEGUNDOS
 //
-// 60 SEGUNDOS ES EL MÁXIMO DEL PLAN, no una elección nuestra. El
-// proyecto está en el plan Hobby de Vercel, donde `maxDuration` no puede
-// pasar de 60: escribir 120 aquí no alargaría nada, la plataforma
-// cortaría igual y el alumno recibiría un 504 del gateway en vez de un
-// bloque.
+// Fueron 60 mientras se creyó que era el máximo del plan Hobby. Con
+// Fluid Compute el máximo es 300 —las rutas de los crons de este mismo
+// proyecto ya declaran 300—, y los 60 se habían quedado cortos: medido el
+// 20-10-2026, un bloque de diez ejercicios tarda entre 50 y 56 segundos
+// (unos 53 tokens/s, 2.700-3.000 tokens), y los que llevan el andamio en
+// español son los largos. Con el corte en 52, esos caían SIEMPRE al
+// banco, y en conjunto acababa allí uno de cada tres intentos.
 //
-// Eso es lo que decide todo el presupuesto de abajo. Un bloque de diez
-// ejercicios tarda, medido en cinco tiradas contra la API real, entre 43
-// y 52 segundos (media 48). La revisión son 3 más. No cabe una segunda
-// generación, así que NO HAY REGENERACIÓN: el revisor deja su veredicto
-// guardado y el bloque sale igual.
+// 120 deja la generación holgada y la revisión dentro, sin ser una
+// espera abierta: si la API se va por encima de los 100 segundos de
+// abajo, se sirve el banco igual que antes.
 //
-// Si el proyecto pasa algún día a Pro, el techo sube a 300 y lo que hay
-// que tocar es esto: `maxDuration` a 120, `PRESUPUESTO_IA_MS` a 100_000 y
-// devolver la regeneración a `generarConRevision`.
+// SIGUE SIN HABER REGENERACIÓN: el revisor deja su veredicto guardado y
+// el bloque sale igual. Ahora cabría; devolverla es otra decisión.
 // ---------------------------------------------------------------
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const ESPERA_BANCO_MS = 1600; // el banco responde al instante: sin esto la demo se siente falsa
 
@@ -80,26 +79,24 @@ const ESPERA_BANCO_MS = 1600; // el banco responde al instante: sin esto la demo
 // La cuenta, con los números medidos:
 //
 //   lecturas (sesión, y ficha e historial en paralelo)  ~1s    · tope 5+5
-//   generación                                          43-52s · tope 52
-//   revisión                                            3s     · lo que sobre
+//   generación                                          50-56s · tope 100
+//   revisión                                            1-5s   · lo que sobre, máx. 8
 //   guardado                                            <1s    · tope 5
 //
-// El peor caso previsto es que la generación se coma los 52 segundos
+// El peor caso previsto es que la generación se coma los 100 segundos
 // enteros: entonces no queda revisión, el bloque sale sin revisar y
 // sigue estando por debajo del techo. El caso malo de verdad —que tarde
-// MÁS de 52— se corta y se sirve el banco, que es exactamente lo que
-// pasaba antes a los 45.
+// MÁS de 100— se corta y se sirve el banco.
 //
-// LA REVISIÓN COBRA LO QUE SOBRA, y por eso corre unas veces sí y otras
-// no. Es a propósito: entre un bloque suyo sin revisar y un bloque
-// genérico del banco, gana el suyo. Reservarle cinco segundos fijos
-// obligaría a cortar la generación en 47, y con eso una de cada cinco
-// personas acabaría en el banco.
+// LA REVISIÓN COBRA LO QUE SOBRA. Con los 52 de antes casi nunca sobraba
+// nada; con 100, en el caso normal le quedan sus 8 enteros. Si un día la
+// API va tan lenta que no queda, gana igual el bloque suyo sin revisar
+// sobre uno genérico del banco.
 // ---------------------------------------------------------------
 
-// El tope de UNA llamada al modelo (52 s), el de la revisión (8 s) y los
+// El tope de UNA llamada al modelo (100 s), el de la revisión (8 s) y los
 // dos intentos viven con el generador, en `lib/generador-bloque.ts`.
-const PRESUPUESTO_IA_MS = 52_000; // tope de TODA la fase de generación
+const PRESUPUESTO_IA_MS = 100_000; // tope de TODA la fase de generación
 const TIEMPO_BASE_MS = 5_000; // tope de una consulta a Supabase
 
 /** Lo que se reserva para el guardado y el cierre del flujo. */
@@ -487,6 +484,12 @@ export async function POST(peticion: Request) {
   traza("idioma", idiomaBloque);
 
   return flujoDeGeneracion(traza, async (emitir) => {
+    // Por qué se acaba sirviendo el banco, si se acaba. Se guarda con el
+    // bloque (ver más abajo): los logs de la plataforma duran poco, y sin
+    // esto la fila del banco no dice si fue un corte, un error de la API o
+    // la falta de clave.
+    let motivoBanco = "sin clave de la API";
+
     if (clave) {
       const sistema = construirSistema(nivel, idiomaBloque);
       const usuario = construirUsuario(materia, idiomaBloque);
@@ -511,7 +514,9 @@ export async function POST(peticion: Request) {
         emitir
       );
 
-      if (generado) {
+      if (generado.bloque === null) {
+        motivoBanco = generado.motivo;
+      } else {
         // El idioma pedido y la clase de la que sale, estampados por
         // nosotros y no por el modelo. Ver `estamparBloque`.
         const bloque = estamparBloque(generado.bloque, idiomaBloque, claseOrigen);
@@ -573,8 +578,19 @@ export async function POST(peticion: Request) {
     // `copiarTraducciones`.
     const delBanco = bloqueDeBanco(nivel, titulosExcluidos);
     const bloque = conIdPropio(delBanco);
+    // En `revision`, que en el banco iba vacía: no hay veredicto que
+    // guardar, pero sí el motivo. `estado: "banco"` lo distingue de los
+    // tres estados del revisor.
+    traza("banco:motivo", motivoBanco);
     const guardadoBanco = await conLimiteOAlternativa(
-      guardarBloqueGenerado(alumnoId, bloque, MODO_ACTUAL, "banco", null, porEquipo),
+      guardarBloqueGenerado(
+        alumnoId,
+        bloque,
+        MODO_ACTUAL,
+        "banco",
+        { estado: "banco", motivo: motivoBanco },
+        porEquipo
+      ),
       TIEMPO_BASE_MS,
       "guardarBloqueGenerado(banco)",
       false

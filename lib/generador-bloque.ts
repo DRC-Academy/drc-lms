@@ -33,8 +33,13 @@ import type { EventoGeneracion } from "@/lib/generacion";
 export const MODELO = "claude-sonnet-4-6";
 const URL_API = "https://api.anthropic.com/v1/messages";
 
-/** Tope de UNA llamada al modelo. Ver el presupuesto en la ruta. */
-export const TIEMPO_MAXIMO_MS = 52_000;
+/**
+ * Tope de UNA llamada al modelo. Ver el presupuesto en la ruta.
+ *
+ * Era 52 y se quedaba corto: una generación tarda de 50 a 56 segundos
+ * (medido el 20-10-2026), así que los bloques largos se cortaban siempre.
+ */
+export const TIEMPO_MAXIMO_MS = 100_000;
 // Ocho, y no cinco. No le quita nada a la generación —esta corre antes y
 // se lleva lo que necesite— así que es solo el tope de lo que la revisión
 // puede gastar de lo que sobre. Con cinco se quedaba a medias en tiradas
@@ -243,6 +248,9 @@ async function pedirBloqueAlModelo(
 // GENERACIÓN CON REVISIÓN
 // ---------------------------------------------------------------
 
+/** Sin bloque, con el porqué: es lo que se guarda en la fila del banco. */
+export type SinBloque = { bloque: null; motivo: string };
+
 /**
  * Pide bloques hasta que uno pase la validación estructural, sin salirse
  * del presupuesto y sin insistir cuando el fallo no va a cambiar.
@@ -254,11 +262,16 @@ async function generarEstructural(
   plazo: Plazo,
   traza: Traza,
   topeMs: number
-): Promise<Bloque | null> {
+): Promise<Bloque | SinBloque> {
+  // El motivo del último intento fallido. Si el presupuesto se acaba
+  // antes del siguiente, el que cuenta es este: «presupuesto agotado»
+  // solo no diría qué se lo comió.
+  let ultimoMotivo = "";
+
   for (let intento = 1; intento <= INTENTOS; intento++) {
     if (plazo.agotado()) {
       traza("generación:presupuesto agotado", `antes del intento ${intento}/${INTENTOS}`);
-      return null;
+      return { bloque: null, motivo: `presupuesto agotado tras: ${ultimoMotivo}` };
     }
 
     const resultado = await pedirBloqueAlModelo(
@@ -278,14 +291,15 @@ async function generarEstructural(
     console.warn(
       `[generar-bloque] Intento ${intento}/${INTENTOS} descartado — ${resultado.motivo}`
     );
+    ultimoMotivo = `intento ${intento}/${INTENTOS}: ${resultado.motivo}`;
 
     if (resultado.estado === "definitivo") {
       traza("generación:fallo definitivo", "no se reintenta");
-      return null;
+      return { bloque: null, motivo: ultimoMotivo };
     }
   }
 
-  return null;
+  return { bloque: null, motivo: ultimoMotivo };
 }
 
 /** Deja en el log lo necesario para medir después cuánto y por qué falla. */
@@ -312,8 +326,9 @@ function registrarRevision(etiqueta: string, revision: Revision) {
 }
 
 /**
- * Genera un bloque y lo pasa por el revisor. Devuelve null cuando no hay
- * nada publicable, que es la señal para servir el banco.
+ * Genera un bloque y lo pasa por el revisor. Devuelve `bloque: null`, con
+ * el motivo, cuando no hay nada publicable: es la señal para servir el
+ * banco.
  *
  * YA NO REGENERA, y es el cambio que trajeron los diez ejercicios. Antes,
  * si el revisor tumbaba el bloque, se pedía otro avisando de lo que había
@@ -332,8 +347,8 @@ function registrarRevision(etiqueta: string, revision: Revision) {
  * le queda presupuesto, el bloque sale igual con el veredicto que haya.
  *
  * `topeLlamadaMs` es el tope de UNA llamada al modelo. La ruta no lo pasa
- * y se queda con los 52 s que le deja el techo de Vercel; solo
- * `scripts/demo.ts`, que no tiene ese techo, pide más.
+ * y se queda con los 100 s que caben bajo su techo; solo
+ * `scripts/demo.ts`, que no tiene techo, pide más.
  */
 export async function generarConRevision(
   clave: string,
@@ -344,15 +359,16 @@ export async function generarConRevision(
   traza: Traza,
   emitir: (evento: EventoGeneracion) => void,
   topeLlamadaMs: number = TIEMPO_MAXIMO_MS
-): Promise<{ bloque: Bloque; revision: Revision; intentos: number } | null> {
+): Promise<{ bloque: Bloque; revision: Revision; intentos: number } | SinBloque> {
   traza("generación:inicio", `presupuesto ${plazo.restante()}ms`);
 
   // Cada `emitir` va justo antes de la espera que describe, nunca
   // después: es lo que hace que el texto de la pantalla y lo que está
   // ocurriendo aquí dentro sean la misma cosa.
   emitir({ tipo: "etapa", etapa: "escribiendo", ms: plazo.transcurrido() });
-  const bloque = await generarEstructural(clave, sistema, usuario, plazo, traza, topeLlamadaMs);
-  if (!bloque) return null;
+  const generado = await generarEstructural(clave, sistema, usuario, plazo, traza, topeLlamadaMs);
+  if ("motivo" in generado) return generado;
+  const bloque = generado;
 
   // Con lo que sobre. La generación se lleva casi todo el presupuesto y
   // hay tiradas en las que no queda nada; entonces `revisarBloque`

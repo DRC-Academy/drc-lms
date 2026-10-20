@@ -204,8 +204,10 @@ create table if not exists public.bloques_generados (
   -- a migrar la base cada vez que cambie un campo del ejercicio.
   contenido     jsonb       not null,
 
-  -- El resultado del revisor pedagógico (lib/revisor.ts). Nullable
-  -- porque un bloque del banco puede no haber pasado por él.
+  -- El resultado del revisor pedagógico (lib/revisor.ts). En los del
+  -- banco, desde el 20-10-2026, `{"estado": "banco", "motivo": …}`: por
+  -- qué no salió el de la IA. Nullable: los del banco anteriores no lo
+  -- llevan.
   revision      jsonb,
 
   origen        text        not null,

@@ -25,10 +25,10 @@ export type EstadoGeneracion = "listo" | "generando" | "error";
 
 /**
  * Un poco por encima del `maxDuration` de `app/api/generar-bloque`, que
- * son 60 segundos. Así gana siempre el error del servidor —que sabe qué
+ * son 120 segundos. Así gana siempre el error del servidor —que sabe qué
  * pasó— y este solo actúa cuando la respuesta no llega en absoluto.
  */
-const TIEMPO_MAXIMO_MS = 70_000;
+const TIEMPO_MAXIMO_MS = 130_000;
 
 /**
  * Cada cuánto se repinta la barra. A 250ms el avance se ve continuo sin
@@ -121,7 +121,7 @@ export function usarGenerador({
   //
   // Solo aporta movimiento continuo. Los saltos verificados los da el
   // servidor al cambiar `etapaViva`; aquí únicamente se deja correr el
-  // tiempo contra el presupuesto real, que son 52 segundos.
+  // tiempo contra lo que tarda el caso normal (`PRESUPUESTO_VISIBLE_MS`).
   // ---------------------------------------------------------------
   useEffect(() => {
     if (estado !== "generando") return;

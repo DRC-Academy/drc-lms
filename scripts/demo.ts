@@ -90,7 +90,7 @@ const DIA_MS = 86_400_000;
 
 /**
  * Presupuesto de una generación y tope de cada llamada. Aquí no hay techo
- * de Vercel: una llamada que tarde más de los 52 s de la ruta —pasa con
+ * de Vercel: una llamada que tarde más de los 100 s de la ruta —pasa con
  * la API cargada— se espera en vez de cortarse, y cabe el segundo intento.
  */
 const PLAZO_GENERACION_MS = 300_000;
@@ -279,8 +279,8 @@ async function crearBloques(ancla: string, idioma: IdiomaBloque, maxIntentos: nu
           () => {},
           TOPE_LLAMADA_MS
         );
-        if (!generado) {
-          log(`  intento ${intento}: la generación no dio un bloque válido`);
+        if (generado.bloque === null) {
+          log(`  intento ${intento}: la generación no dio un bloque válido (${generado.motivo})`);
           continue;
         }
 

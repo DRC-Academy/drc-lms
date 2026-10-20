@@ -57,10 +57,11 @@ export const TIPO_FLUJO = "application/x-ndjson";
 // ---------------------------------------------------------------
 // CALIBRACIÓN DE LA BARRA
 //
-// El presupuesto de IA de la ruta es de 52 segundos, así que la barra se
-// mide contra esos 52 y no contra una duración inventada. Sube desde los
-// 45 de antes por lo mismo que sube todo aquí: el bloque pasó de cinco
-// ejercicios a diez.
+// La barra se mide contra lo que tarda el caso normal, medido: de 50 a 56
+// segundos de generación (20-10-2026) más lecturas y revisión. No contra
+// el presupuesto de la ruta, que desde que es de 100 segundos es un tope
+// para el caso malo: medida contra él, la barra iría por la mitad cuando
+// el bloque ya está, y el aviso de «está tardando» no saldría nunca.
 //
 // Dos reglas que no se tocan:
 //
@@ -72,7 +73,7 @@ export const TIPO_FLUJO = "application/x-ndjson";
 //      retroceder: una barra que baja se lee como un fallo.
 // ---------------------------------------------------------------
 
-export const PRESUPUESTO_VISIBLE_MS = 52_000;
+export const PRESUPUESTO_VISIBLE_MS = 60_000;
 
 /** A partir de aquí se reconoce la espera en vez de disimularla. */
 export const UMBRAL_TARDANZA_MS = PRESUPUESTO_VISIBLE_MS;
