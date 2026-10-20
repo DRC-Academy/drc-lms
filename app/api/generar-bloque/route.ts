@@ -42,7 +42,7 @@ import { guardarBloqueGenerado, leerUltimaGeneracion } from "@/lib/progreso-serv
 import { copiarTraducciones } from "@/lib/traducciones-servidor";
 import { calcularDisponibilidad, comoFecha } from "@/lib/limites";
 import { abrirPlazo, conLimite, conLimiteOAlternativa, describir, type Plazo } from "@/lib/tiempo";
-import { TIPO_FLUJO, type EventoGeneracion, type Origen } from "@/lib/generacion";
+import { TIPO_FLUJO, leerPantallaOrigen, type EventoGeneracion, type Origen } from "@/lib/generacion";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -338,6 +338,12 @@ export async function POST(peticion: Request) {
    */
   const porEquipo = sesion.rol !== "alumno";
 
+  // Desde qué pantalla se pidió: el Inicio o Para ti. Solo se acepta uno
+  // de los dos valores; cualquier otra cosa, o nada, se guarda como «sin
+  // dato». Del equipo no se guarda: no es uso de ninguna pantalla.
+  const pantalla = porEquipo ? null : leerPantallaOrigen((datos as { pantalla?: unknown }).pantalla);
+  traza("pantalla", pantalla ?? "sin dato");
+
   // ---------------------------------------------------------------
   // LAS LECTURAS, LAS DOS A LA VEZ
   //
@@ -542,7 +548,9 @@ export async function POST(peticion: Request) {
             MODO_ACTUAL,
             "ia",
             { ...generado.revision, intentos: generado.intentos },
-            porEquipo
+            porEquipo,
+            undefined,
+            pantalla
           ),
           TIEMPO_BASE_MS,
           "guardarBloqueGenerado(ia)",
@@ -589,7 +597,9 @@ export async function POST(peticion: Request) {
         MODO_ACTUAL,
         "banco",
         { estado: "banco", motivo: motivoBanco },
-        porEquipo
+        porEquipo,
+        undefined,
+        pantalla
       ),
       TIEMPO_BASE_MS,
       "guardarBloqueGenerado(banco)",

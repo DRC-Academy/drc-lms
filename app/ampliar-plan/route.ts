@@ -21,13 +21,20 @@
 //
 // Nadie puede usar esto contra otro: lo único que hace es llevar a QUIEN
 // PULSA a SU propia cuenta de la tienda, con el email de SU sesión.
+//
+// CADA CLIC DE UN ALUMNO SE APUNTA (`banner_ampliar_clic` en `eventos`),
+// en segundo plano: la redirección sale sin esperar a la base. Con la
+// pantalla desde la que pulsó, sacada del Referer —solo la sección, sin
+// ids—, y por qué vía se le mandó.
 // ---------------------------------------------------------------
 
 import { NextResponse, type NextRequest } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
-import { crearTokenPuenteWp } from "@/lib/sesion";
+import { crearTokenPuenteWp, type SesionAbierta } from "@/lib/sesion";
 import { puenteWpActivo, urlAmpliarPlan, viaDeAmpliar } from "@/lib/ampliar-plan";
 import { PUENTE_WP } from "@/lib/cuenta-woo";
+import { apuntarEvento } from "@/lib/eventos";
+import { enSegundoPlano } from "@/lib/segundo-plano";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,11 +46,39 @@ function ir(url: string): NextResponse {
   return respuesta;
 }
 
+/**
+ * La sección desde la que se pulsó, por el Referer. Los dos botones que
+ * hay viven en el Inicio (`/alumno/{id}`) y en Mi progreso (`/progreso`);
+ * sin Referer o desde otro sitio, «otra». El id del alumno no se guarda:
+ * ya va en la fila.
+ */
+function pantallaDe(peticion: NextRequest): string {
+  const referer = peticion.headers.get("referer");
+  if (!referer) return "otra";
+  try {
+    const ruta = new URL(referer).pathname;
+    if (/^\/alumno\/[^/]+\/?$/.test(ruta)) return "inicio";
+    if (/^\/progreso\/?$/.test(ruta)) return "progreso";
+  } catch {
+    // Un Referer que no es una URL: «otra».
+  }
+  return "otra";
+}
+
+function apuntarClic(sesion: SesionAbierta, peticion: NextRequest, via: string) {
+  if (sesion.rol !== "alumno") return;
+  const datos = { pantalla: pantallaDe(peticion), via };
+  enSegundoPlano("ampliar-plan", () => apuntarEvento(sesion.alumnoId, "banner_ampliar_clic", datos));
+}
+
 export async function GET(peticion: NextRequest) {
   const sesion = await sesionActual();
   if (!sesion) return ir(new URL("/acceso", peticion.url).toString());
 
-  if (viaDeAmpliar(sesion, puenteWpActivo()) === "tienda") return ir(urlAmpliarPlan());
+  const via = viaDeAmpliar(sesion, puenteWpActivo());
+  apuntarClic(sesion, peticion, via);
+
+  if (via === "tienda") return ir(urlAmpliarPlan());
 
   try {
     const token = await crearTokenPuenteWp(sesion.email, "cambio-plan");

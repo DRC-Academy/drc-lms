@@ -26,11 +26,42 @@
 // las instancias que ya habían preguntado. Para el cierre de sesión no
 // aplica —ver `revocarSesion`—, y para echar a alguien a la fuerza un
 // minuto es tolerable.
+//
+// LOS ACCESOS
+//
+// Una visita es una fila en `accesos`: usar la plataforma cuando la
+// última actividad registrada del alumno tiene más de 30 minutos, o
+// entrar por el enlace del correo o por WooCommerce. Se decide aquí,
+// donde ya se refresca `ultimo_uso_en`, y no en una consulta aparte:
+//
+//   · EL FRENO DE 5 MINUTOS NO PIERDE VISITAS. Si esta instancia tocó
+//     la sesión hace menos de 5 minutos, la última actividad es como
+//     mucho de entonces: no puede haber 30 minutos de hueco.
+//   · EL MEMO DE 60 SEGUNDOS NO INFLUYE. Guarda si la sesión está viva;
+//     el toque va por su cuenta (`tocadoEn`) y se mira en las dos ramas.
+//   · `cache()` DEDUPLICA dentro de la petición: una página que pasa por
+//     varios guards toca una vez como mucho.
+//   · CADA INSTANCIA TIENE SU MEMO. Una que no ha visto la sesión no sabe
+//     cuándo se tocó, y pregunta a la base con un UPDATE condicionado
+//     (`tocarUltimoUso`): es la base la que dice si hay hueco, y con una
+//     sola sentencia dos instancias a la vez no cuentan la visita dos
+//     veces.
+//
+// El margen, dicho claro: `ultimo_uso_en` puede ir hasta 5 minutos por
+// detrás de la última petición real, así que una pausa de 25 a 30
+// minutos puede contar ya como visita nueva. Y quien pasa más de 30
+// minutos en una lección sin que el navegador pida nada al servidor
+// vuelve como visita nueva en su siguiente petición.
+//
+// Todo esto va EN SEGUNDO PLANO (`enSegundoPlano`): la página no espera
+// a la escritura, como no esperaba nadie a saber si se había refrescado
+// `ultimo_uso_en`.
 // ---------------------------------------------------------------
 
 import "server-only";
 import { cache } from "react";
 import { baseLms } from "@/lib/supabase-lms";
+import { enSegundoPlano } from "@/lib/segundo-plano";
 import type { Rol } from "@/lib/sesion";
 
 export type OrigenSesion = "magic_link" | "woocommerce";
@@ -43,6 +74,9 @@ const MS_MEMO = 60 * 1000;
  * escritura por petición, que es exactamente lo que no queremos.
  */
 const MS_TOCAR = 5 * 60 * 1000;
+
+/** Más que esto sin actividad y lo siguiente es una visita nueva. */
+const MS_VISITA = 30 * 60 * 1000;
 
 /**
  * Tope del memo. Es una instancia serverless y no un servidor de larga
@@ -112,7 +146,49 @@ export async function crearSesion(datos: {
 
   const id = (data ?? [])[0]?.id ?? null;
   if (id) memo.set(id, { viva: true, comprobadoEn: Date.now(), tocadoEn: Date.now() });
+
+  // Entrar es una visita, por cualquiera de las dos puertas. No con `en`:
+  // eso es `scripts/demo.ts` rellenando el pasado, no alguien entrando.
+  if (id && datos.rol === "alumno" && datos.alumnoId && !datos.en) {
+    const alumnoId = datos.alumnoId;
+    enSegundoPlano("accesos", () => anotarAcceso(alumnoId, id, Date.now()));
+  }
+
   return id;
+}
+
+// ---------------------------------------------------------------
+// ACCESOS
+// ---------------------------------------------------------------
+
+/**
+ * Apunta una visita, salvo que el alumno siga activo en OTRA sesión
+ * suya —otro dispositivo, o un enlace nuevo con el anterior aún abierto—:
+ * entonces es la misma visita.
+ *
+ * Sin filtro de cuentas: la demo y la de pruebas se apuntan igual y las
+ * quita `metricas_excluido()` en la base, que es la única lista.
+ */
+async function anotarAcceso(alumnoId: string, sesionId: string, ahora: number) {
+  const { data, error } = await baseLms()
+    .from("sesiones")
+    .select("id")
+    .eq("alumno_id", alumnoId)
+    .neq("id", sesionId)
+    .gte("ultimo_uso_en", new Date(ahora - MS_VISITA).toISOString())
+    .limit(1)
+    .returns<{ id: string }[]>();
+
+  // Si no se puede comprobar, se apunta: una visita de más se nota menos
+  // en el panel que una que falta.
+  if (error) console.error("[accesos] No se pudo mirar si seguía activo en otra sesión:", error.message);
+  else if ((data ?? []).length > 0) return;
+
+  const { error: alInsertar } = await baseLms()
+    .from("accesos")
+    .insert({ alumno_id: alumnoId, iniciado_en: new Date(ahora).toISOString() });
+
+  if (alInsertar) console.error("[accesos] No se pudo apuntar la visita:", alInsertar.message);
 }
 
 // ---------------------------------------------------------------
@@ -151,14 +227,51 @@ async function consultarViva(id: string): Promise<boolean> {
   return Date.parse(fila.expira_en) > Date.now();
 }
 
-async function tocarUltimoUso(id: string) {
-  const { error } = await baseLms()
-    .from("sesiones")
-    .update({ ultimo_uso_en: new Date().toISOString() })
-    .eq("id", id);
+async function refrescarUltimoUso(id: string, en: string) {
+  const { error } = await baseLms().from("sesiones").update({ ultimo_uso_en: en }).eq("id", id);
 
   // Es telemetría: que falle no cambia nada para quien está navegando.
   if (error) console.error("[sesiones] No se pudo refrescar ultimo_uso_en:", error.message);
+}
+
+/**
+ * Refresca `ultimo_uso_en` y, si había 30 minutos de hueco, apunta la
+ * visita. `tocadoAntes` es cuándo la tocó ESTA instancia por última vez
+ * (0 si nunca).
+ */
+async function tocarUltimoUso(id: string, tocadoAntes: number) {
+  const ahora = Date.now();
+  const en = new Date(ahora).toISOString();
+
+  // La tocó esta misma instancia hace menos de 30 minutos: no hay hueco
+  // posible, basta con refrescar. Es el caso de casi todas las veces.
+  if (tocadoAntes > 0 && ahora - tocadoAntes < MS_VISITA) {
+    await refrescarUltimoUso(id, en);
+    return;
+  }
+
+  // Si no, que lo diga la base: se refresca SOLO si la última actividad
+  // es de hace más de 30 minutos, y si devuelve la fila, había hueco.
+  const { data, error } = await baseLms()
+    .from("sesiones")
+    .update({ ultimo_uso_en: en })
+    .eq("id", id)
+    .lt("ultimo_uso_en", new Date(ahora - MS_VISITA).toISOString())
+    .select("rol, alumno_id")
+    .returns<{ rol: Rol; alumno_id: string | null }[]>();
+
+  if (error) {
+    console.error("[sesiones] No se pudo refrescar ultimo_uso_en:", error.message);
+    return;
+  }
+
+  const fila = (data ?? [])[0];
+  if (!fila) {
+    await refrescarUltimoUso(id, en);
+    return;
+  }
+
+  if (fila.rol === "alumno" && fila.alumno_id) await anotarAcceso(fila.alumno_id, id, ahora);
 }
 
 /**
@@ -177,8 +290,9 @@ export const sesionViva = cache(async (id: string): Promise<boolean> => {
 
   if (entrada && ahora - entrada.comprobadoEn < MS_MEMO) {
     if (entrada.viva && ahora - entrada.tocadoEn > MS_TOCAR) {
+      const tocadoAntes = entrada.tocadoEn;
       entrada.tocadoEn = ahora;
-      await tocarUltimoUso(id);
+      enSegundoPlano("sesiones", () => tocarUltimoUso(id, tocadoAntes));
     }
     return entrada.viva;
   }
@@ -189,11 +303,11 @@ export const sesionViva = cache(async (id: string): Promise<boolean> => {
   memo.set(id, { viva, comprobadoEn: ahora, tocadoEn: entrada?.tocadoEn ?? 0 });
 
   if (viva) {
-    const tocado = entrada?.tocadoEn ?? 0;
-    if (ahora - tocado > MS_TOCAR) {
+    const tocadoAntes = entrada?.tocadoEn ?? 0;
+    if (ahora - tocadoAntes > MS_TOCAR) {
       const guardada = memo.get(id);
       if (guardada) guardada.tocadoEn = ahora;
-      await tocarUltimoUso(id);
+      enSegundoPlano("sesiones", () => tocarUltimoUso(id, tocadoAntes));
     }
   }
 

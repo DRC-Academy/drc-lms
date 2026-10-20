@@ -9,6 +9,7 @@ import {
   TIPO_FLUJO,
   UMBRAL_TARDANZA_MS,
   type EtapaGeneracion,
+  type PantallaOrigen,
 } from "@/lib/generacion";
 import type { TextosPractica } from "@/lib/textos/practica";
 import { usarIdioma } from "@/components/ProveedorIdioma";
@@ -66,9 +67,12 @@ const CADENCIA_MS = 250;
 export function usarGenerador({
   alumnoId,
   generadosIniciales,
+  pantalla,
 }: {
   alumnoId: string;
   generadosIniciales: Bloque[];
+  /** Desde dónde se pide: se guarda con el bloque para el panel. */
+  pantalla: PantallaOrigen;
 }) {
   const [estado, setEstado] = useState<EstadoGeneracion>("listo");
   const [etapa, setEtapa] = useState<EtapaGeneracion>("preparando");
@@ -161,7 +165,7 @@ export function usarGenerador({
       const respuesta = await fetch("/api/generar-bloque", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ alumnoId, excluir: todos.map((b) => b.titulo) }),
+        body: JSON.stringify({ alumnoId, excluir: todos.map((b) => b.titulo), pantalla }),
         signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS),
       });
 
@@ -201,7 +205,7 @@ export function usarGenerador({
       );
       setEstado("error");
     }
-  }, [alumnoId, todos, anotarEtapa, t]);
+  }, [alumnoId, todos, pantalla, anotarEtapa, t]);
 
   return {
     estado,

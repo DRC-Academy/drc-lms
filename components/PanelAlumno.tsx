@@ -75,7 +75,7 @@ export default function PanelAlumno({
     generar,
     reintentar,
     zonaNuevos,
-  } = usarGenerador({ alumnoId, generadosIniciales });
+  } = usarGenerador({ alumnoId, generadosIniciales, pantalla: "inicio" });
 
   /**
    * MIGRACIÓN DEL PROGRESO QUE QUEDÓ EN EL NAVEGADOR

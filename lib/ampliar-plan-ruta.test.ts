@@ -8,6 +8,20 @@ import { NextRequest } from "next/server";
 const sesion = vi.hoisted(() => ({ actual: null as unknown }));
 vi.mock("@/lib/sesion-servidor", () => ({ sesionActual: async () => sesion.actual }));
 
+// El clic se apunta en segundo plano: aquí se recoge para comprobarlo.
+const eventos = vi.hoisted(() => ({ apuntados: [] as unknown[][], pendientes: [] as Promise<unknown>[] }));
+vi.mock("@/lib/eventos", () => ({
+  apuntarEvento: async (...args: unknown[]) => {
+    eventos.apuntados.push(args);
+    return true;
+  },
+}));
+vi.mock("@/lib/segundo-plano", () => ({
+  enSegundoPlano: (_etiqueta: string, tarea: () => Promise<unknown>) => {
+    eventos.pendientes.push(tarea());
+  },
+}));
+
 const SECRETO_PUENTE = "q".repeat(40);
 const peticion = () => new NextRequest("http://localhost:3001/ampliar-plan");
 
@@ -17,6 +31,8 @@ beforeEach(() => {
   process.env.SECRETO_WOO = "w".repeat(40);
   process.env.SECRETO_SESION = "s".repeat(40);
   delete process.env.URL_AMPLIAR_PLAN;
+  eventos.apuntados.length = 0;
+  eventos.pendientes.length = 0;
 });
 
 describe("GET /ampliar-plan", () => {
@@ -59,6 +75,32 @@ describe("GET /ampliar-plan", () => {
     expect(r.headers.get("location")).toBe("https://drcacademy.com/mi-cuenta/?drc-ampliar-plan=1");
     expect(error).toHaveBeenCalled();
     error.mockRestore();
+  });
+
+  it("el clic de un alumno se apunta, con la pantalla del Referer y la vía", async () => {
+    sesion.actual = { rol: "alumno", email: "alumna@ejemplo.com", alumnoId: "abc", sesionId: "x" };
+    const { GET } = await import("@/app/ampliar-plan/route");
+    const conReferer = (ruta: string) =>
+      new NextRequest("http://localhost:3001/ampliar-plan", { headers: { referer: `http://localhost:3001${ruta}` } });
+    await GET(conReferer("/alumno/abc"));
+    await GET(conReferer("/progreso"));
+    await GET(peticion());
+    await Promise.all(eventos.pendientes);
+    expect(eventos.apuntados).toEqual([
+      ["abc", "banner_ampliar_clic", { pantalla: "inicio", via: "puente" }],
+      ["abc", "banner_ampliar_clic", { pantalla: "progreso", via: "puente" }],
+      ["abc", "banner_ampliar_clic", { pantalla: "otra", via: "puente" }],
+    ]);
+  });
+
+  it("del equipo y sin sesión no se apunta nada", async () => {
+    sesion.actual = { rol: "admin", email: "equipo@drcacademy.com", alumnoId: null, sesionId: "x" };
+    const { GET } = await import("@/app/ampliar-plan/route");
+    await GET(peticion());
+    sesion.actual = null;
+    await GET(peticion());
+    await Promise.all(eventos.pendientes);
+    expect(eventos.apuntados).toEqual([]);
   });
 
   it("sin sesión, a /acceso", async () => {

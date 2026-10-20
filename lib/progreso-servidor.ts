@@ -22,6 +22,7 @@ import { baseLms } from "@/lib/supabase-lms";
 import { validarBloque } from "@/lib/validarBloque";
 import type { Bloque } from "@/lib/data";
 import type { ModoHistorico } from "@/lib/modos";
+import type { PantallaOrigen } from "@/lib/generacion";
 import type { ProgresoLocal, RegistroAvance, RegistroProgreso } from "@/lib/progreso";
 
 export type { ProgresoLocal };
@@ -402,7 +403,9 @@ export async function guardarBloqueGenerado(
   origen: OrigenBloque,
   revision: unknown = null,
   porEquipo = false,
-  en?: Date
+  en?: Date,
+  /** Desde qué pantalla se pidió. Null = sin dato (equipo, demo, pestañas viejas). */
+  pantalla: PantallaOrigen | null = null
 ): Promise<boolean> {
   const { error } = await baseLms()
     .from("bloques_generados")
@@ -416,6 +419,7 @@ export async function guardarBloqueGenerado(
         revision,
         origen,
         generado_por_equipo: porEquipo,
+        pantalla_origen: pantalla,
         ...(en ? { generado_en: en.toISOString() } : {}),
       },
       { onConflict: "bloque_clave", ignoreDuplicates: true }

@@ -24,6 +24,23 @@ import type { TextosPractica } from "@/lib/textos/practica";
 export type Origen = "ia" | "banco";
 
 /**
+ * Desde qué pantalla se pidió el bloque: el Inicio o Para ti. Lo manda
+ * el cliente en el cuerpo y se guarda en `bloques_generados.pantalla_origen`.
+ *
+ * No confundir con `Origen`, que es quién lo escribió.
+ */
+export type PantallaOrigen = "inicio" | "para_ti";
+
+/**
+ * Lo que llega del cliente, o null si no es una de las dos. Null se
+ * guarda como «sin dato» y no rompe la generación: una versión vieja de
+ * la página abierta en una pestaña no manda nada, y eso no es un error.
+ */
+export function leerPantallaOrigen(valor: unknown): PantallaOrigen | null {
+  return valor === "inicio" || valor === "para_ti" ? valor : null;
+}
+
+/**
  * Las etapas por las que pasa una generación.
  *
  * `preparando` es la única que no viaja por el flujo: cubre desde que el

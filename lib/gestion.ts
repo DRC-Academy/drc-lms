@@ -257,6 +257,14 @@ const ULTIMA_CLASE =
  *
  * Fuera quedan `review` —esperando revisión— y `rejected`, que es una
  * clase que alguien miró y descartó.
+ *
+ * ⚠ ESTE FILTRO ESTÁ DUPLICADO EN GESTIÓN, junto con el `analysis_status
+ * = 'ready'` de `obtenerUltimaClase`, `clasesDelPanel` e
+ * `historialDeClases`: la vista `vista_clases_nuevas_semana`
+ * (`supabase/gestion-vista-clases-nuevas.sql`) lo repite en SQL para
+ * contar qué alumnos podían generar práctica cada semana. Si cambia
+ * aquí, cambia allí; si no, el panel contaría como «podía generar» a
+ * quien el LMS no deja, o al revés.
  */
 const VALIDACION_ACEPTADA = ["approved", "auto_approved", "ok"] as const;
 

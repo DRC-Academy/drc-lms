@@ -8,6 +8,7 @@ import { FAQ, buscar, enlaceSoporte, preguntaPorId } from "@/lib/faq";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import type { Idioma } from "@/lib/idioma";
 import type { TextosAyuda } from "@/lib/textos/ayuda";
+import { apuntarEvento } from "@/components/apuntarEvento";
 
 /**
  * LA AYUDA DEL ALUMNO. Un buscador de FAQ con forma de conversación.
@@ -133,9 +134,13 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
   // conversación NO se borra al cerrar: quien vuelve a abrir a los diez
   // segundos porque le ha entrado otra duda no tiene por qué empezar de
   // cero.
+  //
+  // Cada apertura se le cuenta al servidor (`chat_abierto`), sin esperar:
+  // el chat responde en el cliente y sin esto no quedaba rastro de su uso.
   // ---------------------------------------------------------------
   function abrir() {
     setAbierto(true);
+    apuntarEvento({ tipo: "chat_abierto" });
     if (mensajes.length === 0) {
       anadir({ de: "bot", tipo: "categorias", clave: "saludo" });
     }
@@ -160,6 +165,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
     function alPedir() {
       setMenu(false);
       setAbierto(true);
+      apuntarEvento({ tipo: "chat_abierto" });
       setMensajes((previos) =>
         previos.length === 0
           ? [{ id: ++siguienteId.current, de: "bot", tipo: "categorias", clave: "saludo" }]
@@ -219,6 +225,7 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
     const pregunta = preguntaPorId(id);
     if (!pregunta) return;
 
+    apuntarEvento({ tipo: "chat_pregunta_vista", pregunta: id });
     anadir(
       { de: "alumno", dicho: { tipo: "pregunta", idPregunta: id } },
       { de: "bot", tipo: "respuesta", idPregunta: id, util: null }
@@ -431,6 +438,14 @@ export default function ChatAyuda({ nombre }: { nombre: string }) {
                   {mensaje.tipo === "soporte" && (
                     <a
                       href={enlaceSoporte({ nombre, ruta, asunto: asuntoDe(mensaje.derivacion, idioma), idioma })}
+                      // Por qué llegó a soporte, nunca lo que escribió.
+                      onClick={() =>
+                        apuntarEvento(
+                          mensaje.derivacion.motivo === "noResuelto"
+                            ? { tipo: "chat_a_whatsapp", motivo: "noResuelto", pregunta: mensaje.derivacion.idPregunta }
+                            : { tipo: "chat_a_whatsapp", motivo: mensaje.derivacion.motivo }
+                        )
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-verde inline-flex min-h-[44px] items-center justify-center gap-2 self-start rounded-full px-5 text-[14.5px] font-semibold"

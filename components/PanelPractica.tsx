@@ -101,7 +101,7 @@ export default function PanelPractica({
     generar,
     reintentar,
     zonaNuevos,
-  } = usarGenerador({ alumnoId, generadosIniciales });
+  } = usarGenerador({ alumnoId, generadosIniciales, pantalla: "para_ti" });
 
   const t = usarIdioma().t.ruta;
 
