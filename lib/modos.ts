@@ -117,19 +117,17 @@ export function avisoFormulario(
  *
  * Es el valor que va a `bloques_generados.modo`. Sigue existiendo la
  * columna —y sigue habiendo miles de filas con `repaso`, `examen` y
- * `contexto`— porque el panel del equipo lee el histórico y necesita
- * distinguir de cuándo es cada bloque.
+ * `contexto`— porque el histórico se sigue leyendo y hay que distinguir
+ * de cuándo es cada bloque.
  */
 export const MODO_ACTUAL = "practica";
 
 /**
  * Todos los valores que pueden aparecer en la columna, incluidos los
- * tres que ya no se generan. Es un tipo de LECTURA: lo usa el panel para
- * repasar el histórico, nunca la generación.
+ * tres que ya no se generan. Es un tipo de LECTURA: lo usa quien repasa
+ * el histórico, nunca la generación.
  */
 export type ModoHistorico = "repaso" | "examen" | "contexto" | "practica";
-
-export const MODOS_HISTORICOS: ModoHistorico[] = ["repaso", "examen", "contexto", "practica"];
 
 /**
  * Lo que se enseña cuando todavía no toca generar.

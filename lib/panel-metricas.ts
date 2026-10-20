@@ -1,10 +1,10 @@
 // ---------------------------------------------------------------
 // LOS DATOS DEL PANEL DEL EQUIPO, POR RANGO DE FECHAS
 //
-// Sustituye a `cargarPanel` (`lib/admin-servidor.ts`) para la pantalla
-// nueva: cualquier rango de días, comparado con el periodo anterior de la
-// misma duración. Todo se lee aquí, en el servidor, y lo que sale es un
-// objeto plano que la página pasa por props.
+// Sustituyó a `cargarPanel` (el panel antiguo, `lib/admin-servidor.ts`,
+// ya borrado): cualquier rango de días, comparado con el periodo
+// anterior de la misma duración. Todo se lee aquí, en el servidor, y lo
+// que sale es un objeto plano que la página pasa por props.
 //
 // DE DÓNDE SALE CADA COSA
 //   · LMS, con las funciones de `supabase/lms-panel-metricas.sql`: series,

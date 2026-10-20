@@ -13,7 +13,6 @@ import { unstable_cache } from "next/cache";
 import { baseLms } from "@/lib/supabase-lms";
 import { alumnosDelPanel, partesDeClase, type AlumnoPanel } from "@/lib/gestion";
 import { esIdDemo } from "@/lib/demo/cuenta";
-import { CUENTA_DE_PRUEBAS, type Periodo } from "@/lib/admin-servidor";
 import { instanteEnMadrid } from "@/lib/clases";
 import { diaLocal, sumarDias } from "@/lib/fechas";
 import { limitesDelMes, medirBoton, type FilaEntrada, type MedidaBoton, type Origen } from "@/lib/entradas-clase";
@@ -105,6 +104,13 @@ async function primeraEntrada(): Promise<string | null | undefined> {
 }
 
 /** La cuenta de pruebas y la demo no son alumnos: no salen en el resumen. */
+/**
+ * La cuenta de pruebas de Facundo: no es un alumno. Vivía en el panel
+ * antiguo (`lib/admin-servidor.ts`, ya borrado). Las métricas del panel
+ * nuevo no la usan: excluyen con `metricas_excluido()` en la base.
+ */
+const CUENTA_DE_PRUEBAS = "s_1785879819493";
+
 export function esCuentaDeEquipo(alumnoId: string): boolean {
   return alumnoId === CUENTA_DE_PRUEBAS || esIdDemo(alumnoId);
 }
@@ -250,13 +256,6 @@ export async function usoDelBoton(rango: RangoDias): Promise<UsoDelBoton> {
   } catch {
     return { estado: "error" };
   }
-}
-
-/** El rango de un periodo del panel: los últimos N días naturales, hoy incluido. */
-export function rangoDelPeriodo(periodo: Periodo, ahora = new Date()): RangoDias {
-  const hoy = diaLocal(ahora);
-  const hasta = sumarDias(hoy, 1);
-  return periodo === "todo" ? { desde: null, hasta } : { desde: sumarDias(hoy, 1 - Number(periodo)), hasta };
 }
 
 /** El rango de un mes "2026-10". */

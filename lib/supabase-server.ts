@@ -215,8 +215,8 @@ type Consulta = {
   limit(cantidad: number): Consulta;
   /**
    * Una ventana de filas, para paginar. PostgREST corta en 1000 y no hay
-   * `limit` que lo suba, así que la única lectura que puede pasar de ahí
-   * —la última clase de TODOS los alumnos, en `clasesDelPanel`— tiene
+   * `limit` que lo suba, así que las lecturas que pueden pasar de ahí
+   * —las fichas de todos los alumnos, los partes de un rango— tienen
    * que pedirlas por tramos. Sigue siendo un SELECT: acota, no escribe.
    */
   range(desde: number, hasta: number): Consulta;

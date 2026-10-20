@@ -259,8 +259,7 @@ const ULTIMA_CLASE =
  * clase que alguien miró y descartó.
  *
  * ⚠ ESTE FILTRO ESTÁ DUPLICADO EN GESTIÓN, junto con el `analysis_status
- * = 'ready'` de `obtenerUltimaClase`, `clasesDelPanel` e
- * `historialDeClases`: la vista `vista_clases_nuevas_semana`
+ * = 'ready'` de `obtenerUltimaClase` e `historialDeClases`: la vista `vista_clases_nuevas_semana`
  * (`supabase/gestion-vista-clases-nuevas.sql`) lo repite en SQL para
  * contar qué alumnos podían generar práctica cada semana. Si cambia
  * aquí, cambia allí; si no, el panel contaría como «podía generar» a
@@ -656,79 +655,13 @@ export async function alumnosParaAvisos(): Promise<AlumnoAviso[]> {
     }));
 }
 
-export type ClasePanel = {
-  alumnoId: string;
-  titulo: string;
-  /** Lo que de verdad importa: si el análisis trae contenido o vino vacío. */
-  conTranscript: boolean;
-  fechaClase: string;
-};
-
 /**
- * La última clase de cada alumno, para saber quién tiene transcript.
- *
- * MISMA DEFINICIÓN QUE `obtenerUltimaClase`, filtro de validación
- * incluido: la más reciente `ready` y validada de `class_analyses`. El
- * panel tiene que contar lo mismo que la ficha, o el equipo ve una
- * fecha en una pantalla y otra en la de al lado.
- *
- * No basta con tener fila: hay filas con `temas` y `errores` vacíos, que
- * es una clase registrada sin análisis detrás. Para el panel eso cuenta
- * igual que no tenerla, porque el modo repaso no puede construir nada.
- *
- * SE PAGINA, y no es por prudencia. PostgREST corta en 1000 filas y no
- * hay `limit` que lo suba: hoy hay 1279 clases `ready` y validadas, así
- * que una sola consulta perdería 279 —y como vienen ordenadas por
- * fecha, las que se perderían son las de los alumnos que llevan más
- * tiempo sin clase, que desaparecerían del panel enteros—. La vista
- * devolvía una fila por alumno y nunca llegó a rozar el tope; la tabla
- * son todas las clases de todos, y sí lo roza.
+ * Las lecturas que pueden pasar de 1000 filas van por tramos: PostgREST
+ * corta ahí y no hay `limit` que lo suba. Y como las filas vienen
+ * ordenadas, lo que se perdería no es al azar: serían siempre las del
+ * final.
  */
 const PAGINA = 1000;
-
-export async function clasesDelPanel(): Promise<ClasePanel[]> {
-  const filas: Fila[] = [];
-
-  for (let desde = 0; ; desde += PAGINA) {
-    const { data, error } = await soloLectura("class_analyses")
-      .select("student_id, class_title, topics_covered, errors_detected, class_date, analyzed_at")
-      .eq("analysis_status", "ready")
-      .in("validation_status", VALIDACION_ACEPTADA)
-      .order("class_date", { ascending: false })
-      .order("analyzed_at", { ascending: false })
-      .range(desde, desde + PAGINA - 1)
-      .returns<Fila[]>();
-
-    if (error) {
-      console.error("[gestion] No se pudo leer las clases para el panel:", error.message);
-      return [];
-    }
-
-    const pagina = data ?? [];
-    filas.push(...pagina);
-    if (pagina.length < PAGINA) break;
-  }
-
-  const vistos = new Set<string>();
-  const salida: ClasePanel[] = [];
-
-  for (const fila of filas) {
-    const alumnoId = comoTexto(fila.student_id);
-    if (alumnoId === "" || vistos.has(alumnoId)) continue;
-    vistos.add(alumnoId);
-
-    salida.push({
-      alumnoId,
-      titulo: comoTexto(fila.class_title),
-      conTranscript:
-        comoTexto(fila.topics_covered).trim() !== "" ||
-        comoTexto(fila.errors_detected).trim() !== "",
-      fechaClase: comoTexto(fila.class_date),
-    });
-  }
-
-  return salida;
-}
 
 const CAMPOS_RESUMEN = "alumno_id, nombre, email, nivel, profesor";
 
