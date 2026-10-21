@@ -3,15 +3,15 @@ import {
   atajosDeFechas,
   diasDelRango,
   esDia,
-  granularidadDe,
   leerRango,
   lunesDe,
   rangoAnterior,
+  rangoGrafico,
   rangoPorDefecto,
 } from "@/lib/panel-rango";
 import type { FilaEntrada } from "@/lib/entradas-clase";
 import { contraQue, diaCorto, etiquetaPeriodo, mesLargo, rangoLegible, tituloPeriodo } from "@/lib/panel-formato";
-import { alumnosQuePodian, disponibilidad, medirClase, periodosDelRango, recortar } from "@/lib/panel-calculos";
+import { disponibilidad, medirClase, recortar, semanasDelRango } from "@/lib/panel-calculos";
 
 // Hoy es martes 20 oct 2026 en todos los casos.
 const HOY = "2026-10-20";
@@ -34,9 +34,14 @@ describe("el rango", () => {
     expect(rangoAnterior(r)).toEqual({ desde: "2026-07-22", hasta: "2026-09-04" });
   });
 
-  it("por días hasta 31, por semanas a partir de ahí", () => {
-    expect(granularidadDe({ desde: "2026-10-01", hasta: "2026-10-31" })).toBe("dia");
-    expect(granularidadDe({ desde: "2026-09-30", hasta: "2026-10-31" })).toBe("semana");
+  it("el gráfico: las 12 semanas que acaban en la del final, o el rango entero si es más largo", () => {
+    // La semana del 12 oct: de la del 27 jul a la del 12 oct.
+    expect(rangoGrafico({ desde: "2026-10-12", hasta: "2026-10-18" })).toEqual({ desde: "2026-07-27", hasta: "2026-10-18" });
+    // Esta semana, a medias: hasta hoy.
+    expect(rangoGrafico({ desde: "2026-10-19", hasta: "2026-10-20" })).toEqual({ desde: "2026-08-03", hasta: "2026-10-20" });
+    // 16 semanas, empezando a mitad de una: desde su lunes.
+    expect(rangoGrafico({ desde: "2026-07-01", hasta: "2026-10-18" })).toEqual({ desde: "2026-06-29", hasta: "2026-10-18" });
+    expect(semanasDelRango(rangoGrafico({ desde: "2026-10-12", hasta: "2026-10-18" }))).toHaveLength(12);
   });
 
   it("lo que no cumple las reglas da el de por defecto", () => {
@@ -78,32 +83,13 @@ describe("la disponibilidad", () => {
   });
 });
 
-describe("los periodos de la serie", () => {
-  it("por semanas, recortadas a los bordes", () => {
-    expect(periodosDelRango({ desde: "2026-09-30", hasta: "2026-10-14" }, "semana")).toEqual([
+describe("las semanas del gráfico", () => {
+  it("de lunes a domingo, recortadas a los bordes", () => {
+    expect(semanasDelRango({ desde: "2026-09-30", hasta: "2026-10-14" })).toEqual([
       { periodo: "2026-09-28", desde: "2026-09-30", hasta: "2026-10-04" },
       { periodo: "2026-10-05", desde: "2026-10-05", hasta: "2026-10-11" },
       { periodo: "2026-10-12", desde: "2026-10-12", hasta: "2026-10-14" },
     ]);
-  });
-
-  it("por días, uno por día", () => {
-    const p = periodosDelRango({ desde: "2026-10-24", hasta: "2026-10-26" }, "dia");
-    expect(p.map((x) => x.periodo)).toEqual(["2026-10-24", "2026-10-25", "2026-10-26"]);
-  });
-});
-
-describe("quién podía generar", () => {
-  // 00:30 del lunes 12 en Madrid son las 22:30 UTC del domingo 11.
-  const filas = [
-    { alumnoId: "a", primeraDisponibleEn: "2026-10-11T22:30:00Z", ultimaDisponibleEn: "2026-10-11T22:30:00Z" },
-    { alumnoId: "b", primeraDisponibleEn: "2026-10-11T21:30:00Z", ultimaDisponibleEn: "2026-10-11T21:30:00Z" },
-    { alumnoId: "c", primeraDisponibleEn: "2026-10-05T10:00:00Z", ultimaDisponibleEn: "2026-10-14T10:00:00Z" },
-  ];
-  it("por el instante en hora de Madrid", () => {
-    const semana = alumnosQuePodian(filas, { desde: "2026-10-12", hasta: "2026-10-18" });
-    expect(Array.from(semana).sort()).toEqual(["a", "c"]); // b fue el domingo 11 a las 23:30 de Madrid
-    expect(Array.from(alumnosQuePodian(filas, { desde: "2026-10-05", hasta: "2026-10-11" })).sort()).toEqual(["b", "c"]);
   });
 });
 
@@ -126,7 +112,25 @@ describe("las clases con entrada", () => {
       clasesConEntrada: 1,
       alumnos: 1,
       alumnosConEntrada: 1,
+      porAlumno: { a: { clases: 2, conEntrada: 1, ultima: "2026-10-13T10:00" } },
     });
+  });
+
+  it("la lista: también quien no usó el botón, y la última clase abierta con él", () => {
+    const partes = [
+      parte("a", "2026-10-13", "10:00"),
+      parte("a", "2026-10-16", "10:00"),
+      parte("b", "2026-10-14", "18:00"),
+      parte("c", "2026-10-15", "09:00", "falta_sin_aviso"),
+    ];
+    // a abre las dos; c pulsa en una falta, que no cuenta; d pulsa sin parte.
+    const entradas = [clic("a", "2026-10-16T10:00"), clic("a", "2026-10-13T10:00"), clic("c", "2026-10-15T09:00"), clic("d", "2026-10-15T12:00")];
+    const r = medirClase(partes, entradas, { desde: "2026-10-12", hasta: "2026-10-18" });
+    expect(r.porAlumno).toEqual({
+      a: { clases: 2, conEntrada: 2, ultima: "2026-10-16T10:00" },
+      b: { clases: 1, conEntrada: 0, ultima: null },
+    });
+    expect([r.alumnos, r.alumnosConEntrada, r.clases, r.clasesConEntrada]).toEqual([2, 1, 3, 2]);
   });
 });
 
@@ -165,8 +169,7 @@ describe("cómo se escriben las fechas", () => {
   it("periodos y meses", () => {
     expect(diaCorto("2026-09-07")).toBe("7 sep");
     expect(etiquetaPeriodo("2026-10-12")).toBe("12 oct");
-    expect(tituloPeriodo("2026-10-13", "dia")).toBe("Martes 13 oct");
-    expect(tituloPeriodo("2026-10-12", "semana")).toBe("Semana del 12 oct");
+    expect(tituloPeriodo("2026-10-12")).toBe("Semana del 12 oct");
     expect(mesLargo("2026-10-01")).toBe("Octubre de 2026");
   });
 });

@@ -3,19 +3,17 @@
 //
 // `lib/panel-metricas.ts` lee; esto decide. Va aparte para poder
 // probarlo sin base: qué dice el panel cuando un dato no existía en todo
-// el rango, en qué periodos se parte la serie, quién podía generar
-// práctica y cómo se reparten las clases con entrada por el botón.
+// el rango, en qué semanas se parte el gráfico y cómo se reparten las
+// clases con entrada por el botón.
 //
-// Nada de aquí cuenta alumnos únicos de un rango largo: eso lo hace la
-// base. Lo único que se cuenta aquí son clases (el cruce de los partes
-// de Gestión con los clics del LMS, que viven en bases distintas) y
-// conjuntos de ids que vienen de Gestión, que solo deja leer vistas.
+// Nada de aquí cuenta alumnos únicos de las tablas del LMS: eso lo hace
+// la base. Lo único que se cuenta aquí es el cruce de los partes de
+// Gestión con los clics del LMS, que viven en bases distintas.
 // ---------------------------------------------------------------
 
 import { sumarDias } from "@/lib/fechas";
-import { instanteEnMadrid } from "@/lib/clases";
-import { claveDeEntrada, medirBoton, type FilaEntrada, type ParteParaMedir } from "@/lib/entradas-clase";
-import { lunesDe, type Granularidad, type Rango } from "@/lib/panel-rango";
+import { claveDeEntrada, claveDeParte, medirBoton, TIPOS_DADA, type FilaEntrada, type ParteParaMedir } from "@/lib/entradas-clase";
+import { lunesDe, type Rango } from "@/lib/panel-rango";
 
 // ---------------------------------------------------------------
 // DISPONIBILIDAD
@@ -46,25 +44,24 @@ export function recortar(rango: Rango, inicio: string | null): Rango | null {
 }
 
 // ---------------------------------------------------------------
-// LOS PERIODOS DE LA SERIE
+// LAS SEMANAS DEL GRÁFICO
 //
-// Los mismos que genera `panel_agregado` en la base: días, o semanas que
-// empiezan en lunes y se recortan a los bordes del rango.
+// Las mismas que genera `panel_cifras` en la base: semanas que empiezan
+// en lunes y se recortan a los bordes del rango.
 // ---------------------------------------------------------------
 
 export type Periodo = {
-  /** El día, o el lunes de la semana. */
+  /** El lunes de la semana. */
   periodo: string;
-  /** Los días de ese periodo que entran en el rango. */
+  /** Los días de esa semana que entran en el rango. */
   desde: string;
   hasta: string;
 };
 
-export function periodosDelRango(rango: Rango, granularidad: Granularidad): Periodo[] {
+export function semanasDelRango(rango: Rango): Periodo[] {
   const periodos: Periodo[] = [];
-  const paso = granularidad === "dia" ? 1 : 7;
-  for (let p = granularidad === "dia" ? rango.desde : lunesDe(rango.desde); p <= rango.hasta; p = sumarDias(p, paso)) {
-    const fin = sumarDias(p, paso - 1);
+  for (let p = lunesDe(rango.desde); p <= rango.hasta; p = sumarDias(p, 7)) {
+    const fin = sumarDias(p, 6);
     periodos.push({
       periodo: p,
       desde: p < rango.desde ? rango.desde : p,
@@ -75,47 +72,23 @@ export function periodosDelRango(rango: Rango, granularidad: Granularidad): Peri
 }
 
 // ---------------------------------------------------------------
-// QUIÉN PODÍA GENERAR PRÁCTICA
-//
-// Un alumno podía en el rango si alguna clase nueva suya pasó a estar
-// disponible dentro (`vista_clases_nuevas_semana`, en Gestión).
-//
-// LA VISTA ES SEMANAL y trae la primera y la última de cada semana. En
-// rangos de semanas enteras es exacto. En un rango que corta una semana
-// por los dos lados (un día suelto, por ejemplo) se mira si la primera o
-// la última caen dentro: si un alumno tuvo tres o más esa semana y solo
-// la del medio cae en el rango, no cuenta. Es raro —la mediana es una o
-// dos por semana— y deja la cifra por abajo, nunca por arriba.
-// ---------------------------------------------------------------
-
-export type FilaClasesNuevas = {
-  alumnoId: string;
-  primeraDisponibleEn: string;
-  ultimaDisponibleEn: string;
-};
-
-export function alumnosQuePodian(filas: FilaClasesNuevas[], rango: Rango): Set<string> {
-  const ini = instanteEnMadrid(rango.desde, "00:00").getTime();
-  const fin = instanteEnMadrid(sumarDias(rango.hasta, 1), "00:00").getTime();
-  const dentro = (iso: string) => {
-    const t = Date.parse(iso);
-    return Number.isFinite(t) && t >= ini && t < fin;
-  };
-  const ids = new Set<string>();
-  for (const f of filas) {
-    if (dentro(f.primeraDisponibleEn) || dentro(f.ultimaDisponibleEn)) ids.add(f.alumnoId);
-  }
-  return ids;
-}
-
-// ---------------------------------------------------------------
 // CLASES CON ENTRADA POR EL BOTÓN
 //
 // La cuenta es `medirBoton` (`lib/entradas-clase.ts`), la misma de
-// /entradas: clases dadas según los partes de Gestión, y cuántas se
-// abrieron con «Ingresar a clase». Aquí solo se le pasan los partes y
-// los clics de cada trozo.
+// /entradas: clases dadas según los partes de Gestión (normales y
+// recuperaciones), y cuántas se abrieron con «Ingresar a clase». Un clic
+// casa con una clase por alumno, día y hora de inicio; los clics en
+// clases sin parte o con parte de falta no cuentan.
 // ---------------------------------------------------------------
+
+export type ClaseDelAlumno = {
+  /** Clases dadas en el trozo. */
+  clases: number;
+  /** De ellas, abiertas al menos una vez con el botón. */
+  conEntrada: number;
+  /** La más reciente de esas, "AAAA-MM-DDTHH:MM" en Madrid; null si ninguna. */
+  ultima: string | null;
+};
 
 export type ResumenClase = {
   /** Clases dadas (normales y recuperaciones). */
@@ -124,24 +97,42 @@ export type ResumenClase = {
   clasesConEntrada: number;
   /** Alumnos con alguna clase dada en el trozo. */
   alumnos: number;
-  /** De ellos, los que usaron el botón al menos una vez. */
+  /** De ellos, los que abrieron al menos una con el botón. */
   alumnosConEntrada: number;
+  /** alumno_id → sus cifras. Solo quien tuvo alguna clase dada. */
+  porAlumno: Record<string, ClaseDelAlumno>;
 };
 
 /** Partes y clics de los días de `rango`, ya sin excluidos. */
 export function medirClase(partes: ParteParaMedir[], entradas: FilaEntrada[], rango: Rango): ResumenClase {
   const enRango = (dia: string) => dia >= rango.desde && dia <= rango.hasta;
-  const medida = medirBoton(
-    partes.filter((p) => enRango(p.fecha)),
-    entradas.filter((e) => {
-      const clave = claveDeEntrada(e);
-      return clave !== null && enRango(clave.slice(0, 10));
-    })
-  );
+  const susPartes = partes.filter((p) => enRango(p.fecha));
+  const susEntradas = entradas.filter((e) => {
+    const clave = claveDeEntrada(e);
+    return clave !== null && enRango(clave.slice(0, 10));
+  });
+  const medida = medirBoton(susPartes, susEntradas);
+
+  // La última clase dada que se abrió con el botón, con la misma clave
+  // que usa `medirBoton` para casar un clic con su parte.
+  const dadas = new Set(susPartes.filter((p) => TIPOS_DADA.has(p.tipo) && p.hora).map((p) => `${p.alumnoId}|${claveDeParte(p.fecha, p.hora as string)}`));
+  const ultima = new Map<string, string>();
+  for (const e of susEntradas) {
+    const clave = claveDeEntrada(e) as string;
+    if (!dadas.has(`${e.alumno_id}|${clave}`)) continue;
+    const ya = ultima.get(e.alumno_id);
+    if (!ya || clave > ya) ultima.set(e.alumno_id, clave);
+  }
+
+  const porAlumno: Record<string, ClaseDelAlumno> = {};
+  for (const [id, c] of Object.entries(medida.porAlumno)) {
+    porAlumno[id] = { clases: c.clases, conEntrada: c.conEntrada, ultima: ultima.get(id) ?? null };
+  }
   return {
     clases: medida.clases,
     clasesConEntrada: medida.clasesConEntrada,
     alumnos: medida.alumnos,
     alumnosConEntrada: medida.alumnosConEntrada,
+    porAlumno,
   };
 }

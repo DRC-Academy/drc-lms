@@ -1,28 +1,32 @@
 // ---------------------------------------------------------------
 // LOS DATOS DEL PANEL DEL EQUIPO, POR RANGO DE FECHAS
 //
-// Sustituyó a `cargarPanel` (el panel antiguo, `lib/admin-servidor.ts`,
-// ya borrado): cualquier rango de días, comparado con el periodo
-// anterior de la misma duración. Todo se lee aquí, en el servidor, y lo
-// que sale es un objeto plano que la página pasa por props.
+// El panel responde, por orden de importancia:
+//   1. ¿Quién entra a clase con el botón? Alumnos con alguna clase dada
+//      en el rango que abrieron al menos una con «Ingresar a clase», y
+//      clases dadas abiertas así. Con la lista de alumnos.
+//   2. Accesos a la plataforma.
+//   3. Quién, con plan activo hoy, no ha accedido nunca.
+//   4. Dos indicadores pequeños: practicaron, y práctica con IA o banco.
+// Y un gráfico semana a semana de 1 y de 2. Todo comparado con el periodo
+// anterior de la misma duración, salvo 3, que no depende de fechas.
 //
 // DE DÓNDE SALE CADA COSA
-//   · LMS, con las funciones de `supabase/lms-panel-metricas.sql`: series,
-//     totales, embudo, primer bloque, eventos, el top de cursos y las
-//     cifras por alumno. Los alumnos ÚNICOS se cuentan allí, nunca aquí.
+//   · LMS, con las funciones de `supabase/panel-metricas.sql`: accesos,
+//     practicaron y bloques (`panel_cifras`), quién nunca accedió
+//     (`panel_nunca_accedieron`) y desde cuándo hay datos. Los alumnos
+//     ÚNICOS se cuentan allí, nunca aquí.
 //   · Gestión, solo vistas y con el cliente de solo lectura: las fichas
-//     (y quién tiene plan activo), las clases nuevas de cada semana y los
-//     partes de clase.
+//     (nombre, profesor, alta, plan activo hoy) y los partes de clase.
+//   · Las entradas a clase se cruzan con los partes aquí (`medirClase`),
+//     porque viven en bases distintas.
 //   · Quién no cuenta lo decide la base del LMS (`metricas_excluido`), y
 //     las listas que vienen de Gestión pasan por `metricas_quitar_excluidos`.
 //     No hay ninguna regla de exclusión en este archivo.
 //
-// LAS DOS POBLACIONES. El volumen —bloques, lecciones, entradas, visitas,
-// eventos— es de todos menos los excluidos: es uso real de la plataforma
-// tenga el alumno plan o no. Las proporciones sobre «alumnos con plan
-// activo» y el embudo se ciñen a esos alumnos (`totalesPlan`, `embudo`),
-// para que cada escalón quede dentro del anterior. El plan activo es el
-// de HOY: en rangos viejos, quien tenía plan entonces y ya no, no está.
+// Ninguna cifra depende del plan que tenía cada alumno en el periodo:
+// Gestión no guarda cuándo terminó cada plan. Solo «nunca accedieron»
+// usa el plan, y es el de HOY.
 //
 // LO QUE NO SE PUDO LEER va a null y su nombre a `fallos`. Un null se
 // pinta como «no se ha podido leer», nunca como un cero.
@@ -33,19 +37,14 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { baseLms } from "@/lib/supabase-lms";
-import { alumnosParaMetricas, clasesNuevasEntre, partesDeClase } from "@/lib/gestion";
+import { alumnosDeProfesor, alumnosParaMetricas, partesDeClase } from "@/lib/gestion";
 import { entradasConClaseEntre } from "@/lib/entradas-clase-servidor";
 import { diaLocal, sumarDias } from "@/lib/fechas";
-import { granularidadDe, lunesDe, rangoAnterior, type Granularidad, type Rango } from "@/lib/panel-rango";
-import {
-  alumnosQuePodian,
-  disponibilidad,
-  medirClase,
-  periodosDelRango,
-  recortar,
-  type Disponibilidad,
-  type ResumenClase,
-} from "@/lib/panel-calculos";
+import { rangoAnterior, rangoGrafico, type Rango } from "@/lib/panel-rango";
+import { disponibilidad, medirClase, recortar, semanasDelRango, type Disponibilidad, type Periodo, type ResumenClase } from "@/lib/panel-calculos";
+
+/** El profesor de prueba de Gestión: sus alumnos son cuentas del equipo. */
+export const PROFESOR_DE_PRUEBA = "t1";
 
 // ---------------------------------------------------------------
 // LO QUE DEVUELVE
@@ -54,125 +53,57 @@ import {
 /** El periodo actual y el anterior de la misma duración. */
 export type Comparado<T> = { actual: T; anterior: T };
 
-/** Una fila de `panel_serie` / `panel_totales`, en camelCase. */
-export type FilaPanel = {
+/** Una fila de `panel_cifras`, en camelCase. */
+export type Cifras = {
   periodo: string;
   periodoDesde: string;
   periodoHasta: string;
-  /** Alumnos únicos con cualquier actividad, también entrar. */
-  activos: number;
-  /** Alumnos únicos con lección, ejercicio o bloque. */
-  hicieronAlgo: number;
-  /** Accesos totales (visitas). Desde la instrumentación. */
+  /** Visitas totales y alumnos únicos con alguna. Desde el 20 oct 2026. */
   accesos: number;
   accesosAlumnos: number;
-  /** Entradas a clase totales y sus alumnos únicos. Desde el 13 oct 2026. */
-  entradas: number;
-  entradasAlumnos: number;
-  /** Alumnos únicos que generaron un bloque. */
-  generaron: number;
+  /** Alumnos únicos con lección, intento de ejercicio de lección o bloque generado. */
+  practicaron: number;
   bloques: number;
   bloquesIa: number;
   bloquesBanco: number;
-  /** Por pantalla. Desde la instrumentación; lo anterior va a «sin pantalla». */
-  bloquesInicio: number;
-  bloquesParaTi: number;
-  bloquesSinPantalla: number;
-  /** De los generados en el periodo, los terminados alguna vez. */
-  completados: number;
-  completadosIa: number;
-  completadosBanco: number;
-  completadosInicio: number;
-  completadosParaTi: number;
-  completadosSinPantalla: number;
-  leccionesAlumnos: number;
-  lecciones: number;
-  ejerciciosAlumnos: number;
-  ejercicios: number;
 };
 
-export type Embudo = {
-  /** Con plan activo y alguna actividad. */
-  entraron: number;
-  hicieronAlgo: number;
-  /** Hicieron algo en al menos dos periodos (días o semanas) distintos. */
-  volvieron: number;
-  /** Cuántos periodos tiene el rango: con uno solo no se puede volver. */
-  periodos: number;
-};
-
-export type FilaEvento = {
-  tipo: string;
-  /** La pregunta, la pantalla o el motivo; null en la fila del total del tipo. */
-  detalle: string | null;
-  esTotal: boolean;
-  total: number;
-  alumnos: number;
-};
-
-export type FilaTop = { id: string; titulo: string; curso: string; leccionesCompletadas: number; alumnosUnicos: number };
-
-export type FilaAlumno = {
+/** Una fila de la lista del bloque «Entrar a clase». */
+export type FilaClase = {
   alumnoId: string;
+  /** Vacío si el alumno no tiene ficha en Gestión. */
   nombre: string;
   profesor: string;
-  activo: boolean;
-  /** Última actividad en la plataforma, de siempre (ISO), o null si nunca. */
-  ultimaActividad: string | null;
-  /** En el rango. */
-  entradas: number;
-  bloques: number;
-  lecciones: number;
+  clases: number;
+  conEntrada: number;
+  /** La última clase abierta con el botón en el rango, "AAAA-MM-DDTHH:MM". */
+  ultima: string | null;
 };
 
-export type PeriodoClase = {
-  periodo: string;
-  desde: string;
-  hasta: string;
-  /** Null si el periodo cae entero antes del primer clic. */
-  resumen: ResumenClase | null;
-};
+export type FilaNunca = { alumnoId: string; nombre: string; profesor: string; fechaInicio: string | null };
 
-/**
- * De qué depende cada cifra:
- *   siempre          hay datos desde que abrió la plataforma.
- *   entradasClase    `entradas`, `entradasAlumnos` y `clase`.
- *   instrumentacion  `accesos`, `accesosAlumnos`, los `*Inicio`/`*ParaTi`
- *                    de bloques y completados, y `eventos`.
- *
- * `activos` es «siempre», pero CAMBIA DE MÉTODO con la instrumentación:
- * antes salía de inicios de sesión y actividad; desde entonces cuenta
- * también a quien entra y no hace nada. Un rango que cruza esa fecha
- * sube en el tramo nuevo sin que haya más alumnos.
- */
-export type Fuente = "entradasClase" | "instrumentacion";
+export type Fuente = "entradasClase" | "accesos";
 
 export type MetricasPanel = {
   rango: Rango;
   anterior: Rango;
-  granularidad: Granularidad;
   calculadoEn: string;
-  disponibilidad: Record<Fuente, Comparado<Disponibilidad>> | null;
-  /** El primer día con datos de cada fuente, para decidir periodo a periodo. */
+  /** El primer día con datos de cada fuente, o null si aún no hay. Null entero si no se pudo leer. */
   inicioDatos: Record<Fuente, string | null> | null;
-  /** Con plan activo hoy, y con ficha en Gestión (sin excluidos). */
-  alumnos: { conPlan: number; conFicha: number } | null;
-  /** Todos menos los excluidos. */
-  totales: Comparado<FilaPanel> | null;
-  /** Solo los que hoy tienen plan activo. */
-  totalesPlan: Comparado<FilaPanel> | null;
-  serie: FilaPanel[] | null;
-  /** Dentro del plan activo. El primer escalón es `alumnos.conPlan`. */
-  embudo: Comparado<Embudo> | null;
-  /** Tenían una clase analizada nueva en el rango, y de ellos cuántos generaron. */
-  podianGenerar: Comparado<{ podian: number; generaron: number }> | null;
-  /** Generaron su primer bloque en el rango, y de ellos cuántos lo terminaron. */
-  primerBloque: Comparado<{ primeros: number; completaron: number }> | null;
-  /** Null dentro: ese periodo no tiene datos (antes del 13 oct). */
-  clase: { actual: ResumenClase | null; anterior: ResumenClase | null; serie: PeriodoClase[] } | null;
-  eventos: Comparado<FilaEvento[]> | null;
-  top: { cursos: FilaTop[]; modulos: FilaTop[] } | null;
-  tabla: FilaAlumno[] | null;
+  disponibilidad: Record<Fuente, Comparado<Disponibilidad>> | null;
+  /** Entrar a clase. Null dentro: ese periodo cae entero antes del 13 oct. */
+  clase: Comparado<ResumenClase | null> | null;
+  /** La lista del bloque 1: una fila por alumno con clase dada en el rango. */
+  listaClase: FilaClase[] | null;
+  cifras: Comparado<Cifras> | null;
+  /** Las semanas del gráfico (`rangoGrafico`). */
+  semanas: Periodo[];
+  /** Por semana del gráfico. Null dentro: esa semana no tiene datos. */
+  grafico: { clase: (ResumenClase | null)[]; accesos: (number | null)[] } | null;
+  /** Con plan activo hoy y sin ningún inicio de sesión ni acceso, nunca. */
+  nunca: { conPlan: number; alumnos: FilaNunca[] } | null;
+  /** Para el pie: cuántas cuentas se excluyen y cuáles del profesor de prueba no. */
+  exclusiones: { cuentas: number; sinExcluir: { alumnoId: string; nombre: string }[] | null } | null;
   /** Lo que no se pudo leer. Vacío = todo bien. */
   fallos: string[];
 };
@@ -191,74 +122,20 @@ async function rpc<T>(nombre: string, parametros: Record<string, unknown>): Prom
   return (data ?? []) as T[];
 }
 
-/** Igual, por tramos de 1000: para las que devuelven una fila por alumno. */
-async function rpcPaginada<T>(nombre: string, parametros: Record<string, unknown>): Promise<T[] | null> {
-  const PAGINA = 1000;
-  const filas: T[] = [];
-  for (let desde = 0; ; desde += PAGINA) {
-    const { data, error } = await baseLms().rpc(nombre, parametros).range(desde, desde + PAGINA - 1);
-    if (error) {
-      console.error(`[panel] ${nombre}:`, error.message);
-      return null;
-    }
-    const pagina = (data ?? []) as T[];
-    filas.push(...pagina);
-    if (pagina.length < PAGINA) return filas;
-  }
-}
-
 const aCamel = (clave: string) => clave.replace(/_([a-z])/g, (_, letra: string) => letra.toUpperCase());
 
 /** Una fila de la base con las claves en camelCase y los números como números. */
-function aFilaPanel(fila: Record<string, unknown>): FilaPanel {
+function aCifras(fila: Record<string, unknown>): Cifras {
   const salida: Record<string, unknown> = {};
   for (const [clave, valor] of Object.entries(fila)) {
-    salida[aCamel(clave)] = typeof valor === "number" || clave.startsWith("periodo") ? valor : Number(valor);
+    salida[aCamel(clave)] = clave.startsWith("periodo") ? valor : Number(valor);
   }
-  return salida as FilaPanel;
+  return salida as Cifras;
 }
 
-const params = (rango: Rango, extra: Record<string, unknown> = {}) => ({
-  p_desde: rango.desde,
-  p_hasta: rango.hasta,
-  ...extra,
-});
-
-async function totales(rango: Rango, alumnos?: string[]): Promise<FilaPanel | null> {
-  const filas = await rpc<Record<string, unknown>>("panel_totales", params(rango, alumnos ? { p_alumnos: alumnos } : {}));
-  return filas && filas[0] ? aFilaPanel(filas[0]) : null;
-}
-
-async function embudo(rango: Rango, granularidad: Granularidad, alumnos: string[]): Promise<Embudo | null> {
-  const filas = await rpc<{ entraron: number; hicieron_algo: number; volvieron: number; periodos: number }>(
-    "panel_embudo",
-    params(rango, { p_granularidad: granularidad, p_alumnos: alumnos })
-  );
-  const f = filas?.[0];
-  return f ? { entraron: f.entraron, hicieronAlgo: f.hicieron_algo, volvieron: f.volvieron, periodos: f.periodos } : null;
-}
-
-async function primerBloque(rango: Rango): Promise<{ primeros: number; completaron: number } | null> {
-  const filas = await rpc<{ primeros: number; completaron: number }>("panel_primer_bloque", params(rango));
-  return filas?.[0] ?? null;
-}
-
-async function eventos(rango: Rango): Promise<FilaEvento[] | null> {
-  const filas = await rpc<{ tipo: string; detalle: string | null; es_total: boolean; total: number; alumnos: number }>(
-    "panel_eventos",
-    params(rango)
-  );
-  return filas ? filas.map((f) => ({ tipo: f.tipo, detalle: f.detalle, esTotal: f.es_total, total: f.total, alumnos: f.alumnos })) : null;
-}
-
-async function top(rango: Rango, agrupar: "curso" | "modulo"): Promise<FilaTop[] | null> {
-  const filas = await rpc<{ id: string; titulo: string; curso: string; lecciones_completadas: number; alumnos_unicos: number }>(
-    "panel_top",
-    params(rango, { p_agrupar: agrupar, p_limite: 5 })
-  );
-  return filas
-    ? filas.map((f) => ({ id: f.id, titulo: f.titulo, curso: f.curso, leccionesCompletadas: f.lecciones_completadas, alumnosUnicos: f.alumnos_unicos }))
-    : null;
+async function cifras(rango: Rango, granularidad: "semana" | "total"): Promise<Cifras[] | null> {
+  const filas = await rpc<Record<string, unknown>>("panel_cifras", { p_desde: rango.desde, p_hasta: rango.hasta, p_granularidad: granularidad });
+  return filas ? filas.map(aCifras) : null;
 }
 
 /** Fuente → primer día con datos (Madrid), o null si aún no hay. */
@@ -269,21 +146,32 @@ async function inicioDeDatos(): Promise<Record<Fuente, string | null> | null> {
     const desde = filas.find((f) => f.fuente === fuente)?.desde;
     return desde ? diaLocal(new Date(desde)) : null;
   };
-  return { entradasClase: dia("entradas_clase"), instrumentacion: dia("instrumentacion") };
+  return { entradasClase: dia("entradas_clase"), accesos: dia("accesos") };
 }
 
 async function quitarExcluidos(ids: string[]): Promise<Set<string> | null> {
-  const { data, error } = await baseLms().rpc("metricas_quitar_excluidos", { p_alumnos: ids });
+  const filas = await rpc<string>("metricas_quitar_excluidos", { p_alumnos: ids });
+  return filas ? new Set(filas) : null;
+}
+
+/** La función devuelve un `text[]`: PostgREST lo da como un array. */
+async function nuncaAccedieron(ids: string[]): Promise<Set<string> | null> {
+  const filas = await rpc<string>("panel_nunca_accedieron", { p_alumnos: ids });
+  return filas ? new Set(filas) : null;
+}
+
+async function cuantasExcluidas(): Promise<number | null> {
+  const { count, error } = await baseLms().from("metricas_excluidos").select("alumno_id", { count: "exact", head: true });
   if (error) {
-    console.error("[panel] metricas_quitar_excluidos:", error.message);
+    console.error("[panel] metricas_excluidos:", error.message);
     return null;
   }
-  return new Set((data ?? []) as string[]);
+  return count ?? 0;
 }
 
 /**
- * Partes de Gestión y clics del LMS de los días con datos de los dos
- * rangos, en una lectura. Sin recortar exclusiones todavía.
+ * Partes de Gestión y clics del LMS de los días con datos de todos los
+ * trozos, en una lectura. Sin recortar exclusiones todavía.
  */
 async function leerClases(trozos: Rango[]) {
   if (trozos.length === 0) return { partes: [], entradas: [] };
@@ -299,7 +187,8 @@ async function leerClases(trozos: Rango[]) {
 
 async function calcular(rango: Rango): Promise<MetricasPanel> {
   const anterior = rangoAnterior(rango);
-  const granularidad = granularidadDe(rango);
+  const grafico = rangoGrafico(rango);
+  const semanas = semanasDelRango(grafico);
   const fallos: string[] = [];
   const anotar = <T>(nombre: string, valor: T | null): T | null => {
     if (valor === null) fallos.push(nombre);
@@ -308,64 +197,39 @@ async function calcular(rango: Rango): Promise<MetricasPanel> {
 
   // --- Primera tanda: todo lo que no depende de nada ---
   const inicioP = inicioDeDatos();
+  // Los partes, solo desde el primer clic: antes no hay nada que cruzar.
   const clasesP = inicioP.then((inicio) =>
     inicio
-      ? leerClases([recortar(anterior, inicio.entradasClase), recortar(rango, inicio.entradasClase)].filter((t): t is Rango => t !== null))
+      ? leerClases([anterior, rango, grafico].map((r) => recortar(r, inicio.entradasClase)).filter((t): t is Rango => t !== null))
       : null
   );
 
-  const [inicio, lecturaClases, fichas, nuevas, serie, totAct, totAnt, priAct, priAnt, evAct, evAnt, cursos, modulos, porAlumno] =
-    await Promise.all([
-      inicioP,
-      clasesP,
-      alumnosParaMetricas(),
-      clasesNuevasEntre(lunesDe(anterior.desde), sumarDias(rango.hasta, 1)),
-      rpc<Record<string, unknown>>("panel_serie", params(rango, { p_granularidad: granularidad })),
-      totales(rango),
-      totales(anterior),
-      primerBloque(rango),
-      primerBloque(anterior),
-      eventos(rango),
-      eventos(anterior),
-      top(rango, "curso"),
-      top(rango, "modulo"),
-      rpcPaginada<{ alumno_id: string; ultima_actividad: string | null; entradas: number; bloques: number; lecciones: number }>(
-        "panel_alumnos",
-        params(rango)
-      ),
-    ]);
+  const [inicio, lecturaClases, fichas, totAct, totAnt, serie, delT1, excluidas] = await Promise.all([
+    inicioP,
+    clasesP,
+    alumnosParaMetricas(),
+    cifras(rango, "total"),
+    cifras(anterior, "total"),
+    cifras(grafico, "semana"),
+    alumnosDeProfesor(PROFESOR_DE_PRUEBA),
+    cuantasExcluidas(),
+  ]);
 
   // --- Quién cuenta, de lo que viene de Gestión: una sola pregunta a la base ---
   const idsDeFuera = new Set<string>();
   for (const f of fichas ?? []) idsDeFuera.add(f.alumnoId);
-  for (const n of nuevas ?? []) idsDeFuera.add(n.alumnoId);
   for (const p of lecturaClases?.partes ?? []) idsDeFuera.add(p.alumnoId);
   for (const e of lecturaClases?.entradas ?? []) idsDeFuera.add(e.alumno_id);
+  for (const a of delT1 ?? []) idsDeFuera.add(a.alumnoId);
   const cuentan = idsDeFuera.size > 0 ? await quitarExcluidos(Array.from(idsDeFuera)) : new Set<string>();
 
   const fichasQueCuentan = fichas && cuentan ? fichas.filter((f) => cuentan.has(f.alumnoId)) : null;
-  const conPlan = fichasQueCuentan ? fichasQueCuentan.filter((f) => f.activo).map((f) => f.alumnoId) : null;
+  const conPlan = fichasQueCuentan ? fichasQueCuentan.filter((f) => f.activo) : null;
+  const sinAcceso = conPlan ? await nuncaAccedieron(conPlan.map((f) => f.alumnoId)) : null;
 
-  const podian =
-    nuevas && cuentan
-      ? {
-          actual: Array.from(alumnosQuePodian(nuevas, rango)).filter((id) => cuentan.has(id)),
-          anterior: Array.from(alumnosQuePodian(nuevas, anterior)).filter((id) => cuentan.has(id)),
-        }
-      : null;
-
-  // --- Segunda tanda: lo que se ciñe a una lista de alumnos ---
-  const [planAct, planAnt, embAct, embAnt, genAct, genAnt] = await Promise.all([
-    conPlan ? totales(rango, conPlan) : null,
-    conPlan ? totales(anterior, conPlan) : null,
-    conPlan ? embudo(rango, granularidad, conPlan) : null,
-    conPlan ? embudo(anterior, granularidad, conPlan) : null,
-    podian ? totales(rango, podian.actual) : null,
-    podian ? totales(anterior, podian.anterior) : null,
-  ]);
-
-  // --- Clases con entrada por el botón ---
-  let clase: MetricasPanel["clase"] = null;
+  // --- Entrar a clase ---
+  let clase: Comparado<ResumenClase | null> | null = null;
+  let claseGrafico: (ResumenClase | null)[] | null = null;
   if (inicio && lecturaClases && cuentan) {
     const partes = lecturaClases.partes.filter((p) => cuentan.has(p.alumnoId));
     const entradas = lecturaClases.entradas.filter((e) => cuentan.has(e.alumno_id));
@@ -373,29 +237,29 @@ async function calcular(rango: Rango): Promise<MetricasPanel> {
       const trozo = recortar(r, inicio.entradasClase);
       return trozo ? medirClase(partes, entradas, trozo) : null;
     };
-    clase = {
-      actual: medir(rango),
-      anterior: medir(anterior),
-      serie: periodosDelRango(rango, granularidad).map((p) => ({ ...p, resumen: medir({ desde: p.desde, hasta: p.hasta }) })),
-    };
+    clase = { actual: medir(rango), anterior: medir(anterior) };
+    claseGrafico = semanas.map((s) => medir({ desde: s.desde, hasta: s.hasta }));
   }
 
-  // --- La tabla: una fila por alumno con ficha, tenga actividad o no ---
-  const delLms = new Map((porAlumno ?? []).map((f) => [f.alumno_id, f]));
-  const tabla: FilaAlumno[] | null =
-    fichasQueCuentan && porAlumno
-      ? fichasQueCuentan.map((f) => {
-          const suyo = delLms.get(f.alumnoId);
-          return {
-            alumnoId: f.alumnoId,
-            nombre: f.nombre,
-            profesor: f.profesor,
-            activo: f.activo,
-            ultimaActividad: suyo?.ultima_actividad ?? null,
-            entradas: suyo?.entradas ?? 0,
-            bloques: suyo?.bloques ?? 0,
-            lecciones: suyo?.lecciones ?? 0,
-          };
+  const ficha = new Map((fichas ?? []).map((f) => [f.alumnoId, f]));
+  const listaClase: FilaClase[] | null =
+    clase && fichas
+      ? Object.entries(clase.actual?.porAlumno ?? {}).map(([alumnoId, c]) => ({
+          alumnoId,
+          nombre: ficha.get(alumnoId)?.nombre ?? "",
+          profesor: ficha.get(alumnoId)?.profesor ?? "",
+          clases: c.clases,
+          conEntrada: c.conEntrada,
+          ultima: c.ultima,
+        }))
+      : null;
+
+  // --- Accesos en el gráfico: null en las semanas sin datos ---
+  const accesosGrafico =
+    serie && inicio
+      ? semanas.map((s) => {
+          if (inicio.accesos === null || inicio.accesos > s.hasta) return null;
+          return serie.find((f) => f.periodo === s.periodo)?.accesos ?? 0;
         })
       : null;
 
@@ -405,36 +269,36 @@ async function calcular(rango: Rango): Promise<MetricasPanel> {
   return {
     rango,
     anterior,
-    granularidad,
     calculadoEn: new Date().toISOString(),
-    disponibilidad: anotar(
-      "inicio de los datos",
-      inicio
+    inicioDatos: anotar("inicio de los datos", inicio),
+    disponibilidad: inicio
+      ? {
+          entradasClase: { actual: disponibilidad(inicio.entradasClase, rango), anterior: disponibilidad(inicio.entradasClase, anterior) },
+          accesos: { actual: disponibilidad(inicio.accesos, rango), anterior: disponibilidad(inicio.accesos, anterior) },
+        }
+      : null,
+    clase: anotar("clases con entrada", clase),
+    listaClase: anotar("lista de alumnos con clase", listaClase),
+    cifras: ambos("accesos y práctica", totAct?.[0] ?? null, totAnt?.[0] ?? null),
+    semanas,
+    grafico: anotar("gráfico", claseGrafico && accesosGrafico ? { clase: claseGrafico, accesos: accesosGrafico } : null),
+    nunca: anotar(
+      "nunca accedieron",
+      conPlan && sinAcceso
         ? {
-            entradasClase: { actual: disponibilidad(inicio.entradasClase, rango), anterior: disponibilidad(inicio.entradasClase, anterior) },
-            instrumentacion: { actual: disponibilidad(inicio.instrumentacion, rango), anterior: disponibilidad(inicio.instrumentacion, anterior) },
+            conPlan: conPlan.length,
+            alumnos: conPlan
+              .filter((f) => sinAcceso.has(f.alumnoId))
+              .map((f) => ({ alumnoId: f.alumnoId, nombre: f.nombre, profesor: f.profesor, fechaInicio: f.fechaInicio })),
           }
         : null
     ),
-    inicioDatos: inicio,
-    alumnos: anotar(
-      "alumnos de Gestión",
-      fichasQueCuentan && conPlan ? { conPlan: conPlan.length, conFicha: fichasQueCuentan.length } : null
+    // Sin `profesor_id` en Gestión no se sabe quién es de t1: se dice,
+    // pero no cuenta como fallo del panel.
+    exclusiones: anotar(
+      "cuentas excluidas",
+      excluidas !== null ? { cuentas: excluidas, sinExcluir: delT1 && cuentan ? delT1.filter((a) => cuentan.has(a.alumnoId)) : null } : null
     ),
-    totales: ambos("totales", totAct, totAnt),
-    totalesPlan: ambos("totales del plan activo", planAct, planAnt),
-    serie: anotar("serie", serie ? serie.map(aFilaPanel) : null),
-    embudo: ambos("embudo", embAct, embAnt),
-    podianGenerar: ambos(
-      "podían generar",
-      podian && genAct ? { podian: podian.actual.length, generaron: genAct.generaron } : null,
-      podian && genAnt ? { podian: podian.anterior.length, generaron: genAnt.generaron } : null
-    ),
-    primerBloque: ambos("primer bloque", priAct, priAnt),
-    clase: anotar("clases con entrada", clase),
-    eventos: ambos("eventos", evAct, evAnt),
-    top: anotar("top de cursos", cursos && modulos ? { cursos, modulos } : null),
-    tabla: anotar("tabla de alumnos", tabla),
     fallos,
   };
 }
@@ -470,3 +334,35 @@ export async function cargarMetricas(rango: Rango): Promise<MetricasPanel> {
 
 /** Sin caché: para scripts y pruebas. */
 export const calcularMetricas = calcular;
+
+// ---------------------------------------------------------------
+// LA LISTA DE EXCLUSIONES (/exclusiones)
+// ---------------------------------------------------------------
+
+export type CuentaExcluida = { alumnoId: string; nombre: string | null; motivo: string; desde: string | null };
+
+export type Exclusiones = {
+  cuentas: CuentaExcluida[] | null;
+  /** Del profesor de prueba y sin excluir. Null: no se pudo comprobar. */
+  sinExcluir: { alumnoId: string; nombre: string }[] | null;
+};
+
+/** Sin caché: la página se mira poco y tiene que reflejar un alta recién hecha. */
+export async function cargarExclusiones(): Promise<Exclusiones> {
+  const [lista, fichas, delT1] = await Promise.all([
+    baseLms()
+      .from("metricas_excluidos")
+      .select("alumno_id, motivo, creado_en")
+      .order("creado_en", { ascending: true })
+      .returns<{ alumno_id: string; motivo: string; creado_en: string | null }[]>(),
+    alumnosParaMetricas(),
+    alumnosDeProfesor(PROFESOR_DE_PRUEBA),
+  ]);
+  if (lista.error) console.error("[panel] metricas_excluidos:", lista.error.message);
+  const nombre = new Map((fichas ?? []).map((f) => [f.alumnoId, f.nombre]));
+  const cuentas = lista.error
+    ? null
+    : (lista.data ?? []).map((f) => ({ alumnoId: f.alumno_id, nombre: nombre.get(f.alumno_id) ?? null, motivo: f.motivo, desde: f.creado_en }));
+  const cuentan = delT1 && delT1.length > 0 ? await quitarExcluidos(delT1.map((a) => a.alumnoId)) : new Set<string>();
+  return { cuentas, sinExcluir: delT1 && cuentan ? delT1.filter((a) => cuentan.has(a.alumnoId)) : null };
+}

@@ -51,7 +51,9 @@
 -- (`gestion-vista-perfil-estado.sql`, `gestion-vista-profesores.sql`).
 -- Si alguien las ha cambiado en Gestión desde entonces, este `create or
 -- replace` desharía ese cambio. Esperado (desde el 07/10/2026):
--- vista_perfil_alumno 25 y vista_profesores 2. Si no cuadra,
+-- vista_perfil_alumno 25 (26 si ya se ejecutó la PARTE A de
+-- `panel-metricas.sql`, que añade `profesor_id` en la misma columna
+-- que este archivo) y vista_profesores 2. Si no cuadra,
 -- PARA y avísame. La segunda consulta enseña la definición de verdad de
 -- la vista de perfiles, para compararla con la del PASO 2 si hay dudas.
 -- ---------------------------------------------------------------

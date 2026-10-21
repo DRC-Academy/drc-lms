@@ -150,38 +150,6 @@ export function Delta({
   );
 }
 
-/** Una cifra suelta sobre fondo apagado: número grande y qué es. */
-export function Cifra({ n, texto }: { n: ReactNode; texto: ReactNode }) {
-  return (
-    <div className="min-w-0 rounded-[10px] bg-[#F7F9F7] px-[9px] py-2 sm:px-3 sm:py-2.5">
-      <div className="text-[20px] font-semibold leading-[1.1] tabular-nums text-marca-tinta sm:text-[24px]">{n}</div>
-      <div className="mt-[3px] text-[12.5px] leading-[1.35] text-marca-tintaMedia">{texto}</div>
-    </div>
-  );
-}
-
-export function LineaDato({ izq, der }: { izq: ReactNode; der: ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 border-marca-nieblaOscura py-1.5 text-[14px] [&+&]:border-t">
-      <span className="text-marca-tintaMedia">{izq}</span>
-      <span className="whitespace-nowrap text-right font-semibold tabular-nums text-marca-tinta">{der}</span>
-    </div>
-  );
-}
-
-export function Leyenda({ nombres, colores }: { nombres: string[]; colores: readonly string[] }) {
-  return (
-    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-marca-tintaMedia">
-      {nombres.map((n, i) => (
-        <span key={n} className="inline-flex items-center gap-1.5">
-          <i aria-hidden className="inline-block h-2.5 w-2.5 flex-none rounded-[3px]" style={{ background: colores[i] }} />
-          {n}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 /** «Ver como tabla», debajo de cada gráfico. */
 export function TablaVista({ cabeceras, filas }: { cabeceras: string[]; filas: ReactNode[][] }) {
   return (
@@ -258,6 +226,14 @@ export function ErrorLectura({ que, conValor = false }: { que: string; conValor?
   );
 }
 
-export function Aclaracion({ children }: { children: ReactNode }) {
-  return <p className="mt-3 max-w-[72ch] text-pretty text-[12.5px] leading-[1.5] text-marca-grisSuave">{children}</p>;
+/** «Cómo se calcula», cerrado: la definición exacta, en llano. */
+export function ComoSeCalcula({ children }: { children: ReactNode }) {
+  return (
+    <details className="mt-3 text-[13px]">
+      <summary className="w-max cursor-pointer rounded font-medium text-marca-verdeOsc hover:text-marca-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verde">
+        Cómo se calcula
+      </summary>
+      <div className="mt-2 max-w-[72ch] space-y-1.5 text-pretty leading-[1.5] text-marca-tintaMedia">{children}</div>
+    </details>
+  );
 }

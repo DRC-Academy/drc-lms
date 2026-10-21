@@ -257,13 +257,6 @@ const ULTIMA_CLASE =
  *
  * Fuera quedan `review` —esperando revisión— y `rejected`, que es una
  * clase que alguien miró y descartó.
- *
- * ⚠ ESTE FILTRO ESTÁ DUPLICADO EN GESTIÓN, junto con el `analysis_status
- * = 'ready'` de `obtenerUltimaClase` e `historialDeClases`: la vista `vista_clases_nuevas_semana`
- * (`supabase/gestion-vista-clases-nuevas.sql`) lo repite en SQL para
- * contar qué alumnos podían generar práctica cada semana. Si cambia
- * aquí, cambia allí; si no, el panel contaría como «podía generar» a
- * quien el LMS no deja, o al revés.
  */
 const VALIDACION_ACEPTADA = ["approved", "auto_approved", "ok"] as const;
 
@@ -1265,11 +1258,13 @@ export type AlumnoMetricas = {
   profesor: string;
   /** Plan activo en Gestión: `estado_asignacion = 'active'`. */
   activo: boolean;
+  /** El alta, "AAAA-MM-DD", o null si Gestión no la tiene. */
+  fechaInicio: string | null;
 };
 
 /**
  * Todos los alumnos con ficha, con su estado de plan, por tramos. Null
- * si falla un tramo. Sin filtrar la demo ni la cuenta de pruebas: eso lo
+ * si falla un tramo. Sin filtrar la demo ni las cuentas de prueba: eso lo
  * hace la base del LMS (`metricas_quitar_excluidos`), que es la única
  * lista.
  */
@@ -1277,7 +1272,7 @@ export async function alumnosParaMetricas(): Promise<AlumnoMetricas[] | null> {
   const filas: Fila[] = [];
   for (let desde = 0; ; desde += PAGINA) {
     const { data, error } = await soloLectura("vista_perfil_alumno")
-      .select("alumno_id, nombre, profesor, estado_asignacion")
+      .select("alumno_id, nombre, profesor, estado_asignacion, fecha_inicio")
       .order("alumno_id", { ascending: true })
       .order(...ORDEN_ESTADO)
       .range(desde, desde + PAGINA - 1)
@@ -1296,49 +1291,35 @@ export async function alumnosParaMetricas(): Promise<AlumnoMetricas[] | null> {
     nombre: comoTexto(fila.nombre),
     profesor: comoTexto(fila.profesor),
     activo: esAsignacionActiva(fila.estado_asignacion),
+    fechaInicio: comoTextoOpcional(fila.fecha_inicio)?.slice(0, 10) ?? null,
   }));
 }
 
-export type ClasesNuevasSemana = {
-  alumnoId: string;
-  /** El lunes, "AAAA-MM-DD". */
-  semana: string;
-  clasesNuevas: number;
-  /** Instantes ISO: la primera y la última de la semana que pasaron a estar disponibles. */
-  primeraDisponibleEn: string;
-  ultimaDisponibleEn: string;
-};
-
 /**
- * Las filas de `vista_clases_nuevas_semana` de las semanas que empiezan
- * entre `primerLunes` (incluido) y `hasta` (excluido), por tramos. Null
- * si falla un tramo.
+ * Los alumnos cuya assignment es de un profesor, por su `teacher_id`.
+ * Lo usa el aviso de cuentas de prueba sin excluir (el profesor de
+ * prueba es `t1`). Necesita `profesor_id` en `vista_perfil_alumno`
+ * (PARTE A de `supabase/panel-metricas.sql`): sin esa columna, o si
+ * falla la lectura, null, y el panel dice que no lo ha podido comprobar.
  */
-export async function clasesNuevasEntre(primerLunes: string, hasta: string): Promise<ClasesNuevasSemana[] | null> {
-  const filas: Fila[] = [];
-  for (let desde = 0; ; desde += PAGINA) {
-    const { data, error } = await soloLectura("vista_clases_nuevas_semana")
-      .select("alumno_id, semana, clases_nuevas, primera_disponible_en, ultima_disponible_en")
-      .gte("semana", primerLunes)
-      .lt("semana", hasta)
-      .order("semana", { ascending: true })
-      .order("alumno_id", { ascending: true })
-      .range(desde, desde + PAGINA - 1)
-      .returns<Fila[]>();
+export async function alumnosDeProfesor(teacherId: string): Promise<{ alumnoId: string; nombre: string }[] | null> {
+  const { data, error } = await soloLectura("vista_perfil_alumno")
+    .select("alumno_id, nombre")
+    .eq("profesor_id", teacherId)
+    .order("alumno_id", { ascending: true })
+    .returns<Fila[]>();
 
-    if (error) {
-      console.error("[gestion] No se pudo leer vista_clases_nuevas_semana:", error.message);
-      return null;
-    }
-    filas.push(...(data ?? []));
-    if ((data ?? []).length < PAGINA) break;
+  if (error) {
+    console.error("[gestion] No se pudieron leer los alumnos del profesor:", error.message);
+    return null;
   }
-
-  return filas.map((fila) => ({
-    alumnoId: comoTexto(fila.alumno_id),
-    semana: comoTexto(fila.semana),
-    clasesNuevas: Number(fila.clases_nuevas) || 0,
-    primeraDisponibleEn: comoTexto(fila.primera_disponible_en),
-    ultimaDisponibleEn: comoTexto(fila.ultima_disponible_en),
-  }));
+  const vistos = new Set<string>();
+  const salida: { alumnoId: string; nombre: string }[] = [];
+  for (const fila of data ?? []) {
+    const id = comoTexto(fila.alumno_id);
+    if (id === "" || vistos.has(id)) continue;
+    vistos.add(id);
+    salida.push({ alumnoId: id, nombre: comoTexto(fila.nombre) });
+  }
+  return salida;
 }

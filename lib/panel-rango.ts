@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------
 // EL RANGO DEL PANEL
 //
-// Qué días mira el panel, cuál es el periodo con el que se compara y si
-// la serie va por días o por semanas. Módulo puro y compartido: lo usan
+// Qué días mira el panel, cuál es el periodo con el que se compara y qué
+// semanas enseña el gráfico. Módulo puro y compartido: lo usan
 // la capa de datos (`lib/panel-metricas.ts`) y el selector de fechas.
 //
 // LAS REGLAS:
@@ -14,7 +14,8 @@
 //     cumple las reglas —también una fecha mal escrita en la URL— da el
 //     rango por defecto, no un error.
 //   · El periodo anterior dura lo mismo y acaba el día antes.
-//   · Hasta 31 días la serie va por días; con más, por semanas.
+//   · El gráfico va siempre por semanas: las 12 que acaban en la del
+//     final del rango, o el rango entero si tiene más.
 // ---------------------------------------------------------------
 
 import { sumarDias } from "@/lib/fechas";
@@ -22,13 +23,11 @@ import { sumarDias } from "@/lib/fechas";
 /** Días "AAAA-MM-DD" de Madrid, los dos incluidos. */
 export type Rango = { desde: string; hasta: string };
 
-export type Granularidad = "dia" | "semana";
-
 /** 12 meses, con el bisiesto dentro. */
 export const DIAS_MAXIMOS = 366;
 
-/** Hasta aquí la serie va por días. */
-export const DIAS_SERIE_DIARIA = 31;
+/** Semanas del gráfico cuando el rango es más corto. */
+export const SEMANAS_GRAFICO = 12;
 
 const FORMA_DIA = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -55,8 +54,16 @@ export function lunesDe(dia: string): string {
   return sumarDias(dia, -desdeLunes);
 }
 
-export function granularidadDe(rango: Rango): Granularidad {
-  return diasDelRango(rango) <= DIAS_SERIE_DIARIA ? "dia" : "semana";
+/**
+ * Los días del gráfico: semanas enteras desde el lunes, hasta el último
+ * día del rango (la última semana puede quedar a medias). Las 12 que
+ * acaban en la semana de `hasta`, o desde el lunes de `desde` si el
+ * rango es más largo.
+ */
+export function rangoGrafico(rango: Rango): Rango {
+  const doce = sumarDias(lunesDe(rango.hasta), -7 * (SEMANAS_GRAFICO - 1));
+  const lunes = lunesDe(rango.desde);
+  return { desde: lunes < doce ? lunes : doce, hasta: rango.hasta };
 }
 
 /** La última semana completa: de lunes a domingo, la que acabó antes de hoy. */

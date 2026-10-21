@@ -301,7 +301,7 @@ export type MedidaBoton = {
 };
 
 /** "2026-10-12T17:00": el día y la hora de inicio, en Madrid. */
-function claveDeParte(fecha: string, hora: string): string {
+export function claveDeParte(fecha: string, hora: string): string {
   return `${fecha}T${hora}`;
 }
 

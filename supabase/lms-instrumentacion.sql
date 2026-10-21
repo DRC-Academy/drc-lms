@@ -6,7 +6,7 @@
 -- LMS_SUPABASE_URL), NO en el de Gestión. Antes de pulsar «Run»,
 -- comprueba que el ref del proyecto abierto es el de LMS_SUPABASE_URL.
 --
--- ORDEN: este archivo primero; después `lms-panel-metricas.sql`, que
+-- ORDEN: este archivo primero; después `panel-metricas.sql`, que
 -- lee las tablas que se crean aquí.
 --
 -- Idempotente: se puede ejecutar las veces que haga falta. El
@@ -18,7 +18,7 @@
 -- 1. QUIÉN NO CUENTA EN NINGUNA MÉTRICA
 --
 -- Un solo sitio para la lista. Lo leen todas las vistas y funciones del
--- panel (`lms-panel-metricas.sql`) a través de `metricas_excluido()`, y
+-- panel (`panel-metricas.sql`) a través de `metricas_excluido()`, y
 -- el servidor a través de la vista `metricas_excluidos`, que es la que
 -- usa para lo que no se puede calcular aquí dentro (el cruce de
 -- entradas a clase con los partes de Gestión).

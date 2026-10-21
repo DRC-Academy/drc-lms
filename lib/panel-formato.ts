@@ -7,7 +7,7 @@
 // mediodía UTC para que ninguna zona los mueva de día.
 // ---------------------------------------------------------------
 
-import type { Granularidad, Rango } from "@/lib/panel-rango";
+import type { Rango } from "@/lib/panel-rango";
 
 /**
  * Los dos colores de serie, siempre en este orden: la primera serie es
@@ -70,14 +70,12 @@ export function contraQue(anterior: Rango, rango: Rango): string {
   return `vs. ${rangoLegible(anterior, anterior.desde.slice(0, 4) !== rango.hasta.slice(0, 4))}`;
 }
 
-/** El rótulo de un periodo de la serie en el eje: "13 oct", o el lunes de la semana. */
+/** El rótulo de una semana en el eje: su lunes, "12 oct". */
 export function etiquetaPeriodo(periodo: string): string {
   return diaCorto(periodo);
 }
 
-/** El título de un periodo en el tooltip y la tabla: "Martes 13 oct" o "Semana del 12 oct". */
-export function tituloPeriodo(periodo: string, granularidad: Granularidad): string {
-  if (granularidad === "semana") return `Semana del ${diaCorto(periodo)}`;
-  const dia = new Intl.DateTimeFormat("es-ES", { timeZone: "UTC", weekday: "long" }).format(comoFecha(periodo));
-  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${diaCorto(periodo)}`;
+/** El título de una semana en el tooltip y la tabla: "Semana del 12 oct". */
+export function tituloPeriodo(periodo: string): string {
+  return `Semana del ${diaCorto(periodo)}`;
 }
