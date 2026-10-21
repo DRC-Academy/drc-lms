@@ -447,3 +447,45 @@ export function LineaPorcentaje({
     </div>
   );
 }
+
+// ---------------------------------------------------------------
+// LA CHISPA DE LAS TARJETAS
+// ---------------------------------------------------------------
+
+/** La forma de la serie del rango, sin ejes. Lo de antes de tener datos va como línea gris plana. */
+export function Chispa({ valores }: { valores: (number | null)[] }) {
+  const [caja, ancho] = usarAncho<HTMLDivElement>();
+  const H = 38;
+  const pad = 5;
+  const n = valores.length;
+  let svg: ReactNode = null;
+  if (ancho && n > 1) {
+    const W = Math.max(120, ancho);
+    const conDato = valores.filter((v): v is number => v !== null);
+    const max = Math.max(1, ...conDato);
+    const x = (i: number) => pad + (i * (W - 2 * pad)) / (n - 1);
+    const y = (v: number) => H - pad - (v / max) * (H - 2 * pad);
+    const primero = valores.findIndex((v) => v !== null);
+    const puntos = valores.map((v, i) => (v === null ? null : ([x(i), y(v)] as const))).filter((p) => p !== null);
+    const ultimo = valores.length - 1 - [...valores].reverse().findIndex((v) => v !== null);
+    svg = (
+      <svg width={W} height={H} aria-hidden>
+        {primero > 0 && (
+          <line x1={x(0)} x2={x(primero)} y1={H - pad} y2={H - pad} stroke="#E2E8E4" strokeWidth={2} strokeLinecap="round" />
+        )}
+        {puntos.length > 1 && (
+          <path
+            d={puntos.map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join("")}
+            fill="none"
+            stroke={COLOR_SERIE[0]}
+            strokeWidth={2}
+            strokeLinejoin="round"
+          />
+        )}
+        {primero >= 0 && <circle cx={x(ultimo)} cy={y(valores[ultimo] as number)} r={4} fill={COLOR_SERIE[0]} stroke="#fff" strokeWidth={2} />}
+      </svg>
+    );
+  }
+  return <div ref={caja} className="mt-1 h-[38px]" aria-hidden>{svg}</div>;
+}
+

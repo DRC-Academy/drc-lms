@@ -3,8 +3,9 @@
 //
 // Lo que importa, por orden: quién entra a clase con el botón (arriba,
 // con su lista), los accesos, quién no ha entrado nunca, y dos
-// indicadores pequeños de práctica. Debajo, un solo gráfico semana a
-// semana. Nada más: cada cifra tiene su «Cómo se calcula».
+// indicadores pequeños de práctica. Cada bloque lleva su gráfico semana
+// a semana (las 12 semanas que acaban en la del final del rango) y su
+// «Cómo se calcula».
 //
 // LOS ESTADOS. Lo que existía en todo el rango se pinta entero; lo que
 // empezó a apuntarse a mitad, con «datos desde…»; lo que no existía,
@@ -20,10 +21,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Disponibilidad } from "@/lib/panel-calculos";
 import type { Fuente, MetricasPanel } from "@/lib/panel-metricas";
-import { contraQue, diaCorto, etiquetaPeriodo, MUESTRA_MINIMA, numero, porcentaje, tituloPeriodo } from "@/lib/panel-formato";
-import type { PuntoEje } from "@/components/panel/graficos";
-import { AvisoParcial, CabTarjeta, ChipPequena, ComoSeCalcula, Delta, ErrorLectura, Pct, SinDatos, Tarjeta } from "@/components/panel/piezas";
-import GraficoSemanas from "@/components/panel/GraficoSemanas";
+import { COLOR_SERIE, contraQue, diaCorto, etiquetaPeriodo, MUESTRA_MINIMA, numero, porcentaje, tituloPeriodo } from "@/lib/panel-formato";
+import { Chispa, Columnas, LineaPorcentaje, type PuntoEje } from "@/components/panel/graficos";
+import { AvisoParcial, CabTarjeta, ChipPequena, ComoSeCalcula, Delta, ErrorLectura, Leyenda, Pct, SinDatos, TablaVista, Tarjeta } from "@/components/panel/piezas";
 import TablaClase from "@/components/panel/TablaClase";
 import ListaNunca from "@/components/panel/ListaNunca";
 
@@ -80,28 +80,6 @@ export default function PanelMetricas({ m, ahora }: { m: MetricasPanel; ahora: D
       <section aria-label="Práctica" className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
         {indicadores()}
       </section>
-
-      {/* EL GRÁFICO */}
-      <Tarjeta titulo="semanas" id="t-semanas">
-        <CabTarjeta
-          id="t-semanas"
-          titulo="Semana a semana"
-          sub="Semanas de lunes a domingo: las 12 que acaban en la última del rango elegido, o todo el rango si es más largo. La semana en curso va hasta hoy."
-        />
-        {m.grafico ? (
-          <GraficoSemanas
-            puntos={puntos}
-            clase={m.grafico.clase.map((r) => (r ? { parte: r.alumnosConEntrada, base: r.alumnos } : null))}
-            accesos={m.grafico.accesos}
-            notaClase={inicio("entradasClase") && m.grafico.clase.some((r) => r === null) ? `«Ingresar a clase» se registra desde el ${diaCorto(inicio("entradasClase") as string)}: las semanas de antes salen vacías, no a cero.` : null}
-            notaAccesos={inicio("accesos") && m.grafico.accesos.some((v) => v === null) ? `Los accesos se registran desde el ${diaCorto(inicio("accesos") as string)}: las semanas de antes salen vacías, no a cero.` : null}
-          />
-        ) : (
-          <div className="mt-4">
-            <ErrorLectura que="el gráfico" />
-          </div>
-        )}
-      </Tarjeta>
 
       <footer className="space-y-1.5 pt-5 text-[12.5px] leading-[1.5] text-marca-grisSuave">
         {avisoExclusiones()}
@@ -196,6 +174,7 @@ export default function PanelMetricas({ m, ahora }: { m: MetricasPanel; ahora: D
           </div>
         </div>
         <Parcial d={d} texto={(desde) => `Datos desde el ${diaCorto(desde)}: las clases de antes no se cuentan.`} />
+        {graficoClase()}
         {como}
         <div className="mt-5 border-t border-marca-nieblaOscura pt-4">
           <h3 className="font-display text-[15px] font-semibold text-marca-tinta">Alumnos con clase en el periodo</h3>
@@ -253,6 +232,7 @@ export default function PanelMetricas({ m, ahora }: { m: MetricasPanel; ahora: D
           </div>
         </div>
         <Parcial d={d} texto={(desde) => `Datos desde el ${diaCorto(desde)}: antes no se registraban las visitas.`} />
+        {graficoAccesos()}
         {como}
       </>
     );
@@ -300,6 +280,7 @@ export default function PanelMetricas({ m, ahora }: { m: MetricasPanel; ahora: D
             <b className="text-[22px] font-semibold tabular-nums">{numero(a.practicaron)}</b> alumnos
           </p>
           <Delta actual={a.practicaron} anterior={t.anterior.practicaron === 0 ? null : t.anterior.practicaron} sinComparar="Sin práctica en el periodo anterior" />
+          {m.grafico && <Chispa valores={m.grafico.practicaron} />}
           <ComoSeCalcula>
             <p>
               Alumnos únicos con al menos una lección completada, un intento de ejercicio de lección o un bloque de práctica generado en el periodo.
@@ -325,6 +306,7 @@ export default function PanelMetricas({ m, ahora }: { m: MetricasPanel; ahora: D
               )}
             </>
           )}
+          {graficoBloques()}
           <ComoSeCalcula>
             <p>
               Bloques de práctica generados en el periodo, según quién los hizo: la IA, a partir de la última clase analizada, o el banco de reserva,
@@ -333,6 +315,71 @@ export default function PanelMetricas({ m, ahora }: { m: MetricasPanel; ahora: D
             </p>
           </ComoSeCalcula>
         </Indicador>
+      </>
+    );
+  }
+
+  // ---------------------------------------------------------------
+  // LOS GRÁFICOS DE CADA BLOQUE
+  // ---------------------------------------------------------------
+
+  function graficoClase() {
+    const g = m.grafico;
+    if (!g) return <div className="mt-4"><ErrorLectura que="el gráfico" /></div>;
+    const valores = g.clase.map((r) => (r ? { parte: r.alumnosConEntrada, base: r.alumnos } : null));
+    return (
+      <>
+        <p className="mt-4 text-[12.5px] font-medium text-marca-grisSuave">Semana a semana · % de alumnos con clase que entraron con el botón</p>
+        <LineaPorcentaje puntos={puntos} valores={valores} unidad="alumnos con clase" aria="Porcentaje de alumnos con clase que la abrieron con el botón, por semana" />
+        <TablaVista
+          cabeceras={["Semana", "Alumnos con clase", "Entraron con el botón", "%", "Clases", "Abiertas con el botón"]}
+          filas={puntos.map((p, i) => {
+            const r = g.clase[i];
+            return r
+              ? [p.titulo, numero(r.alumnos), numero(r.alumnosConEntrada), r.alumnos ? `${porcentaje(r.alumnosConEntrada, r.alumnos)} %` : "—", numero(r.clases), numero(r.clasesConEntrada)]
+              : [p.titulo, "sin datos", "sin datos", "—", "sin datos", "sin datos"];
+          })}
+        />
+      </>
+    );
+  }
+
+  function graficoAccesos() {
+    const g = m.grafico;
+    if (!g) return <div className="mt-4"><ErrorLectura que="el gráfico" /></div>;
+    if (g.accesos.every((v) => v === null)) return null;
+    return (
+      <>
+        <p className="mt-4 text-[12.5px] font-medium text-marca-grisSuave">Semana a semana · accesos totales</p>
+        <Columnas puntos={puntos} series={[{ nombre: "Accesos totales", valores: g.accesos }]} alto={190} aria="Accesos totales a la plataforma, por semana" />
+        <TablaVista
+          cabeceras={["Semana", "Accesos totales"]}
+          filas={puntos.map((p, i) => [p.titulo, g.accesos[i] === null ? "sin datos" : numero(g.accesos[i] as number)])}
+        />
+      </>
+    );
+  }
+
+  function graficoBloques() {
+    const g = m.grafico;
+    if (!g) return null;
+    const nombres = ["De IA", "Del banco"];
+    return (
+      <>
+        <Leyenda nombres={nombres} colores={COLOR_SERIE} />
+        <Columnas
+          puntos={puntos}
+          series={[
+            { nombre: nombres[0], valores: g.bloquesIa },
+            { nombre: nombres[1], valores: g.bloquesBanco },
+          ]}
+          alto={150}
+          aria="Bloques generados con IA y servidos del banco, por semana"
+        />
+        <TablaVista
+          cabeceras={["Semana", ...nombres]}
+          filas={puntos.map((p, i) => [p.titulo, numero(g.bloquesIa[i]), numero(g.bloquesBanco[i])])}
+        />
       </>
     );
   }

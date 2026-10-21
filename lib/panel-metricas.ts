@@ -98,8 +98,18 @@ export type MetricasPanel = {
   cifras: Comparado<Cifras> | null;
   /** Las semanas del gráfico (`rangoGrafico`). */
   semanas: Periodo[];
-  /** Por semana del gráfico. Null dentro: esa semana no tiene datos. */
-  grafico: { clase: (ResumenClase | null)[]; accesos: (number | null)[] } | null;
+  /**
+   * Por semana (`semanas`), para los gráficos de cada bloque. Null dentro:
+   * esa semana no tiene datos (entradas antes del 13 oct, accesos antes
+   * del 20 oct). La práctica existe desde el primer día.
+   */
+  grafico: {
+    clase: (ResumenClase | null)[];
+    accesos: (number | null)[];
+    practicaron: number[];
+    bloquesIa: number[];
+    bloquesBanco: number[];
+  } | null;
   /** Con plan activo hoy y sin ningún inicio de sesión ni acceso, nunca. */
   nunca: { conPlan: number; alumnos: FilaNunca[] } | null;
   /** Para el pie: cuántas cuentas se excluyen y cuáles del profesor de prueba no. */
@@ -166,7 +176,8 @@ async function cuantasExcluidas(): Promise<number | null> {
     console.error("[panel] metricas_excluidos:", error.message);
     return null;
   }
-  return count ?? 0;
+  // Sin recuento no se sabe: nunca un cero en su lugar.
+  return count ?? null;
 }
 
 /**
@@ -254,13 +265,14 @@ async function calcular(rango: Rango): Promise<MetricasPanel> {
         }))
       : null;
 
-  // --- Accesos en el gráfico: null en las semanas sin datos ---
+  // --- El gráfico: la base da una fila por semana, también las vacías.
+  // Si falta alguna, el gráfico entero cuenta como no leído: no se
+  // rellena con ceros. Los accesos van a null en las semanas sin datos. ---
+  const porSemana = serie ? new Map(serie.map((f) => [f.periodo, f])) : null;
+  const semanaFila = porSemana && semanas.every((s) => porSemana.has(s.periodo)) ? semanas.map((s) => porSemana.get(s.periodo) as Cifras) : null;
   const accesosGrafico =
-    serie && inicio
-      ? semanas.map((s) => {
-          if (inicio.accesos === null || inicio.accesos > s.hasta) return null;
-          return serie.find((f) => f.periodo === s.periodo)?.accesos ?? 0;
-        })
+    semanaFila && inicio
+      ? semanaFila.map((f, i) => (inicio.accesos === null || inicio.accesos > semanas[i].hasta ? null : f.accesos))
       : null;
 
   const ambos = <T>(nombre: string, actual: T | null, previo: T | null): Comparado<T> | null =>
@@ -281,7 +293,18 @@ async function calcular(rango: Rango): Promise<MetricasPanel> {
     listaClase: anotar("lista de alumnos con clase", listaClase),
     cifras: ambos("accesos y práctica", totAct?.[0] ?? null, totAnt?.[0] ?? null),
     semanas,
-    grafico: anotar("gráfico", claseGrafico && accesosGrafico ? { clase: claseGrafico, accesos: accesosGrafico } : null),
+    grafico: anotar(
+      "gráfico",
+      claseGrafico && accesosGrafico && semanaFila
+        ? {
+            clase: claseGrafico,
+            accesos: accesosGrafico,
+            practicaron: semanaFila.map((f) => f.practicaron),
+            bloquesIa: semanaFila.map((f) => f.bloquesIa),
+            bloquesBanco: semanaFila.map((f) => f.bloquesBanco),
+          }
+        : null
+    ),
     nunca: anotar(
       "nunca accedieron",
       conPlan && sinAcceso
