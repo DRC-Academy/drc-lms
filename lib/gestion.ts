@@ -1258,8 +1258,6 @@ export type AlumnoMetricas = {
   profesor: string;
   /** Plan activo en Gestión: `estado_asignacion = 'active'`. */
   activo: boolean;
-  /** El alta, "AAAA-MM-DD", o null si Gestión no la tiene. */
-  fechaInicio: string | null;
 };
 
 /**
@@ -1272,7 +1270,7 @@ export async function alumnosParaMetricas(): Promise<AlumnoMetricas[] | null> {
   const filas: Fila[] = [];
   for (let desde = 0; ; desde += PAGINA) {
     const { data, error } = await soloLectura("vista_perfil_alumno")
-      .select("alumno_id, nombre, profesor, estado_asignacion, fecha_inicio")
+      .select("alumno_id, nombre, profesor, estado_asignacion")
       .order("alumno_id", { ascending: true })
       .order(...ORDEN_ESTADO)
       .range(desde, desde + PAGINA - 1)
@@ -1291,7 +1289,6 @@ export async function alumnosParaMetricas(): Promise<AlumnoMetricas[] | null> {
     nombre: comoTexto(fila.nombre),
     profesor: comoTexto(fila.profesor),
     activo: esAsignacionActiva(fila.estado_asignacion),
-    fechaInicio: comoTextoOpcional(fila.fecha_inicio)?.slice(0, 10) ?? null,
   }));
 }
 

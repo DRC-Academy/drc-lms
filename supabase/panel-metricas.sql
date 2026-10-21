@@ -1,6 +1,11 @@
 -- ===============================================================
 -- EL PANEL DEL EQUIPO: ENTRAR A CLASE, ACCESOS, NUNCA ACCEDIERON
 --
+-- ⚠ EJECUTADO EL 21/10/2026. Parte de la PARTE B (panel_cifras,
+-- panel_nunca_accedieron, metricas_practica, metricas_accesos) la sustituye
+-- y la borra `panel-para-ti.sql`: el panel se quedó en tres cifras. Lo de
+-- Gestión (PARTE A) y las exclusiones siguen valiendo.
+--
 -- UN ARCHIVO, DOS BASES, TRES PARTES. A mano, en el SQL Editor, en este
 -- orden y cada parte en SU base:
 --

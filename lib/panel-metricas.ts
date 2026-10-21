@@ -1,32 +1,26 @@
 // ---------------------------------------------------------------
 // LOS DATOS DEL PANEL DEL EQUIPO, POR RANGO DE FECHAS
 //
-// El panel responde, por orden de importancia:
-//   1. ¿Quién entra a clase con el botón? Alumnos con alguna clase dada
-//      en el rango que abrieron al menos una con «Ingresar a clase», y
-//      clases dadas abiertas así. Con la lista de alumnos.
-//   2. Accesos a la plataforma.
-//   3. Quién, con plan activo hoy, no ha accedido nunca.
-//   4. Dos indicadores pequeños: practicaron, y práctica con IA o banco.
-// Y un gráfico semana a semana de 1 y de 2. Todo comparado con el periodo
-// anterior de la misma duración, salvo 3, que no depende de fechas.
+// El panel responde tres preguntas, y nada más:
+//   1. ¿A cuántas clases se entró con el botón «Ingresar a clase»? De
+//      las clases dadas en el rango, las abiertas así.
+//   2. ¿Cuántos alumnos usan el botón? De los alumnos con alguna clase
+//      dada en el rango, los que abrieron al menos una con él. Con la
+//      lista de alumnos.
+//   3. ¿Cuántos alumnos generan práctica con IA en «Para ti»?
+// Cada una con el periodo anterior de la misma duración y semana a
+// semana (las 12 semanas que acaban en la del final del rango).
 //
 // DE DÓNDE SALE CADA COSA
-//   · LMS, con las funciones de `supabase/panel-metricas.sql`: accesos,
-//     practicaron y bloques (`panel_cifras`), quién nunca accedió
-//     (`panel_nunca_accedieron`) y desde cuándo hay datos. Los alumnos
-//     ÚNICOS se cuentan allí, nunca aquí.
-//   · Gestión, solo vistas y con el cliente de solo lectura: las fichas
-//     (nombre, profesor, alta, plan activo hoy) y los partes de clase.
-//   · Las entradas a clase se cruzan con los partes aquí (`medirClase`),
+//   · 1 y 2: los partes de clase de Gestión (solo vistas, cliente de solo
+//     lectura) cruzados aquí con `entradas_clase` del LMS (`medirClase`),
 //     porque viven en bases distintas.
+//   · 3: la base del LMS, `panel_para_ti` (`supabase/panel-para-ti.sql`).
+//     Los alumnos ÚNICOS se cuentan allí, nunca aquí.
+//   · Desde cuándo hay datos de cada cosa: `panel_inicio_datos`.
 //   · Quién no cuenta lo decide la base del LMS (`metricas_excluido`), y
 //     las listas que vienen de Gestión pasan por `metricas_quitar_excluidos`.
 //     No hay ninguna regla de exclusión en este archivo.
-//
-// Ninguna cifra depende del plan que tenía cada alumno en el periodo:
-// Gestión no guarda cuándo terminó cada plan. Solo «nunca accedieron»
-// usa el plan, y es el de HOY.
 //
 // LO QUE NO SE PUDO LEER va a null y su nombre a `fallos`. Un null se
 // pinta como «no se ha podido leer», nunca como un cero.
@@ -53,22 +47,7 @@ export const PROFESOR_DE_PRUEBA = "t1";
 /** El periodo actual y el anterior de la misma duración. */
 export type Comparado<T> = { actual: T; anterior: T };
 
-/** Una fila de `panel_cifras`, en camelCase. */
-export type Cifras = {
-  periodo: string;
-  periodoDesde: string;
-  periodoHasta: string;
-  /** Visitas totales y alumnos únicos con alguna. Desde el 20 oct 2026. */
-  accesos: number;
-  accesosAlumnos: number;
-  /** Alumnos únicos con lección, intento de ejercicio de lección o bloque generado. */
-  practicaron: number;
-  bloques: number;
-  bloquesIa: number;
-  bloquesBanco: number;
-};
-
-/** Una fila de la lista del bloque «Entrar a clase». */
+/** Una fila de la lista de alumnos con clase. */
 export type FilaClase = {
   alumnoId: string;
   /** Vacío si el alumno no tiene ficha en Gestión. */
@@ -80,9 +59,10 @@ export type FilaClase = {
   ultima: string | null;
 };
 
-export type FilaNunca = { alumnoId: string; nombre: string; profesor: string; fechaInicio: string | null };
+/** IA en «Para ti»: alumnos únicos y bloques. */
+export type ParaTi = { alumnos: number; bloques: number };
 
-export type Fuente = "entradasClase" | "accesos";
+export type Fuente = "entradasClase" | "paraTi";
 
 export type MetricasPanel = {
   rango: Rango;
@@ -91,27 +71,16 @@ export type MetricasPanel = {
   /** El primer día con datos de cada fuente, o null si aún no hay. Null entero si no se pudo leer. */
   inicioDatos: Record<Fuente, string | null> | null;
   disponibilidad: Record<Fuente, Comparado<Disponibilidad>> | null;
-  /** Entrar a clase. Null dentro: ese periodo cae entero antes del 13 oct. */
+  /** 1 y 2. Null dentro: ese periodo cae entero antes del primer clic (13 oct). */
   clase: Comparado<ResumenClase | null> | null;
-  /** La lista del bloque 1: una fila por alumno con clase dada en el rango. */
+  /** La lista de 2: una fila por alumno con clase dada en el rango. */
   listaClase: FilaClase[] | null;
-  cifras: Comparado<Cifras> | null;
-  /** Las semanas del gráfico (`rangoGrafico`). */
+  /** 3. */
+  paraTi: Comparado<ParaTi> | null;
+  /** Las semanas de los gráficos (`rangoGrafico`). */
   semanas: Periodo[];
-  /**
-   * Por semana (`semanas`), para los gráficos de cada bloque. Null dentro:
-   * esa semana no tiene datos (entradas antes del 13 oct, accesos antes
-   * del 20 oct). La práctica existe desde el primer día.
-   */
-  grafico: {
-    clase: (ResumenClase | null)[];
-    accesos: (number | null)[];
-    practicaron: number[];
-    bloquesIa: number[];
-    bloquesBanco: number[];
-  } | null;
-  /** Con plan activo hoy y sin ningún inicio de sesión ni acceso, nunca. */
-  nunca: { conPlan: number; alumnos: FilaNunca[] } | null;
+  /** Por semana. Null dentro: esa semana no tiene datos. */
+  grafico: { clase: (ResumenClase | null)[]; paraTi: (ParaTi | null)[] } | null;
   /** Para el pie: cuántas cuentas se excluyen y cuáles del profesor de prueba no. */
   exclusiones: { cuentas: number; sinExcluir: { alumnoId: string; nombre: string }[] | null } | null;
   /** Lo que no se pudo leer. Vacío = todo bien. */
@@ -132,20 +101,11 @@ async function rpc<T>(nombre: string, parametros: Record<string, unknown>): Prom
   return (data ?? []) as T[];
 }
 
-const aCamel = (clave: string) => clave.replace(/_([a-z])/g, (_, letra: string) => letra.toUpperCase());
+type FilaParaTi = { periodo: string; alumnos: number; bloques: number };
 
-/** Una fila de la base con las claves en camelCase y los números como números. */
-function aCifras(fila: Record<string, unknown>): Cifras {
-  const salida: Record<string, unknown> = {};
-  for (const [clave, valor] of Object.entries(fila)) {
-    salida[aCamel(clave)] = clave.startsWith("periodo") ? valor : Number(valor);
-  }
-  return salida as Cifras;
-}
-
-async function cifras(rango: Rango, granularidad: "semana" | "total"): Promise<Cifras[] | null> {
-  const filas = await rpc<Record<string, unknown>>("panel_cifras", { p_desde: rango.desde, p_hasta: rango.hasta, p_granularidad: granularidad });
-  return filas ? filas.map(aCifras) : null;
+async function paraTi(rango: Rango, granularidad: "semana" | "total"): Promise<FilaParaTi[] | null> {
+  const filas = await rpc<FilaParaTi>("panel_para_ti", { p_desde: rango.desde, p_hasta: rango.hasta, p_granularidad: granularidad });
+  return filas ? filas.map((f) => ({ periodo: f.periodo, alumnos: Number(f.alumnos), bloques: Number(f.bloques) })) : null;
 }
 
 /** Fuente → primer día con datos (Madrid), o null si aún no hay. */
@@ -156,17 +116,11 @@ async function inicioDeDatos(): Promise<Record<Fuente, string | null> | null> {
     const desde = filas.find((f) => f.fuente === fuente)?.desde;
     return desde ? diaLocal(new Date(desde)) : null;
   };
-  return { entradasClase: dia("entradas_clase"), accesos: dia("accesos") };
+  return { entradasClase: dia("entradas_clase"), paraTi: dia("para_ti") };
 }
 
 async function quitarExcluidos(ids: string[]): Promise<Set<string> | null> {
   const filas = await rpc<string>("metricas_quitar_excluidos", { p_alumnos: ids });
-  return filas ? new Set(filas) : null;
-}
-
-/** La función devuelve un `text[]`: PostgREST lo da como un array. */
-async function nuncaAccedieron(ids: string[]): Promise<Set<string> | null> {
-  const filas = await rpc<string>("panel_nunca_accedieron", { p_alumnos: ids });
   return filas ? new Set(filas) : null;
 }
 
@@ -215,30 +169,25 @@ async function calcular(rango: Rango): Promise<MetricasPanel> {
       : null
   );
 
-  const [inicio, lecturaClases, fichas, totAct, totAnt, serie, delT1, excluidas] = await Promise.all([
+  const [inicio, lecturaClases, fichas, ptAct, ptAnt, ptSemanas, delT1, excluidas] = await Promise.all([
     inicioP,
     clasesP,
     alumnosParaMetricas(),
-    cifras(rango, "total"),
-    cifras(anterior, "total"),
-    cifras(grafico, "semana"),
+    paraTi(rango, "total"),
+    paraTi(anterior, "total"),
+    paraTi(grafico, "semana"),
     alumnosDeProfesor(PROFESOR_DE_PRUEBA),
     cuantasExcluidas(),
   ]);
 
   // --- Quién cuenta, de lo que viene de Gestión: una sola pregunta a la base ---
   const idsDeFuera = new Set<string>();
-  for (const f of fichas ?? []) idsDeFuera.add(f.alumnoId);
   for (const p of lecturaClases?.partes ?? []) idsDeFuera.add(p.alumnoId);
   for (const e of lecturaClases?.entradas ?? []) idsDeFuera.add(e.alumno_id);
   for (const a of delT1 ?? []) idsDeFuera.add(a.alumnoId);
   const cuentan = idsDeFuera.size > 0 ? await quitarExcluidos(Array.from(idsDeFuera)) : new Set<string>();
 
-  const fichasQueCuentan = fichas && cuentan ? fichas.filter((f) => cuentan.has(f.alumnoId)) : null;
-  const conPlan = fichasQueCuentan ? fichasQueCuentan.filter((f) => f.activo) : null;
-  const sinAcceso = conPlan ? await nuncaAccedieron(conPlan.map((f) => f.alumnoId)) : null;
-
-  // --- Entrar a clase ---
+  // --- 1 y 2: las clases con entrada por el botón ---
   let clase: Comparado<ResumenClase | null> | null = null;
   let claseGrafico: (ResumenClase | null)[] | null = null;
   if (inicio && lecturaClases && cuentan) {
@@ -265,18 +214,22 @@ async function calcular(rango: Rango): Promise<MetricasPanel> {
         }))
       : null;
 
-  // --- El gráfico: la base da una fila por semana, también las vacías.
-  // Si falta alguna, el gráfico entero cuenta como no leído: no se
-  // rellena con ceros. Los accesos van a null en las semanas sin datos. ---
-  const porSemana = serie ? new Map(serie.map((f) => [f.periodo, f])) : null;
-  const semanaFila = porSemana && semanas.every((s) => porSemana.has(s.periodo)) ? semanas.map((s) => porSemana.get(s.periodo) as Cifras) : null;
-  const accesosGrafico =
-    semanaFila && inicio
-      ? semanaFila.map((f, i) => (inicio.accesos === null || inicio.accesos > semanas[i].hasta ? null : f.accesos))
+  // --- 3, semana a semana: la base da una fila por semana, también las
+  // vacías. Si falta alguna, el gráfico cuenta como no leído: no se
+  // rellena con ceros. Antes del primer bloque con pantalla, null. ---
+  const porSemana = ptSemanas ? new Map(ptSemanas.map((f) => [f.periodo, f])) : null;
+  const paraTiGrafico =
+    porSemana && inicio && semanas.every((s) => porSemana.has(s.periodo))
+      ? semanas.map((s) => {
+          if (inicio.paraTi === null || inicio.paraTi > s.hasta) return null;
+          const f = porSemana.get(s.periodo) as FilaParaTi;
+          return { alumnos: f.alumnos, bloques: f.bloques };
+        })
       : null;
 
-  const ambos = <T>(nombre: string, actual: T | null, previo: T | null): Comparado<T> | null =>
-    anotar(nombre, actual !== null && previo !== null ? { actual, anterior: previo } : null);
+  const una = (filas: FilaParaTi[] | null): ParaTi | null => (filas && filas[0] ? { alumnos: filas[0].alumnos, bloques: filas[0].bloques } : null);
+  const ptA = una(ptAct);
+  const ptB = una(ptAnt);
 
   return {
     rango,
@@ -286,36 +239,14 @@ async function calcular(rango: Rango): Promise<MetricasPanel> {
     disponibilidad: inicio
       ? {
           entradasClase: { actual: disponibilidad(inicio.entradasClase, rango), anterior: disponibilidad(inicio.entradasClase, anterior) },
-          accesos: { actual: disponibilidad(inicio.accesos, rango), anterior: disponibilidad(inicio.accesos, anterior) },
+          paraTi: { actual: disponibilidad(inicio.paraTi, rango), anterior: disponibilidad(inicio.paraTi, anterior) },
         }
       : null,
     clase: anotar("clases con entrada", clase),
     listaClase: anotar("lista de alumnos con clase", listaClase),
-    cifras: ambos("accesos y práctica", totAct?.[0] ?? null, totAnt?.[0] ?? null),
+    paraTi: anotar("IA en «Para ti»", ptA && ptB ? { actual: ptA, anterior: ptB } : null),
     semanas,
-    grafico: anotar(
-      "gráfico",
-      claseGrafico && accesosGrafico && semanaFila
-        ? {
-            clase: claseGrafico,
-            accesos: accesosGrafico,
-            practicaron: semanaFila.map((f) => f.practicaron),
-            bloquesIa: semanaFila.map((f) => f.bloquesIa),
-            bloquesBanco: semanaFila.map((f) => f.bloquesBanco),
-          }
-        : null
-    ),
-    nunca: anotar(
-      "nunca accedieron",
-      conPlan && sinAcceso
-        ? {
-            conPlan: conPlan.length,
-            alumnos: conPlan
-              .filter((f) => sinAcceso.has(f.alumnoId))
-              .map((f) => ({ alumnoId: f.alumnoId, nombre: f.nombre, profesor: f.profesor, fechaInicio: f.fechaInicio })),
-          }
-        : null
-    ),
+    grafico: anotar("gráficos", claseGrafico && paraTiGrafico ? { clase: claseGrafico, paraTi: paraTiGrafico } : null),
     // Sin `profesor_id` en Gestión no se sabe quién es de t1: se dice,
     // pero no cuenta como fallo del panel.
     exclusiones: anotar(
