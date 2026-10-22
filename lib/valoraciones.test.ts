@@ -132,25 +132,33 @@ describe("el pop-up", () => {
   const haceTres = parte({ fecha: "2026-10-18", tipo: "normal", hora: "10:00" });
   const sinHora = parte({ fecha: "2026-10-21", tipo: "normal", hora: null });
 
-  it("sale la más reciente de las de menos de 48 h", () => {
+  it("sale la última clase", () => {
     const clases = valorables([anteayer, ayer, haceTres]);
     expect(claseDelPopup(clases, new Set(), AHORA)?.claseId).toBe(ayer.parteId);
   });
 
-  it("no sale con una de hace tres días", () => {
-    expect(claseDelPopup(valorables([haceTres]), new Set(), AHORA)).toBeNull();
+  it("sale aunque sea de hace días: no hay ventana de 48 h", () => {
+    expect(claseDelPopup(valorables([haceTres]), new Set(), AHORA)?.claseId).toBe(haceTres.parteId);
   });
 
-  it("no sale si ya tiene fila (valorada o descartada) y pasa a la siguiente", () => {
+  it("si la última ya tiene fila (valorada o descartada) no sale, y no baja a una anterior", () => {
     const clases = valorables([anteayer, ayer]);
-    expect(claseDelPopup(clases, new Set([ayer.parteId]), AHORA)?.claseId).toBe(anteayer.parteId);
-    expect(claseDelPopup(clases, new Set([ayer.parteId, anteayer.parteId]), AHORA)).toBeNull();
+    expect(claseDelPopup(clases, new Set([ayer.parteId]), AHORA)).toBeNull();
+    expect(claseDelPopup(clases, new Set([anteayer.parteId]), AHORA)?.claseId).toBe(ayer.parteId);
   });
 
-  it("una clase sin hora no lo dispara", () => {
+  it("con una clase nueva vuelve a salir", () => {
+    const hoy = parte({ fecha: "2026-10-21", tipo: "normal", hora: "10:00" });
+    const clases = valorables([ayer, hoy]);
+    expect(claseDelPopup(clases, new Set([ayer.parteId]), AHORA)?.claseId).toBe(hoy.parteId);
+  });
+
+  it("una clase sin hora no lo dispara, ni aunque haya otra anterior", () => {
     const clases = valorables([sinHora], [analisis({ fecha: "2026-10-21" })]);
     expect(clases).toHaveLength(1);
     expect(claseDelPopup(clases, new Set(), AHORA)).toBeNull();
+    const conAyer = valorables([ayer, sinHora], [analisis({ fecha: "2026-10-21" })]);
+    expect(claseDelPopup(conAyer, new Set(), AHORA)).toBeNull();
   });
 });
 

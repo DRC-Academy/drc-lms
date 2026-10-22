@@ -2,7 +2,7 @@
 // LA VALORACIÓN DE CLASES: QUÉ CLASE SE PUEDE VALORAR
 //
 // El alumno valora con estrellas una clase que tuvo, desde «Mis clases»
-// o desde el pop-up que sale al entrar cuando la clase acaba de pasar.
+// o desde el pop-up que sale al entrar con su última clase sin valorar.
 // Aquí está la regla de qué clases son esas, y nada más: MÓDULO PURO, sin
 // lecturas. Lo que lee y guarda está en `lib/valoraciones-servidor.ts`.
 //
@@ -66,9 +66,6 @@ export const ESTRELLAS_MAX = 5;
 
 /** El tope del comentario, el mismo que el CHECK de la tabla. */
 export const MAX_COMENTARIO = 1000;
-
-/** El pop-up sale para una clase que terminó hace menos que esto. */
-export const HORAS_DEL_POPUP = 48;
 
 /** Lo que dura una clase de la que no se sabe la duración. */
 const HORAS_POR_DEFECTO = 1;
@@ -241,20 +238,27 @@ export function clasesValorables({
 }
 
 /**
- * La clase del pop-up: la más reciente de las que terminaron en las
- * últimas `HORAS_DEL_POPUP` horas y no tienen ninguna fila en
- * `valoraciones_clase`, ni valorada ni descartada. Null si no hay.
+ * La clase del pop-up: LA ÚLTIMA que tuvo, sea de cuando sea (desde el
+ * 21/10/2026 no hay ventana de 48 h), si todavía no tiene ninguna fila en
+ * `valoraciones_clase`, ni valorada ni descartada. Si la última ya la
+ * tiene, nada: no se baja a una anterior, y el pop-up vuelve con su
+ * próxima clase. Tampoco si la última no tiene hora, como siempre.
  */
 export function claseDelPopup(clases: readonly ClaseValorable[], conFila: ReadonlySet<string>, ahora: Date): ClaseValorable | null {
-  const desde = ahora.getTime() - HORAS_DEL_POPUP * 3600_000;
-  let elegida: ClaseValorable | null = null;
+  let ultima: ClaseValorable | null = null;
   for (const c of clases) {
-    if (!c.fin || conFila.has(c.claseId)) continue;
-    const fin = c.fin.getTime();
-    if (fin <= desde || fin > ahora.getTime()) continue;
-    if (!elegida || fin > elegida.fin!.getTime()) elegida = c;
+    if (c.fin && c.fin.getTime() > ahora.getTime()) continue;
+    if (!ultima || esPosterior(c, ultima)) ultima = c;
   }
-  return elegida;
+  if (!ultima || !ultima.fin || conFila.has(ultima.claseId)) return null;
+  return ultima;
+}
+
+/** Por día; el mismo día, por hora, y la que tiene hora va después de la que no. */
+function esPosterior(a: ClaseValorable, b: ClaseValorable): boolean {
+  if (a.fecha !== b.fecha) return a.fecha > b.fecha;
+  if (!a.inicio) return false;
+  return !b.inicio || a.inicio.getTime() > b.inicio.getTime();
 }
 
 // ---------------------------------------------------------------

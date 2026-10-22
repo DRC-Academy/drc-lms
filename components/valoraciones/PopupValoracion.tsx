@@ -9,7 +9,7 @@ import { SUCESO_LANZAR_TUTORIAL } from "@/components/tutorial/eventos";
 // EL POP-UP DE DESPUÉS DE LA CLASE
 //
 // Lo monta el layout del alumno (`ValoracionAlEntrar`) cuando el servidor
-// ha encontrado una clase dada, terminada hace menos de 48 h y sin fila en
+// ha encontrado la última clase dada del alumno, sin fila en
 // `valoraciones_clase`. Aquí solo se decide CUÁNDO abrirlo:
 //
 //   · UNO POR VISITA. Una visita es la sesión de la pestaña
@@ -20,11 +20,11 @@ import { SUCESO_LANZAR_TUTORIAL } from "@/components/tutorial/eventos";
 //     diálogo modal. Si arranca el recorrido mientras espera, se retira.
 //
 // Cerrarlo sin valorar —X, «Ahora no», el fondo o Escape— lo apunta como
-// descartado y no vuelve a salir para esa clase. Sigue pudiendo valorarse
-// desde «Mis clases».
+// descartado y no vuelve a salir hasta su próxima clase. Sigue pudiendo
+// valorarse desde «Mis clases».
 //
-// `vistaPrevia`: el equipo revisando una ficha lo ve como el alumno, una
-// vez por clase y pestaña, y cerrarlo o enviarlo no apunta nada.
+// `vistaPrevia`: el equipo revisando una ficha lo ve como el alumno, en
+// cada carga de la página, y cerrarlo o enviarlo no apunta nada.
 // ---------------------------------------------------------------
 
 const ESPERA_MS = 2500;
@@ -64,11 +64,9 @@ export default function PopupValoracion({
   vistaPrevia?: boolean;
 }) {
   const [abierta, setAbierta] = useState(false);
-  // El equipo pasa de una ficha a otra en la misma pestaña: su visita es por clase.
-  const clave = vistaPrevia ? `${CLAVE_VISITA}:${claseId}` : CLAVE_VISITA;
-
   useEffect(() => {
-    if (leer(clave)) return;
+    // El equipo lo ve en cada carga: la visita es cosa del alumno.
+    if (!vistaPrevia && leer(CLAVE_VISITA)) return;
     let retirado = false;
     const retirarse = () => {
       retirado = true;
@@ -76,14 +74,14 @@ export default function PopupValoracion({
     window.addEventListener(SUCESO_LANZAR_TUTORIAL, retirarse);
     const reloj = setTimeout(() => {
       if (retirado || hayOtraCosaDelante()) return;
-      escribir(clave);
+      if (!vistaPrevia) escribir(CLAVE_VISITA);
       setAbierta(true);
     }, ESPERA_MS);
     return () => {
       clearTimeout(reloj);
       window.removeEventListener(SUCESO_LANZAR_TUTORIAL, retirarse);
     };
-  }, [clave]);
+  }, [vistaPrevia]);
 
   const alCerrar = useCallback(
     (enviada: boolean) => {
