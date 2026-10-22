@@ -65,6 +65,13 @@ export default async function Home({ searchParams }: { searchParams: { desde?: s
                 Garantía
                 <Chevron />
               </Link>
+              <Link
+                href="/valoraciones"
+                className="inline-flex min-h-[44px] items-center gap-1 text-[14px] font-semibold text-marca-verdeOsc hover:text-marca-tinta lg:min-h-0 lg:pt-2"
+              >
+                Valoraciones de clase
+                <Chevron />
+              </Link>
             </nav>
           </div>
           <div className="flex w-full flex-col items-stretch gap-1.5 sm:w-auto sm:items-end">

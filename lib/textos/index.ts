@@ -56,6 +56,7 @@ import { ESTADISTICAS, type TextosEstadisticas } from "@/lib/textos/estadisticas
 import { RECUPERACIONES, type TextosRecuperaciones } from "@/lib/textos/recuperaciones";
 import { AUTOSERVICIO, type TextosAutoservicio } from "@/lib/textos/autoservicio";
 import { DIPLOMA, type TextosDiploma } from "@/lib/textos/diploma";
+import { VALORACIONES, type TextosValoraciones } from "@/lib/textos/valoraciones";
 
 export type Textos = {
   ejercicios: TextosEjercicios;
@@ -73,6 +74,7 @@ export type Textos = {
   recuperaciones: TextosRecuperaciones;
   autoservicio: TextosAutoservicio;
   diploma: TextosDiploma;
+  valoraciones: TextosValoraciones;
 };
 
 export const TEXTOS: Record<Idioma, Textos> = {
@@ -92,6 +94,7 @@ export const TEXTOS: Record<Idioma, Textos> = {
     recuperaciones: RECUPERACIONES.en,
     autoservicio: AUTOSERVICIO.en,
     diploma: DIPLOMA.en,
+    valoraciones: VALORACIONES.en,
   },
   es: {
     ejercicios: EJERCICIOS.es,
@@ -109,5 +112,6 @@ export const TEXTOS: Record<Idioma, Textos> = {
     recuperaciones: RECUPERACIONES.es,
     autoservicio: AUTOSERVICIO.es,
     diploma: DIPLOMA.es,
+    valoraciones: VALORACIONES.es,
   },
 };

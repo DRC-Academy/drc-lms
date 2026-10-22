@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { storeMascota } from "@/components/mascota/store";
 import { lanzarTutorial } from "@/components/tutorial/eventos";
 import { marcarRecorridoVisto } from "@/app/acciones-tutorial";
+import { CLAVE_TUTORIAL_EN_VISITA } from "@/components/valoraciones/PopupValoracion";
 
 /**
  * EL ONBOARDING: lanza el recorrido guiado la primera vez que el alumno
@@ -17,6 +18,9 @@ import { marcarRecorridoVisto } from "@/app/acciones-tutorial";
  *
  * SE MARCA COMO VISTO AL ARRANCAR: terminarlo, saltarlo o cerrar la
  * pestaña a medias cuentan igual. No se le persigue.
+ *
+ * Y LA VISITA QUEDA APUNTADA: en ella no sale el pop-up de valorar la
+ * clase (`PopupValoracion`), tampoco después de recargar.
  */
 const ESPERA_MS = 1800;
 
@@ -32,6 +36,11 @@ export default function ArranqueTutorial() {
       const generando = Object.values(storeMascota.leer().anclas).some((a) => a.estado === "estudiando");
       if (generando) return;
       lanzarTutorial("onboarding");
+      try {
+        sessionStorage.setItem(CLAVE_TUTORIAL_EN_VISITA, "1");
+      } catch {
+        // Sin almacenamiento, se sigue.
+      }
       void marcarRecorridoVisto();
     }, ESPERA_MS);
     return () => clearTimeout(reloj);

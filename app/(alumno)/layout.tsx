@@ -4,6 +4,7 @@ import { sesionActual } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { MarcoFijo, PiezasDeLaSesion } from "@/components/Navegacion";
 import { ProveedorMarco } from "@/components/leccion/MarcoCurso";
+import ValoracionAlEntrar from "@/components/valoraciones/ValoracionAlEntrar";
 
 /**
  * EL LAYOUT COMÚN DEL ALUMNO: la rejilla del marco y lo que solo depende
@@ -43,6 +44,11 @@ export default function LayoutAlumno({ children, marco }: { children: React.Reac
 /**
  * La ayuda y el recorrido, con el nombre de quien ha entrado. El equipo
  * tiene la ayuda, sin nombre, y no el recorrido.
+ *
+ * Y el pop-up de valorar la última clase, que es «al entrar»: va aquí, y
+ * no en una página, porque el layout no se vuelve a pintar al navegar y
+ * así sale en la primera pantalla que se abra, sea cual sea. En su propio
+ * `<Suspense>`: lee Gestión y no tiene que esperar nadie por él.
  */
 async function DeLaSesion() {
   const sesion = await sesionActual();
@@ -50,5 +56,12 @@ async function DeLaSesion() {
   if (sesion.rol !== "alumno") return <PiezasDeLaSesion nombre="" inicioHref={null} />;
 
   const perfil = await obtenerPerfil(sesion.alumnoId);
-  return <PiezasDeLaSesion nombre={perfil?.nombre.trim() ?? ""} inicioHref={`/alumno/${sesion.alumnoId}`} />;
+  return (
+    <>
+      <PiezasDeLaSesion nombre={perfil?.nombre.trim() ?? ""} inicioHref={`/alumno/${sesion.alumnoId}`} />
+      <Suspense fallback={null}>
+        <ValoracionAlEntrar alumnoId={sesion.alumnoId} />
+      </Suspense>
+    </>
+  );
 }

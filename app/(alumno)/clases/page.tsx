@@ -7,6 +7,7 @@ import PantallaClases from "@/components/clases/PantallaClases";
 import RecuperacionesDeGestion from "@/components/clases/RecuperacionesDeGestion";
 import AutoservicioDeGestion from "@/components/clases/autoservicio/AutoservicioDeGestion";
 import { autoservicioVisible } from "@/lib/autoservicio";
+import { valoracionesDelHistorial } from "@/lib/valoraciones-servidor";
 import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,10 @@ export const dynamic = "force-dynamic";
  * AUTOSERVICIO_PROFESOR_ACTIVO=1 (cambiar de profesor), cada uno con su
  * botón (`lib/autoservicio`): con los dos apagados no se monta nada.
  *
+ * EN EL HISTORIAL, «VALORAR CLASE» en cada clase dada
+ * (`valoracionesDelHistorial`, de `lib/valoraciones-servidor.ts`). El
+ * equipo ve las estrellas que haya y no valora.
+ *
  * `force-dynamic` porque la respuesta depende de la hora: una página
  * cacheada diría "hoy" el día siguiente.
  */
@@ -52,12 +57,13 @@ export default async function PaginaClases({
   const { sesion, alumnoId, paraEnlaces } = await exigirAlumnoDeLaPagina();
   const resaltada = typeof searchParams.recuperacion === "string" ? searchParams.recuperacion : null;
 
-  const [calendarioCrudo, excepciones, recorrido, profesores, profe] = await Promise.all([
+  const [calendarioCrudo, excepciones, recorrido, profesores, profe, valoraciones] = await Promise.all([
     obtenerCalendario(alumnoId),
     obtenerExcepciones(alumnoId),
     obtenerRecorrido(alumnoId),
     obtenerNombresProfesor(),
     profesorDelAlumno(alumnoId),
+    valoracionesDelHistorial(alumnoId),
   ]);
   // El profesor que se nombra en las clases de ahora es el de la ficha;
   // el historial sigue diciendo quién dio cada clase pasada.
@@ -76,6 +82,8 @@ export default async function PaginaClases({
         hrefPractica={conFoco("/practica", paraEnlaces)}
         t={textosActuales()}
         foco={paraEnlaces}
+        valoraciones={valoraciones}
+        soloLectura={sesion.rol !== "alumno"}
         recuperaciones={
           <Suspense fallback={null}>
             <RecuperacionesDeGestion alumnoId={alumnoId} resaltada={resaltada} soloLectura={sesion.rol !== "alumno"} />

@@ -967,6 +967,12 @@ export type ClaseDelRecorrido = {
   numero: number | null;
   /** Quién dio la clase. El nombre lo pone `obtenerNombresProfesor`. */
   teacherId: string | null;
+  /**
+   * `analyzed_at`. Con dos clases del mismo profesor el mismo día, el
+   * orden en que se analizaron es lo único que las distingue: lo usa la
+   * valoración para emparejar cada análisis con su parte (`lib/valoraciones.ts`).
+   */
+  analizadoEn: string | null;
   /** Tiene análisis: título o temas. Sin él, la clase es su fecha y su profesor. */
   conAnalisis: boolean;
 };
@@ -1065,6 +1071,7 @@ function aRecorrido(filas: Fila[]): Recorrido {
       temas,
       numero,
       teacherId: comoTextoOpcional(fila.teacher_id),
+      analizadoEn: comoTextoOpcional(fila.analyzed_at),
       conAnalisis,
     });
   }
@@ -1181,6 +1188,7 @@ export type FilaParteGestion = {
   hora: string | null;
   tipo: string;
   profesor: string | null;
+  teacherId: string | null;
   motivo: string | null;
   rescheduledTo: string | null;
   registradoEn: string | null;
@@ -1198,7 +1206,7 @@ export async function partesDeClase(
 ): Promise<FilaParteGestion[] | null> {
   const filas = await todasLasFilas(
     "vista_partes_clase",
-    "alumno_id, parte_id, fecha, hora, profesor, class_type, rescheduled_to, registrado_en, motivo, avisado_en, cancelado_por",
+    "alumno_id, parte_id, fecha, hora, profesor, teacher_id, class_type, rescheduled_to, registrado_en, motivo, avisado_en, cancelado_por",
     "parte_id",
     alumnoId,
     fechas
@@ -1212,6 +1220,7 @@ export async function partesDeClase(
     hora: comoTextoOpcional(fila.hora),
     tipo: comoTexto(fila.class_type),
     profesor: comoTextoOpcional(fila.profesor),
+    teacherId: comoTextoOpcional(fila.teacher_id),
     motivo: comoTextoOpcional(fila.motivo),
     rescheduledTo: comoTextoOpcional(fila.rescheduled_to),
     registradoEn: comoTextoOpcional(fila.registrado_en),
@@ -1220,11 +1229,18 @@ export async function partesDeClase(
   }));
 }
 
-export type FilaProgramadaGestion = { alumnoId: string; fecha: string; hora: string; teacherId: string | null };
+export type FilaProgramadaGestion = {
+  alumnoId: string;
+  fecha: string;
+  hora: string;
+  teacherId: string | null;
+  /** Lo que dura, en horas. Null si la vista no lo trae. */
+  horas: number | null;
+};
 
 /** Las clases que había en el calendario cada día, desde el 23/09/2026. */
 export async function clasesProgramadas(alumnoId?: string): Promise<FilaProgramadaGestion[] | null> {
-  const filas = await todasLasFilas("vista_clases_programadas", "alumno_id, fecha, hora, teacher_id", "fecha", alumnoId);
+  const filas = await todasLasFilas("vista_clases_programadas", "alumno_id, fecha, hora, horas, teacher_id", "fecha", alumnoId);
   if (!filas) return null;
 
   return filas.map((fila) => ({
@@ -1232,6 +1248,7 @@ export async function clasesProgramadas(alumnoId?: string): Promise<FilaPrograma
     fecha: comoTexto(fila.fecha),
     hora: comoTexto(fila.hora),
     teacherId: comoTextoOpcional(fila.teacher_id),
+    horas: Number.isFinite(Number(fila.horas)) && Number(fila.horas) > 0 ? Number(fila.horas) : null,
   }));
 }
 

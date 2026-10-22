@@ -11,6 +11,11 @@ export type DetalleRecorrido = {
   profesores: Map<string, string>;
   /** "con Ignacio" */
   conProfesor: (nombre: string) => string;
+  /**
+   * Lo que va al pie de cada parada: el «Valorar clase» o sus estrellas
+   * (`components/valoraciones/ValorarClase`). Null en las que no se pueden valorar.
+   */
+  valorar?: (clase: ClaseDelRecorrido) => ReactNode;
 };
 
 // ---------------------------------------------------------------
@@ -168,6 +173,8 @@ function Parada({
           </div>
         </details>
       )}
+
+      {detalle?.valorar?.(clase)}
     </li>
   );
 }
