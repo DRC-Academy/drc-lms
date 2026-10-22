@@ -29,6 +29,11 @@ import { MAX_COMENTARIO, type Origen } from "@/lib/valoraciones";
 // celebración: el mensaje aparece en su sitio y la hoja se cierra sola a
 // los dos segundos, o con «Cerrar».
 //
+// CON 5 ESTRELLAS, EN VEZ DE LAS GRACIAS, LA RESEÑA: en la misma hoja,
+// la invitación a contarlo en público y un solo botón que abre la página
+// de reseñas en otra pestaña y cierra la hoja. Esta no se cierra sola:
+// hay que leerla. La X, el fondo y Escape la cierran como siempre.
+//
 // `vistaPrevia`: el equipo revisando una ficha la ve y la usa igual que
 // el alumno, con una línea que lo avisa, y al enviar no se guarda nada.
 // ---------------------------------------------------------------
@@ -36,6 +41,7 @@ import { MAX_COMENTARIO, type Origen } from "@/lib/valoraciones";
 /** El contador sale cuando queda poco. */
 const AVISO_CONTADOR = MAX_COMENTARIO - 150;
 const MS_GRACIAS = 2000;
+const ENLACE_RESENA = "https://es.trustpilot.com/evaluate/drcacademy.com";
 
 export type Inicial = { estrellas: number | null; comentario: string | null };
 
@@ -108,9 +114,10 @@ function Formulario({
   const idComentario = useId();
   const [estrellas, setEstrellas] = useState<number | null>(inicial?.estrellas ?? null);
   const [comentario, setComentario] = useState(inicial?.comentario ?? "");
-  const [estado, setEstado] = useState<"editando" | "gracias" | "error">("editando");
+  const [estado, setEstado] = useState<"editando" | "gracias" | "resena" | "error">("editando");
   const [enviando, empezar] = useTransition();
   const cerrarGracias = useRef<HTMLButtonElement>(null);
+  const dejarResena = useRef<HTMLAnchorElement>(null);
   // En una referencia: quien abre la hoja la pasa nueva en cada render, y
   // el reloj de las gracias no tiene que volver a empezar por eso.
   const cerrar = useRef(alCerrar);
@@ -124,17 +131,22 @@ function Formulario({
     return () => clearTimeout(reloj);
   }, [estado]);
 
+  useEffect(() => {
+    if (estado === "resena") dejarResena.current?.focus({ preventScroll: true });
+  }, [estado]);
+
   function enviar() {
     if (estrellas === null || enviando) return;
+    const tras = estrellas === 5 ? "resena" : "gracias";
     if (vistaPrevia) {
-      setEstado("gracias");
+      setEstado(tras);
       return;
     }
     empezar(async () => {
       const resultado = await enviarValoracion({ claseId, estrellas, comentario: comentario.trim() || null, origen }).catch(() => null);
       if (resultado?.ok) {
         alEnviar();
-        setEstado("gracias");
+        setEstado(tras);
       } else {
         setEstado("error");
       }
@@ -152,6 +164,33 @@ function Formulario({
     );
   }
 
+  if (estado === "resena") {
+    return (
+      <div role="status" className="aparece font-sans">
+        <div className="flex items-start gap-3">
+          <h2 className="min-w-0 flex-1 text-pretty pt-1 font-display text-[22px] font-bold leading-[1.2] text-marca-tinta min-[900px]:text-[24px]">
+            {tv.resenaTitulo}
+          </h2>
+          <BotonCerrar etiqueta={tv.cerrar} alPulsar={() => alCerrar(true)} />
+        </div>
+        <p className="mt-2 text-pretty text-[15px] leading-[1.45] text-marca-tintaMedia">{tv.resenaTexto(profesor)}</p>
+        <div className="mt-6">
+          {/* La hoja se cierra en la vuelta siguiente: el enlace se abre antes de desmontarse. */}
+          <a
+            ref={dejarResena}
+            href={ENLACE_RESENA}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setTimeout(() => alCerrar(true), 0)}
+            className={BOTON_VERDE}
+          >
+            {tv.dejarResena}
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const etiqueta = estrellas !== null ? tv.etiquetas[estrellas - 1] : tv.eligeEstrellas;
 
   return (
@@ -161,16 +200,7 @@ function Formulario({
         <h2 className="min-w-0 flex-1 text-pretty pt-1 font-display text-[22px] font-bold leading-[1.2] text-marca-tinta min-[900px]:text-[24px]">
           {titulo}
         </h2>
-        <button
-          type="button"
-          onClick={() => alCerrar(false)}
-          aria-label={tv.cerrar}
-          className={`-mr-2 -mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-full text-marca-gris transition-colors hover:bg-marca-niebla hover:text-marca-tinta ${FOCO}`}
-        >
-          <svg aria-hidden viewBox="0 0 20 20" width="18" height="18">
-            <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </button>
+        <BotonCerrar etiqueta={tv.cerrar} alPulsar={() => alCerrar(false)} />
       </div>
 
       <p className="mt-2 text-pretty text-[15px] leading-[1.45] text-marca-tintaMedia">{tv.subtitulo}</p>
@@ -228,5 +258,20 @@ function Formulario({
         </button>
       </div>
     </div>
+  );
+}
+
+function BotonCerrar({ etiqueta, alPulsar }: { etiqueta: string; alPulsar: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={alPulsar}
+      aria-label={etiqueta}
+      className={`-mr-2 -mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-full text-marca-gris transition-colors hover:bg-marca-niebla hover:text-marca-tinta ${FOCO}`}
+    >
+      <svg aria-hidden viewBox="0 0 20 20" width="18" height="18">
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    </button>
   );
 }

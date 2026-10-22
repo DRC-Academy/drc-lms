@@ -4,7 +4,8 @@
 // El pop-up de después de la clase y el «Valorar clase» del historial de
 // «Mis clases» (`components/valoraciones/`). Cálido y corto: es una
 // pregunta, no un examen. Nada de lenguaje de error ni de vigilancia, y
-// nada que celebre: se da las gracias y ya.
+// nada que celebre: se da las gracias y ya. Con 5 estrellas, en lugar
+// de las gracias, la invitación a dejar una reseña pública.
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
@@ -32,6 +33,11 @@ export type TextosValoraciones = {
   ahoraNo: string;
   cerrar: string;
   gracias: string;
+  /** Tras enviar 5 estrellas, en lugar de las gracias. */
+  resenaTitulo: string;
+  /** "Ayudaría un montón a Mauricio…"; sin profesor, "a tu profe". */
+  resenaTexto: (profesor: string | null) => string;
+  dejarResena: string;
   /** Si no se pudo guardar. Sin culpa: que lo intente otra vez. */
   noSeGuardo: string;
   /** El equipo revisando una ficha: lo ve todo, no se guarda nada. */
@@ -63,6 +69,9 @@ export const VALORACIONES: Record<Idioma, TextosValoraciones> = {
     ahoraNo: "Ahora no",
     cerrar: "Cerrar",
     gracias: "¡Gracias! Nos ayuda mucho.",
+    resenaTitulo: "¿Te gustaría compartir tu experiencia con otros alumnos?",
+    resenaTexto: (profesor) => `Ayudaría un montón a ${profesor ?? "tu profe"} a seguir creciendo.`,
+    dejarResena: "Dejar reseña",
     noSeGuardo: "No hemos podido guardarla. ¿Lo intentas otra vez?",
     vistaPrevia: "Vista del equipo: así lo ve el alumno. No se guarda nada.",
     valorarClase: "Valorar clase",
@@ -86,6 +95,9 @@ export const VALORACIONES: Record<Idioma, TextosValoraciones> = {
     ahoraNo: "Not now",
     cerrar: "Close",
     gracias: "Thank you! This really helps.",
+    resenaTitulo: "Would you like to share your experience with other students?",
+    resenaTexto: (profesor) => `It would really help ${profesor ?? "your teacher"} keep growing.`,
+    dejarResena: "Leave a review",
     noSeGuardo: "We couldn't save it. Would you try again?",
     vistaPrevia: "Team preview: this is what the student sees. Nothing is saved.",
     valorarClase: "Rate class",
