@@ -79,3 +79,63 @@ export function etiquetaPeriodo(periodo: string): string {
 export function tituloPeriodo(periodo: string): string {
   return `Semana del ${diaCorto(periodo)}`;
 }
+
+// ---------------------------------------------------------------
+// LOS MESES DEL GRÁFICO Y LOS TRAMOS DE LAS COMPARACIONES FIJAS
+// ---------------------------------------------------------------
+
+const MES_CORTO = new Intl.DateTimeFormat("es-ES", { timeZone: "UTC", month: "short" });
+const DIA_SEMANA = new Intl.DateTimeFormat("es-ES", { timeZone: "UTC", weekday: "short" });
+
+/** El rótulo de un mes en el eje: "oct". */
+export function etiquetaMes(periodo: string): string {
+  return MES_CORTO.format(comoFecha(periodo)).replace(".", "").replace("sept", "sep");
+}
+
+/** "2026-10-22" → "jue". */
+export function diaDeLaSemana(dia: string): string {
+  return DIA_SEMANA.format(comoFecha(dia)).replace(".", "");
+}
+
+/**
+ * El tramo en pequeño, como se lee junto a la comparación: «lun–jue» o
+ * «1–22». El lunes, o el día 1, solo «lun» o «día 1».
+ */
+export function tramoCorto(hasta: string, de: "semana" | "mes"): string {
+  const dia = hasta.slice(0, 10);
+  if (de === "semana") return diaDeLaSemana(dia) === "lun" ? "lun" : `lun–${diaDeLaSemana(dia)}`;
+  const n = Number(dia.slice(8));
+  return n === 1 ? "día 1" : `1–${n}`;
+}
+
+/**
+ * Un tramo en largo, para el tooltip: «lun 19 oct, 00:00 – jue 22 oct,
+ * 23:02». El que acaba a las 00:00 se dice hasta el final del día antes.
+ */
+export function tramoLargo(t: { desde: string; hasta: string }): string {
+  const dia = (d: string) => `${diaDeLaSemana(d)} ${diaCorto(d)}`;
+  const desde = t.desde.slice(0, 10);
+  if (t.hasta.slice(11) === "00:00") {
+    const fin = new Date(Date.parse(`${t.hasta.slice(0, 10)}T12:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+    return `${dia(desde)} – ${dia(fin)}, el día entero`;
+  }
+  return `${dia(desde)}, ${t.desde.slice(11)} – ${dia(t.hasta.slice(0, 10))}, ${t.hasta.slice(11)}`;
+}
+
+/** Una variación ya escrita: el texto y hacia dónde va (para el color). */
+export type Variacion = { texto: string; signo: -1 | 0 | 1 };
+
+const conSigno = (n: number) => (n > 0 ? `+${numero(n)}` : n < 0 ? `−${numero(-n)}` : "0");
+
+/** Porcentajes: diferencia en puntos y el valor anterior. «+3 pts · vs. 16 %». */
+export function variacionEnPuntos(actual: number, anterior: number): Variacion {
+  const d = actual - anterior;
+  return { texto: `${conSigno(d)} ${Math.abs(d) === 1 ? "pt" : "pts"} · vs. ${anterior} %`, signo: Math.sign(d) as -1 | 0 | 1 };
+}
+
+/** Números: diferencia absoluta y relativa. «+6 · +43 %»; contra un cero, «+6 · vs. 0». */
+export function variacionEnNumero(actual: number, anterior: number): Variacion {
+  const d = actual - anterior;
+  const relativo = anterior > 0 ? `${conSigno(Math.round((d / anterior) * 100))} %` : `vs. ${numero(anterior)}`;
+  return { texto: `${conSigno(d)} · ${relativo}`, signo: Math.sign(d) as -1 | 0 | 1 };
+}

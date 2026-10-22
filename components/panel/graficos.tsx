@@ -15,6 +15,10 @@
 // lleva null y se pinta como una marca corta sobre la base, con «aún no
 // se registraba» en el tooltip; un cero es una columna que no se levanta.
 //
+// EL PERIODO EN CURSO (`enCurso`, su índice) va a medias: su columna sale
+// más clara y con borde discontinuo, y el último tramo de la línea
+// discontinuo y con el punto hueco. Bajo su rótulo, «en curso».
+//
 // TECLADO: cada gráfico es una sola parada de tabulador. Con el foco
 // dentro, las flechas recorren los periodos y el tooltip los va diciendo.
 // ---------------------------------------------------------------
@@ -159,6 +163,18 @@ function columna(x: number, y: number, w: number, h: number, r = 4): string {
   return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
 }
 
+/** «en curso», debajo del rótulo del eje del periodo a medias. */
+function EnCurso({ x, y }: { x: number; y: number }) {
+  return (
+    <text className="fill-marca-grisSuave text-[10.5px] font-medium" x={x} y={y} textAnchor="middle">
+      en curso
+    </text>
+  );
+}
+
+/** El título del tooltip, con «en curso» si toca. */
+const tituloDe = (p: PuntoEje, enCurso: boolean) => (enCurso ? `${p.titulo} · en curso` : p.titulo);
+
 /** Cada cuántos periodos va un rótulo para que no se pisen (~46px cada uno), contando desde el último. */
 function cadaCuanto(anchoBanda: number): number {
   return Math.max(1, Math.ceil(46 / Math.max(1, anchoBanda)));
@@ -179,18 +195,21 @@ export function Columnas({
   series,
   alto = 230,
   aria,
+  enCurso = null,
 }: {
   puntos: PuntoEje[];
   series: Serie[];
   alto?: number;
   aria: string;
+  /** El índice del periodo a medias, o null. */
+  enCurso?: number | null;
 }) {
   const [caja, ancho] = usarAncho<HTMLDivElement>();
   const n = puntos.length;
   const contenido = useCallback(
     (i: number) => (
       <>
-        <b className="font-semibold">{puntos[i].titulo}</b>
+        <b className="font-semibold">{tituloDe(puntos[i], i === enCurso)}</b>
         {series.every((s) => s.valores[i] === null) ? (
           <div>Aún no se registraba</div>
         ) : (
@@ -203,14 +222,14 @@ export function Columnas({
         )}
       </>
     ),
-    [puntos, series]
+    [puntos, series, enCurso]
   );
   const { activo, tip, enseñar, props } = usarActivo(n, contenido);
 
   let svg: ReactNode = null;
   if (ancho) {
     const W = Math.max(260, ancho);
-    const m = { t: 22, r: 4, b: 30, l: 36 };
+    const m = { t: 22, r: 4, b: enCurso === null ? 30 : 42, l: 36 };
     const pw = W - m.l - m.r;
     const ph = alto - m.t - m.b;
     const banda = pw / Math.max(1, n);
@@ -239,8 +258,16 @@ export function Columnas({
             {series.map((s, j) => {
               const v = s.valores[i];
               const x = x0(i) + j * (bw + gap);
-              return v === null ? (
-                <line key={j} x1={x + bw / 2} x2={x + bw / 2} y1={y(0) - 3} y2={y(0) + 3} stroke={SIN_DATO} />
+              if (v === null) return <line key={j} x1={x + bw / 2} x2={x + bw / 2} y1={y(0) - 3} y2={y(0) + 3} stroke={SIN_DATO} />;
+              return i === enCurso ? (
+                <path
+                  key={j}
+                  d={columna(x + 0.5, y(v) + 0.5, bw - 1, (v / tope) * ph - 0.5)}
+                  fill={COLOR_SERIE[j]}
+                  fillOpacity={0.35}
+                  stroke={COLOR_SERIE[j]}
+                  strokeDasharray="3 2"
+                />
               ) : (
                 <path key={j} d={columna(x, y(v), bw, (v / tope) * ph)} fill={COLOR_SERIE[j]} />
               );
@@ -255,6 +282,7 @@ export function Columnas({
                 {p.etiqueta}
               </text>
             )}
+            {i === enCurso && <EnCurso x={m.l + i * banda + banda / 2} y={m.t + ph + 30} />}
           </g>
         ))}
         {/* El valor directo, solo del último periodo. */}
@@ -321,6 +349,7 @@ export function LineaPorcentaje({
   unidad,
   alto = 170,
   aria,
+  enCurso = null,
 }: {
   puntos: PuntoEje[];
   valores: Proporcion[];
@@ -328,6 +357,8 @@ export function LineaPorcentaje({
   unidad: string;
   alto?: number;
   aria: string;
+  /** El índice del periodo a medias, o null. */
+  enCurso?: number | null;
 }) {
   const [caja, ancho] = usarAncho<HTMLDivElement>();
   const n = puntos.length;
@@ -336,7 +367,7 @@ export function LineaPorcentaje({
       const v = valores[i];
       return (
         <>
-          <b className="font-semibold">{puntos[i].titulo}</b>
+          <b className="font-semibold">{tituloDe(puntos[i], i === enCurso)}</b>
           <div>
             {v === null
               ? "Aún no se registraba"
@@ -347,14 +378,14 @@ export function LineaPorcentaje({
         </>
       );
     },
-    [puntos, valores, unidad]
+    [puntos, valores, unidad, enCurso]
   );
   const { activo, tip, enseñar, props } = usarActivo(n, contenido);
 
   let svg: ReactNode = null;
   if (ancho) {
     const W = Math.max(240, ancho);
-    const m = { t: 16, r: 38, b: 30, l: 40 };
+    const m = { t: 16, r: 38, b: enCurso === null ? 30 : 42, l: 40 };
     const pw = W - m.l - m.r;
     const ph = alto - m.t - m.b;
     const pcts = valores.map((v) => (v === null || v.base === 0 ? null : (v.parte / v.base) * 100));
@@ -365,16 +396,19 @@ export function LineaPorcentaje({
     const banda = n > 1 ? paso : pw;
     const cada = cadaCuanto(banda);
 
-    // Tramos seguidos con dato: un hueco corta la línea.
+    // Tramos seguidos con dato: un hueco corta la línea. El periodo en
+    // curso no entra en ellos: va aparte, discontinuo desde el anterior.
     const tramos: [number, number][][] = [];
     let actual: [number, number][] = [];
     pcts.forEach((v, i) => {
-      if (v === null) {
+      if (v === null || i === enCurso) {
         if (actual.length) tramos.push(actual);
         actual = [];
       } else actual.push([x(i), y(v)]);
     });
     if (actual.length) tramos.push(actual);
+    const vCurso = enCurso === null ? null : pcts[enCurso];
+    const vPrevio = enCurso === null || enCurso === 0 ? null : pcts[enCurso - 1];
     const ultimoConDato = pcts.reduce<number>((u, v, i) => (v === null ? u : i), -1);
 
     svg = (
@@ -396,9 +430,21 @@ export function LineaPorcentaje({
             </g>
           );
         })}
+        {enCurso !== null && vCurso != null && vPrevio != null && (
+          <path
+            d={`M${x(enCurso - 1)},${y(vPrevio)}L${x(enCurso)},${y(vCurso)}`}
+            fill="none"
+            stroke={COLOR_SERIE[0]}
+            strokeWidth={2}
+            strokeDasharray="4 3"
+            strokeLinecap="round"
+          />
+        )}
         {pcts.map((v, i) =>
           v === null ? (
             <line key={i} x1={x(i)} x2={x(i)} y1={y(0) - 3} y2={y(0) + 3} stroke={SIN_DATO} />
+          ) : i === enCurso ? (
+            <circle key={i} cx={x(i)} cy={y(v)} r={4} fill="#fff" stroke={COLOR_SERIE[0]} strokeWidth={2} />
           ) : n <= 14 || i === ultimoConDato || activo === i ? (
             <circle key={i} cx={x(i)} cy={y(v)} r={4.5} fill={COLOR_SERIE[0]} stroke="#fff" strokeWidth={2} />
           ) : null
@@ -417,6 +463,7 @@ export function LineaPorcentaje({
               </text>
             )
         )}
+        {enCurso !== null && <EnCurso x={x(enCurso)} y={m.t + ph + 31} />}
         {ultimoConDato >= 0 && (
           <text className="fill-marca-tinta text-[12px] font-semibold tabular-nums" x={x(ultimoConDato) + 8} y={y(pcts[ultimoConDato] as number) - 8}>
             {Math.round(pcts[ultimoConDato] as number)} %

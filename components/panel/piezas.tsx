@@ -14,9 +14,10 @@
 // ---------------------------------------------------------------
 
 import type { ReactNode } from "react";
-import { MUESTRA_MINIMA, numero, porcentaje } from "@/lib/panel-formato";
+import { MUESTRA_MINIMA, numero, porcentaje, type Variacion } from "@/lib/panel-formato";
 
 export const COLOR_BAJA = "#A5432F";
+export const COLOR_SUBE = "#14722A";
 
 export function Tarjeta({
   children,
@@ -117,14 +118,21 @@ export function Delta({
   anterior,
   enPuntos = false,
   sinComparar = "Sin periodo anterior para comparar",
+  tenue = false,
 }: {
   actual: number;
   anterior: number | null;
   /** Para porcentajes: la diferencia va en puntos y sin %, y el «vs.» lleva el %. */
   enPuntos?: boolean;
   sinComparar?: string;
+  /** Por debajo de las comparaciones fijas: gris, sin flecha ni color. */
+  tenue?: boolean;
 }) {
-  if (anterior === null) return <span className="text-[13px] font-medium text-marca-grisSuave">{sinComparar}</span>;
+  if (anterior === null) {
+    // Tenue va a media frase («Rango elegido vs. …: sin datos…»): en minúscula.
+    const texto = tenue ? sinComparar.charAt(0).toLowerCase() + sinComparar.slice(1) : sinComparar;
+    return <span className={`text-[13px] text-marca-grisSuave ${tenue ? "" : "font-medium"}`}>{texto}</span>;
+  }
   const d = actual - anterior;
   const vs = enPuntos ? `${anterior} %` : numero(anterior);
   if (d === 0) {
@@ -137,8 +145,17 @@ export function Delta({
   const sube = d > 0;
   const signo = sube ? "+" : "−";
   const relativo = !enPuntos && anterior > 0 ? ` (${signo}${Math.abs(Math.round((d / anterior) * 100))} %)` : "";
+  if (tenue) {
+    return (
+      <span className="text-[13px] tabular-nums text-marca-grisSuave">
+        {signo}
+        {numero(Math.abs(d))}
+        {enPuntos ? (Math.abs(d) === 1 ? " pt" : " pts") : relativo} · vs. {vs}
+      </span>
+    );
+  }
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-x-1 text-[13px] font-semibold" style={{ color: sube ? "#14722A" : COLOR_BAJA }}>
+    <span className="inline-flex flex-wrap items-baseline gap-x-1 text-[13px] font-semibold" style={{ color: sube ? COLOR_SUBE : COLOR_BAJA }}>
       <span aria-hidden>{sube ? "▲" : "▼"}</span>
       <span>
         {signo}
@@ -148,6 +165,59 @@ export function Delta({
       <span className="font-normal text-marca-grisSuave">vs. {vs}</span>
     </span>
   );
+}
+
+/**
+ * Lo que dice una comparación fija: la variación, o por qué no la hay.
+ * `tenue`: gris en vez de verde o rojo (periodo anterior incompleto,
+ * muestra pequeña), con la razón en `nota`.
+ */
+export type EstadoFija =
+  | { tipo: "variacion"; variacion: Variacion; tenue: boolean; notas: string[] }
+  | { tipo: "texto"; texto: string };
+
+/**
+ * Una de las dos comparaciones fijas: «vs. semana anterior · lun–jue» y
+ * debajo la variación. El detalle (los dos tramos con sus horas y sus
+ * cifras) va en el tooltip y, para lectores de pantalla, en el texto.
+ */
+export function LineaFija({ nombre, tramo, detalle, estado }: { nombre: string; tramo: string; detalle: string; estado: EstadoFija }) {
+  const color =
+    estado.tipo !== "variacion" || estado.tenue || estado.variacion.signo === 0
+      ? undefined
+      : estado.variacion.signo > 0
+        ? COLOR_SUBE
+        : COLOR_BAJA;
+  return (
+    <div title={detalle} className="min-w-0">
+      <p className="text-[12px] leading-[1.35] text-marca-grisSuave">
+        <span className="font-medium text-marca-tintaMedia">{nombre}</span> · <span className="whitespace-nowrap">{tramo}</span>
+      </p>
+      {estado.tipo === "variacion" ? (
+        <>
+          <p
+            className={`text-[13.5px] font-semibold leading-[1.4] tabular-nums ${color ? "" : "text-marca-grisSuave"}`}
+            style={color ? { color } : undefined}
+          >
+            {estado.variacion.texto}
+          </p>
+          {estado.notas.map((n) => (
+            <p key={n} className="text-[12px] leading-[1.35] text-marca-grisSuave">
+              {n}
+            </p>
+          ))}
+        </>
+      ) : (
+        <p className="text-[13px] leading-[1.4] text-marca-grisSuave">{estado.texto}</p>
+      )}
+      <span className="sr-only">{detalle}</span>
+    </div>
+  );
+}
+
+/** Las dos comparaciones fijas, una al lado de la otra; en móvil, una encima de otra. */
+export function LineasFijas({ children }: { children: ReactNode }) {
+  return <div className="mt-2.5 grid grid-cols-1 gap-x-4 gap-y-2 border-t border-marca-nieblaOscura pt-2.5 min-[480px]:grid-cols-2">{children}</div>;
 }
 
 /** «Ver como tabla», debajo de cada gráfico. */
@@ -172,7 +242,7 @@ export function TablaVista({ cabeceras, filas }: { cabeceras: string[]; filas: R
             {filas.map((f, i) => (
               <tr key={i}>
                 {f.map((c, j) => (
-                  <td key={j} className={`whitespace-nowrap border-b border-marca-nieblaOscura px-2.5 py-1 ${j ? "text-right" : "text-left"}`}>
+                  <td key={j} className={`border-b border-marca-nieblaOscura px-2.5 py-1 ${j ? "whitespace-nowrap text-right" : "min-w-[5.5rem] text-left"}`}>
                     {c}
                   </td>
                 ))}

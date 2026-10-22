@@ -14,6 +14,7 @@
 import { sumarDias } from "@/lib/fechas";
 import { claveDeEntrada, claveDeParte, medirBoton, TIPOS_DADA, type FilaEntrada, type ParteParaMedir } from "@/lib/entradas-clase";
 import { lunesDe, type Rango } from "@/lib/panel-rango";
+import type { Tramo } from "@/lib/panel-tramos";
 
 // ---------------------------------------------------------------
 // DISPONIBILIDAD
@@ -135,4 +136,32 @@ export function medirClase(partes: ParteParaMedir[], entradas: FilaEntrada[], ra
     alumnosConEntrada: medida.alumnosConEntrada,
     porAlumno,
   };
+}
+
+/** Las cuatro cifras, sin la lista por alumno: lo que necesitan las comparaciones fijas. */
+export type CifrasClase = Pick<ResumenClase, "clases" | "clasesConEntrada" | "alumnos" | "alumnosConEntrada">;
+
+/**
+ * Como `medirClase`, pero el tramo acaba a una hora («hasta ahora»). Una
+ * clase entra si su inicio, día y hora de Madrid, cae en [desde, hasta);
+ * un parte sin hora cuenta como de las 00:00 de su día. El clic va con la
+ * clase que lleva en su `clase_id`, igual que en `medirBoton`.
+ */
+export function medirClaseTramo(partes: ParteParaMedir[], entradas: FilaEntrada[], tramo: Tramo): CifrasClase {
+  const dentro = (clave: string) => clave >= tramo.desde && clave < tramo.hasta;
+  const m = medirBoton(
+    partes.filter((p) => dentro(claveDeParte(p.fecha, p.hora ?? "00:00"))),
+    entradas.filter((e) => {
+      const clave = claveDeEntrada(e);
+      return clave !== null && dentro(clave);
+    })
+  );
+  return { clases: m.clases, clasesConEntrada: m.clasesConEntrada, alumnos: m.alumnos, alumnosConEntrada: m.alumnosConEntrada };
+}
+
+/** El trozo del tramo que tiene datos (desde las 00:00 del día `inicio`), o null si ninguno. */
+export function recortarTramo(tramo: Tramo, inicio: string | null): Tramo | null {
+  if (inicio === null) return null;
+  const desde = `${inicio}T00:00` > tramo.desde ? `${inicio}T00:00` : tramo.desde;
+  return desde < tramo.hasta ? { desde, hasta: tramo.hasta } : null;
 }
