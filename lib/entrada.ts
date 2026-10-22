@@ -12,6 +12,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { NOMBRE_COOKIE, OPCIONES_COOKIE, DIAS_SESION, crearCookieSesion, type Sesion } from "@/lib/sesion";
 import { crearSesion, type OrigenSesion } from "@/lib/sesiones-lms";
+import { clienteActual } from "@/lib/cliente-request";
 
 /**
  * Por qué se rechaza a alguien en la puerta.
@@ -64,6 +65,7 @@ export async function entrarComo(
     emailAdmin: sesion.rol === "admin" ? sesion.email : null,
     origen,
     expiraEn: new Date(Date.now() + DIAS_SESION * 24 * 60 * 60 * 1000),
+    cliente: clienteActual(),
   });
 
   if (!sesionId) return volverAAcceso(urlPeticion, "error", volver);

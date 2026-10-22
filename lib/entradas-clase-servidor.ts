@@ -11,6 +11,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { baseLms } from "@/lib/supabase-lms";
+import { conColumnasCliente, type ClienteRequest } from "@/lib/cliente-request";
 import { alumnosDelPanel, partesDeClase, type AlumnoPanel } from "@/lib/gestion";
 import { esIdDemo } from "@/lib/demo/cuenta";
 import { instanteEnMadrid } from "@/lib/clases";
@@ -38,12 +39,16 @@ export type NuevaEntrada = {
  * Apunta un clic. NUNCA LANZA: un fallo se registra en el log y la ruta
  * redirige como si nada.
  */
-export async function registrarEntrada(fila: NuevaEntrada): Promise<void> {
+export async function registrarEntrada(fila: NuevaEntrada, cliente?: ClienteRequest): Promise<void> {
   try {
-    const { error } = await baseLms()
-      .from("entradas_clase")
-      .insert(fila)
-      .abortSignal(AbortSignal.timeout(MS_REGISTRO));
+    // Un solo tope para los dos intentos de `conColumnasCliente`.
+    const tope = AbortSignal.timeout(MS_REGISTRO);
+    const { error } = await conColumnasCliente(cliente, (extra) =>
+      baseLms()
+        .from("entradas_clase")
+        .insert({ ...fila, ...extra })
+        .abortSignal(tope)
+    );
     if (error) console.error("[entradas] No se pudo apuntar la entrada:", error.message);
   } catch (error) {
     console.error("[entradas] No se pudo apuntar la entrada:", (error as Error).message);

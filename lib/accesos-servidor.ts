@@ -23,6 +23,7 @@
 
 import "server-only";
 import { baseLms } from "@/lib/supabase-lms";
+import { clienteActual, conColumnasCliente } from "@/lib/cliente-request";
 
 export type ResultadoIntento =
   | "enlace_enviado"
@@ -48,12 +49,17 @@ export async function registrarIntento(datos: {
   origen?: "magic_link" | "woocommerce";
 }): Promise<void> {
   try {
-    const { error } = await baseLms().from("intentos_acceso").insert({
-      alumno_id: datos.alumnoId ?? null,
-      rol: datos.rol,
-      resultado: datos.resultado,
-      origen: datos.origen ?? "magic_link",
-    });
+    const { error } = await conColumnasCliente(clienteActual(), (extra) =>
+      baseLms()
+        .from("intentos_acceso")
+        .insert({
+          alumno_id: datos.alumnoId ?? null,
+          rol: datos.rol,
+          resultado: datos.resultado,
+          origen: datos.origen ?? "magic_link",
+          ...extra,
+        })
+    );
 
     // Se registra en el log y nada más: que no se pueda contar un
     // intento no es motivo para que alguien no entre.

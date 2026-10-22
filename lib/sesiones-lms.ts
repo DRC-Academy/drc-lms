@@ -62,6 +62,7 @@ import "server-only";
 import { cache } from "react";
 import { baseLms } from "@/lib/supabase-lms";
 import { enSegundoPlano } from "@/lib/segundo-plano";
+import { clienteActual, conColumnasCliente, type ClienteRequest } from "@/lib/cliente-request";
 import type { Rol } from "@/lib/sesion";
 
 export type OrigenSesion = "magic_link" | "woocommerce";
@@ -124,20 +125,25 @@ export async function crearSesion(datos: {
    * verdad nunca lo manda.
    */
   en?: Date;
+  /** IP y navegador de quien entra (`lib/cliente-request.ts`). */
+  cliente?: ClienteRequest;
 }): Promise<string | null> {
-  const { data, error } = await baseLms()
-    .from("sesiones")
-    .insert({
-      rol: datos.rol,
-      alumno_id: datos.alumnoId,
-      email_admin: datos.emailAdmin,
-      origen: datos.origen,
-      expira_en: datos.expiraEn.toISOString(),
-      ...(datos.en ? { creada_en: datos.en.toISOString(), ultimo_uso_en: datos.en.toISOString() } : {}),
-    })
-    .select("id")
-    .limit(1)
-    .returns<{ id: string }[]>();
+  const { data, error } = await conColumnasCliente(datos.cliente, (extra) =>
+    baseLms()
+      .from("sesiones")
+      .insert({
+        rol: datos.rol,
+        alumno_id: datos.alumnoId,
+        email_admin: datos.emailAdmin,
+        origen: datos.origen,
+        expira_en: datos.expiraEn.toISOString(),
+        ...(datos.en ? { creada_en: datos.en.toISOString(), ultimo_uso_en: datos.en.toISOString() } : {}),
+        ...extra,
+      })
+      .select("id")
+      .limit(1)
+      .returns<{ id: string }[]>()
+  );
 
   if (error) {
     console.error("[sesiones] No se pudo abrir la sesión:", error.message);
@@ -151,7 +157,8 @@ export async function crearSesion(datos: {
   // eso es `scripts/demo.ts` rellenando el pasado, no alguien entrando.
   if (id && datos.rol === "alumno" && datos.alumnoId && !datos.en) {
     const alumnoId = datos.alumnoId;
-    enSegundoPlano("accesos", () => anotarAcceso(alumnoId, id, Date.now()));
+    const cliente = datos.cliente;
+    enSegundoPlano("accesos", () => anotarAcceso(alumnoId, id, Date.now(), cliente));
   }
 
   return id;
@@ -169,7 +176,7 @@ export async function crearSesion(datos: {
  * Sin filtro de cuentas: la demo y la de pruebas se apuntan igual y las
  * quita `metricas_excluido()` en la base, que es la única lista.
  */
-async function anotarAcceso(alumnoId: string, sesionId: string, ahora: number) {
+async function anotarAcceso(alumnoId: string, sesionId: string, ahora: number, cliente: ClienteRequest | undefined) {
   const { data, error } = await baseLms()
     .from("sesiones")
     .select("id")
@@ -184,9 +191,11 @@ async function anotarAcceso(alumnoId: string, sesionId: string, ahora: number) {
   if (error) console.error("[accesos] No se pudo mirar si seguía activo en otra sesión:", error.message);
   else if ((data ?? []).length > 0) return;
 
-  const { error: alInsertar } = await baseLms()
-    .from("accesos")
-    .insert({ alumno_id: alumnoId, iniciado_en: new Date(ahora).toISOString() });
+  const { error: alInsertar } = await conColumnasCliente(cliente, (extra) =>
+    baseLms()
+      .from("accesos")
+      .insert({ alumno_id: alumnoId, iniciado_en: new Date(ahora).toISOString(), ...extra })
+  );
 
   if (alInsertar) console.error("[accesos] No se pudo apuntar la visita:", alInsertar.message);
 }
@@ -237,9 +246,10 @@ async function refrescarUltimoUso(id: string, en: string) {
 /**
  * Refresca `ultimo_uso_en` y, si había 30 minutos de hueco, apunta la
  * visita. `tocadoAntes` es cuándo la tocó ESTA instancia por última vez
- * (0 si nunca).
+ * (0 si nunca). `cliente` es el de la petición que la toca: se lee antes
+ * de pasar al segundo plano, mientras la petición sigue en curso.
  */
-async function tocarUltimoUso(id: string, tocadoAntes: number) {
+async function tocarUltimoUso(id: string, tocadoAntes: number, cliente: ClienteRequest) {
   const ahora = Date.now();
   const en = new Date(ahora).toISOString();
 
@@ -271,7 +281,7 @@ async function tocarUltimoUso(id: string, tocadoAntes: number) {
     return;
   }
 
-  if (fila.rol === "alumno" && fila.alumno_id) await anotarAcceso(fila.alumno_id, id, ahora);
+  if (fila.rol === "alumno" && fila.alumno_id) await anotarAcceso(fila.alumno_id, id, ahora, cliente);
 }
 
 /**
@@ -292,7 +302,8 @@ export const sesionViva = cache(async (id: string): Promise<boolean> => {
     if (entrada.viva && ahora - entrada.tocadoEn > MS_TOCAR) {
       const tocadoAntes = entrada.tocadoEn;
       entrada.tocadoEn = ahora;
-      enSegundoPlano("sesiones", () => tocarUltimoUso(id, tocadoAntes));
+      const cliente = clienteActual();
+      enSegundoPlano("sesiones", () => tocarUltimoUso(id, tocadoAntes, cliente));
     }
     return entrada.viva;
   }
@@ -307,7 +318,8 @@ export const sesionViva = cache(async (id: string): Promise<boolean> => {
     if (ahora - tocadoAntes > MS_TOCAR) {
       const guardada = memo.get(id);
       if (guardada) guardada.tocadoEn = ahora;
-      enSegundoPlano("sesiones", () => tocarUltimoUso(id, tocadoAntes));
+      const cliente = clienteActual();
+      enSegundoPlano("sesiones", () => tocarUltimoUso(id, tocadoAntes, cliente));
     }
   }
 

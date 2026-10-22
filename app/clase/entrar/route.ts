@@ -36,6 +36,7 @@ import { PARAM_FOCO, leerFoco } from "@/lib/foco";
 import { destinoSeguro } from "@/lib/volver";
 import { RUTA_SIN_ENLACE, comoOrigen, idDeClase, minutosDesdeInicio, resolverEntrada } from "@/lib/entradas-clase";
 import { registrarEntrada } from "@/lib/entradas-clase-servidor";
+import { clienteDeRequest } from "@/lib/cliente-request";
 
 export const dynamic = "force-dynamic";
 
@@ -78,15 +79,18 @@ export async function GET(peticion: NextRequest) {
   const { clase, destino } = entrada;
 
   if (sesion.rol === "alumno") {
-    await registrarEntrada({
-      alumno_id: alumnoId,
-      clase_id: clase ? idDeClase(clase) : null,
-      clase_inicio: clase ? clase.empiezaEn.toISOString() : null,
-      profesor: clase?.profesor ?? null,
-      profesor_id: clase?.teacherId ?? null,
-      origen: comoOrigen(parametros.get("origen")),
-      minutos_desde_inicio: clase ? minutosDesdeInicio(clase, ahora) : null,
-    });
+    await registrarEntrada(
+      {
+        alumno_id: alumnoId,
+        clase_id: clase ? idDeClase(clase) : null,
+        clase_inicio: clase ? clase.empiezaEn.toISOString() : null,
+        profesor: clase?.profesor ?? null,
+        profesor_id: clase?.teacherId ?? null,
+        origen: comoOrigen(parametros.get("origen")),
+        minutos_desde_inicio: clase ? minutosDesdeInicio(clase, ahora) : null,
+      },
+      clienteDeRequest(peticion.headers)
+    );
   }
 
   if (!destino) {
