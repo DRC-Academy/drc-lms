@@ -36,7 +36,7 @@ export default function HistorialClases({
   t,
   anclas = false,
   valoraciones = null,
-  soloLectura = false,
+  vistaPrevia = false,
 }: {
   /** `Recorrido.todas`: de la más reciente a la más antigua. */
   clases: ClaseDelRecorrido[];
@@ -46,13 +46,13 @@ export default function HistorialClases({
   anclas?: boolean;
   /** Por análisis, la clase que se valora desde él. Null: sin botón en ninguna. */
   valoraciones?: Map<string, ValorarDelHistorial> | null;
-  /** El equipo revisando la ficha: ve las estrellas, no valora. */
-  soloLectura?: boolean;
+  /** El equipo revisando la ficha: lo ve como el alumno, sin guardar. */
+  vistaPrevia?: boolean;
 }) {
   const valorar = valoraciones
     ? (clase: ClaseDelRecorrido) => {
         const v = valoraciones.get(clase.id);
-        return v ? <ValorarClase claseId={v.claseId} profesor={v.profesor} guardada={v.guardada} soloLectura={soloLectura} /> : null;
+        return v ? <ValorarClase claseId={v.claseId} profesor={v.profesor} guardada={v.guardada} vistaPrevia={vistaPrevia} /> : null;
       }
     : undefined;
 

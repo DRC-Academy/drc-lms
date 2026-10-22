@@ -44,7 +44,7 @@ export const dynamic = "force-dynamic";
  *
  * EN EL HISTORIAL, «VALORAR CLASE» en cada clase dada
  * (`valoracionesDelHistorial`, de `lib/valoraciones-servidor.ts`). El
- * equipo ve las estrellas que haya y no valora.
+ * equipo lo ve y lo prueba como el alumno, sin guardar nada.
  *
  * `force-dynamic` porque la respuesta depende de la hora: una página
  * cacheada diría "hoy" el día siguiente.
@@ -83,7 +83,7 @@ export default async function PaginaClases({
         t={textosActuales()}
         foco={paraEnlaces}
         valoraciones={valoraciones}
-        soloLectura={sesion.rol !== "alumno"}
+        vistaPrevia={sesion.rol !== "alumno"}
         recuperaciones={
           <Suspense fallback={null}>
             <RecuperacionesDeGestion alumnoId={alumnoId} resaltada={resaltada} soloLectura={sesion.rol !== "alumno"} />

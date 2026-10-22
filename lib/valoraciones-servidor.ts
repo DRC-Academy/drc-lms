@@ -30,7 +30,6 @@ import {
 } from "@/lib/gestion";
 import { LecturaFallida, SEGUNDOS_CLASES, conCache, etiquetaAlumno } from "@/lib/cache-gestion";
 import { instanteEnMadrid } from "@/lib/clases";
-import { tutorialPendiente } from "@/lib/tutorial/estado";
 import { esCuentaDeEquipo } from "@/lib/entradas-clase-servidor";
 import {
   claseDelPopup,
@@ -117,19 +116,11 @@ async function valoracionesDe(alumnoId: string): Promise<Map<string, ValoracionG
 
 export type ValoracionPendiente = { claseId: string; profesor: string | null };
 
-/**
- * La clase que hay que preguntar al entrar, o null. EL RECORRIDO GUIADO
- * VA PRIMERO: si al alumno le toca el onboarding, en esta visita no se
- * pregunta nada.
- */
+/** La clase que hay que preguntar al entrar, o null. */
 export async function valoracionPendiente(alumnoId: string): Promise<ValoracionPendiente | null> {
   if (!alumnoId) return null;
-  const [tutorial, clases, guardadas] = await Promise.all([
-    tutorialPendiente(alumnoId),
-    leerClasesValorables(alumnoId),
-    valoracionesDe(alumnoId),
-  ]);
-  if (tutorial || !clases || !guardadas) return null;
+  const [clases, guardadas] = await Promise.all([leerClasesValorables(alumnoId), valoracionesDe(alumnoId)]);
+  if (!clases || !guardadas) return null;
 
   const clase = claseDelPopup(clases, new Set(guardadas.keys()), new Date());
   if (!clase) return null;

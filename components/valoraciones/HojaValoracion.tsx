@@ -28,6 +28,9 @@ import { MAX_COMENTARIO, type Origen } from "@/lib/valoraciones";
 // AL ENVIAR, LAS GRACIAS Y NADA MÁS. Sin confeti, sin puntos, sin
 // celebración: el mensaje aparece en su sitio y la hoja se cierra sola a
 // los dos segundos, o con «Cerrar».
+//
+// `vistaPrevia`: el equipo revisando una ficha la ve y la usa igual que
+// el alumno, con una línea que lo avisa, y al enviar no se guarda nada.
 // ---------------------------------------------------------------
 
 /** El contador sale cuando queda poco. */
@@ -42,6 +45,7 @@ export default function HojaValoracion({
   profesor,
   origen,
   inicial = null,
+  vistaPrevia = false,
   alCerrar,
 }: {
   abierta: boolean;
@@ -50,6 +54,8 @@ export default function HojaValoracion({
   origen: Origen;
   /** Lo que ya tenía, al editar. */
   inicial?: Inicial | null;
+  /** El equipo revisando la ficha: todo igual, sin guardar. */
+  vistaPrevia?: boolean;
   alCerrar: (enviada: boolean) => void;
 }) {
   const { t } = usarIdioma();
@@ -70,6 +76,7 @@ export default function HojaValoracion({
         titulo={titulo}
         origen={origen}
         inicial={inicial}
+        vistaPrevia={vistaPrevia}
         alEnviar={() => setEnviada(true)}
         alCerrar={(tras) => alCerrar(tras || enviada)}
       />
@@ -83,6 +90,7 @@ function Formulario({
   titulo,
   origen,
   inicial,
+  vistaPrevia,
   alEnviar,
   alCerrar,
 }: {
@@ -91,6 +99,7 @@ function Formulario({
   titulo: string;
   origen: Origen;
   inicial: Inicial | null;
+  vistaPrevia: boolean;
   alEnviar: () => void;
   alCerrar: (enviada: boolean) => void;
 }) {
@@ -117,6 +126,10 @@ function Formulario({
 
   function enviar() {
     if (estrellas === null || enviando) return;
+    if (vistaPrevia) {
+      setEstado("gracias");
+      return;
+    }
     empezar(async () => {
       const resultado = await enviarValoracion({ claseId, estrellas, comentario: comentario.trim() || null, origen }).catch(() => null);
       if (resultado?.ok) {
@@ -161,6 +174,9 @@ function Formulario({
       </div>
 
       <p className="mt-2 text-pretty text-[15px] leading-[1.45] text-marca-tintaMedia">{tv.subtitulo}</p>
+      {vistaPrevia && (
+        <p className="mt-3 rounded-[12px] bg-marca-niebla px-4 py-2.5 text-[14px] leading-[1.4] text-marca-tintaMedia">{tv.vistaPrevia}</p>
+      )}
 
       <div className="mt-6">
         <Estrellas valor={estrellas} alCambiar={setEstrellas} t={tv} />

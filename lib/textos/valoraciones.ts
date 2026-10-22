@@ -34,6 +34,8 @@ export type TextosValoraciones = {
   gracias: string;
   /** Si no se pudo guardar. Sin culpa: que lo intente otra vez. */
   noSeGuardo: string;
+  /** El equipo revisando una ficha: lo ve todo, no se guarda nada. */
+  vistaPrevia: string;
 
   // --- en el historial ---
   valorarClase: string;
@@ -62,6 +64,7 @@ export const VALORACIONES: Record<Idioma, TextosValoraciones> = {
     cerrar: "Cerrar",
     gracias: "¡Gracias! Nos ayuda mucho.",
     noSeGuardo: "No hemos podido guardarla. ¿Lo intentas otra vez?",
+    vistaPrevia: "Vista del equipo: así lo ve el alumno. No se guarda nada.",
     valorarClase: "Valorar clase",
     editar: "Editar",
     editarValoracion: (n) => `Editar tu valoración (${n} de 5)`,
@@ -84,6 +87,7 @@ export const VALORACIONES: Record<Idioma, TextosValoraciones> = {
     cerrar: "Close",
     gracias: "Thank you! This really helps.",
     noSeGuardo: "We couldn't save it. Would you try again?",
+    vistaPrevia: "Team preview: this is what the student sees. Nothing is saved.",
     valorarClase: "Rate class",
     editar: "Edit",
     editarValoracion: (n) => `Edit your rating (${n} of 5)`,

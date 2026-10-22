@@ -61,12 +61,12 @@ export default function PantallaClases({
   ahora = new Date(),
   foco = null,
   valoraciones = null,
-  soloLectura = false,
+  vistaPrevia = false,
 }: {
   /** Por análisis del historial, la clase que se valora desde él (`valoracionesDelHistorial`). */
   valoraciones?: Map<string, ValorarDelHistorial> | null;
-  /** El equipo revisando la ficha. */
-  soloLectura?: boolean;
+  /** El equipo revisando la ficha: el «Valorar clase» se ve y no guarda. */
+  vistaPrevia?: boolean;
   /** «Tu horario», ya montado. Null con el interruptor apagado. */
   autoservicio?: ReactNode;
   /** Las recuperaciones, ya montadas (ver la cabecera). */
@@ -156,7 +156,7 @@ export default function PantallaClases({
       {autoservicio}
 
       <div className="mt-[26px] min-[900px]:mt-9">
-        <HistorialClases clases={recorrido} profesores={profesores} t={tc} anclas valoraciones={valoraciones} soloLectura={soloLectura} />
+        <HistorialClases clases={recorrido} profesores={profesores} t={tc} anclas valoraciones={valoraciones} vistaPrevia={vistaPrevia} />
       </div>
     </main>
   );

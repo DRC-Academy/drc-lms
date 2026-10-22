@@ -1,6 +1,8 @@
 import { alumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { datosDelMarco } from "@/lib/navegacion-servidor";
 import { PiezasDelMarco } from "@/components/Navegacion";
+import ValoracionAlEntrar from "@/components/valoraciones/ValoracionAlEntrar";
+import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +21,22 @@ export const dynamic = "force-dynamic";
  * El `[...ruta]` recoge cualquier pantalla del grupo. De ella solo se
  * mira si es `/alumno/<id>/…`, para darle a `alumnoDeLaPagina` el mismo
  * id que recibe la página.
+ *
+ * Al equipo revisando una ficha, también el pop-up de valorar la clase
+ * tal como le saldría a ese alumno, sin guardar nada. Al alumno se lo
+ * monta el layout, que solo depende de su cookie.
  */
 export default async function Marco({ params }: { params: { ruta: string[] } }) {
   const [seccion, id] = params.ruta;
   const alumno = await alumnoDeLaPagina(seccion === "alumno" && id ? id : undefined);
-  return <PiezasDelMarco datos={await datosDelMarco(alumno)} />;
+  return (
+    <>
+      <PiezasDelMarco datos={await datosDelMarco(alumno)} />
+      {alumno.revisando && alumno.alumnoId !== "" && (
+        <Suspense fallback={null}>
+          <ValoracionAlEntrar alumnoId={alumno.alumnoId} vistaPrevia />
+        </Suspense>
+      )}
+    </>
+  );
 }

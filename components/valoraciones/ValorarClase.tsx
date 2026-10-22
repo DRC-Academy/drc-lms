@@ -12,19 +12,19 @@ import { FOCO } from "@/components/clases/autoservicio/Piezas";
  * estrellas y «Editar» si ya la valoró. Abre la misma hoja que el pop-up
  * (`HojaValoracion`). Cerrarla aquí no descarta nada.
  *
- * `soloLectura`: el equipo revisando la ficha ve las estrellas y no puede
- * valorar por el alumno.
+ * `vistaPrevia`: el equipo revisando la ficha lo ve y lo prueba igual que
+ * el alumno, pero no guarda nada en su nombre.
  */
 export default function ValorarClase({
   claseId,
   profesor,
   guardada,
-  soloLectura = false,
+  vistaPrevia = false,
 }: {
   claseId: string;
   profesor: string | null;
   guardada: Inicial | null;
-  soloLectura?: boolean;
+  vistaPrevia?: boolean;
 }) {
   const { t } = usarIdioma();
   const tv = t.valoraciones;
@@ -36,18 +36,10 @@ export default function ValorarClase({
   const alCerrar = useCallback(
     (enviada: boolean) => {
       setAbierta(false);
-      if (enviada) router.refresh();
+      if (enviada && !vistaPrevia) router.refresh();
     },
-    [router]
+    [router, vistaPrevia]
   );
-
-  if (soloLectura) {
-    return estrellas !== null ? (
-      <div className="mt-2">
-        <EstrellasFijas valor={estrellas} etiqueta={tv.tuValoracion(estrellas)} />
-      </div>
-    ) : null;
-  }
 
   return (
     <div className="mt-2">
@@ -88,6 +80,7 @@ export default function ValorarClase({
         profesor={profesor}
         origen="mis_clases"
         inicial={guardada}
+        vistaPrevia={vistaPrevia}
         alCerrar={alCerrar}
       />
     </div>
