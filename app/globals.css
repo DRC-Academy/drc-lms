@@ -823,6 +823,53 @@
       box-shadow: 0 0 0 4px rgba(30, 158, 58, 0.35);
     }
   }
+
+  /* EL AVISO DE PAGO PENDIENTE (components/impago/AvisoImpago.tsx).
+     Velo de tinta sobre la página desenfocada. Sin `backdrop-filter` el
+     velo es opaco: sin desenfoque, una página nítida debajo invitaría a
+     pulsarla. La tarjeta entra subiendo (hoja en el móvil); con
+     movimiento reducido, solo la opacidad. Solo `from`: ver arriba. */
+  .aviso-impago-velo {
+    background: #12211a;
+    animation: aviso-impago-aparece 200ms ease-out both;
+  }
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .aviso-impago-velo {
+      background: rgba(18, 33, 26, 0.55);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+    }
+  }
+  .aviso-impago-tarjeta {
+    animation: aviso-impago-sube 320ms var(--ease-salida) 60ms both;
+  }
+  @media (min-width: 640px) {
+    .aviso-impago-tarjeta {
+      animation-name: aviso-impago-entra;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .aviso-impago-tarjeta {
+      animation-name: aviso-impago-aparece;
+    }
+  }
+  @keyframes aviso-impago-sube {
+    from {
+      opacity: 0;
+      transform: translateY(32px);
+    }
+  }
+  @keyframes aviso-impago-entra {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+  @keyframes aviso-impago-aparece {
+    from {
+      opacity: 0;
+    }
+  }
 }
 
 @layer utilities {

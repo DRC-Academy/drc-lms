@@ -43,6 +43,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
+import { estadoDeAcceso, respuestaImpago } from "@/lib/estado-acceso";
 import { buscarBloqueGenerado } from "@/lib/progreso-servidor";
 import { guardarTraduccion, leerTraduccion } from "@/lib/traducciones-servidor";
 import { idiomaDe, type IdiomaBloque } from "@/lib/traduccion-bloque";
@@ -63,6 +64,7 @@ const PLAZO_MODELO_MS = 30_000;
 export async function POST(peticion: NextRequest) {
   const sesion = await sesionActual();
   if (!sesion) return NextResponse.json({ error: "Sin sesión" }, { status: 401 });
+  if ((await estadoDeAcceso(sesion)) === "impago") return respuestaImpago();
 
   let cuerpo: unknown;
   try {

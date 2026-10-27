@@ -22,6 +22,7 @@
 import { NextResponse } from "next/server";
 import { historialDeClases, obtenerAlumno } from "@/lib/gestion";
 import { sesionActual } from "@/lib/sesion-servidor";
+import { estadoDeAcceso, respuestaImpago } from "@/lib/estado-acceso";
 import { MODO_ACTUAL } from "@/lib/modos";
 import {
   construirSistema,
@@ -295,6 +296,13 @@ export async function POST(peticion: Request) {
     );
   }
   traza("sesión:ok", `rol=${sesion.rol}`);
+
+  // Pago pendiente (`lib/estado-acceso.ts`): antes de leer nada y, sobre
+  // todo, antes de pagar una generación.
+  if ((await estadoDeAcceso(sesion)) === "impago") {
+    traza("acceso:impago");
+    return respuestaImpago();
+  }
 
   let cuerpo: unknown;
   try {

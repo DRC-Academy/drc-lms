@@ -19,6 +19,7 @@
 // ---------------------------------------------------------------
 
 import { sesionActual } from "@/lib/sesion-servidor";
+import { estadoDeAcceso } from "@/lib/estado-acceso";
 import { idiomaActual } from "@/lib/idioma-servidor";
 import { elegirFecha, proponerHorarios, type EstadoRecuperacion, type Hueco, type HuecoConHoras, type ResultadoAccion } from "@/lib/recuperaciones";
 import { RECUPERACIONES } from "@/lib/textos/recuperaciones";
@@ -44,6 +45,8 @@ function traducir(r: ResultadoAccion): RespuestaRecuperacion {
 async function alumnoDeLaSesion(): Promise<string | null> {
   const sesion = await sesionActual();
   if (!sesion || sesion.rol !== "alumno" || !sesion.alumnoId) return null;
+  // Pago pendiente (`lib/estado-acceso.ts`): como si no hubiera alumno.
+  if ((await estadoDeAcceso(sesion)) === "impago") return null;
   return sesion.alumnoId;
 }
 

@@ -13,6 +13,7 @@
 
 import { NextResponse } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
+import { estadoDeAcceso, respuestaImpago } from "@/lib/estado-acceso";
 import { leerEventoChat } from "@/lib/eventos-chat";
 import { apuntarEvento } from "@/lib/eventos";
 
@@ -24,6 +25,7 @@ const NADA = () => new NextResponse(null, { status: 204 });
 export async function POST(peticion: Request) {
   const sesion = await sesionActual();
   if (!sesion || sesion.rol !== "alumno") return NADA();
+  if ((await estadoDeAcceso(sesion)) === "impago") return respuestaImpago();
 
   let cuerpo: unknown;
   try {

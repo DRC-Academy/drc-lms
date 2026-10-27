@@ -15,6 +15,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
+import { estadoDeAcceso, respuestaImpago } from "@/lib/estado-acceso";
 import { completarLeccion } from "@/lib/cursos-servidor";
 import { conFoco, leerFoco } from "@/lib/foco";
 
@@ -33,6 +34,8 @@ export async function POST(peticion: NextRequest) {
     // entrar preguntándose por qué. Ver `avisoDe` en `app/acceso`.
     return NextResponse.redirect(new URL("/acceso?motivo=sesion", peticion.url), { status: 303 });
   }
+
+  if ((await estadoDeAcceso(sesion)) === "impago") return respuestaImpago();
 
   const datos = await peticion.formData();
   const leccionId = String(datos.get("leccionId") ?? "");

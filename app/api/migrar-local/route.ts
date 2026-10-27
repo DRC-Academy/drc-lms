@@ -18,6 +18,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
+import { estadoDeAcceso, respuestaImpago } from "@/lib/estado-acceso";
 import { migrarProgresoLocal } from "@/lib/progreso-servidor";
 import { validarBloque } from "@/lib/validarBloque";
 import type { ProgresoLocal } from "@/lib/progreso";
@@ -100,6 +101,8 @@ export async function POST(peticion: NextRequest) {
   if (sesion.rol !== "alumno") {
     return NextResponse.json({ migrado: false, motivo: "administrador" });
   }
+  // Un 403 no borra nada en el navegador: se reintenta cuando vuelva.
+  if ((await estadoDeAcceso(sesion)) === "impago") return respuestaImpago();
 
   let cuerpo: unknown;
   try {

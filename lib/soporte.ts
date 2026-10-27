@@ -11,6 +11,9 @@
 
 export const WHATSAPP_DRC = "353899409220";
 
+/** El chat sin mensaje preparado. Lo usa el aviso de pago pendiente. */
+export const ENLACE_WHATSAPP = `https://wa.me/${WHATSAPP_DRC}`;
+
 const MENSAJES = {
   es: "Hola! Estoy en la plataforma y no encuentro un horario que me encaje para mis clases. [Ref: plataforma / mis-clases]",
   en: "Hi! I'm on the platform and I can't find a time that works for my classes. [Ref: plataforma / mis-clases]",

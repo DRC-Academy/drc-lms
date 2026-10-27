@@ -5,6 +5,8 @@ import { obtenerPerfil } from "@/lib/gestion";
 import { MarcoFijo, PiezasDeLaSesion } from "@/components/Navegacion";
 import { ProveedorMarco } from "@/components/leccion/MarcoCurso";
 import ValoracionAlEntrar from "@/components/valoraciones/ValoracionAlEntrar";
+import AvisoImpago from "@/components/impago/AvisoImpago";
+import { estadoDeAcceso } from "@/lib/estado-acceso";
 
 /**
  * EL LAYOUT COMÚN DEL ALUMNO: la rejilla del marco y lo que solo depende
@@ -28,7 +30,38 @@ import ValoracionAlEntrar from "@/components/valoraciones/ValoracionAlEntrar";
  */
 export const viewport: Viewport = { viewportFit: "cover" };
 
-export default function LayoutAlumno({ children, marco }: { children: React.ReactNode; marco: React.ReactNode }) {
+/**
+ * `inert` para React 18, que no conoce el atributo: como cadena pasa tal
+ * cual al HTML, y en HTML basta con que esté. (React 19 lo trata como
+ * booleano y ahí "" sería false: al actualizar, pasar a `inert`.)
+ */
+const INERTE = { inert: "" } as Record<string, string>;
+
+/**
+ * PAGO PENDIENTE (`lib/estado-acceso.ts`). Si la suscripción del alumno
+ * está en espera, la página se pinta igual pero con `inert` —ni clic, ni
+ * tabulador, ni lector de pantalla— y encima solo el aviso: sin ayuda,
+ * sin recorrido y sin valoración, que no tienen que competir con él. Lo
+ * que de verdad cierra la puerta son las rutas y acciones, que rechazan
+ * a quien está en espera; esto es lo que el alumno ve.
+ *
+ * El layout no se vuelve a pintar al navegar, pero con la página inerte
+ * no hay navegación: sale de aquí con la recarga de «Ya lo he hecho».
+ */
+export default async function LayoutAlumno({ children, marco }: { children: React.ReactNode; marco: React.ReactNode }) {
+  if ((await estadoDeAcceso(await sesionActual())) === "impago") {
+    return (
+      <>
+        <div className="flex min-h-dvh flex-col" {...INERTE}>
+          <ProveedorMarco>
+            <MarcoFijo piezas={marco}>{children}</MarcoFijo>
+          </ProveedorMarco>
+        </div>
+        <AvisoImpago />
+      </>
+    );
+  }
+
   return (
     <div className="flex min-h-dvh flex-col">
       <ProveedorMarco>

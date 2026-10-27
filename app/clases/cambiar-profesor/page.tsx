@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
+import { estadoDeAcceso } from "@/lib/estado-acceso";
 import { autoservicioProfesorActivo, autoservicioSimuladoActivo, proveedorAutoservicio } from "@/lib/autoservicio";
 import type { EstadoAutoservicio, LecturaAutoservicio } from "@/lib/autoservicio/tipos";
 import { enlaceWhatsAppHorarios } from "@/lib/soporte";
@@ -26,6 +27,8 @@ export function generateMetadata(): Metadata {
 export default async function PaginaCambiarProfesor() {
   const { sesion, alumnoId } = await exigirAlumnoDeLaPagina();
   if (sesion.rol !== "alumno" || !autoservicioProfesorActivo()) redirect("/clases");
+  // Pago pendiente: fuera del layout del alumno no hay aviso; en «Clases» sí.
+  if ((await estadoDeAcceso(sesion)) === "impago") redirect("/clases");
   const whatsapp = enlaceWhatsAppHorarios(idiomaActual());
 
   let estado: LecturaAutoservicio<EstadoAutoservicio>;

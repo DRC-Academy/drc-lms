@@ -199,6 +199,31 @@ export const obtenerPerfil = cache(async (alumnoId: string): Promise<PerfilAlumn
   );
 });
 
+/**
+ * ¿Gestión tiene al alumno con la suscripción en espera (pago fallido)?
+ * Es `estado_suscripcion = 'on-hold'` en la vista: un episodio abierto de
+ * `student_payment_holds`, que ya aplica la regla única de Gestión —varias
+ * suscripciones, Pausa, activación manual, Oritalk—. Ver
+ * `supabase/gestion-vista-perfil-suscripcion.sql`.
+ *
+ * SIN CACHÉ ENTRE PETICIONES, a diferencia del perfil: un alumno que
+ * acaba de pagar tiene que poder entrar en cuanto Gestión cierre el
+ * episodio, no 90 s después. Lee una columna de una fila.
+ *
+ * LANZA si la lectura falla. Qué se hace entonces —dejar pasar— lo
+ * decide `estadoDeAcceso` (`lib/estado-acceso.ts`), que es la única que
+ * llama a esto. La demo no tiene fila en Gestión: sale false sin pasar
+ * por `escenarioDe`.
+ */
+export async function leerEnEspera(alumnoId: string): Promise<boolean> {
+  const { data, error } = await soloLectura("vista_perfil_alumno")
+    .select("estado_suscripcion")
+    .eq("alumno_id", alumnoId)
+    .returns<{ estado_suscripcion: string | null }[]>();
+  if (error) throw new Error(`No se pudo leer estado_suscripcion: ${error.message}`);
+  return (data ?? []).some((fila) => fila.estado_suscripcion === "on-hold");
+}
+
 // ---------------------------------------------------------------
 // CUÁL ES «LA ÚLTIMA CLASE», Y POR QUÉ YA NO SALE DE LA VISTA
 //

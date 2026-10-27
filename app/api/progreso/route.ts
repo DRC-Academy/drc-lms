@@ -21,6 +21,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
+import { estadoDeAcceso, respuestaImpago } from "@/lib/estado-acceso";
 import {
   borrarAvance,
   guardarAvance,
@@ -55,6 +56,7 @@ export async function POST(peticion: NextRequest) {
   if (sesion.rol !== "alumno") {
     return NextResponse.json({ guardado: false, motivo: "administrador" });
   }
+  if ((await estadoDeAcceso(sesion)) === "impago") return respuestaImpago();
 
   const alumnoId = sesion.alumnoId;
 

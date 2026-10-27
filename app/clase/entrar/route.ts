@@ -30,6 +30,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
+import { estadoDeAcceso } from "@/lib/estado-acceso";
 import { obtenerCalendario, obtenerExcepciones, obtenerPerfil } from "@/lib/gestion";
 import { clasesCercanas, proximaDelAlumno } from "@/lib/clases";
 import { PARAM_FOCO, leerFoco } from "@/lib/foco";
@@ -57,6 +58,13 @@ export async function GET(peticion: NextRequest) {
     const volver = destinoSeguro(`${peticion.nextUrl.pathname}${peticion.nextUrl.search}`);
     if (volver) acceso.searchParams.set("volver", volver);
     return redirigir(acceso);
+  }
+
+  // Pago pendiente (`lib/estado-acceso.ts`): ni se apunta la entrada ni
+  // se abre la sala. Es una navegación, así que en vez de un 403 en
+  // blanco va a su inicio, donde le espera el aviso.
+  if ((await estadoDeAcceso(sesion)) === "impago") {
+    return redirigir(new URL(`/alumno/${sesion.alumnoId}`, peticion.url));
   }
 
   const alumnoId = sesion.rol === "alumno" ? sesion.alumnoId : leerFoco(parametros.get(PARAM_FOCO) ?? undefined);

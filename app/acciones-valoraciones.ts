@@ -1,6 +1,7 @@
 "use server";
 
 import { sesionActual } from "@/lib/sesion-servidor";
+import { estadoDeAcceso } from "@/lib/estado-acceso";
 import { descartarValoracion, guardarValoracion, type ResultadoValoracion } from "@/lib/valoraciones-servidor";
 
 /**
@@ -17,6 +18,7 @@ export async function enviarValoracion(entrada: {
 }): Promise<ResultadoValoracion> {
   const sesion = await sesionActual();
   if (!sesion || sesion.rol !== "alumno") return { ok: false, motivo: "no_valorable" };
+  if ((await estadoDeAcceso(sesion)) === "impago") return { ok: false, motivo: "no_valorable" };
   return guardarValoracion(sesion.alumnoId, entrada);
 }
 
@@ -24,5 +26,6 @@ export async function enviarValoracion(entrada: {
 export async function descartarPopupValoracion(claseId: string): Promise<ResultadoValoracion> {
   const sesion = await sesionActual();
   if (!sesion || sesion.rol !== "alumno") return { ok: false, motivo: "no_valorable" };
+  if ((await estadoDeAcceso(sesion)) === "impago") return { ok: false, motivo: "no_valorable" };
   return descartarValoracion(sesion.alumnoId, claseId);
 }

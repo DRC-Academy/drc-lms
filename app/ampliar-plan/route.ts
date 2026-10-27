@@ -71,6 +71,9 @@ function apuntarClic(sesion: SesionAbierta, peticion: NextRequest, via: string) 
   enSegundoPlano("ampliar-plan", () => apuntarEvento(sesion.alumnoId, "banner_ampliar_clic", datos));
 }
 
+// SIN `estadoDeAcceso` A PROPÓSITO: con el pago pendiente también se
+// llega aquí. Es la única excepción, declarada en `RUTAS_SIN_BLOQUEO`
+// (`lib/estado-acceso.ts`).
 export async function GET(peticion: NextRequest) {
   const sesion = await sesionActual();
   if (!sesion) return ir(new URL("/acceso", peticion.url).toString());
