@@ -29,10 +29,16 @@ import { MAX_COMENTARIO, type Origen } from "@/lib/valoraciones";
 // celebración: el mensaje aparece en su sitio y la hoja se cierra sola a
 // los dos segundos, o con «Cerrar».
 //
-// CON 5 ESTRELLAS, EN VEZ DE LAS GRACIAS, LA RESEÑA: en la misma hoja,
-// la invitación a contarlo en público y un solo botón que abre la página
-// de reseñas en otra pestaña y cierra la hoja. Esta no se cierra sola:
-// hay que leerla. La X, el fondo y Escape la cierran como siempre.
+// CON 5 ESTRELLAS, LA RESEÑA EN EL MISMO BOTÓN: «Enviar» pasa a «Enviar
+// reseña para ayudar a mi profe», con una línea encima que dice qué va a
+// pasar, y «Ahora no» desaparece (la X, el fondo y Escape siguen
+// cerrando, y cuenta como descartada). Al pulsarlo, en el mismo clic:
+// copia el comentario, abre la página de reseñas en otra pestaña —antes
+// de cualquier espera, o el navegador la bloquea— y guarda como siempre.
+// Después, unas gracias que dicen si el comentario quedó copiado, con
+// «Cerrar» y un enlace por si la pestaña no se abrió. Esas no se cierran
+// solas: hay que leerlas. Si el guardado falla y se reintenta, la
+// pestaña no se vuelve a abrir.
 //
 // `vistaPrevia`: el equipo revisando una ficha la ve y la usa igual que
 // el alumno, con una línea que lo avisa, y al enviar no se guarda nada.
@@ -115,41 +121,49 @@ function Formulario({
   const [estrellas, setEstrellas] = useState<number | null>(inicial?.estrellas ?? null);
   const [comentario, setComentario] = useState(inicial?.comentario ?? "");
   const [estado, setEstado] = useState<"editando" | "gracias" | "resena" | "error">("editando");
+  const [copiado, setCopiado] = useState(false);
   const [enviando, empezar] = useTransition();
   const cerrarGracias = useRef<HTMLButtonElement>(null);
-  const dejarResena = useRef<HTMLAnchorElement>(null);
+  /** La pestaña de reseñas ya se abrió: al reintentar no se abre otra. */
+  const pestanaAbierta = useRef(false);
   // En una referencia: quien abre la hoja la pasa nueva en cada render, y
   // el reloj de las gracias no tiene que volver a empezar por eso.
   const cerrar = useRef(alCerrar);
   cerrar.current = alCerrar;
 
-  // Las gracias se quedan dos segundos y la hoja se cierra sola.
+  // Las gracias se quedan dos segundos y la hoja se cierra sola; las de
+  // la reseña, no.
   useEffect(() => {
-    if (estado !== "gracias") return;
+    if (estado !== "gracias" && estado !== "resena") return;
     cerrarGracias.current?.focus({ preventScroll: true });
+    if (estado === "resena") return;
     const reloj = setTimeout(() => cerrar.current(true), MS_GRACIAS);
     return () => clearTimeout(reloj);
   }, [estado]);
 
-  useEffect(() => {
-    if (estado === "resena") dejarResena.current?.focus({ preventScroll: true });
-  }, [estado]);
-
   function enviar() {
     if (estrellas === null || enviando) return;
-    const tras = estrellas === 5 ? "resena" : "gracias";
-    if (vistaPrevia) {
-      setEstado(tras);
-      return;
+    const resena = estrellas === 5;
+    const texto = comentario.trim();
+    // Todo lo de la reseña, aquí arriba y sin esperar a nada: fuera del
+    // clic, el navegador ya no deja copiar ni abrir la pestaña.
+    const copia = resena && texto ? copiar(texto) : Promise.resolve(false);
+    if (resena && !pestanaAbierta.current) {
+      window.open(ENLACE_RESENA, "_blank", "noopener,noreferrer");
+      pestanaAbierta.current = true;
     }
+    const tras = resena ? "resena" : "gracias";
     empezar(async () => {
-      const resultado = await enviarValoracion({ claseId, estrellas, comentario: comentario.trim() || null, origen }).catch(() => null);
-      if (resultado?.ok) {
+      if (!vistaPrevia) {
+        const resultado = await enviarValoracion({ claseId, estrellas, comentario: texto || null, origen }).catch(() => null);
+        if (!resultado?.ok) {
+          setEstado("error");
+          return;
+        }
         alEnviar();
-        setEstado(tras);
-      } else {
-        setEstado("error");
       }
+      setCopiado(await copia);
+      setEstado(tras);
     });
   }
 
@@ -166,32 +180,27 @@ function Formulario({
 
   if (estado === "resena") {
     return (
-      <div role="status" className="aparece font-sans">
-        <div className="flex items-start gap-3">
-          <h2 className="min-w-0 flex-1 text-pretty pt-1 font-display text-[22px] font-bold leading-[1.2] text-marca-tinta min-[900px]:text-[24px]">
-            {tv.resenaTitulo}
-          </h2>
-          <BotonCerrar etiqueta={tv.cerrar} alPulsar={() => alCerrar(true)} />
-        </div>
-        <p className="mt-2 text-pretty text-[15px] leading-[1.45] text-marca-tintaMedia">{tv.resenaTexto(profesor)}</p>
-        <div className="mt-6">
-          {/* La hoja se cierra en la vuelta siguiente: el enlace se abre antes de desmontarse. */}
-          <a
-            ref={dejarResena}
-            href={ENLACE_RESENA}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => setTimeout(() => alCerrar(true), 0)}
-            className={BOTON_VERDE}
-          >
-            {tv.dejarResena}
-          </a>
-        </div>
+      <div role="status" className="aparece flex flex-col items-center gap-5 pb-1 pt-4 text-center">
+        <p className="text-pretty font-display text-[20px] font-bold leading-[1.3] text-marca-tinta">
+          {copiado ? tv.graciasCopiado : tv.graciasResena}
+        </p>
+        <button ref={cerrarGracias} type="button" onClick={() => alCerrar(true)} className={`${BOTON_LINEA} max-w-[320px]`}>
+          {tv.cerrar}
+        </button>
+        <a
+          href={ENLACE_RESENA}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`-mt-1 rounded text-[14px] text-marca-tintaMedia underline underline-offset-2 hover:text-marca-tinta ${FOCO}`}
+        >
+          {tv.noSeAbrio}
+        </a>
       </div>
     );
   }
 
   const etiqueta = estrellas !== null ? tv.etiquetas[estrellas - 1] : tv.eligeEstrellas;
+  const resena = estrellas === 5;
 
   return (
     <div className="font-sans">
@@ -244,21 +253,35 @@ function Formulario({
         </p>
       )}
 
-      <div className="mt-6 flex flex-col gap-2.5 min-[900px]:flex-row-reverse">
+      {resena && <p className="aparece mt-6 text-pretty text-center text-[14px] leading-[1.4] text-marca-tintaMedia">{tv.avisoResena}</p>}
+
+      <div className={`${resena ? "mt-3" : "mt-6"} flex flex-col gap-2.5 min-[900px]:flex-row-reverse`}>
         <button
           type="button"
           onClick={enviar}
           disabled={estrellas === null || enviando}
-          className={estrellas === null ? BOTON_APAGADO : BOTON_VERDE}
+          className={estrellas === null ? BOTON_APAGADO : `${BOTON_VERDE} py-2.5 text-center leading-[1.2]`}
         >
-          {enviando ? tv.enviando : tv.enviar}
+          {enviando ? tv.enviando : resena ? tv.enviarResena : tv.enviar}
         </button>
-        <button type="button" onClick={() => alCerrar(false)} className={BOTON_LINEA}>
-          {tv.ahoraNo}
-        </button>
+        {!resena && (
+          <button type="button" onClick={() => alCerrar(false)} className={BOTON_LINEA}>
+            {tv.ahoraNo}
+          </button>
+        )}
       </div>
     </div>
   );
+}
+
+/** Copia al portapapeles; si no se puede (permisos, http, navegador viejo), `false` y sigue. */
+async function copiar(texto: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function BotonCerrar({ etiqueta, alPulsar }: { etiqueta: string; alPulsar: () => void }) {

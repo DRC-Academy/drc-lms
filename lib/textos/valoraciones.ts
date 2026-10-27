@@ -4,8 +4,8 @@
 // El pop-up de después de la clase y el «Valorar clase» del historial de
 // «Mis clases» (`components/valoraciones/`). Cálido y corto: es una
 // pregunta, no un examen. Nada de lenguaje de error ni de vigilancia, y
-// nada que celebre: se da las gracias y ya. Con 5 estrellas, en lugar
-// de las gracias, la invitación a dejar una reseña pública.
+// nada que celebre: se da las gracias y ya. Con 5 estrellas, el botón
+// lleva a dejar una reseña pública (sin nombrar la plataforma).
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
@@ -33,11 +33,16 @@ export type TextosValoraciones = {
   ahoraNo: string;
   cerrar: string;
   gracias: string;
-  /** Tras enviar 5 estrellas, en lugar de las gracias. */
-  resenaTitulo: string;
-  /** "Ayudaría un montón a Mauricio…"; sin profesor, "a tu profe". */
-  resenaTexto: (profesor: string | null) => string;
-  dejarResena: string;
+  /** El botón de enviar con 5 estrellas: envía y abre la página de reseñas. */
+  enviarResena: string;
+  /** Encima de ese botón: qué va a pasar al pulsarlo. */
+  avisoResena: string;
+  /** Tras enviar 5 estrellas, con el comentario ya en el portapapeles. */
+  graciasCopiado: string;
+  /** Tras enviar 5 estrellas sin comentario, o si no se pudo copiar. */
+  graciasResena: string;
+  /** Por si el navegador bloqueó la pestaña. */
+  noSeAbrio: string;
   /** Si no se pudo guardar. Sin culpa: que lo intente otra vez. */
   noSeGuardo: string;
   /** El equipo revisando una ficha: lo ve todo, no se guarda nada. */
@@ -69,9 +74,11 @@ export const VALORACIONES: Record<Idioma, TextosValoraciones> = {
     ahoraNo: "Ahora no",
     cerrar: "Cerrar",
     gracias: "¡Gracias! Nos ayuda mucho.",
-    resenaTitulo: "¿Te gustaría compartir tu experiencia con otros alumnos?",
-    resenaTexto: (profesor) => `Ayudaría un montón a ${profesor ?? "tu profe"} a seguir creciendo.`,
-    dejarResena: "Dejar reseña",
+    enviarResena: "Enviar reseña para ayudar a mi profe",
+    avisoResena: "Te llevaremos a una página para publicar tu reseña y que otros alumnos la vean.",
+    graciasCopiado: "¡Gracias! Hemos copiado tu comentario: solo tienes que pegarlo en tu reseña.",
+    graciasResena: "¡Gracias! Te hemos abierto la página para dejar tu reseña.",
+    noSeAbrio: "¿No se ha abierto? Ábrela aquí",
     noSeGuardo: "No hemos podido guardarla. ¿Lo intentas otra vez?",
     vistaPrevia: "Vista del equipo: así lo ve el alumno. No se guarda nada.",
     valorarClase: "Valorar clase",
@@ -95,9 +102,11 @@ export const VALORACIONES: Record<Idioma, TextosValoraciones> = {
     ahoraNo: "Not now",
     cerrar: "Close",
     gracias: "Thank you! This really helps.",
-    resenaTitulo: "Would you like to share your experience with other students?",
-    resenaTexto: (profesor) => `It would really help ${profesor ?? "your teacher"} keep growing.`,
-    dejarResena: "Leave a review",
+    enviarResena: "Send review to help my teacher",
+    avisoResena: "We'll take you to a page where you can post your review so other students can see it.",
+    graciasCopiado: "Thank you! We've copied your comment — just paste it into your review.",
+    graciasResena: "Thank you! We've opened the page where you can leave your review.",
+    noSeAbrio: "Didn't open? Open it here",
     noSeGuardo: "We couldn't save it. Would you try again?",
     vistaPrevia: "Team preview: this is what the student sees. Nothing is saved.",
     valorarClase: "Rate class",
