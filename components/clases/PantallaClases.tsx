@@ -37,7 +37,6 @@ import type { ReactNode } from "react";
 import { proximaDelAlumno, semanasDelAlumno } from "@/lib/clases";
 import type { FilaCalendario } from "@/lib/calendario-gestion";
 import type { ClaseDelRecorrido } from "@/lib/gestion";
-import type { ValorarDelHistorial } from "@/lib/valoraciones-servidor";
 import { formatearFechaLarga } from "@/lib/perfil";
 import type { Textos } from "@/lib/textos";
 import BannerClase, { SinProxima } from "@/components/clases/BannerClase";
@@ -60,13 +59,7 @@ export default function PantallaClases({
   autoservicio = null,
   ahora = new Date(),
   foco = null,
-  valoraciones = null,
-  vistaPrevia = false,
 }: {
-  /** Por análisis del historial, la clase que se valora desde él (`valoracionesDelHistorial`). */
-  valoraciones?: Map<string, ValorarDelHistorial> | null;
-  /** El equipo revisando la ficha: el «Valorar clase» se ve y no guarda. */
-  vistaPrevia?: boolean;
   /** «Tu horario», ya montado. Null con el interruptor apagado. */
   autoservicio?: ReactNode;
   /** Las recuperaciones, ya montadas (ver la cabecera). */
@@ -156,7 +149,7 @@ export default function PantallaClases({
       {autoservicio}
 
       <div className="mt-[26px] min-[900px]:mt-9">
-        <HistorialClases clases={recorrido} profesores={profesores} t={tc} anclas valoraciones={valoraciones} vistaPrevia={vistaPrevia} />
+        <HistorialClases clases={recorrido} profesores={profesores} t={tc} anclas />
       </div>
     </main>
   );

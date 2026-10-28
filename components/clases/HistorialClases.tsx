@@ -17,14 +17,11 @@
 // Todo se lee en el servidor (`obtenerRecorrido`, `obtenerNombresProfesor`)
 // y nada de lo que se pinta es el transcript ni los errores del alumno.
 //
-// CADA CLASE DADA SE PUEDE VALORAR desde su parada (`valoraciones`, de
-// `valoracionesDelHistorial`): las canceladas, las faltas y las que no
-// casan con un parte de Gestión no llevan botón.
+// SIN «VALORAR CLASE»: desde el 28/10/2026 solo se valora la última clase
+// dada, y solo desde el pop-up (`components/valoraciones/PopupValoracion`).
 // ---------------------------------------------------------------
 
 import type { ClaseDelRecorrido } from "@/lib/gestion";
-import type { ValorarDelHistorial } from "@/lib/valoraciones-servidor";
-import ValorarClase from "@/components/valoraciones/ValorarClase";
 import type { TextosClases } from "@/lib/textos/clases";
 import SenderoClases from "@/components/clases/SenderoClases";
 import { TituloSeccion } from "@/components/base/Seccion";
@@ -35,8 +32,6 @@ export default function HistorialClases({
   profesores,
   t,
   anclas = false,
-  valoraciones = null,
-  vistaPrevia = false,
 }: {
   /** `Recorrido.todas`: de la más reciente a la más antigua. */
   clases: ClaseDelRecorrido[];
@@ -44,17 +39,7 @@ export default function HistorialClases({
   t: TextosClases;
   /** Un `id` por clase, para que el calendario enlace a cada una (ver `Recorrido`). */
   anclas?: boolean;
-  /** Por análisis, la clase que se valora desde él. Null: sin botón en ninguna. */
-  valoraciones?: Map<string, ValorarDelHistorial> | null;
-  /** El equipo revisando la ficha: lo ve como el alumno, sin guardar. */
-  vistaPrevia?: boolean;
 }) {
-  const valorar = valoraciones
-    ? (clase: ClaseDelRecorrido) => {
-        const v = valoraciones.get(clase.id);
-        return v ? <ValorarClase claseId={v.claseId} profesor={v.profesor} guardada={v.guardada} vistaPrevia={vistaPrevia} /> : null;
-      }
-    : undefined;
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="titulo-historial">
@@ -66,7 +51,7 @@ export default function HistorialClases({
         clases={clases}
         vacio={t.historialVacio}
         rotuloTemas={t.temasTratados}
-        detalle={{ profesores, conProfesor: t.conProfesor, valorar }}
+        detalle={{ profesores, conProfesor: t.conProfesor }}
         anclas={anclas}
         visibles={1}
         verMas={t.verMasClases}

@@ -20,8 +20,8 @@ import { SUCESO_LANZAR_TUTORIAL } from "@/components/tutorial/eventos";
 //     diálogo modal. Si arranca el recorrido mientras espera, se retira.
 //
 // Cerrarlo sin valorar —X, «Ahora no», el fondo o Escape— lo apunta como
-// descartado y no vuelve a salir hasta su próxima clase. Sigue pudiendo
-// valorarse desde «Mis clases».
+// descartado y no vuelve a salir hasta su próxima clase. No hay otro
+// sitio desde el que valorarla: solo se valora la última clase, y solo aquí.
 //
 // `vistaPrevia`: el equipo revisando una ficha lo ve como el alumno, en
 // cada carga de la página, y cerrarlo o enviarlo no apunta nada.

@@ -8,9 +8,9 @@
 //
 // NADA DE LO QUE MANDA EL NAVEGADOR SE CREE. De él llegan el `clase_id`,
 // las estrellas y el comentario; el alumno sale de la cookie, y antes de
-// escribir se vuelve a calcular la lista de clases valorables de ESE
-// alumno. Un `clase_id` que no está en ella —de otro alumno, cancelada,
-// sin terminar— se rechaza. El profesor y la fecha se leen de Gestión.
+// escribir se vuelve a calcular la ÚLTIMA CLASE DADA de ESE alumno. Un
+// `clase_id` que no es esa —una anterior, de otro alumno, cancelada, sin
+// terminar— se rechaza. El profesor y la fecha se leen de Gestión.
 //
 // SIN TABLA, NADA. Si `valoraciones_clase` no existe todavía (o la base
 // no contesta), las lecturas devuelven null y ni el pop-up ni el botón
@@ -34,6 +34,7 @@ import { esCuentaDeEquipo } from "@/lib/entradas-clase-servidor";
 import {
   claseDelPopup,
   clasesValorables,
+  ultimaClaseDada,
   comoComentario,
   comoEstrellas,
   comoOrigen,
@@ -128,49 +129,17 @@ export async function valoracionPendiente(alumnoId: string): Promise<ValoracionP
 }
 
 // ---------------------------------------------------------------
-// EL HISTORIAL DE «MIS CLASES»
-// ---------------------------------------------------------------
-
-export type ValorarDelHistorial = { claseId: string; profesor: string | null; guardada: ValoracionGuardada | null };
-
-/**
- * Por análisis del historial (`ClaseDelRecorrido.id`), la clase que se
- * valora desde él y lo que ya tenga. Solo las clases dadas que casan con
- * un análisis: las demás no salen en el historial. Null si falta algo.
- */
-export async function valoracionesDelHistorial(alumnoId: string): Promise<Map<string, ValorarDelHistorial> | null> {
-  if (!alumnoId) return null;
-  const [clases, guardadas, profesores] = await Promise.all([
-    leerClasesValorables(alumnoId),
-    valoracionesDe(alumnoId),
-    obtenerNombresProfesor(),
-  ]);
-  if (!clases || !guardadas) return null;
-
-  const salida = new Map<string, ValorarDelHistorial>();
-  for (const clase of clases) {
-    if (!clase.analisisId) continue;
-    const guardada = guardadas.get(clase.claseId);
-    salida.set(clase.analisisId, {
-      claseId: clase.claseId,
-      profesor: nombreDelProfesor(clase, profesores),
-      // Una fila solo descartada no es una valoración: sigue el botón.
-      guardada: guardada && guardada.estrellas !== null ? guardada : null,
-    });
-  }
-  return salida;
-}
-
-// ---------------------------------------------------------------
 // GUARDAR
 // ---------------------------------------------------------------
 
 export type ResultadoValoracion = { ok: true } | { ok: false; motivo: "datos" | "no_valorable" | "base" };
 
-/** La clase de este alumno con ese id, si se puede valorar. */
+/** La última clase dada de este alumno, si es la de ese id. Cualquier otra no se valora. */
 async function claseDelAlumno(alumnoId: string, claseId: unknown): Promise<ClaseValorable | null> {
   if (typeof claseId !== "string" || claseId === "") return null;
-  return (await leerClasesValorables(alumnoId))?.find((c) => c.claseId === claseId) ?? null;
+  const clases = await leerClasesValorables(alumnoId);
+  const ultima = clases ? ultimaClaseDada(clases, new Date()) : null;
+  return ultima?.claseId === claseId ? ultima : null;
 }
 
 /** Lo que se copia de Gestión en la fila al crearla. */

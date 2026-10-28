@@ -6,6 +6,7 @@ import {
   comoEstrellas,
   comoOrigen,
   resumirValoraciones,
+  ultimaClaseDada,
   type AnalisisParaValorar,
   type FilaValoracion,
   type ParteParaValorar,
@@ -159,6 +160,26 @@ describe("el pop-up", () => {
     expect(claseDelPopup(clases, new Set(), AHORA)).toBeNull();
     const conAyer = valorables([ayer, sinHora], [analisis({ fecha: "2026-10-21" })]);
     expect(claseDelPopup(conAyer, new Set(), AHORA)).toBeNull();
+  });
+});
+
+describe("solo se valora la última clase dada", () => {
+  const ayer = parte({ fecha: "2026-10-20", tipo: "normal", hora: "17:00" });
+  const anteayer = parte({ fecha: "2026-10-19", tipo: "normal", hora: "21:00" });
+
+  it("es la última terminada, tenga fila o no; nunca una anterior", () => {
+    const clases = valorables([anteayer, ayer]);
+    expect(ultimaClaseDada(clases, AHORA)?.claseId).toBe(ayer.parteId);
+  });
+
+  it("una que aún dura no cuenta: sigue siendo la anterior", () => {
+    const enCurso = parte({ fecha: "2026-10-21", tipo: "normal", hora: "19:30" });
+    expect(ultimaClaseDada(valorables([ayer, enCurso]), AHORA)?.claseId).toBe(ayer.parteId);
+  });
+
+  it("si la última no tiene hora, ninguna", () => {
+    const sinHora = parte({ fecha: "2026-10-21", tipo: "normal", hora: null });
+    expect(ultimaClaseDada(valorables([ayer, sinHora], [analisis({ fecha: "2026-10-21" })]), AHORA)).toBeNull();
   });
 });
 

@@ -12,9 +12,9 @@ import { MAX_COMENTARIO, type Origen } from "@/lib/valoraciones";
 // ---------------------------------------------------------------
 // LA VALORACIÓN DE UNA CLASE: LA PIEZA CENTRAL
 //
-// La única que pregunta. La usan el pop-up de después de la clase
-// (`PopupValoracion`) y el «Valorar clase» del historial (`ValorarClase`),
-// y ninguno pinta estrellas ni formulario por su cuenta.
+// La única que pregunta. La abre el pop-up de después de la clase
+// (`PopupValoracion`), que no pinta estrellas ni formulario por su cuenta.
+// Desde el 28/10/2026 no hay «Valorar clase» en el historial.
 //
 // En una `HojaInferior`: en móvil sube desde abajo; desde 900 px queda
 // centrada como un cuadro. Cierra con la X, con «Ahora no», pulsando el
@@ -31,14 +31,12 @@ import { MAX_COMENTARIO, type Origen } from "@/lib/valoraciones";
 //
 // CON 5 ESTRELLAS, LA RESEÑA EN EL MISMO BOTÓN: «Enviar» pasa a «Enviar
 // reseña para ayudar a mi profe», con una línea encima que dice qué va a
-// pasar, y «Ahora no» desaparece (la X, el fondo y Escape siguen
-// cerrando, y cuenta como descartada). Al pulsarlo, en el mismo clic:
-// copia el comentario, abre la página de reseñas en otra pestaña —antes
-// de cualquier espera, o el navegador la bloquea— y guarda como siempre.
-// Después, unas gracias que dicen si el comentario quedó copiado, con
-// «Cerrar» y un enlace por si la pestaña no se abrió. Esas no se cierran
-// solas: hay que leerlas. Si el guardado falla y se reintenta, la
-// pestaña no se vuelve a abrir.
+// pasar; el comentario y «Ahora no» desaparecen (la opinión se escribe una
+// vez, en la página de reseñas; la X, el fondo y Escape siguen cerrando, y
+// cuenta como descartada). Al pulsarlo guarda como siempre, con comentario
+// null aunque lo hubiera escrito antes con menos estrellas, y al terminar
+// bien va a la página de reseñas EN LA MISMA VENTANA. Si falla, el aviso
+// de siempre y se queda para reintentar. Bajando a 4 o menos vuelve todo.
 //
 // `vistaPrevia`: el equipo revisando una ficha la ve y la usa igual que
 // el alumno, con una línea que lo avisa, y al enviar no se guarda nada.
@@ -49,14 +47,11 @@ const AVISO_CONTADOR = MAX_COMENTARIO - 150;
 const MS_GRACIAS = 2000;
 const ENLACE_RESENA = "https://es.trustpilot.com/evaluate/drcacademy.com";
 
-export type Inicial = { estrellas: number | null; comentario: string | null };
-
 export default function HojaValoracion({
   abierta,
   claseId,
   profesor,
   origen,
-  inicial = null,
   vistaPrevia = false,
   alCerrar,
 }: {
@@ -64,8 +59,6 @@ export default function HojaValoracion({
   claseId: string;
   profesor: string | null;
   origen: Origen;
-  /** Lo que ya tenía, al editar. */
-  inicial?: Inicial | null;
   /** El equipo revisando la ficha: todo igual, sin guardar. */
   vistaPrevia?: boolean;
   alCerrar: (enviada: boolean) => void;
@@ -87,7 +80,6 @@ export default function HojaValoracion({
         profesor={profesor}
         titulo={titulo}
         origen={origen}
-        inicial={inicial}
         vistaPrevia={vistaPrevia}
         alEnviar={() => setEnviada(true)}
         alCerrar={(tras) => alCerrar(tras || enviada)}
@@ -101,7 +93,6 @@ function Formulario({
   profesor,
   titulo,
   origen,
-  inicial,
   vistaPrevia,
   alEnviar,
   alCerrar,
@@ -110,7 +101,6 @@ function Formulario({
   profesor: string | null;
   titulo: string;
   origen: Origen;
-  inicial: Inicial | null;
   vistaPrevia: boolean;
   alEnviar: () => void;
   alCerrar: (enviada: boolean) => void;
@@ -118,41 +108,44 @@ function Formulario({
   const { t } = usarIdioma();
   const tv = t.valoraciones;
   const idComentario = useId();
-  const [estrellas, setEstrellas] = useState<number | null>(inicial?.estrellas ?? null);
-  const [comentario, setComentario] = useState(inicial?.comentario ?? "");
-  const [estado, setEstado] = useState<"editando" | "gracias" | "resena" | "error">("editando");
-  const [copiado, setCopiado] = useState(false);
-  const [enviando, empezar] = useTransition();
+  const [estrellas, setEstrellas] = useState<number | null>(null);
+  const [comentario, setComentario] = useState("");
+  const [estado, setEstado] = useState<"editando" | "gracias" | "yendo" | "error">("editando");
+  const [guardando, empezar] = useTransition();
+  /** Guardando, o ya guardada y camino de la página de reseñas: el botón no se vuelve a pulsar. */
+  const enviando = guardando || estado === "yendo";
   const cerrarGracias = useRef<HTMLButtonElement>(null);
-  /** La pestaña de reseñas ya se abrió: al reintentar no se abre otra. */
-  const pestanaAbierta = useRef(false);
   // En una referencia: quien abre la hoja la pasa nueva en cada render, y
   // el reloj de las gracias no tiene que volver a empezar por eso.
   const cerrar = useRef(alCerrar);
   cerrar.current = alCerrar;
 
-  // Las gracias se quedan dos segundos y la hoja se cierra sola; las de
-  // la reseña, no.
+  // Las gracias se quedan dos segundos y la hoja se cierra sola.
   useEffect(() => {
-    if (estado !== "gracias" && estado !== "resena") return;
+    if (estado !== "gracias") return;
     cerrarGracias.current?.focus({ preventScroll: true });
-    if (estado === "resena") return;
     const reloj = setTimeout(() => cerrar.current(true), MS_GRACIAS);
     return () => clearTimeout(reloj);
+  }, [estado]);
+
+  // Volviendo atrás desde la página de reseñas, Safari y Chrome pueden
+  // devolver la página tal como se fue (bfcache), con «Un momento…» en el
+  // botón. Ya está guardada: la hoja se cierra.
+  useEffect(() => {
+    if (estado !== "yendo") return;
+    const alVolver = (e: PageTransitionEvent) => {
+      if (e.persisted) cerrar.current(true);
+    };
+    window.addEventListener("pageshow", alVolver);
+    return () => window.removeEventListener("pageshow", alVolver);
   }, [estado]);
 
   function enviar() {
     if (estrellas === null || enviando) return;
     const resena = estrellas === 5;
-    const texto = comentario.trim();
-    // Todo lo de la reseña, aquí arriba y sin esperar a nada: fuera del
-    // clic, el navegador ya no deja copiar ni abrir la pestaña.
-    const copia = resena && texto ? copiar(texto) : Promise.resolve(false);
-    if (resena && !pestanaAbierta.current) {
-      window.open(ENLACE_RESENA, "_blank", "noopener,noreferrer");
-      pestanaAbierta.current = true;
-    }
-    const tras = resena ? "resena" : "gracias";
+    // Con 5 estrellas el comentario no se ve, y no se manda aunque lo
+    // hubiera escrito antes con menos.
+    const texto = resena ? "" : comentario.trim();
     empezar(async () => {
       if (!vistaPrevia) {
         const resultado = await enviarValoracion({ claseId, estrellas, comentario: texto || null, origen }).catch(() => null);
@@ -162,8 +155,12 @@ function Formulario({
         }
         alEnviar();
       }
-      setCopiado(await copia);
-      setEstado(tras);
+      if (resena) {
+        setEstado("yendo");
+        window.location.assign(ENLACE_RESENA);
+        return;
+      }
+      setEstado("gracias");
     });
   }
 
@@ -174,27 +171,6 @@ function Formulario({
         <button ref={cerrarGracias} type="button" onClick={() => alCerrar(true)} className={`${BOTON_LINEA} max-w-[320px]`}>
           {tv.cerrar}
         </button>
-      </div>
-    );
-  }
-
-  if (estado === "resena") {
-    return (
-      <div role="status" className="aparece flex flex-col items-center gap-5 pb-1 pt-4 text-center">
-        <p className="text-pretty font-display text-[20px] font-bold leading-[1.3] text-marca-tinta">
-          {copiado ? tv.graciasCopiado : tv.graciasResena}
-        </p>
-        <button ref={cerrarGracias} type="button" onClick={() => alCerrar(true)} className={`${BOTON_LINEA} max-w-[320px]`}>
-          {tv.cerrar}
-        </button>
-        <a
-          href={ENLACE_RESENA}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`-mt-1 rounded text-[14px] text-marca-tintaMedia underline underline-offset-2 hover:text-marca-tinta ${FOCO}`}
-        >
-          {tv.noSeAbrio}
-        </a>
       </div>
     );
   }
@@ -227,7 +203,7 @@ function Formulario({
         </p>
       </div>
 
-      {estrellas !== null && (
+      {estrellas !== null && !resena && (
         <div className="aparece mt-5">
           <label htmlFor={idComentario} className="sr-only">
             {tv.comentarioEtiqueta}
@@ -262,7 +238,7 @@ function Formulario({
           disabled={estrellas === null || enviando}
           className={estrellas === null ? BOTON_APAGADO : `${BOTON_VERDE} py-2.5 text-center leading-[1.2]`}
         >
-          {enviando ? tv.enviando : resena ? tv.enviarResena : tv.enviar}
+          {enviando ? (resena ? tv.unMomento : tv.enviando) : resena ? tv.enviarResena : tv.enviar}
         </button>
         {!resena && (
           <button type="button" onClick={() => alCerrar(false)} className={BOTON_LINEA}>
@@ -272,16 +248,6 @@ function Formulario({
       </div>
     </div>
   );
-}
-
-/** Copia al portapapeles; si no se puede (permisos, http, navegador viejo), `false` y sigue. */
-async function copiar(texto: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(texto);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function BotonCerrar({ etiqueta, alPulsar }: { etiqueta: string; alPulsar: () => void }) {

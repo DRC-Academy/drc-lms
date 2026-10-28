@@ -1,16 +1,17 @@
 // ---------------------------------------------------------------
 // LA VALORACIÓN DE CLASES: QUÉ CLASE SE PUEDE VALORAR
 //
-// El alumno valora con estrellas una clase que tuvo, desde «Mis clases»
-// o desde el pop-up que sale al entrar con su última clase sin valorar.
-// Aquí está la regla de qué clases son esas, y nada más: MÓDULO PURO, sin
-// lecturas. Lo que lee y guarda está en `lib/valoraciones-servidor.ts`.
+// El alumno valora con estrellas su ÚLTIMA clase dada, desde el pop-up
+// que sale al entrar si todavía no la ha valorado ni descartado (hasta el
+// 28/10/2026 también se valoraba cualquiera desde «Mis clases»). Aquí está
+// la regla de qué clase es esa, y nada más: MÓDULO PURO, sin lecturas. Lo
+// que lee y guarda está en `lib/valoraciones-servidor.ts`.
 //
 // UNA CLASE ES UN PARTE DE GESTIÓN (`vista_partes_clase`). La valoración
 // se ata a su `parte_id`, que es el único dato que dice qué pasó con esa
 // clase. El historial de «Mis clases», en cambio, son análisis de
-// transcript (`class_analyses`); para poner el botón en él, cada análisis
-// se empareja con su parte.
+// transcript (`class_analyses`); cada análisis se empareja con su parte
+// porque un análisis prueba que la clase se dio (regla a).
 //
 // ---------------------------------------------------------------
 // CUÁNDO CUENTA COMO DADA (decisión de producto, 21/10/2026)
@@ -50,8 +51,8 @@
 //
 // Inicio: `fecha` + `hora` del parte, en hora de Madrid. Duración: la de
 // `vista_clases_programadas` (alumno + fecha + hora); si no casa, una
-// hora. Sin hora no se sabe cuándo terminó: esa clase no dispara el
-// pop-up, pero se puede valorar desde el historial si tiene análisis.
+// hora. Sin hora no se sabe cuándo terminó: si la última es así, no hay
+// pop-up ni se puede valorar.
 // ---------------------------------------------------------------
 
 import { instanteEnMadrid } from "@/lib/clases";
@@ -238,20 +239,28 @@ export function clasesValorables({
 }
 
 /**
- * La clase del pop-up: LA ÚLTIMA que tuvo, sea de cuando sea (desde el
- * 21/10/2026 no hay ventana de 48 h), si todavía no tiene ninguna fila en
- * `valoraciones_clase`, ni valorada ni descartada. Si la última ya la
- * tiene, nada: no se baja a una anterior, y el pop-up vuelve con su
- * próxima clase. Tampoco si la última no tiene hora, como siempre.
+ * LA ÚLTIMA CLASE DADA: la única que se puede valorar (desde el 28/10/2026
+ * no hay «Valorar clase» en el historial). Sea de cuando sea —desde el
+ * 21/10/2026 no hay ventana de 48 h—, ya terminada. Null si la última no
+ * tiene hora, como siempre: no se baja a una anterior.
  */
-export function claseDelPopup(clases: readonly ClaseValorable[], conFila: ReadonlySet<string>, ahora: Date): ClaseValorable | null {
+export function ultimaClaseDada(clases: readonly ClaseValorable[], ahora: Date): ClaseValorable | null {
   let ultima: ClaseValorable | null = null;
   for (const c of clases) {
     if (c.fin && c.fin.getTime() > ahora.getTime()) continue;
     if (!ultima || esPosterior(c, ultima)) ultima = c;
   }
-  if (!ultima || !ultima.fin || conFila.has(ultima.claseId)) return null;
-  return ultima;
+  return ultima?.fin ? ultima : null;
+}
+
+/**
+ * La clase del pop-up: la última dada, si todavía no tiene ninguna fila en
+ * `valoraciones_clase`, ni valorada ni descartada. Si ya la tiene, nada:
+ * no se baja a una anterior, y el pop-up vuelve con su próxima clase.
+ */
+export function claseDelPopup(clases: readonly ClaseValorable[], conFila: ReadonlySet<string>, ahora: Date): ClaseValorable | null {
+  const ultima = ultimaClaseDada(clases, ahora);
+  return ultima && !conFila.has(ultima.claseId) ? ultima : null;
 }
 
 /** Por día; el mismo día, por hora, y la que tiene hora va después de la que no. */
@@ -265,6 +274,7 @@ function esPosterior(a: ClaseValorable, b: ClaseValorable): boolean {
 // LO QUE MANDA EL ALUMNO
 // ---------------------------------------------------------------
 
+/** "mis_clases" solo queda en filas de antes del 28/10/2026. */
 export type Origen = "popup" | "mis_clases";
 
 export function comoOrigen(valor: unknown): Origen | null {
