@@ -8,7 +8,8 @@
 //
 // "Puede tardar unos minutos" es literal: Gestión cierra el episodio al
 // llegar el webhook de WooCommerce (segundos) y, si no llega, en el
-// barrido de cada 5 minutos. El LMS no guarda el estado.
+// barrido de cada 5 minutos. El LMS no guarda el estado. Si tras eso
+// sigue en espera, WhatsApp: el enlace está justo debajo, en el pie.
 // ---------------------------------------------------------------
 
 import type { Idioma } from "@/lib/idioma";
@@ -36,7 +37,8 @@ export const IMPAGO: Record<Idioma, TextosImpago> = {
     boton: "Actualizar mi pago",
     secundario: "Ya lo he hecho",
     comprobando: "Comprobando…",
-    avisoTrasComprobar: "Puede tardar unos minutos en actualizarse. Vuelve a intentarlo en un momento.",
+    avisoTrasComprobar:
+      "Puede tardar unos minutos en actualizarse. Si ya has pagado y sigue apareciendo, escríbenos por WhatsApp.",
     pieAyuda: "¿Necesitas ayuda?",
     pieWhatsapp: "Escríbenos por WhatsApp",
     api: "Tu suscripción está en espera. En cuanto se actualice el pago, todo vuelve a estar disponible.",
@@ -48,7 +50,8 @@ export const IMPAGO: Record<Idioma, TextosImpago> = {
     boton: "Update my payment",
     secundario: "I've already done it",
     comprobando: "Checking…",
-    avisoTrasComprobar: "It may take a few minutes to update. Please try again in a moment.",
+    avisoTrasComprobar:
+      "It can take a few minutes to update. If you've already paid and you still see this, message us on WhatsApp.",
     pieAyuda: "Need help?",
     pieWhatsapp: "Message us on WhatsApp",
     api: "Your subscription is on hold. As soon as the payment is updated, everything will be available again.",

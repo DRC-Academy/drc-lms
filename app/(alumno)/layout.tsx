@@ -7,6 +7,7 @@ import { ProveedorMarco } from "@/components/leccion/MarcoCurso";
 import ValoracionAlEntrar from "@/components/valoraciones/ValoracionAlEntrar";
 import AvisoImpago from "@/components/impago/AvisoImpago";
 import { estadoDeAcceso } from "@/lib/estado-acceso";
+import { urlActualizarPago } from "@/lib/cuenta-woo";
 
 /**
  * EL LAYOUT COMÚN DEL ALUMNO: la rejilla del marco y lo que solo depende
@@ -47,9 +48,16 @@ const INERTE = { inert: "" } as Record<string, string>;
  *
  * El layout no se vuelve a pintar al navegar, pero con la página inerte
  * no hay navegación: sale de aquí con la recarga de «Ya lo he hecho».
+ *
+ * La URL de «Actualizar mi pago» se resuelve aquí, en el servidor. Hoy va
+ * sin ID de suscripción (→ Perfil de Mi cuenta); cuando la vista de
+ * Gestión lo exponga, se lee aquí y se le pasa a `urlActualizarPago`, y
+ * el aviso no cambia.
  */
 export default async function LayoutAlumno({ children, marco }: { children: React.ReactNode; marco: React.ReactNode }) {
   if ((await estadoDeAcceso(await sesionActual())) === "impago") {
+    const urlPago = urlActualizarPago(null);
+
     return (
       <>
         <div className="flex min-h-dvh flex-col" {...INERTE}>
@@ -57,7 +65,7 @@ export default async function LayoutAlumno({ children, marco }: { children: Reac
             <MarcoFijo piezas={marco}>{children}</MarcoFijo>
           </ProveedorMarco>
         </div>
-        <AvisoImpago />
+        <AvisoImpago urlPago={urlPago} />
       </>
     );
   }

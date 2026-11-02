@@ -20,13 +20,19 @@ import { ENLACE_WHATSAPP } from "@/lib/soporte";
 //
 // En el móvil es una hoja que sube desde abajo, con los botones a lo
 // ancho y al alcance del pulgar; desde `sm`, una tarjeta centrada.
+//
+// «ACTUALIZAR MI PAGO» ES UN ENLACE Y NADA MÁS: `<a href>` en la misma
+// pestaña, sin `target`, sin `onClick` y sin nada asíncrono delante. La
+// URL llega ya resuelta del servidor (`urlActualizarPago`, en
+// `lib/cuenta-woo.ts`); aquí no se escribe ninguna. Antes iba a
+// /mi-cuenta a secas, que la web redirige al LMS: el alumno volvía a este
+// mismo aviso sin ver nada.
 // ---------------------------------------------------------------
-
-const MI_CUENTA = "https://drcacademy.com/mi-cuenta";
 
 const ENFOCABLES = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export default function AvisoImpago() {
+/** `urlPago`: a dónde lleva «Actualizar mi pago», ya resuelta en el servidor. */
+export default function AvisoImpago({ urlPago }: { urlPago: string }) {
   const { t: textos } = usarIdioma();
   const t = textos.impago;
   const dialogo = useRef<HTMLDivElement>(null);
@@ -134,7 +140,7 @@ export default function AvisoImpago() {
         <div className="mt-7 flex flex-col gap-3">
           <a
             ref={principal}
-            href={MI_CUENTA}
+            href={urlPago}
             className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full bg-marca-verde px-6 text-[16px] font-semibold text-white transition-colors hover:bg-marca-verdeOsc focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc"
           >
             {t.boton}
