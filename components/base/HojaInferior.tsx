@@ -28,6 +28,11 @@ import { createPortal } from "react-dom";
 // globo). Sin él, en escritorio la hoja se queda centrada como un
 // cuadro, del ancho de una columna: subir medio metro desde abajo en
 // una pantalla grande no tiene sentido.
+//
+// `centrada`: una tarjeta en el centro también en el móvil, sin asa y
+// sin relleno (lo pone quien la usa, que puede llevar una franja a
+// sangre arriba). Es la del aviso de «Para ti». Todo lo demás —portal,
+// foco, Escape, fondo que cierra— es lo mismo.
 // ---------------------------------------------------------------
 
 export default function HojaInferior({
@@ -37,6 +42,7 @@ export default function HojaInferior({
   etiquetaCerrar,
   id,
   soloMovil = false,
+  centrada = false,
   children,
 }: {
   abierta: boolean;
@@ -47,6 +53,7 @@ export default function HojaInferior({
   etiquetaCerrar: string;
   id?: string;
   soloMovil?: boolean;
+  centrada?: boolean;
   children: ReactNode;
 }) {
   const hoja = useRef<HTMLDivElement>(null);
@@ -77,6 +84,26 @@ export default function HojaInferior({
   }, [abierta]);
 
   if (!abierta) return null;
+
+  if (centrada) {
+    return createPortal(
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(18,33,26,0.55)] px-4 py-6">
+        <button type="button" aria-label={etiquetaCerrar} onClick={alCerrar} className="absolute inset-0 cursor-default" />
+        <div
+          ref={hoja}
+          id={id}
+          role="dialog"
+          aria-modal="true"
+          aria-label={etiqueta}
+          tabIndex={-1}
+          className="aparece relative max-h-[90dvh] w-full max-w-[420px] overflow-y-auto rounded-[20px] bg-white outline-none"
+        >
+          {children}
+        </div>
+      </div>,
+      document.body
+    );
+  }
 
   return createPortal(
     <div

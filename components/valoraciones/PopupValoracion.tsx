@@ -8,7 +8,7 @@ import { SUCESO_LANZAR_TUTORIAL } from "@/components/tutorial/eventos";
 // ---------------------------------------------------------------
 // EL POP-UP DE DESPUÉS DE LA CLASE
 //
-// Lo monta el layout del alumno (`ValoracionAlEntrar`) cuando el servidor
+// Lo monta el layout del alumno (`PopupAlEntrar`) cuando el servidor
 // ha encontrado la última clase dada del alumno, sin fila en
 // `valoraciones_clase`. Aquí solo se decide CUÁNDO abrirlo:
 //
@@ -47,7 +47,7 @@ function escribir(clave: string) {
   }
 }
 
-function hayOtraCosaDelante(): boolean {
+export function hayOtraCosaDelante(): boolean {
   return (
     leer("drc:tutorial") !== null ||
     document.querySelector("[data-tutorial-activo], [data-ayuda-abierta], [aria-modal='true']") !== null

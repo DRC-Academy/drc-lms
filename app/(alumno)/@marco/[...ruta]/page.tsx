@@ -1,7 +1,7 @@
 import { alumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { datosDelMarco } from "@/lib/navegacion-servidor";
 import { PiezasDelMarco } from "@/components/Navegacion";
-import ValoracionAlEntrar from "@/components/valoraciones/ValoracionAlEntrar";
+import PopupAlEntrar from "@/components/PopupAlEntrar";
 import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
@@ -22,8 +22,9 @@ export const dynamic = "force-dynamic";
  * mira si es `/alumno/<id>/…`, para darle a `alumnoDeLaPagina` el mismo
  * id que recibe la página.
  *
- * Al equipo revisando una ficha, también el pop-up de valorar la clase
- * tal como le saldría a ese alumno, sin guardar nada. Al alumno se lo
+ * Al equipo revisando una ficha, también el pop-up de entrada (valorar
+ * la clase o el aviso de «Para ti») tal como le saldría a ese alumno,
+ * sin guardar nada. Al alumno se lo
  * monta el layout, que solo depende de su cookie.
  */
 export default async function Marco({ params }: { params: { ruta: string[] } }) {
@@ -34,7 +35,7 @@ export default async function Marco({ params }: { params: { ruta: string[] } }) 
       <PiezasDelMarco datos={await datosDelMarco(alumno)} />
       {alumno.revisando && alumno.alumnoId !== "" && (
         <Suspense fallback={null}>
-          <ValoracionAlEntrar alumnoId={alumno.alumnoId} vistaPrevia />
+          <PopupAlEntrar alumnoId={alumno.alumnoId} vistaPrevia />
         </Suspense>
       )}
     </>

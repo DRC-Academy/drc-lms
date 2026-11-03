@@ -4,7 +4,7 @@ import { sesionActual } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
 import { MarcoFijo, PiezasDeLaSesion } from "@/components/Navegacion";
 import { ProveedorMarco } from "@/components/leccion/MarcoCurso";
-import ValoracionAlEntrar from "@/components/valoraciones/ValoracionAlEntrar";
+import PopupAlEntrar from "@/components/PopupAlEntrar";
 import AvisoImpago from "@/components/impago/AvisoImpago";
 import { estadoDeAcceso } from "@/lib/estado-acceso";
 import { urlActualizarPago } from "@/lib/cuenta-woo";
@@ -86,7 +86,8 @@ export default async function LayoutAlumno({ children, marco }: { children: Reac
  * La ayuda y el recorrido, con el nombre de quien ha entrado. El equipo
  * tiene la ayuda, sin nombre, y no el recorrido.
  *
- * Y el pop-up de valorar la última clase, que es «al entrar»: va aquí, y
+ * Y el pop-up de entrada (valorar la última clase o, si no, el aviso de
+ * «Para ti»; ver `PopupAlEntrar`), que es «al entrar»: va aquí, y
  * no en una página, porque el layout no se vuelve a pintar al navegar y
  * así sale en la primera pantalla que se abra, sea cual sea. En su propio
  * `<Suspense>`: lee Gestión y no tiene que esperar nadie por él.
@@ -101,7 +102,7 @@ async function DeLaSesion() {
     <>
       <PiezasDeLaSesion nombre={perfil?.nombre.trim() ?? ""} inicioHref={`/alumno/${sesion.alumnoId}`} />
       <Suspense fallback={null}>
-        <ValoracionAlEntrar alumnoId={sesion.alumnoId} />
+        <PopupAlEntrar alumnoId={sesion.alumnoId} />
       </Suspense>
     </>
   );

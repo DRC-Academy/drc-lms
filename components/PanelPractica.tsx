@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import type { Bloque } from "@/lib/data";
 import type { AvisoFormulario, TarjetaPractica } from "@/lib/modos";
@@ -102,6 +104,34 @@ export default function PanelPractica({
     reintentar,
     zonaNuevos,
   } = usarGenerador({ alumnoId, generadosIniciales, pantalla: "para_ti" });
+
+  // ---------------------------------------------------------------
+  // `?empezar=1`: LLEGA DESDE EL AVISO DE «PARA TI»
+  //
+  // El botón del aviso (`components/aviso-para-ti/AvisoParaTi.tsx`)
+  // trae aquí al alumno para que su primer bloque empiece a prepararse
+  // sin buscar otro botón. Se lanza la MISMA `generar()` que la parada,
+  // una sola vez y solo si la parada está abierta; y el parámetro se
+  // quita de la URL en el acto, para que recargar no pida otro bloque
+  // mientras el primero aún se está escribiendo.
+  // ---------------------------------------------------------------
+  const parametros = useSearchParams();
+  const router = useRouter();
+  const ruta = usePathname();
+  const empezado = useRef(false);
+  const puedeGenerar = tarjeta !== null && tarjeta.espera === null;
+
+  useEffect(() => {
+    if (parametros.get("empezar") !== "1") return;
+    const resto = new URLSearchParams(parametros.toString());
+    resto.delete("empezar");
+    const consulta = resto.toString();
+    router.replace(consulta ? `${ruta}?${consulta}` : ruta, { scroll: false });
+
+    if (empezado.current || !puedeGenerar || estado === "generando") return;
+    empezado.current = true;
+    void generar();
+  }, [parametros, router, ruta, puedeGenerar, estado, generar]);
 
   const t = usarIdioma().t.ruta;
 
