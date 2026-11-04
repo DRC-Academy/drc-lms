@@ -87,3 +87,18 @@ export function leerFoco(valor: string | string[] | undefined): string | null {
   const limpio = valor.trim();
   return limpio === "" ? null : limpio;
 }
+
+/**
+ * La ficha de la que habla esta URL para el equipo: el id de
+ * `/alumno/<id>/…` o, en el resto de pantallas, `?alumno=`. Null si no
+ * habla de ninguna.
+ *
+ * LO USAN EL SERVIDOR Y EL NAVEGADOR, y tiene que dar lo mismo en los dos:
+ * es lo que decide si los datos que tiene la barra son de la ficha que se
+ * está mirando (`lib/marco.ts`). Igual que el parámetro, NO AUTORIZA NADA.
+ */
+export function focoDeLaUrl(ruta: string, consulta: { get(nombre: string): string | null }): string | null {
+  const [, seccion, id] = ruta.split("/");
+  if (seccion === "alumno" && id) return leerFoco(decodeURIComponent(id));
+  return leerFoco(consulta.get(PARAM_FOCO) ?? undefined);
+}

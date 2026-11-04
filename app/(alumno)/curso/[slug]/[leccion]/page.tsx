@@ -19,6 +19,7 @@ import { textosActuales } from "@/lib/idioma-servidor";
 import { incrustacionYoutube } from "@/lib/youtube";
 import VistaLeccion from "@/components/leccion/VistaLeccion";
 import type { EjercicioVista } from "@/lib/ejercicios";
+import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,8 @@ export default async function PaginaLeccion({
   // Quién es el alumno de esta lección: él mismo, el revisado, o nadie
   // —el equipo repasando contenido—. Ver la cabecera equivalente en
   // `app/curso/[slug]/page.tsx`.
-  const { sesion, alumnoId, paraEnlaces } = await alumnoDeLaPagina();
+  const alumno = await alumnoDeLaPagina();
+  const { sesion, alumnoId, paraEnlaces } = alumno;
 
   // ---------------------------------------------------------------
   // DOS OLAS, NO SIETE ESPERAS
@@ -142,6 +144,8 @@ export default async function PaginaLeccion({
     arbol.modulos.find((m) => m.lecciones.some((l) => l.id === leccion.id))?.id ?? "";
 
   return (
+    <>
+    <MarcoDeLaPagina alumno={alumno} />
     <VistaLeccion
       cursoSlug={curso.slug}
       cursoTitulo={curso.titulo}
@@ -171,5 +175,6 @@ export default async function PaginaLeccion({
       foco={paraEnlaces}
       profesor={(await profesorDelAlumno(alumnoId))?.nombre ?? ""}
     />
+    </>
   );
 }

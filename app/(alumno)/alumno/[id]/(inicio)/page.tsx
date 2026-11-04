@@ -33,6 +33,7 @@ import SemanaCompacta from "@/components/clases/SemanaCompacta";
 import { tutorialPendiente } from "@/lib/tutorial/estado";
 import { Suspense } from "react";
 import { AvisoRecuperacion } from "@/components/clases/RecuperacionesDeGestion";
+import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
 
 // La ficha se arma con datos de Gestión en cada visita: no hay nada que
 // prerenderizar y los datos cambian en cuanto se analiza una clase nueva.
@@ -271,6 +272,7 @@ export default async function PerfilAlumno({
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
+      <MarcoDeLaPagina alumno={alumno} />
 
       <main className="mx-auto w-full max-w-contenido flex-1 px-4 pb-8 pt-[18px] min-[900px]:px-9 min-[900px]:pb-11 min-[900px]:pt-8">
         {/* Control del equipo, no del alumno: va arriba del todo y fuera

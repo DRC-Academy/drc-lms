@@ -43,9 +43,9 @@ import { useEstadisticasEnVivo } from "@/components/estadisticas/ejercicios-en-v
  * está en CSS (`.barra-app` en `globals.css`); aquí solo se marca qué se
  * ve abierta (`.barra-rotulo`).
  *
- * LAS ESTADÍSTICAS LLEGAN HECHAS, por props desde el slot `@marco`
- * (`lib/navegacion-servidor.ts`), del mismo alumno que la página. Esta barra no lee nada. Para el
- * lector de pantalla van siempre en texto (`sr-only`): lo que solo sale
+ * LAS ESTADÍSTICAS LLEGAN HECHAS, por props (`components/marco/`), del
+ * mismo alumno que la página. Esta barra no lee nada. Para el lector de
+ * pantalla van siempre en texto (`sr-only`): lo que solo sale
  * abierta se oculta con `visibility`, que también lo oculta a él.
  */
 export default function BarraLateral({
@@ -53,6 +53,7 @@ export default function BarraLateral({
   nombre,
   inicioHref,
   estadisticas = null,
+  cargando = false,
 }: {
   enlaces: EnlaceSeccion[];
   nombre: string;
@@ -60,6 +61,8 @@ export default function BarraLateral({
   inicioHref: string;
   /** Sin alumno —el equipo en su buscador— no hay. */
   estadisticas?: EstadisticasAlumno | null;
+  /** La carcasa: guarda el sitio de «Cómo vas» y del anillo para que nada salte al llegar. */
+  cargando?: boolean;
 }) {
   const { t } = usarIdioma();
   const { abrirPanel } = usarMarco();
@@ -85,6 +88,7 @@ export default function BarraLateral({
     >
       <div className="barra-panel absolute inset-y-0 left-0 flex flex-col border-r border-marca-borde bg-white pb-[18px] pt-[18px]">
         <Link
+          prefetch={seccion === "inicio" ? false : undefined}
           href={inicioHref}
           aria-label={t.navegacion.inicio}
           className="mb-[18px] ml-5 block w-fit rounded-lg transition-opacity hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc"
@@ -102,15 +106,32 @@ export default function BarraLateral({
 
         {estadisticas?.curso && <AnilloDeLaBarra curso={estadisticas.curso} />}
 
+        {cargando && (
+          <div aria-hidden className="mb-[18px] flex flex-col gap-[18px] px-[18px]">
+            <div className="esq h-[235px] w-11 rounded-[14px]" />
+            <div className="esq h-[62px] w-11 rounded-[12px] [@media(max-height:799px)]:hidden" />
+          </div>
+        )}
+
         <nav data-tour="navegacion" className="flex flex-col gap-1.5 px-[18px]">
           {enlaces.map((enlace) => {
             const activo = enlace.clave === seccion;
+            if (enlace.pendiente) {
+              return (
+                <span key={enlace.clave} aria-hidden className="flex h-11 w-full items-center gap-3 overflow-hidden rounded-[12px] pl-[11px]">
+                  <Icono seccion={enlace.clave} activo={activo} className="h-[22px] w-[22px] shrink-0" />
+                </span>
+              );
+            }
             // Otra web: un `<a>` normal, que el `Link` de Next es para rutas propias.
             const Enlace = enlace.externo ? "a" : Link;
             return (
               <Enlace
                 key={enlace.clave}
                 href={enlace.href}
+                // La pestaña marcada es esta misma pantalla, quizá con otra
+                // consulta: ver `FlechaSemana`.
+                {...(enlace.externo || !activo ? {} : { prefetch: false })}
                 aria-current={activo ? "page" : undefined}
                 aria-label={enlace.texto}
                 // El recorrido guiado busca aquí el botón de cada sección.

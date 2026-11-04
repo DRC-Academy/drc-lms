@@ -66,7 +66,7 @@ const PASOS = PASOS_RECORRIDO;
 const CLAVE = "drc:tutorial";
 const ANCLA = "tutorial";
 const ESPERA_RUTA_MS = 7000;
-const ESPERA_ELEMENTO_MS = 4000;
+const ESPERA_ELEMENTO_MS = 7000;
 /** Lo que se tarda en enseñar el cuadro de espera: lo que llega antes no lo necesita. */
 const ANTES_DE_ESPERA_MS = 300;
 const SONDEO_MS = 120;

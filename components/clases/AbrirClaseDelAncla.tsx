@@ -13,10 +13,19 @@ import { useEffect } from "react";
  *
  * Al cargar con el ancla puesta, al cambiar el ancla y al pulsar un enlace
  * a la MISMA ancla que ya está en la URL, que no dispara `hashchange`.
+ *
+ * Y `#dia-<fecha>`, el enlace de una clase desde el inicio. Next lleva al
+ * ancla al cambiar de pantalla, y en ese momento lo que hay es el esqueleto
+ * (`loading.tsx`), sin el día: hay que hacerlo cuando llega el contenido, que
+ * es cuando se monta esto.
  */
 export default function AbrirClaseDelAncla() {
   useEffect(() => {
     function abrir(ancla: string) {
+      if (ancla.startsWith("#dia-")) {
+        document.getElementById(decodeURIComponent(ancla.slice(1)))?.scrollIntoView({ block: "start" });
+        return;
+      }
       if (!ancla.startsWith("#clase-")) return;
       const destino = document.getElementById(decodeURIComponent(ancla.slice(1)));
       if (!destino) return;

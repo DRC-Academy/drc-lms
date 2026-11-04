@@ -76,6 +76,7 @@ export default function SemanaCompacta({
             <FlechaSemana href={indice > 0 ? hrefSemana(indice - 1) : null} etiqueta={t.semanaAnterior} direccion="atras" />
             {indice > 0 ? (
               <Link
+                prefetch={false}
                 href={hrefSemana(0)}
                 scroll={false}
                 className="inline-flex min-h-[48px] items-center rounded-full px-3 text-[14px] font-semibold text-marca-verdeOsc hover:text-marca-tinta"

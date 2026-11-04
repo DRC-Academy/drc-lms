@@ -88,6 +88,7 @@ export default function AvisoParaTi({ href, vistaPrevia = false }: { href: strin
         <h2 className="font-display text-[24px] font-bold leading-[1.15] text-[#12211A]">{t.titulo}</h2>
         <p className="mt-3 text-[16px] leading-[1.5] text-[#3B4A42]">{t.texto}</p>
         <Link
+          prefetch={false}
           href={href}
           data-autofocus
           onClick={() => setAbierta(false)}

@@ -185,6 +185,69 @@
 }
 
 @layer components {
+  /* ---------------------------------------------------------------
+     EL ESQUELETO: lo que se ve mientras llega una pantalla. Solo define
+     el paso del medio (`50%`): empieza y acaba en su estado en reposo,
+     como pide la regla de movimiento reducido de más arriba.
+     --------------------------------------------------------------- */
+  .esq {
+    background: #e2e8e4;
+    border-radius: 6px;
+    animation: esq-pulso 1600ms ease-in-out infinite;
+  }
+  @keyframes esq-pulso {
+    50% {
+      opacity: 0.55;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .esq {
+      animation: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     LA BARRITA VERDE DE ARRIBA (`components/BarraNavegando.tsx`). Por
+     encima de todo y sin recibir clics. Avanza despacio sin llegar al
+     final: cuánto falta no se sabe, y fingir que sí es peor.
+     --------------------------------------------------------------- */
+  .barra-navegando {
+    position: fixed;
+    top: env(safe-area-inset-top, 0px);
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    height: 3px;
+    background: #1e9e3a;
+    opacity: 0;
+    pointer-events: none;
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+  .barra-navegando[data-estado="cargando"] {
+    opacity: 1;
+    animation: barra-navegando-avanza 9000ms cubic-bezier(0.08, 0.7, 0.2, 1) forwards;
+  }
+  .barra-navegando[data-estado="fin"] {
+    opacity: 0;
+    transform: scaleX(1);
+    transition: opacity 240ms ease-out 60ms;
+  }
+  @keyframes barra-navegando-avanza {
+    from {
+      transform: scaleX(0.15);
+    }
+    to {
+      transform: scaleX(0.92);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .barra-navegando[data-estado="cargando"] {
+      animation: none;
+      transform: scaleX(1);
+    }
+  }
+
   /* Un único valor de tracking para todas las etiquetas de la pantalla. */
   .eyebrow {
     @apply text-[11px] font-semibold uppercase leading-none;

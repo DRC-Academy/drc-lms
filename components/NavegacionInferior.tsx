@@ -73,9 +73,20 @@ export default function NavegacionInferior({
 
       {enlaces.map((enlace) => {
         const activo = seccion === enlace.clave;
+        if (enlace.pendiente) {
+          return (
+            <span key={enlace.clave} aria-hidden className={`flex min-h-[44px] flex-col items-center justify-center gap-[5px] text-[12px] ${activo ? "font-semibold text-marca-tinta" : "font-medium text-marca-gris"}`}>
+              <Icono seccion={enlace.clave} activo={activo} />
+              <span className="max-w-full truncate">{enlace.corto}</span>
+            </span>
+          );
+        }
         return (
           <Link
             key={enlace.clave}
+            // La pestaña marcada es esta misma pantalla, quizá con otra
+            // consulta: ver `FlechaSemana`.
+            prefetch={activo ? false : undefined}
             href={enlace.href}
             aria-current={activo ? "page" : undefined}
             // El nombre entero aunque la etiqueta se recorte.

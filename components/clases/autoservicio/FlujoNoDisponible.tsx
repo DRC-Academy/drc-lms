@@ -37,7 +37,7 @@ export default function FlujoNoDisponible({
       paso={null}
       clave="no-disponible"
       accion={
-        <Link href="/clases" className={BOTON_LINEA}>
+        <Link prefetch={false} href="/clases" className={BOTON_LINEA}>
           {t.volverAMisClases}
         </Link>
       }

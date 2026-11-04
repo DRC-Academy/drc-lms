@@ -74,7 +74,7 @@ export default function MarcoFlujo({
                 {t.volverAMisClases}
               </a>
             ) : (
-              <Link href="/clases" className={claseVolver}>
+              <Link prefetch={false} href="/clases" className={claseVolver}>
                 {flecha}
                 {t.volverAMisClases}
               </Link>

@@ -34,6 +34,11 @@ export type EnlaceSeccion = {
    * sección actual.
    */
   externo?: boolean;
+  /**
+   * Todavía no se sabe a dónde lleva: la carcasa de la barra guarda su
+   * sitio, sin enlace, hasta que llegan los datos del alumno.
+   */
+  pendiente?: boolean;
 };
 
 /** Las secciones de la barra de móvil, y las que van en la hoja del perfil. */
@@ -125,10 +130,9 @@ export function Icono({
  * no tiene ruta aquí y nunca sale marcado.
  *
  * SE DEDUCE DE LA RUTA Y NO SE PASA DESDE LA PÁGINA porque la navegación
- * vivía en el layout común, que no se vuelve a renderizar al pasar de una
- * página a otra: si la sección le llegara del servidor, se quedaba
- * marcada la primera. Ahora la pinta el slot `@marco`, que sí, pero
- * deducirla aquí sigue siendo lo más barato.
+ * vive en el layout común, que no se vuelve a renderizar al pasar de una
+ * página a otra: si la sección le llegara del servidor, se quedaría
+ * marcada la primera.
  *
  * El bloque de práctica (`/alumno/<id>/<bloque>`) es «Para ti»: se abre
  * desde allí y es de allí.
