@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { filasDeLaPestana, situacionDelProfesor, textoUltimoAcceso } from "@/lib/panel-profesor-reglas";
+import {
+  diaEnTexto,
+  enunciadoEnCorto,
+  esPuntoDeClase,
+  filasDeLaPestana,
+  nombreDePila,
+  ordenarPorProximaClase,
+  proximaEnCorto,
+  semanaDelCurso,
+  sinDatosDeCobro,
+  situacionDelProfesor,
+  textoUltimoAcceso,
+} from "@/lib/panel-profesor-reglas";
 
 const COPIA = "ana@drcacademy.com";
 
@@ -92,5 +104,107 @@ describe("textoUltimoAcceso", () => {
   it("sin dato o ilegible", () => {
     expect(textoUltimoAcceso(null, ahora)).toBe("Aún no ha entrado");
     expect(textoUltimoAcceso("basura", ahora)).toBe("Aún no ha entrado");
+  });
+});
+
+describe("semanaDelCurso", () => {
+  const ahora = new Date("2026-11-05T12:00:00Z");
+
+  it("la primera es la 1 y cambia cada siete días", () => {
+    expect(semanaDelCurso(new Date("2026-11-05T09:00:00Z"), ahora)).toBe(1);
+    expect(semanaDelCurso(new Date("2026-10-30T09:00:00Z"), ahora)).toBe(1);
+    expect(semanaDelCurso(new Date("2026-10-29T09:00:00Z"), ahora)).toBe(2);
+  });
+
+  it("una fecha por delante sigue siendo la 1; sin fecha, null", () => {
+    expect(semanaDelCurso(new Date("2026-12-01T09:00:00Z"), ahora)).toBe(1);
+    expect(semanaDelCurso(null, ahora)).toBeNull();
+  });
+});
+
+describe("la próxima clase en palabras", () => {
+  const ahora = new Date("2026-11-05T12:00:00Z");
+
+  it("hoy, mañana o el día", () => {
+    expect(proximaEnCorto("2026-11-05", "18:00", ahora)).toBe("Hoy, 18:00");
+    expect(proximaEnCorto("2026-11-06", "09:00", ahora)).toBe("Mañana, 09:00");
+    expect(proximaEnCorto("2026-11-12", "18:00", ahora)).toMatch(/jue.*12.*nov.*18:00/);
+  });
+
+  it("el día no se corre por la zona horaria", () => {
+    expect(diaEnTexto("2026-11-12")).toMatch(/jueves.*12.*noviembre/);
+  });
+});
+
+describe("ordenarPorProximaClase", () => {
+  it("primero quien la tiene antes, sin clase al final, y a igualdad por nombre", () => {
+    const filas = [
+      { nombre: "Sin clase", empiezaEn: null },
+      { nombre: "Zoe", empiezaEn: 200 },
+      { nombre: "Ana", empiezaEn: 200 },
+      { nombre: "Primero", empiezaEn: 100 },
+      { nombre: "Otro sin", empiezaEn: null },
+    ];
+    expect(ordenarPorProximaClase(filas).map((f) => f.nombre)).toEqual(["Primero", "Ana", "Zoe", "Otro sin", "Sin clase"]);
+    expect(filas[0].nombre).toBe("Sin clase");
+  });
+});
+
+describe("sinDatosDeCobro", () => {
+  it("quita la frase entera y deja el resto", () => {
+    const texto = "Trabajó el pasado simple. Comentó que quiere cancelar su suscripción. Mejoró la pronunciación.";
+    expect(sinDatosDeCobro(texto)).toBe("Trabajó el pasado simple. Mejoró la pronunciación.");
+  });
+
+  it.each([
+    "Habló del pago de la cuota.",
+    "Preguntó por el precio.",
+    "Pagó ayer.",
+    "Son 50 €.",
+    "Pidió la factura.",
+    "Mencionó la garantía del plan.",
+    "Dejó una valoración de cinco estrellas.",
+    "Quiere ampliar el plan.",
+    "Tiene un plan de 3 horas.",
+  ])("«%s» se va", (frase) => {
+    expect(sinDatosDeCobro(frase)).toBe("");
+  });
+
+  it("no toca lo que solo se parece", () => {
+    const texto = "Planificó su viaje. Hizo un plan de estudio con repaso. Compagina el trabajo.";
+    expect(sinDatosDeCobro(texto)).toBe(texto);
+  });
+
+  it("vacío o nulo", () => {
+    expect(sinDatosDeCobro(null)).toBe("");
+    expect(sinDatosDeCobro("   ")).toBe("");
+  });
+});
+
+describe("esPuntoDeClase", () => {
+  it("descarta lo que dice que no hubo clase", () => {
+    expect(esPuntoDeClase("No aplica. No se trata de una clase.")).toBe(false);
+    expect(esPuntoDeClase("No es posible detectar errores del alumno.")).toBe(false);
+    expect(esPuntoDeClase("No procede analizar.")).toBe(false);
+    expect(esPuntoDeClase("")).toBe(false);
+  });
+
+  it("se queda con lo demás", () => {
+    expect(esPuntoDeClase("Preposiciones: 'listen music' en vez de 'listen to music'.")).toBe(true);
+    expect(esPuntoDeClase("Nota mucha mejora en los tiempos verbales.")).toBe(true);
+  });
+});
+
+describe("enunciadoEnCorto y nombreDePila", () => {
+  it("quita el HTML, las entidades y recorta", () => {
+    expect(enunciadoEnCorto("<p>Choose&nbsp;the <b>right</b> word &amp; go</p>")).toBe("Choose the right word & go");
+    const largo = enunciadoEnCorto("a".repeat(300));
+    expect(largo.length).toBeLessThanOrEqual(121);
+    expect(largo.endsWith("…")).toBe(true);
+  });
+
+  it("el nombre de pila", () => {
+    expect(nombreDePila("  Ana María  Ruiz ")).toBe("Ana");
+    expect(nombreDePila("")).toBe("");
   });
 });

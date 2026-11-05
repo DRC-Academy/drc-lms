@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import MarcoProfesor from "@/components/profesor/MarcoProfesor";
-import Chevron from "@/components/admin/Chevron";
-import { nivelMostrado } from "@/lib/estimacion";
+import FichaAlumno from "@/components/profesor/FichaAlumno";
 import { exigirAlumnoDelProfesor, rutaDelPanel } from "@/lib/panel-profesor";
+import { cargarFichaDelAlumno } from "@/lib/panel-profesor-ficha";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Alumno · DRC Academy" };
+export const metadata: Metadata = { title: "Ficha del alumno · DRC Práctica" };
 
 /**
- * LA ENTRADA A LA FICHA. La ficha llega en la Fase 2; la ruta existe ya
- * porque es la puerta del guard: lo ajeno, lo inexistente y lo que ha
- * dejado de estar activo responden el mismo 404 (`not-found.tsx`).
+ * LA FICHA DEL ALUMNO. Primero el guard: lo ajeno, lo inexistente y lo que
+ * ha dejado de estar activo responden el mismo 404 (`not-found.tsx`).
+ * Después, un solo cargador con lo que ha devuelto el guard.
  */
 export default async function PaginaAlumno({
   params,
@@ -23,19 +22,11 @@ export default async function PaginaAlumno({
 }) {
   const como = typeof searchParams.como === "string" ? searchParams.como : undefined;
   const { profesor, alumno } = await exigirAlumnoDelProfesor(params.alumnoId, como);
-  const nivel = nivelMostrado(alumno.alumnoId, alumno, null).nivel;
+  const ficha = await cargarFichaDelAlumno(profesor, alumno);
 
   return (
     <MarcoProfesor nombre={profesor.nombre} comoAdmin={profesor.comoAdmin}>
-      <Link href={rutaDelPanel(profesor, "/profesor")} className="-ml-1 inline-flex min-h-[44px] items-center gap-1 px-1 text-[13.5px] font-semibold text-marca-verdeOsc">
-        <Chevron direccion="izquierda" />
-        Mis alumnos
-      </Link>
-      <h1 className="mt-1 font-display text-[28px] font-bold leading-[1.1] tracking-[-0.01em] text-marca-tinta lg:text-[34px]">
-        {alumno.nombre.trim() || "Sin nombre"}
-      </h1>
-      {nivel && <p className="mt-2 text-[14.5px] leading-[1.5] text-marca-tintaMedia">Nivel {nivel}</p>}
-      <p className="mt-5 text-[15px] leading-[1.5] text-marca-tintaMedia">Muy pronto verás aquí lo que viene trabajando.</p>
+      <FichaAlumno ficha={ficha} volverHref={rutaDelPanel(profesor, "/profesor")} />
     </MarcoProfesor>
   );
 }

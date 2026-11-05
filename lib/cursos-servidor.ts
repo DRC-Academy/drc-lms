@@ -63,6 +63,8 @@ export type EstadoCurso = {
   /** Lecciones del curso. */
   total: number;
   completadas: number;
+  /** Las que el drip le tiene abiertas, contando las completadas: lo completado nunca se cierra. */
+  abiertas: number;
   /**
    * La primera sin completar A LA QUE SE PUEDE ENTRAR.
    *
@@ -430,6 +432,7 @@ export async function estadoDelCurso(
     curso,
     total: 0,
     completadas: 0,
+    abiertas: 0,
     siguiente: null,
     diasParaAbrir: null,
     abreEl: null,
@@ -465,6 +468,7 @@ export async function estadoDelCurso(
   const ordenadas = ordenarLecciones(modulos, lecciones);
 
   let completadas = 0;
+  let abiertas = 0;
   let siguiente: SiguienteLeccion | null = null;
   let diasParaAbrir: number | null = null;
   let abreEl: string | null = null;
@@ -477,12 +481,10 @@ export async function estadoDelCurso(
 
     if (cuando !== undefined) {
       completadas++;
+      abiertas++;
       if (ultimaActividad === null || cuando > ultimaActividad) ultimaActividad = cuando;
       return;
     }
-
-    // Ya la tenemos: el resto de las pendientes no cambia nada.
-    if (siguiente !== null) return;
 
     // LA PRIMERA PENDIENTE A LA QUE SE PUEDE ENTRAR, que no es la
     // primera pendiente. Mismo criterio y misma función que
@@ -498,6 +500,11 @@ export async function estadoDelCurso(
       false,
       ahora
     );
+
+    if (apertura.abierto) abiertas++;
+
+    // Ya la tenemos: el resto de las pendientes solo cuenta en `abiertas`.
+    if (siguiente !== null) return;
 
     if (!apertura.abierto) {
       // Se anota cuándo se abre la primera que está esperando y se
@@ -523,6 +530,7 @@ export async function estadoDelCurso(
     curso,
     total: ordenadas.length,
     completadas,
+    abiertas,
     siguiente,
     // Si hay a dónde ir hoy, lo que tarde el módulo de más allá no le
     // interesa a nadie.

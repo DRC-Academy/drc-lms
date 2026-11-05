@@ -23,8 +23,10 @@ const esCodigo = (f: string) => /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f);
 
 const DEL_PANEL = [
   ...archivos(join(RAIZ, "app", "profesor")),
+  ...archivos(join(RAIZ, "app", "profes")),
   ...archivos(join(RAIZ, "components", "profesor")),
   join(RAIZ, "lib", "panel-profesor.ts"),
+  join(RAIZ, "lib", "panel-profesor-ficha.ts"),
   join(RAIZ, "lib", "panel-profesor-reglas.ts"),
 ].filter(esCodigo);
 
@@ -56,6 +58,10 @@ const PROHIBIDOS = [
   "@/components/admin/GarantiaAlumno",
   "@/components/admin/PantallaGarantia",
   "@/components/admin/PantallaValoraciones",
+  "@/components/practica/PanelBloque",
+  "@/components/impago/AvisoImpago",
+  "@/components/marco/MarcoDeLaPagina",
+  "@/components/marco/MarcoDelAlumno",
 ];
 
 /** Las funciones de `lib/gestion.ts` que leen `select *` o columnas comerciales. */
@@ -71,7 +77,17 @@ const LECTURAS_PROHIBIDAS = [
   "listarAlumnos",
   "alumnosDelPanel",
   "asignacionesDeProfesorSinFiltrar",
+  "obtenerCalendario",
+  "obtenerRecorrido",
+  "profesorDelAlumno",
+  "estadisticasDelAlumno",
+  "datosDelMarco",
 ];
+
+/** El código sin comentarios: nombrar una pieza prohibida para explicarlo no es usarla. */
+function sinComentarios(codigo: string): string {
+  return codigo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
 
 function importaciones(codigo: string): string[] {
   return Array.from(codigo.matchAll(/from\s+["']([^"']+)["']/g), (m) => m[1]);
@@ -80,6 +96,9 @@ function importaciones(codigo: string): string[] {
 describe("el panel del profesor", () => {
   it("existe, y este test mira sus archivos de verdad", () => {
     const rutas = DEL_PANEL.map(rel);
+    expect(rutas).toContain("app/profes/page.tsx");
+    expect(rutas).toContain("lib/panel-profesor-ficha.ts");
+    expect(rutas).toContain("components/profesor/FichaAlumno.tsx");
     expect(rutas).toContain("app/profesor/page.tsx");
     expect(rutas).toContain("app/profesor/alumno/[alumnoId]/page.tsx");
     expect(rutas).toContain("lib/panel-profesor.ts");
@@ -111,7 +130,7 @@ describe("el panel del profesor", () => {
 
   it("no llama a ninguna lectura prohibida de Gestión", () => {
     const malos = DEL_PANEL.flatMap((f) =>
-      LECTURAS_PROHIBIDAS.filter((nombre) => new RegExp(`\\b${nombre}\\b`).test(leer(f))).map((n) => `${rel(f)} -> ${n}`)
+      LECTURAS_PROHIBIDAS.filter((nombre) => new RegExp(`\\b${nombre}\\b`).test(sinComentarios(leer(f)))).map((n) => `${rel(f)} -> ${n}`)
     );
     expect(malos).toEqual([]);
   });
@@ -144,8 +163,117 @@ describe("el panel del profesor", () => {
   });
 });
 
+/** Lo que el panel arrastra de verdad: todo lo que importa, y lo que importa eso. */
+function clausura(inicio: string[]): string[] {
+  const vistos = new Set<string>();
+  const pendientes = [...inicio];
+  while (pendientes.length > 0) {
+    const f = pendientes.pop() as string;
+    if (vistos.has(f)) continue;
+    vistos.add(f);
+    for (const i of importaciones(leer(f))) {
+      if (!i.startsWith("@/")) continue;
+      const base = join(RAIZ, i.slice(2));
+      const real = [`${base}.ts`, `${base}.tsx`, join(base, "index.ts")].find((c) => existsSync(c) && statSync(c).isFile());
+      if (real) pendientes.push(real);
+    }
+  }
+  return Array.from(vistos);
+}
+
+describe("lo que arrastra el panel, también por debajo", () => {
+  const ARRASTRADO = clausura(DEL_PANEL);
+
+  it("el recorrido alcanza a lo que de verdad usa", () => {
+    const rutas = ARRASTRADO.map(rel);
+    expect(rutas).toContain("lib/gestion.ts");
+    expect(rutas).toContain("lib/cursos-servidor.ts");
+    expect(rutas).toContain("components/FormularioAcceso.tsx");
+  });
+
+  it("ninguna pieza prohibida entra, ni de forma indirecta", () => {
+    const prohibidos = PROHIBIDOS.map((p) => p.replace("@/", ""));
+    const malos = ARRASTRADO.map(rel).filter((r) => prohibidos.some((p) => r === `${p}.ts` || r === `${p}.tsx`));
+    expect(malos).toEqual([]);
+  });
+
+  it("fuera de lib/gestion.ts, nadie de la cadena llama a obtenerPerfil ni lee el plan del alumno", () => {
+    // `lib/demo/` son las filas de la cuenta de demostración: las usa
+    // `lib/gestion.ts` y no se leen de ninguna base.
+    const malos = ARRASTRADO.filter((f) => rel(f) !== "lib/gestion.ts" && !rel(f).startsWith("lib/demo/"))
+      .filter((f) => /\bobtenerPerfil\(|\bobtenerAlumno\(|\bleerEnEspera\(|estado_suscripcion|plan_contratado/.test(sinComentarios(leer(f))))
+      .map(rel);
+    expect(malos).toEqual([]);
+  });
+});
+
+describe("la ficha", () => {
+  const FICHA = leer(join(RAIZ, "lib", "panel-profesor-ficha.ts"));
+  const PANTALLA = leer(join(RAIZ, "components", "profesor", "FichaAlumno.tsx"));
+
+  it("ni las respuestas libres ni el enlace de la clase", () => {
+    for (const codigo of [FICHA, PANTALLA]) {
+      expect(codigo).not.toMatch(/from\("respuestas_produccion"\)|leerRespuestas/);
+      expect(codigo).not.toMatch(/meetLink|\.meet_link|enlaceDeClase/);
+    }
+  });
+
+  it("las lecturas nuevas de lib/gestion.ts no piden el enlace, el transcript ni las señales de riesgo", () => {
+    const gestion = leer(join(RAIZ, "lib", "gestion.ts"));
+    const calendario = /const CALENDARIO_SIN_ENLACE =\s*"([^"]+)"/.exec(gestion)?.[1] ?? "";
+    expect(calendario).toContain("celda");
+    expect(calendario).not.toContain("meet_link");
+
+    const clases = /leerClasesDeFicha[\s\S]*?\.select\("([^"]+)"\)/.exec(gestion)?.[1] ?? "";
+    expect(clases).toContain("class_summary");
+    expect(clases).not.toMatch(/\*|transcript|risk|progress_notes|next_class_guide/);
+  });
+
+  it("el cargador pide los tipos que solo crea el guard", () => {
+    expect(FICHA).toMatch(/cargarFichaDelAlumno\(\s*profesor: ProfesorAutorizado,\s*alumno: AlumnoAutorizado/);
+    expect(FICHA).toMatch(/resumenesDeLaLista\(\s*alumnos: readonly AlumnoAutorizado\[\]/);
+  });
+
+  it("la página del alumno llama al guard antes que al cargador", () => {
+    const pagina = leer(join(RAIZ, "app", "profesor", "alumno", "[alumnoId]", "page.tsx"));
+    expect(pagina.indexOf("exigirAlumnoDelProfesor(params")).toBeGreaterThan(-1);
+    expect(pagina.indexOf("exigirAlumnoDelProfesor(params")).toBeLessThan(pagina.indexOf("cargarFichaDelAlumno(profesor"));
+  });
+});
+
+describe("/profes", () => {
+  const PAGINA = leer(join(RAIZ, "app", "profes", "page.tsx"));
+
+  it("usa el mismo formulario y no tiene login propio", () => {
+    expect(PAGINA).toMatch(/FormularioAcceso/);
+    expect(PAGINA).not.toMatch(/crearTokenEnlace|enviarEnlaceAcceso|crearCookie|entrarComo|baseLms|soloLectura/);
+    expect(existsSync(join(RAIZ, "app", "profes", "acciones.ts"))).toBe(false);
+    expect(archivos(join(RAIZ, "app", "profes")).map(rel)).toEqual(["app/profes/page.tsx"]);
+  });
+
+  it("no filtra si el email existe: la acción es la de siempre y no hay rama por URL", () => {
+    const accion = leer(join(RAIZ, "app", "acceso", "acciones.ts"));
+    expect(sinComentarios(accion)).not.toMatch(/\/profes["'`]/);
+    expect(leer(join(RAIZ, "components", "FormularioAcceso.tsx"))).toMatch(/solicitarEnlace\(datos\)/);
+  });
+});
+
 describe("nadie esquiva la pieza central", () => {
   const LECTURAS_DEL_GUARD = ["leerAlumnoAsignado", "leerAlumnosAsignados"];
+
+  it("las lecturas de la ficha solo las usa su cargador", () => {
+    const malos = TODO.filter((f) => !["lib/gestion.ts", "lib/panel-profesor-ficha.ts"].includes(rel(f)))
+      .filter((f) => /\b(leerClasesDeFicha|leerCalendariosSinEnlace|leerExcepcionesDe)\b/.test(leer(f)))
+      .map(rel);
+    expect(malos).toEqual([]);
+  });
+
+  it("el cargador solo se llama desde las páginas del panel", () => {
+    const malos = TODO.filter((f) => /\b(cargarFichaDelAlumno|resumenesDeLaLista)\(/.test(leer(f)))
+      .map(rel)
+      .filter((r) => r !== "lib/panel-profesor-ficha.ts" && !r.startsWith("app/profesor/"));
+    expect(malos).toEqual([]);
+  });
 
   it("las lecturas de alumnos asignados solo las usa el guard", () => {
     const malos = TODO.filter((f) => !["lib/gestion.ts", "lib/panel-profesor.ts"].includes(rel(f)))
@@ -155,7 +283,7 @@ describe("nadie esquiva la pieza central", () => {
   });
 
   it("las vistas nuevas solo se nombran en lib/gestion.ts y en la lista blanca", () => {
-    const malos = TODO.filter((f) => !["lib/gestion.ts", "lib/supabase-server.ts"].includes(rel(f)))
+    const malos = TODO.filter((f) => !["lib/gestion.ts", "lib/supabase-server.ts", "scripts/comprobar-examen-profesores.ts"].includes(rel(f)))
       .filter((f) => /vista_alumnos_profesor|vista_profesores_acceso/.test(leer(f)))
       .map(rel);
     expect(malos).toEqual([]);

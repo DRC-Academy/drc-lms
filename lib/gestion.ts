@@ -1496,3 +1496,91 @@ export async function contarAlumnosPorProfesor(): Promise<Map<string, number>> {
     if ((data ?? []).length < PAGINA) return cuenta;
   }
 }
+
+/**
+ * El calendario SIN `meet_link`, de varios alumnos en UNA consulta. Por
+ * alumno: una petición por lista en vez de una por fila.
+ * LANZA si la lectura falla. Las usa `lib/panel-profesor-ficha.ts`.
+ */
+const CALENDARIO_SIN_ENLACE =
+  "alumno_id, nombre_en_celda, teacher_id, profesor, celda, dia, hora, estado, alumno_celda, alumno_base, estado_base, week_date, recovery_for, rescheduled_to, asignacion_inicio, asignacion_alta, alumno_alta, baja";
+
+export async function leerCalendariosSinEnlace(alumnoIds: readonly string[]): Promise<Map<string, FilaCalendario[]>> {
+  const salida = new Map<string, FilaCalendario[]>();
+  if (alumnoIds.length === 0) return salida;
+
+  const { data, error } = await soloLectura("vista_calendario_alumno")
+    .select(CALENDARIO_SIN_ENLACE)
+    .in("alumno_id", alumnoIds)
+    .order("alumno_id", { ascending: true })
+    .order("teacher_id", { ascending: true })
+    .order("celda", { ascending: true })
+    .returns<Omit<FilaCalendario, "meet_link">[]>();
+  if (error) throw new Error(`No se pudo leer vista_calendario_alumno: ${error.message}`);
+
+  for (const f of data ?? []) {
+    if (typeof f.teacher_id !== "string" || typeof f.celda !== "string" || typeof f.nombre_en_celda !== "string") continue;
+    const lista = salida.get(f.alumno_id) ?? [];
+    lista.push({ ...f, meet_link: null });
+    salida.set(f.alumno_id, lista);
+  }
+  return salida;
+}
+
+/** Las excepciones de varios alumnos en una consulta, crudas. LANZA si falla. */
+export async function leerExcepcionesDe(alumnoIds: readonly string[]): Promise<Map<string, unknown[]>> {
+  const salida = new Map<string, unknown[]>();
+  if (alumnoIds.length === 0) return salida;
+
+  const { data, error } = await soloLectura("vista_excepciones_clase")
+    .select("alumno_id, tipo, class_type, fecha, hora, original_date")
+    .in("alumno_id", alumnoIds)
+    .order("fecha", { ascending: true })
+    .returns<Fila[]>();
+  if (error) throw new Error(`No se pudo leer vista_excepciones_clase: ${error.message}`);
+
+  for (const f of data ?? []) {
+    const id = comoTexto(f.alumno_id);
+    salida.set(id, [...(salida.get(id) ?? []), f]);
+  }
+  return salida;
+}
+
+/** Una clase para la ficha del profesor. Quién la dio se resuelve antes de salir del servidor. */
+export type ClaseDeFicha = {
+  id: string;
+  teacherId: string | null;
+  fechaClase: string;
+  titulo: string;
+  temas: string;
+  resumen: string;
+  puntos: string;
+  /** Sin esto, el resumen y los puntos no se enseñan: es la cola de revisión de Gestión. */
+  validada: boolean;
+};
+
+/**
+ * Las clases de un alumno con lo que necesita su profesor. Columnas
+ * nombradas: ni transcript ni `risk_*`. LANZA si la lectura falla.
+ */
+export async function leerClasesDeFicha(alumnoId: string): Promise<ClaseDeFicha[]> {
+  const { data, error } = await soloLectura("class_analyses")
+    .select("id, teacher_id, class_title, topics_covered, class_summary, errors_detected, class_date, analyzed_at, analysis_status, validation_status")
+    .eq("student_id", alumnoId)
+    .order("class_date", { ascending: false })
+    .order("analyzed_at", { ascending: false })
+    .limit(MAXIMO_CLASES)
+    .returns<Fila[]>();
+  if (error) throw new Error(`No se pudieron leer las clases de la ficha: ${error.message}`);
+
+  return (data ?? []).map((f) => ({
+    id: comoTexto(f.id),
+    teacherId: comoTextoOpcional(f.teacher_id),
+    fechaClase: comoTexto(f.class_date),
+    titulo: comoTexto(f.class_title).trim(),
+    temas: comoTexto(f.topics_covered).trim(),
+    resumen: comoTexto(f.class_summary).trim(),
+    puntos: comoTexto(f.errors_detected).trim(),
+    validada: f.analysis_status === "ready" && (VALIDACION_ACEPTADA as readonly unknown[]).includes(f.validation_status),
+  }));
+}
