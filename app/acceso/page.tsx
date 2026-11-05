@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { sesionActual } from "@/lib/sesion-servidor";
+import { profesorConectado } from "@/lib/panel-profesor";
 import FormularioAcceso from "@/components/FormularioAcceso";
 import { textosActuales } from "@/lib/idioma-servidor";
 import { IdiomaEnEsquina } from "@/components/CabeceraIdioma";
 import type { TextosEntrada } from "@/lib/textos/entrada";
-import { destinoSeguro } from "@/lib/volver";
+import { destinoSeguro, esRutaDeProfesor } from "@/lib/volver";
 
 // Lee la cookie, así que no hay nada que prerenderizar.
 export const dynamic = "force-dynamic";
@@ -79,6 +80,7 @@ export default async function Acceso({ searchParams }: { searchParams: { motivo?
   // Quien ya ha entrado no tiene nada que hacer aquí. A donde iba o a la
   // home, que ya sabe si le toca el buscador o su propia ficha.
   if (await sesionActual()) redirect(volver ?? "/");
+  if (await profesorConectado()) redirect(volver && esRutaDeProfesor(volver) ? volver : "/profesor");
 
   const t = textosActuales().entrada;
   const aviso = avisoDe(searchParams.motivo, t);

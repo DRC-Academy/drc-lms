@@ -30,6 +30,24 @@ export const REMITENTE = "DRC Academy <practica@drcacademy.com>";
 
 const ASUNTO = "Tu acceso a la práctica de DRC Academy";
 
+/** Lo que cambia en el correo del enlace según quién entra. */
+const COPY = {
+  alumno: {
+    asunto: ASUNTO,
+    previa: "Tu enlace para entrar en la práctica.",
+    titular: "Entra en tu práctica",
+    boton: "Entrar en la práctica",
+  },
+  profesor: {
+    asunto: "Tu acceso al panel de profesores de DRC Academy",
+    previa: "Tu enlace para entrar en el panel de profesores.",
+    titular: "Entra en tu panel",
+    boton: "Entrar en mi panel",
+  },
+} as const;
+
+export type DestinatarioEnlace = keyof typeof COPY;
+
 // Los mismos valores que usa la aplicación (tailwind.config.ts, paleta
 // `drc`), para que el correo y la pantalla de acceso se parezcan.
 //
@@ -43,11 +61,12 @@ export const CUERPO = "#5A655E";
 export const FONDO = "#F4F3EF";
 export const BORDE = "#E6E3DA";
 
-function html(enlace: string): string {
+function html(enlace: string, destinatario: DestinatarioEnlace): string {
+  const copy = COPY[destinatario];
   return `<!doctype html>
 <html lang="es">
   <body style="margin:0;padding:0;background:${FONDO};">
-    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Tu enlace para entrar en la práctica. Caduca en ${MINUTOS_ENLACE} minutos.</div>
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${copy.previa} Caduca en ${MINUTOS_ENLACE} minutos.</div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${FONDO};padding:32px 16px;">
       <tr>
         <td align="center">
@@ -56,7 +75,7 @@ function html(enlace: string): string {
               <td style="padding:36px 32px;font-family:'Radio Canada',Helvetica,Arial,sans-serif;">
                 <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:${VERDE};">DRC Academy</p>
 
-                <h1 style="margin:14px 0 0;font-size:26px;line-height:1.15;font-weight:600;color:${TITULAR};">Entra en tu práctica</h1>
+                <h1 style="margin:14px 0 0;font-size:26px;line-height:1.15;font-weight:600;color:${TITULAR};">${copy.titular}</h1>
 
                 <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:${CUERPO};">
                   Has pedido un enlace para entrar. Pulsa el botón y ya estás dentro: no hay contraseña que recordar.
@@ -65,7 +84,7 @@ function html(enlace: string): string {
                 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 0;">
                   <tr>
                     <td style="border-radius:999px;background:${VERDE};">
-                      <a href="${enlace}" style="display:inline-block;padding:14px 28px;font-family:'Radio Canada',Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Entrar en la práctica</a>
+                      <a href="${enlace}" style="display:inline-block;padding:14px 28px;font-family:'Radio Canada',Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">${copy.boton}</a>
                     </td>
                   </tr>
                 </table>
@@ -96,9 +115,9 @@ function html(enlace: string): string {
 </html>`;
 }
 
-function texto(enlace: string): string {
+function texto(enlace: string, destinatario: DestinatarioEnlace): string {
   return [
-    "DRC Academy · Entra en tu práctica",
+    `DRC Academy · ${COPY[destinatario].titular}`,
     "",
     "Has pedido un enlace para entrar. Abre esta dirección y ya estás dentro:",
     "",
@@ -120,7 +139,12 @@ function texto(enlace: string): string {
  * `volver`, si viene, es la ruta a la que iba el alumno —ya pasada por
  * `destinoSeguro`—, y viaja en el enlace para que `/entrar` le deje allí.
  */
-export async function enviarEnlaceAcceso(email: string, token: string, volver: string | null = null): Promise<boolean> {
+export async function enviarEnlaceAcceso(
+  email: string,
+  token: string,
+  volver: string | null = null,
+  destinatario: DestinatarioEnlace = "alumno"
+): Promise<boolean> {
   const clave = process.env.RESEND_API_KEY;
   if (!clave) {
     console.error("[correo] Falta RESEND_API_KEY: no se ha enviado el enlace de acceso.");
@@ -145,9 +169,9 @@ export async function enviarEnlaceAcceso(email: string, token: string, volver: s
     const { error } = await new Resend(clave).emails.send({
       from: REMITENTE,
       to: email,
-      subject: ASUNTO,
-      html: html(enlace),
-      text: texto(enlace),
+      subject: COPY[destinatario].asunto,
+      html: html(enlace, destinatario),
+      text: texto(enlace, destinatario),
     });
 
     if (error) {
@@ -157,6 +181,94 @@ export async function enviarEnlaceAcceso(email: string, token: string, volver: s
       return false;
     }
 
+    return true;
+  } catch (error) {
+    console.error("[correo] No se pudo hablar con Resend:", error);
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------
+// LA INVITACIÓN DEL PROFESOR
+//
+// Lleva a `/acceso`, SIN TOKEN: un enlace que entre directamente y dure
+// días no debe dormir en un buzón. Allí pide su enlace de 15 minutos.
+// ---------------------------------------------------------------
+
+function escapar(texto: string): string {
+  return texto.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
+function htmlInvitacion(enlace: string, nombre: string, email: string): string {
+  return `<!doctype html>
+<html lang="es">
+  <body style="margin:0;padding:0;background:${FONDO};">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${FONDO};padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border:1px solid ${BORDE};border-radius:20px;">
+            <tr>
+              <td style="padding:36px 32px;font-family:'Radio Canada',Helvetica,Arial,sans-serif;">
+                <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:${VERDE};">DRC Academy</p>
+                <h1 style="margin:14px 0 0;font-size:26px;line-height:1.15;font-weight:600;color:${TITULAR};">Hola, ${escapar(nombre)}: ya tienes tu panel</h1>
+                <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:${CUERPO};">
+                  Hemos preparado un panel para ti con tus alumnos y lo que viene trabajando cada uno en la plataforma.
+                </p>
+                <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:${CUERPO};">
+                  Para entrar, escribe <strong style="color:${TITULAR};">${escapar(email)}</strong> y te enviaremos un enlace. No hay contraseña que recordar.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 0;">
+                  <tr>
+                    <td style="border-radius:999px;background:${VERDE};">
+                      <a href="${enlace}" style="display:inline-block;padding:14px 28px;font-family:'Radio Canada',Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Ir a la entrada</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+/** Devuelve si salió. Sin el email en el log, como el resto de envíos. */
+export async function enviarInvitacionProfesor(email: string, nombre: string): Promise<boolean> {
+  const clave = process.env.RESEND_API_KEY;
+  if (!clave) {
+    console.error("[correo] Falta RESEND_API_KEY: no se ha enviado la invitación.");
+    return false;
+  }
+
+  let enlace: string;
+  try {
+    enlace = `${urlPublica()}/acceso`;
+  } catch (error) {
+    console.error(`[correo] No se ha enviado la invitación. ${(error as Error).message}`);
+    return false;
+  }
+
+  try {
+    const { error } = await new Resend(clave).emails.send({
+      from: REMITENTE,
+      to: email,
+      subject: "Ya tienes tu panel de profesores en DRC Academy",
+      html: htmlInvitacion(enlace, nombre, email),
+      text: [
+        `Hola, ${nombre}: ya tienes tu panel`,
+        "",
+        "Hemos preparado un panel para ti con tus alumnos y lo que viene trabajando cada uno en la plataforma.",
+        "",
+        `Para entrar, abre ${enlace}, escribe ${email} y te enviaremos un enlace. No hay contraseña que recordar.`,
+      ].join("\n"),
+    });
+
+    if (error) {
+      console.error(`[correo] Resend rechazó la invitación: ${error.message}`);
+      return false;
+    }
     return true;
   } catch (error) {
     console.error("[correo] No se pudo hablar con Resend:", error);

@@ -12,6 +12,7 @@
 // ---------------------------------------------------------------
 
 import { buscarAlumnoPorEmail } from "@/lib/gestion";
+import { profesorParaEntrar } from "@/lib/panel-profesor";
 import { crearTokenEnlace, esAdministrador, esEmailPlausible, normalizarEmail } from "@/lib/sesion";
 import { enviarEnlaceAcceso } from "@/lib/correo";
 import { registrarIntento, type ResultadoIntento, type RolIntento } from "@/lib/accesos-servidor";
@@ -54,13 +55,20 @@ async function atender(email: string, volver: string | null): Promise<Anotacion>
   // equipo. Comprobar primero si es administrador y ahorrarse la
   // consulta haría que esos emails respondieran antes, y eso también
   // es información que se filtra.
-  const alumno = await buscarAlumnoPorEmail(email);
+  // Lo mismo con el profesor, a la vez: se pregunta por todos los emails.
+  const [alumno, profesor] = await Promise.all([buscarAlumnoPorEmail(email), profesorParaEntrar(email)]);
   const admin = esAdministrador(email);
-  const rol: RolIntento = alumno !== null ? "alumno" : admin ? "admin" : "desconocido";
+  const esProfesor = profesor !== null && !admin;
+  const rol: RolIntento = esProfesor ? "profesor" : alumno !== null ? "alumno" : admin ? "admin" : "desconocido";
 
-  if (alumno === null && !admin) return { resultado: "sin_cuenta", rol, alumnoId: null };
+  if (alumno === null && !admin && !esProfesor) return { resultado: "sin_cuenta", rol, alumnoId: null };
 
-  const enviado = await enviarEnlaceAcceso(email, await crearTokenEnlace(email), volver);
+  const enviado = await enviarEnlaceAcceso(
+    email,
+    await crearTokenEnlace(email),
+    volver,
+    esProfesor ? "profesor" : "alumno"
+  );
   if (!enviado) {
     // El visitante ve el mensaje de siempre; el aviso se queda en el
     // log, que es donde alguien puede hacer algo al respecto.
@@ -70,7 +78,7 @@ async function atender(email: string, volver: string | null): Promise<Anotacion>
   return {
     resultado: enviado ? "enlace_enviado" : "envio_fallido",
     rol,
-    alumnoId: alumno?.alumnoId ?? null,
+    alumnoId: esProfesor ? null : (alumno?.alumnoId ?? null),
   };
 }
 

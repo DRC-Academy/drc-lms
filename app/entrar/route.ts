@@ -16,7 +16,8 @@
 
 import { type NextRequest } from "next/server";
 import { buscarAlumnoPorEmail } from "@/lib/gestion";
-import { entrarComo, volverAAcceso } from "@/lib/entrada";
+import { entrarComo, entrarComoProfesor, volverAAcceso } from "@/lib/entrada";
+import { profesorParaEntrar } from "@/lib/panel-profesor";
 import { guardarVinculo } from "@/lib/vinculos";
 import { abrirTokenEnlace, esAdministrador, type Sesion } from "@/lib/sesion";
 import { registrarIntento } from "@/lib/accesos-servidor";
@@ -45,6 +46,11 @@ export async function GET(peticion: NextRequest) {
   if (esAdministrador(email)) {
     sesion = { rol: "admin", email, alumnoId: null };
   } else {
+    // Admin, profesor, alumno, en ese orden. Un profesor desactivado o
+    // bloqueado sigue hacia abajo: si además es alumno, entra con su cuenta.
+    const profesor = await profesorParaEntrar(email);
+    if (profesor) return entrarComoProfesor(peticion.url, profesor, volver);
+
     // El email estaba en la vista cuando se pidió el enlace, pero
     // podría no estarlo ya: se vuelve a comprobar antes de dar sesión.
     const alumno = await buscarAlumnoPorEmail(email);
