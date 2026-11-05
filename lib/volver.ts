@@ -69,3 +69,8 @@ export function destinoSeguro(valor: unknown): string | null {
 export function esRutaDeProfesor(ruta: string): boolean {
   return ruta === "/profesor" || ruta.startsWith("/profesor/") || ruta.startsWith("/profesor?");
 }
+
+/** Lo que ve un profesor: su panel y su pantalla de entrar. Sin la mascota del alumno. */
+export function esPantallaDeProfesor(ruta: string): boolean {
+  return ruta === "/profes" || esRutaDeProfesor(ruta);
+}

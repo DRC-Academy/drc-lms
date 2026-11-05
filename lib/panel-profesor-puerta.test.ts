@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { middleware } from "@/middleware";
+import { esPantallaDeProfesor } from "@/lib/volver";
 import {
   abrirSesion,
   abrirSesionProfesor,
@@ -148,5 +151,20 @@ describe("/profes, /profesor y /accesos-profesores no se pisan", () => {
   it("con la cookie del profesor, /profes también pasa: la página decide", async () => {
     const cookie = await crearCookieProfesor(profesor, ID);
     expect(pasa(await middleware(pedir("/profes", { [NOMBRE_COOKIE_PROFESOR]: cookie })))).toBe(true);
+  });
+});
+
+describe("la mascota no sale en lo de los profesores", () => {
+  it.each(["/profes", "/profesor", "/profesor/alumno/a1"])("%s es pantalla de profesor", (ruta) => {
+    expect(esPantallaDeProfesor(ruta)).toBe(true);
+  });
+
+  it.each(["/", "/acceso", "/alumno/a1", "/accesos-profesores", "/profesorado", "/profes-x", "/practica"])("%s no lo es", (ruta) => {
+    expect(esPantallaDeProfesor(ruta)).toBe(false);
+  });
+
+  it("la capa de la mascota lo comprueba", () => {
+    const capa = readFileSync(join(__dirname, "..", "components", "mascota", "CapaMascota.tsx"), "utf8");
+    expect(capa).toMatch(/const fuera = [^;]*esPantallaDeProfesor\(ruta\)/);
   });
 });

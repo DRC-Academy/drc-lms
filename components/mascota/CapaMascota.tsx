@@ -10,6 +10,7 @@ import { calcularPoseMascota, type LadoSenala } from "@/components/mascota/pose"
 import { estadoVisible, storeMascota, useStoreMascota, type Ancla, type GestoLibre } from "@/components/mascota/store";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import { BUCLE_PROFESOR, type ClaveBurbuja } from "@/lib/textos/mascota";
+import { esPantallaDeProfesor } from "@/lib/volver";
 
 // Framer y los parches pesan: no hacen falta para pintar la página.
 const Geckonoid = dynamic(() => import("@/components/mascota/Geckonoid"), { ssr: false });
@@ -217,8 +218,8 @@ function useMovimientoReducido(): boolean {
 
 export default function CapaMascota() {
   const ruta = usePathname();
-  // Fuera de la zona del alumno (la baja de avisos) no hay mascota.
-  const fuera = ruta?.startsWith("/avisos") ?? false;
+  // Fuera de la zona del alumno (la baja de avisos y lo de los profesores) no hay mascota.
+  const fuera = ruta ? ruta.startsWith("/avisos") || esPantallaDeProfesor(ruta) : false;
 
   const caja = useRef<HTMLDivElement>(null);
   const estirar = useRef<HTMLDivElement>(null);
