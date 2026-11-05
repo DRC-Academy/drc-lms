@@ -131,6 +131,8 @@ const SIN_ALUMNO: Record<string, string> = {
   "app/api/externo/diploma/route.ts": "Gestión, servidor a servidor.",
   "app/api/wp/progreso-diploma/route.ts": "WordPress, servidor a servidor.",
   "app/avisos/baja/page.tsx": "Baja de correos con token firmado.",
+  "app/profesor/page.tsx": "Panel del profesor: no es un alumno. Su guard es exigirProfesor.",
+  "app/profesor/alumno/[alumnoId]/page.tsx": "Panel del profesor: no es un alumno. Su guard es exigirAlumnoDelProfesor.",
 };
 
 /** Páginas y acciones solo del equipo: el equipo nunca se bloquea. */
