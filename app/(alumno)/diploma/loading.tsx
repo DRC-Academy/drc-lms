@@ -3,10 +3,14 @@ import { Bloque, TarjetaEsqueleto } from "@/components/esqueleto/Piezas";
 /**
  * «Mi diploma» mientras llega, centrado como la pantalla: el titular, la
  * imagen, la frase, la tarjeta del progreso y las tres promesas.
+ *
+ * El fondo blanco no se pinta aquí: lo pone el marco en toda la columna
+ * (`fondoDeRuta`), igual que en `PantallaDiploma`. Solo la franja de las
+ * promesas va en niebla, así que el color no cambia al llegar el contenido.
  */
 export default function Cargando() {
   return (
-    <main aria-busy="true" className="w-full flex-1 bg-marca-niebla">
+    <main aria-busy="true" className="w-full flex-1">
       <div className="flex flex-col items-center px-5 pt-6 min-[900px]:pt-10">
         <Bloque className="h-[94px] w-full max-w-[620px] min-[900px]:h-[82px]" />
         <Bloque className="mt-5 h-[200px] w-[300px] max-w-full" />
@@ -23,7 +27,7 @@ export default function Cargando() {
         </TarjetaEsqueleto>
       </div>
 
-      <div className="px-5 py-12 min-[900px]:py-16">
+      <div className="bg-marca-niebla px-5 py-12 min-[900px]:py-16">
         <Bloque className="mx-auto h-[60px] w-full max-w-[520px] min-[900px]:h-[38px]" />
         <div className="mx-auto mt-7 grid max-w-[1000px] gap-4 min-[900px]:mt-9 min-[900px]:grid-cols-3 min-[900px]:gap-5">
           {[0, 1, 2].map((n) => (
