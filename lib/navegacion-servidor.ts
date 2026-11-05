@@ -13,17 +13,28 @@
 
 import "server-only";
 import { obtenerPerfil } from "@/lib/gestion";
-import { cursosDelInicio } from "@/lib/cursos-servidor";
+import { cursosDelInicio, precargarCursosDelAlumno } from "@/lib/cursos-servidor";
 import { rutaDeMiCurso } from "@/lib/cursos";
 import { nivelDelAlumno } from "@/lib/estimacion";
 import { comoFecha } from "@/lib/fechas";
-import { estadisticasDelAlumno } from "@/lib/estadisticas-servidor";
+import { estadisticasDelAlumno, lecturasDeEstadisticas } from "@/lib/estadisticas-servidor";
 import type { Foco } from "@/lib/sesion-servidor";
 import type { DatosNavegacion } from "@/components/marco/PiezasDelMarco";
 
 export async function datosDelMarco(alumno: Foco): Promise<DatosNavegacion> {
   const { alumnoId, revisando } = alumno;
-  const perfil = alumnoId ? await obtenerPerfil(alumnoId) : null;
+
+  // UNA SOLA OLA. Lo que es del alumno sale todo a la vez, porque nada de
+  // ello depende de otra lectura, y el catálogo viene de su caché. Lo de
+  // abajo ya no viaja: lo encuentra hecho por `cache()`.
+  const [perfil] = alumnoId
+    ? await Promise.all([
+        obtenerPerfil(alumnoId),
+        precargarCursosDelAlumno(alumnoId),
+        lecturasDeEstadisticas(alumnoId),
+      ])
+    : [null];
+
   const principal = perfil
     ? (
         await cursosDelInicio(alumnoId, perfil.plan, nivelDelAlumno(alumnoId, perfil), comoFecha(perfil.fechaInicio))

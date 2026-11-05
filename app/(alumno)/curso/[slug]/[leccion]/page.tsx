@@ -11,6 +11,7 @@ import {
   ejerciciosPorLeccion,
   fechaDelDrip,
   leccionParaVer,
+  precargarCursosDelAlumno,
 } from "@/lib/cursos-servidor";
 import { sanearHtml, tieneContenido } from "@/lib/sanear-html";
 import { partesDeLeccion, prepararLeccion } from "@/lib/leccion-html";
@@ -51,9 +52,13 @@ export default async function PaginaLeccion({
   // El perfil hace dos cosas aquí: es el guard —un alumno solo entra en
   // los cursos de su plan— y de él sale el nombre del profesor, que
   // aparece en el cierre de los ejercicios.
+  //
+  // El progreso y las excepciones también salen de la URL y de la cookie:
+  // la segunda ola y el drip de aquí abajo los encuentran hechos.
   const [curso, perfil] = await Promise.all([
     cursoPorSlug(params.slug),
     alumnoId ? obtenerPerfil(alumnoId) : Promise.resolve(null),
+    alumnoId ? precargarCursosDelAlumno(alumnoId) : Promise.resolve(),
   ]);
 
   if (!curso) notFound();

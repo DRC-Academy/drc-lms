@@ -5,7 +5,7 @@ import { construirEstimacion } from "@/lib/estimacion-ficha";
 import { textoParaElAlumno } from "@/lib/texto-alumno";
 import { objetivoDelAlumno } from "@/lib/objetivo-servidor";
 import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
-import { cursosDelInicio } from "@/lib/cursos-servidor";
+import { cursosDelInicio, precargarCursosDelAlumno } from "@/lib/cursos-servidor";
 import { rutaDeMiCurso } from "@/lib/cursos";
 import { calcularDiploma, progresoDiploma } from "@/lib/diploma";
 import { conFoco } from "@/lib/foco";
@@ -78,9 +78,13 @@ export default async function PaginaProgreso() {
   const alumno = await exigirAlumnoDeLaPagina();
   const { alumnoId, paraEnlaces } = alumno;
 
+  // Lo de los cursos y el profesor se usa más abajo, pero no depende del
+  // perfil: sale ya en esta ola y luego se encuentra hecho por `cache()`.
   const [perfil, recorrido] = await Promise.all([
     obtenerPerfil(alumnoId),
     obtenerRecorrido(alumnoId),
+    precargarCursosDelAlumno(alumnoId),
+    profesorDelAlumno(alumnoId),
   ]);
 
   // Igual que en el resto de pantallas: sin ficha en Gestión no es un

@@ -22,6 +22,7 @@ import { baseLms } from "@/lib/supabase-lms";
 import { comoFecha } from "@/lib/fechas";
 import { cursosDelPlan } from "@/lib/cursos";
 import { excepcionesDelAlumno, sinDripEn, type ExcepcionAcceso } from "@/lib/accesos-manuales";
+import { conCache, LecturaFallida } from "@/lib/cache-gestion";
 
 export type CursoFila = {
   id: string;
@@ -95,6 +96,63 @@ function registrar(donde: string, error: { message: string } | null): boolean {
   return false;
 }
 
+// ---------------------------------------------------------------
+// EL CATÁLOGO, CON CACHÉ ENTRE PETICIONES
+//
+// Cursos, módulos y lecciones son iguales para todos y casi nunca cambian:
+// solo los tocan los scripts de importación. Releerlos en cada pantalla
+// era lo que obligaba a esperar dos olas antes de poder pintar la barra.
+//
+// AQUÍ NO ENTRA NADA DE UN ALUMNO, y `lib/catalogo.test.ts` lo vigila: esta
+// caché se comparte entre todos. El progreso, los intentos y las excepciones
+// se leen siempre en directo, porque cambian al usarse la aplicación.
+//
+// EL COSTE: lo que se importe puede tardar hasta unos 10 minutos en verse.
+// Next sirve la entrada vencida a la primera petición después del plazo
+// mientras la renueva, así que el margen real es algo mayor si no hay
+// visitas. Lo que falla no se guarda (`conCache`).
+//
+// Se guardan listas, no `Set`: la caché pasa por JSON.
+// ---------------------------------------------------------------
+
+const SEGUNDOS_CATALOGO = 600;
+
+async function leerCatalogo<T, R>(
+  clave: string[],
+  donde: string,
+  consulta: () => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  reserva: R
+): Promise<T[] | R> {
+  return conCache<T[] | R>(
+    ["catalogo", ...clave],
+    SEGUNDOS_CATALOGO,
+    ["catalogo"],
+    async () => {
+      const { data, error } = await consulta();
+      if (!registrar(donde, error)) throw new LecturaFallida(donde);
+      return data ?? [];
+    },
+    reserva
+  );
+}
+
+/** Los cursos activos, que son 7. Null si la lectura falló. */
+const cursosActivos = cache(
+  (): Promise<CursoFila[] | null> =>
+    leerCatalogo(
+      ["cursos"],
+      "No se pudieron leer los cursos",
+      () =>
+        baseLms()
+          .from("cursos")
+          .select("id, slug, titulo, nivel, tipo, examen")
+          .eq("activo", true)
+          .order("orden")
+          .returns<CursoFila[]>(),
+      null
+    )
+);
+
 /**
  * Los cursos a los que tiene acceso este alumno, ya resueltos a filas.
  *
@@ -138,20 +196,11 @@ async function cursosYExcepciones(
 ): Promise<{ cursos: CursoFila[]; excepciones: Map<string, ExcepcionAcceso> }> {
   // Las dos a la vez: las excepciones solo dependen del alumno, así que
   // no tienen por qué esperar a la lista de cursos.
-  const [respuesta, excepciones] = await Promise.all([
-    baseLms()
-      .from("cursos")
-      .select("id, slug, titulo, nivel, tipo, examen")
-      .eq("activo", true)
-      .order("orden")
-      .returns<CursoFila[]>(),
-    excepcionesDelAlumno(alumnoId),
-  ]);
+  const [activos, excepciones] = await Promise.all([cursosActivos(), excepcionesDelAlumno(alumnoId)]);
 
-  const { data, error } = respuesta;
-  if (!registrar("No se pudieron leer los cursos", error)) return { cursos: [], excepciones };
+  if (activos === null) return { cursos: [], excepciones };
 
-  const disponibles = data ?? [];
+  const disponibles = activos;
 
   // Lo que da el plan. La regla entera vive en `lib/cursos.ts` y aquí no
   // se decide nada: un plan de examen devuelve el curso del examen y
@@ -182,9 +231,10 @@ async function cursosYExcepciones(
 // repetían: el layout del curso y la página que cuelga de él leían dos
 // veces las 191 lecciones.
 //
-// `cache()` de React las deduplica DENTRO DE UNA PETICIÓN. No es una
-// caché entre peticiones: cada carga vuelve a preguntar, que es lo que
-// queremos, porque el progreso cambia al completar una lección.
+// `cache()` de React las deduplica DENTRO DE UNA PETICIÓN. Por encima, el
+// catálogo tiene además su caché entre peticiones (`leerCatalogo`); el
+// progreso no: cada carga vuelve a preguntar, que es lo que queremos,
+// porque cambia al completar una lección.
 //
 // CON ARGUMENTOS PRIMITIVOS a propósito. `cache()` compara por identidad,
 // así que una función que recibiera el objeto del curso o un `Date` se
@@ -199,17 +249,21 @@ async function cursosYExcepciones(
 // ---------------------------------------------------------------
 
 /** Los módulos del curso, en orden. Null si la lectura falló. */
-const modulosDelCurso = cache(async (cursoId: string): Promise<FilaModulo[] | null> => {
-  const { data, error } = await baseLms()
-    .from("modulos")
-    .select("id, titulo, orden, visible_after")
-    .eq("curso_id", cursoId)
-    .order("orden")
-    .returns<FilaModulo[]>();
-
-  if (!registrar("No se pudieron leer los módulos", error)) return null;
-  return data ?? [];
-});
+const modulosDelCurso = cache(
+  (cursoId: string): Promise<FilaModulo[] | null> =>
+    leerCatalogo(
+      ["modulos", cursoId],
+      "No se pudieron leer los módulos",
+      () =>
+        baseLms()
+          .from("modulos")
+          .select("id, titulo, orden, visible_after")
+          .eq("curso_id", cursoId)
+          .order("orden")
+          .returns<FilaModulo[]>(),
+      null
+    )
+);
 
 /**
  * Las lecciones del curso, sin ordenar entre módulos. Null si falló.
@@ -217,18 +271,25 @@ const modulosDelCurso = cache(async (cursoId: string): Promise<FilaModulo[] | nu
  * Se filtran por el curso a través del módulo —`modulos!inner`— y no
  * por una lista de ids de módulo: así no dependen de haber leído antes
  * los módulos, y las tres lecturas salen en la misma ola.
+ *
+ * `modulos!inner()` filtra sin traer el módulo en cada fila: repetirlo en
+ * las 191 lecciones solo engordaba lo que se guarda en la caché.
  */
-const leccionesDelCurso = cache(async (cursoId: string): Promise<FilaLeccion[] | null> => {
-  const { data, error } = await baseLms()
-    .from("lecciones")
-    .select("id, titulo, orden, modulo_id, modulos!inner(curso_id)")
-    .eq("modulos.curso_id", cursoId)
-    .order("orden")
-    .returns<FilaLeccion[]>();
-
-  if (!registrar("No se pudieron leer las lecciones", error)) return null;
-  return data ?? [];
-});
+const leccionesDelCurso = cache(
+  (cursoId: string): Promise<FilaLeccion[] | null> =>
+    leerCatalogo(
+      ["lecciones", cursoId],
+      "No se pudieron leer las lecciones",
+      () =>
+        baseLms()
+          .from("lecciones")
+          .select("id, titulo, orden, modulo_id, modulos!inner()")
+          .eq("modulos.curso_id", cursoId)
+          .order("orden")
+          .returns<FilaLeccion[]>(),
+      null
+    )
+);
 
 /**
  * Lo que este alumno lleva completado, en todos sus cursos.
@@ -268,30 +329,50 @@ const progresoDelAlumno = cache(async (alumnoId: string): Promise<FilaProgreso[]
  * justo lo que no son.
  */
 const idsSoloEjercicios = cache(async (cursoId: string): Promise<Set<string>> => {
-  const { data, error } = await baseLms()
-    .from("lecciones")
-    .select("id, modulos!inner(curso_id)")
-    .eq("modulos.curso_id", cursoId)
-    .eq("contenido", "")
-    .is("video_url", null)
-    .returns<{ id: string }[]>();
-
-  registrar("No se pudieron leer las lecciones de solo ejercicios", error);
-  return new Set((data ?? []).map((l) => l.id));
+  const filas = await leerCatalogo(
+    ["solo-ejercicios", cursoId],
+    "No se pudieron leer las lecciones de solo ejercicios",
+    () =>
+      baseLms()
+        .from("lecciones")
+        .select("id, modulos!inner()")
+        .eq("modulos.curso_id", cursoId)
+        .eq("contenido", "")
+        .is("video_url", null)
+        .returns<{ id: string }[]>(),
+    []
+  );
+  return new Set(filas.map((l) => l.id));
 });
 
 /** Las que llevan vídeo, por el mismo camino: solo ids. */
 const idsConVideo = cache(async (cursoId: string): Promise<Set<string>> => {
-  const { data, error } = await baseLms()
-    .from("lecciones")
-    .select("id, modulos!inner(curso_id)")
-    .eq("modulos.curso_id", cursoId)
-    .not("video_url", "is", null)
-    .returns<{ id: string }[]>();
-
-  registrar("No se pudieron leer las lecciones con vídeo", error);
-  return new Set((data ?? []).map((l) => l.id));
+  const filas = await leerCatalogo(
+    ["con-video", cursoId],
+    "No se pudieron leer las lecciones con vídeo",
+    () =>
+      baseLms()
+        .from("lecciones")
+        .select("id, modulos!inner()")
+        .eq("modulos.curso_id", cursoId)
+        .not("video_url", "is", null)
+        .returns<{ id: string }[]>(),
+    []
+  );
+  return new Set(filas.map((l) => l.id));
 });
+
+/**
+ * Pide de una vez lo que es del alumno y va a hacer falta para sus cursos.
+ *
+ * Con el catálogo en caché, esto es lo único de `cursosDelInicio` y de
+ * `arbolDelCurso` que sale a la base, y no depende de nada más: quien lo
+ * lanza junto a su primera lectura se ahorra la espera en fila. Las dos van
+ * por `cache()`, así que luego no se repiten dentro del mismo render.
+ */
+export function precargarCursosDelAlumno(alumnoId: string): Promise<unknown> {
+  return Promise.all([progresoDelAlumno(alumnoId), excepcionesDelAlumno(alumnoId)]);
+}
 
 /**
  * El orden real del curso: primero por módulo, luego por lección.
@@ -495,22 +576,10 @@ export type ArbolCurso = {
   leccionActual: string | null;
 };
 
-/**
- * Va por `cache()` porque ahora lo piden dos: la cabecera del layout y la
- * página que cuelga de él. Dentro de una petición es un solo viaje.
- */
-export const cursoPorSlug = cache(async (slug: string): Promise<CursoFila | null> => {
-  const { data, error } = await baseLms()
-    .from("cursos")
-    .select("id, slug, titulo, nivel, tipo, examen")
-    .eq("slug", slug)
-    .eq("activo", true)
-    .limit(1)
-    .returns<CursoFila[]>();
-
-  if (!registrar("No se pudo leer el curso", error)) return null;
-  return (data ?? [])[0] ?? null;
-});
+/** Sale de la misma lista de cursos activos: no es una lectura aparte. */
+export async function cursoPorSlug(slug: string): Promise<CursoFila | null> {
+  return (await cursosActivos())?.find((curso) => curso.slug === slug) ?? null;
+}
 
 /**
  * El árbol entero del curso para el índice: 48 módulos y hasta 169
