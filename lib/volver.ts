@@ -61,3 +61,11 @@ export function destinoSeguro(valor: unknown): string | null {
 
   return `${url.pathname}${url.search}${url.hash}`;
 }
+
+/**
+ * ¿Esta ruta es del panel del profesor? Con la comprobación completa:
+ * `/profesorado` no lo es. Admite la consulta porque `volver` la trae.
+ */
+export function esRutaDeProfesor(ruta: string): boolean {
+  return ruta === "/profesor" || ruta.startsWith("/profesor/") || ruta.startsWith("/profesor?");
+}

@@ -33,7 +33,7 @@ export type ResultadoIntento =
   | "enlace_caducado"
   | "sin_ficha";
 
-export type RolIntento = "alumno" | "admin" | "desconocido";
+export type RolIntento = "alumno" | "admin" | "profesor" | "desconocido";
 
 /**
  * Deja constancia de un intento de acceso. No lanza nunca.

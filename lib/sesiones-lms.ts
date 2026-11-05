@@ -361,3 +361,86 @@ export async function revocarSesion(id: string): Promise<boolean> {
 
   return true;
 }
+
+// ---------------------------------------------------------------
+// LAS SESIONES DEL PROFESOR
+//
+// Misma tabla y misma revocación, pero sin el memo de 60 segundos y sin
+// el fallo abierto de `consultarViva`: desactivar a un profesor se tiene
+// que notar en la petición siguiente, y si la base no contesta no se
+// puede saber si sigue teniendo acceso. Se pregunta en cada página; son
+// pocas personas y la base del LMS está al lado.
+// ---------------------------------------------------------------
+
+/** Abre la sesión de un profesor y devuelve su id, o null si no se pudo. */
+export async function crearSesionProfesor(datos: {
+  teacherId: string;
+  expiraEn: Date;
+  cliente?: ClienteRequest;
+}): Promise<string | null> {
+  const { data, error } = await conColumnasCliente(datos.cliente, (extra) =>
+    baseLms()
+      .from("sesiones")
+      .insert({
+        rol: "profesor",
+        alumno_id: null,
+        email_admin: null,
+        teacher_id: datos.teacherId,
+        origen: "magic_link",
+        expira_en: datos.expiraEn.toISOString(),
+        ...extra,
+      })
+      .select("id")
+      .limit(1)
+      .returns<{ id: string }[]>()
+  );
+
+  if (error) {
+    console.error("[sesiones] No se pudo abrir la sesión del profesor:", error.message);
+    return null;
+  }
+  return (data ?? [])[0]?.id ?? null;
+}
+
+/**
+ * ¿Sigue viva esta sesión, y es de este profesor? SIN MEMO, y cualquier
+ * duda es que no. LANZA si la base falla: el guard lo trata como denegado.
+ */
+export async function sesionProfesorViva(id: string, teacherId: string): Promise<boolean> {
+  if (!UUID.test(id)) return false;
+
+  const { data, error } = await baseLms()
+    .from("sesiones")
+    .select("rol, teacher_id, revocada_en, expira_en, ultimo_uso_en")
+    .eq("id", id)
+    .limit(1)
+    .returns<{ rol: string; teacher_id: string | null; revocada_en: string | null; expira_en: string; ultimo_uso_en: string }[]>();
+
+  if (error) throw new Error(`No se pudo comprobar la sesión del profesor: ${error.message}`);
+
+  const fila = (data ?? [])[0];
+  if (!fila || fila.rol !== "profesor" || fila.teacher_id !== teacherId) return false;
+  if (fila.revocada_en !== null || !(Date.parse(fila.expira_en) > Date.now())) return false;
+
+  // Telemetría, con el mismo freno de 5 minutos que el resto de sesiones.
+  if (Date.now() - Date.parse(fila.ultimo_uso_en) > MS_TOCAR) {
+    enSegundoPlano("sesiones", () => refrescarUltimoUso(id, new Date().toISOString()));
+  }
+  return true;
+}
+
+/** Revoca todas las sesiones vivas de un profesor. Devuelve si se pudo. */
+export async function revocarSesionesDeProfesor(teacherId: string): Promise<boolean> {
+  const { error } = await baseLms()
+    .from("sesiones")
+    .update({ revocada_en: new Date().toISOString() })
+    .eq("rol", "profesor")
+    .eq("teacher_id", teacherId)
+    .is("revocada_en", null);
+
+  if (error) {
+    console.error("[sesiones] No se pudieron revocar las sesiones del profesor:", error.message);
+    return false;
+  }
+  return true;
+}

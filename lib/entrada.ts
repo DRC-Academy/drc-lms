@@ -10,9 +10,18 @@
 
 import "server-only";
 import { NextResponse } from "next/server";
-import { NOMBRE_COOKIE, OPCIONES_COOKIE, DIAS_SESION, crearCookieSesion, type Sesion } from "@/lib/sesion";
-import { crearSesion, type OrigenSesion } from "@/lib/sesiones-lms";
+import {
+  NOMBRE_COOKIE,
+  NOMBRE_COOKIE_PROFESOR,
+  OPCIONES_COOKIE,
+  DIAS_SESION,
+  crearCookieProfesor,
+  crearCookieSesion,
+  type Sesion,
+} from "@/lib/sesion";
+import { crearSesion, crearSesionProfesor, type OrigenSesion } from "@/lib/sesiones-lms";
 import { clienteActual } from "@/lib/cliente-request";
+import { esRutaDeProfesor } from "@/lib/volver";
 
 /**
  * Por qué se rechaza a alguien en la puerta.
@@ -75,5 +84,31 @@ export async function entrarComo(
   const destino = volver ?? (sesion.rol === "admin" ? "/" : `/alumno/${sesion.alumnoId}`);
   const respuesta = NextResponse.redirect(new URL(destino, urlPeticion));
   respuesta.cookies.set(NOMBRE_COOKIE, await crearCookieSesion(sesion, sesionId), OPCIONES_COOKIE);
+  // Un navegador, una identidad: entrar como alumno o admin cierra aquí la de profesor.
+  respuesta.cookies.delete(NOMBRE_COOKIE_PROFESOR);
+  return respuesta;
+}
+
+/**
+ * Lo mismo para un profesor, con su propia cookie. De `volver` solo acepta
+ * rutas de su panel: cualquier otra le devolvería aquí con una vuelta de más.
+ */
+export async function entrarComoProfesor(
+  urlPeticion: string,
+  profesor: { email: string; teacherId: string },
+  volver: string | null = null
+) {
+  const sesionId = await crearSesionProfesor({
+    teacherId: profesor.teacherId,
+    expiraEn: new Date(Date.now() + DIAS_SESION * 24 * 60 * 60 * 1000),
+    cliente: clienteActual(),
+  });
+
+  if (!sesionId) return volverAAcceso(urlPeticion, "error", volver);
+
+  const destino = volver && esRutaDeProfesor(volver) ? volver : "/profesor";
+  const respuesta = NextResponse.redirect(new URL(destino, urlPeticion));
+  respuesta.cookies.set(NOMBRE_COOKIE_PROFESOR, await crearCookieProfesor(profesor, sesionId), OPCIONES_COOKIE);
+  respuesta.cookies.delete(NOMBRE_COOKIE);
   return respuesta;
 }

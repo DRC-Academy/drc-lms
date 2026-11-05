@@ -28,7 +28,7 @@
 // ---------------------------------------------------------------
 
 import { NextResponse, type NextRequest } from "next/server";
-import { NOMBRE_COOKIE } from "@/lib/sesion";
+import { NOMBRE_COOKIE, NOMBRE_COOKIE_PROFESOR, abrirSesionProfesor } from "@/lib/sesion";
 import { sesionActual } from "@/lib/sesion-servidor";
 import { revocarSesion } from "@/lib/sesiones-lms";
 import { SALIR_WP } from "@/lib/cuenta-woo";
@@ -79,6 +79,16 @@ export async function POST(peticion: NextRequest) {
     await revocarSesion(sesion.sesionId);
   }
 
+  // El profesor no tiene cuenta en WordPress: su salida acaba en `/acceso`.
+  const profesor = await abrirSesionProfesor(peticion.cookies.get(NOMBRE_COOKIE_PROFESOR)?.value);
+  if (profesor) await revocarSesion(profesor.sesionId);
+  if (profesor && !sesion) {
+    const salida = NextResponse.redirect(new URL("/acceso?motivo=salida", peticion.url), { status: 303 });
+    salida.cookies.delete(NOMBRE_COOKIE_PROFESOR);
+    salida.cookies.delete(NOMBRE_COOKIE);
+    return salida;
+  }
+
   // PARA VOLVER ATRÁS (si el cierre en WordPress diera problemas): cambiar
   // el destino por `new URL("/acceso?motivo=salida", peticion.url)`, que
   // es adonde iba antes y cuyo aviso sigue en `app/acceso/page.tsx`.
@@ -90,5 +100,6 @@ export async function POST(peticion: NextRequest) {
   });
 
   respuesta.cookies.delete(NOMBRE_COOKIE);
+  respuesta.cookies.delete(NOMBRE_COOKIE_PROFESOR);
   return respuesta;
 }

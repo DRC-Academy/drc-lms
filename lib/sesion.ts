@@ -7,10 +7,12 @@
 // base64url. Sin la firma correcta no se abre, y la firma solo se
 // puede producir con SECRETO_SESION, que nunca sale del servidor.
 //
-// Hay tres sobres distintos y NO son intercambiables:
+// Hay varios sobres distintos y NO son intercambiables:
 //
 //   · enlace  — el del email. Dura 15 minutos. Solo lleva el email.
 //   · sesion  — la cookie. Dura 30 días. Lleva email, rol y alumnoId.
+//   · profesor — la cookie del profesor, aparte (ver «La cookie del
+//               profesor», abajo). Dura 30 días. Lleva email y teacherId.
 //   · woo     — el del botón de WooCommerce. Dura 60 segundos y lo firma
 //               WordPress, no el LMS.
 //   · wp      — el del sentido contrario: lo firma el LMS para abrir la
@@ -50,6 +52,9 @@
 // ---------------------------------------------------------------
 
 export const NOMBRE_COOKIE = "drc_sesion";
+
+/** La del profesor: otra cookie y otro sobre. Ver «La cookie del profesor». */
+export const NOMBRE_COOKIE_PROFESOR = "drc_profesor";
 
 /** Lo que dura el enlace del email. */
 export const MINUTOS_ENLACE = 15;
@@ -176,7 +181,7 @@ function aBytes(texto: string) {
 // FIRMA
 // ---------------------------------------------------------------
 
-type Proposito = "enlace" | "sesion" | "woo" | "baja" | "wp";
+type Proposito = "enlace" | "sesion" | "profesor" | "woo" | "baja" | "wp";
 
 type NombreSecreto = "SECRETO_SESION" | "SECRETO_WOO" | "SECRETO_PUENTE_WP";
 
@@ -551,6 +556,61 @@ export async function abrirSesion(valor: string | undefined): Promise<SesionAbie
   }
 
   return null;
+}
+
+// ---------------------------------------------------------------
+// LA COOKIE DEL PROFESOR
+//
+// `Rol` y `Sesion` NO incluyen al profesor, y es a propósito. Decenas de
+// sitios preguntan `rol === "alumno"` y tratan lo demás como equipo: un
+// rol nuevo en `drc_sesion` entraría como administrador sin que fallara
+// ningún tipo. Con otro propósito dentro de lo que se firma, `abrirSesion`
+// no puede abrir este sobre: para todo lo existente, un profesor es alguien
+// sin sesión.
+//
+// El guard de este sobre es `exigirProfesor` (`lib/panel-profesor.ts`). La
+// fila sigue en `sesiones`, con `rol = 'profesor'` y `teacher_id`.
+// ---------------------------------------------------------------
+
+type SobreProfesor = {
+  /** email normalizado */
+  e: string;
+  /** teacher_id de Gestión */
+  t: string;
+  /** expira en (ms) */
+  x: number;
+  /** id de la fila en `sesiones` */
+  s: string;
+};
+
+/** Quién es el profesor de una cookie, con el id de su fila en `sesiones`. */
+export type SesionProfesor = { email: string; teacherId: string; sesionId: string };
+
+export function crearCookieProfesor(datos: { email: string; teacherId: string }, sesionId: string): Promise<string> {
+  const sobre: SobreProfesor = { e: datos.email, t: datos.teacherId, x: Date.now() + MS_SESION, s: sesionId };
+  return cerrar("profesor", sobre);
+}
+
+/**
+ * El profesor de la cookie, o null si no hay, está manipulada o caducó.
+ * Igual que `abrirSesion`, NO mira la revocación: lo hace el guard, que
+ * corre en Node. Esto también lo usa el middleware.
+ */
+export async function abrirSesionProfesor(valor: string | undefined): Promise<SesionProfesor | null> {
+  if (!valor) return null;
+
+  const datos = await abrir("profesor", valor);
+  if (typeof datos !== "object" || datos === null) return null;
+
+  const { e, t, x, s } = datos as { e?: unknown; t?: unknown; x?: unknown; s?: unknown };
+  if (typeof e !== "string" || typeof x !== "number" || !Number.isFinite(x)) return null;
+  if (typeof t !== "string" || t === "" || typeof s !== "string" || s === "") return null;
+  if (Date.now() >= x) return null;
+
+  const email = normalizarEmail(e);
+  if (!esEmailPlausible(email)) return null;
+
+  return { email, teacherId: t, sesionId: s };
 }
 
 /**

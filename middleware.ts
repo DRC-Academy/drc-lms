@@ -26,9 +26,9 @@
 // ---------------------------------------------------------------
 
 import { NextResponse, type NextRequest } from "next/server";
-import { NOMBRE_COOKIE, abrirSesion } from "@/lib/sesion";
+import { NOMBRE_COOKIE, NOMBRE_COOKIE_PROFESOR, abrirSesion, abrirSesionProfesor } from "@/lib/sesion";
 import { CABECERA_URL } from "@/lib/foco";
-import { destinoSeguro } from "@/lib/volver";
+import { destinoSeguro, esRutaDeProfesor } from "@/lib/volver";
 
 /**
  * Lo único a lo que se llega sin haber entrado.
@@ -153,6 +153,13 @@ export async function middleware(peticion: NextRequest) {
   const sesion = await abrirSesion(peticion.cookies.get(NOMBRE_COOKIE)?.value);
   if (sesion) return conUrl(peticion);
 
+  // LA COOKIE DEL PROFESOR SOLO ABRE SU PANEL. Con ella, cualquier otra
+  // pantalla le devuelve al suyo y cualquier `/api` sigue el camino de
+  // quien no tiene sesión. Dentro, la decisión la toma `exigirProfesor`.
+  const profesor = await abrirSesionProfesor(peticion.cookies.get(NOMBRE_COOKIE_PROFESOR)?.value);
+  if (profesor && esRutaDeProfesor(pathname)) return conUrl(peticion);
+  if (profesor && !pathname.startsWith("/api/")) return NextResponse.redirect(new URL("/profesor", peticion.url));
+
   // A la API se le contesta con un 401, no con una redirección: quien
   // la llama es `fetch`, y una redirección a HTML le llegaría como una
   // respuesta correcta que no sabe leer.
@@ -204,6 +211,7 @@ export async function middleware(peticion: NextRequest) {
   // Si venía una cookie caducada o manipulada, se retira: si no, el
   // navegador la seguiría mandando en cada petición.
   respuesta.cookies.delete(NOMBRE_COOKIE);
+  respuesta.cookies.delete(NOMBRE_COOKIE_PROFESOR);
   return respuesta;
 }
 
