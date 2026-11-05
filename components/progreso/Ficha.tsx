@@ -2,8 +2,9 @@ import type { ClaseDelRecorrido } from "@/lib/gestion";
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { EstimacionFicha } from "@/lib/estimacion-ficha";
 import type { EstadoDiploma, ProgresoDiploma } from "@/lib/diploma";
-import { formatearFechaLarga } from "@/lib/perfil";
-import { ESCALERA_MCER, esHito, type NivelMcer } from "@/lib/recorrido";
+import type { NivelMcer } from "@/lib/recorrido";
+import Escalera from "@/components/progreso/Escalera";
+import Recorrido from "@/components/progreso/Recorrido";
 import { enViñetas, soloParaElAlumno, textoParaElAlumno } from "@/lib/texto-alumno";
 import { EstilosFicha } from "@/components/progreso/estilos";
 import RitmoElige, { type OpcionRitmo } from "@/components/progreso/RitmoElige";
@@ -108,7 +109,7 @@ export default function Ficha({
           <div className="p2-dos">
             <section className="p2-bloque" aria-labelledby="p2-nivel">
               <h2 id="p2-nivel" className="p2-h2">{t.tuNivel}</h2>
-              <Escalera nivel={nivel} meta={estimacion?.meta.nivel ?? null} />
+              <Escalera nivel={nivel} meta={estimacion?.meta.nivel ?? null} estasAqui={t.estasAqui} tuMeta={t.tuMeta} />
             </section>
             {objetivoVisible && (
               <section className="p2-bloque" aria-labelledby="p2-objetivo">
@@ -166,7 +167,20 @@ export default function Ficha({
             </section>
           )}
 
-          <Recorrido clases={clases} />
+          <Recorrido
+            clases={clases}
+            textos={{
+              titulo: t.tuRecorrido,
+              vacio: t.recorridoVacio,
+              verTodas: t.verTodas,
+              plegar: t.plegar,
+              rotuloHito: t.hito,
+              rotuloTemas: textosActuales().clases.temasYVocabulario,
+              claseNumero: t.claseNumero,
+              fechaLarga: t.fechaLarga,
+              resumen: t.recorridoResumen,
+            }}
+          />
 
           <p className="p2-pie">{t.informePrivado}</p>
         </div>
@@ -275,66 +289,5 @@ function TarjetaDiploma({ diploma, progreso, href }: { diploma: EstadoDiploma; p
         </svg>
       </span>
     </a>
-  );
-}
-
-/** La escalera del MCER: superados, «Estás aquí» y «Tu meta» (si no es su propio peldaño). */
-function Escalera({ nivel, meta }: { nivel: NivelMcer | null; meta: NivelMcer | null }) {
-  const t = textosActuales().progreso;
-  const actual = nivel ? ESCALERA_MCER.indexOf(nivel) : -1;
-  const objetivo = meta ? ESCALERA_MCER.indexOf(meta) : -1;
-  return (
-    <ol className="p2-escalera">
-      {ESCALERA_MCER.map((etiqueta, i) => {
-        const hecho = actual >= 0 && i < actual;
-        const aqui = actual >= 0 && i === actual;
-        const esMeta = objetivo >= 0 && i === objetivo && !aqui;
-        const clases = ["p2-peldano", hecho && "is-hecho", aqui && "is-actual", esMeta && "is-meta"].filter(Boolean).join(" ");
-        return (
-          <li key={etiqueta} className={clases} aria-current={aqui ? "step" : undefined}>
-            <span>{etiqueta}</span>
-            {aqui && <span className="p2-peldano-nota">{t.estasAqui}</span>}
-            {esMeta && <span className="p2-peldano-nota">{t.tuMeta}</span>}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
-/** Las clases con análisis, formateadas para el recorrido plegado. */
-function Recorrido({ clases }: { clases: ClaseDelRecorrido[] }) {
-  const textos = textosActuales();
-  const t = textos.progreso;
-  const conContenido = clases.filter((c) => c.titulo !== "" || c.temas !== "");
-
-  const plegadas: ClasePlegada[] = conContenido.map((c) => {
-    const n = c.numero ?? 0;
-    return {
-      id: c.id,
-      numero: n > 0 ? t.claseNumero(n) : null,
-      // `fecha_clase` es AAAA-MM-DD: se parte la cadena, sin `new Date()`.
-      fecha: c.fechaClase !== "" ? formatearFechaLarga(c.fechaClase, t.fechaLarga) : null,
-      hito: n > 0 && esHito(n),
-      titulo: c.titulo,
-      temas: c.temas,
-    };
-  });
-
-  const ultima = plegadas[0];
-  // En el resumen, la fecha sin el año: «el 25 de septiembre».
-  const fechaCorta = ultima?.fecha ? ultima.fecha.replace(/ (de )?\d{4}$/, "") : null;
-
-  return (
-    <RecorridoPlegado
-      titulo={t.tuRecorrido}
-      vacio={t.recorridoVacio}
-      resumen={ultima ? t.recorridoResumen(plegadas.length, fechaCorta, ultima.titulo || null) : ""}
-      verTodas={t.verTodas}
-      plegar={t.plegar}
-      rotuloHito={t.hito}
-      rotuloTemas={textos.clases.temasYVocabulario}
-      clases={plegadas}
-    />
   );
 }

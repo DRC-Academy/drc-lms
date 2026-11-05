@@ -26,6 +26,10 @@ export type ClasePlegada = {
   hito: boolean;
   titulo: string;
   temas: string;
+  /** Solo en el panel del profesor: al alumno no se le enseña. */
+  resumen?: string | null;
+  /** Solo en el panel del profesor: una marca junto a la fecha. */
+  etiqueta?: string | null;
 };
 
 export default function RecorridoPlegado({
@@ -36,6 +40,8 @@ export default function RecorridoPlegado({
   plegar,
   rotuloHito,
   rotuloTemas,
+  rotuloResumen,
+  abiertoDeEntrada = false,
   clases,
 }: {
   titulo: string;
@@ -46,10 +52,13 @@ export default function RecorridoPlegado({
   plegar: string;
   rotuloHito: string;
   rotuloTemas: string;
+  /** Solo si alguna clase trae `resumen`. */
+  rotuloResumen?: string;
+  abiertoDeEntrada?: boolean;
   /** Solo las que tienen análisis, de la más reciente a la más antigua. */
   clases: ClasePlegada[];
 }) {
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(abiertoDeEntrada);
 
   if (clases.length === 0) {
     return (
@@ -93,12 +102,19 @@ export default function RecorridoPlegado({
                 {c.numero && <span className="p2-clase-num">{c.numero}</span>}
                 {c.fecha && <span className={c.numero ? "p2-clase-fecha" : "p2-clase-num"}>{c.fecha}</span>}
                 {c.hito && <span className="p2-chip p2-chip-sm">{rotuloHito}</span>}
+                {c.etiqueta && <span className="p2-chip p2-chip-sm">{c.etiqueta}</span>}
               </div>
               {c.titulo !== "" && <p className="p2-clase-titulo">{c.titulo}</p>}
               {c.temas !== "" && (
                 <>
                   <p className="p2-clase-rotulo">{rotuloTemas}</p>
                   <p className="p2-clase-resumen">{c.temas}</p>
+                </>
+              )}
+              {c.resumen && (
+                <>
+                  <p className="p2-clase-rotulo">{rotuloResumen}</p>
+                  <p className="p2-clase-resumen">{c.resumen}</p>
                 </>
               )}
             </li>
