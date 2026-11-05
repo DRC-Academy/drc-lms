@@ -9,7 +9,7 @@ const doble = vi.hoisted(() => ({
   admins: "",
   preguntasProfesor: [] as string[],
   preguntasAlumno: [] as string[],
-  enviados: [] as { email: string; destinatario: string }[],
+  enviados: [] as { email: string; destinatario: string; volver: string | null }[],
   intentos: [] as Record<string, unknown>[],
   sesiones: [] as Record<string, unknown>[],
 }));
@@ -29,8 +29,8 @@ vi.mock("@/lib/panel-profesor", () => ({
   },
 }));
 vi.mock("@/lib/correo", () => ({
-  enviarEnlaceAcceso: async (email: string, _t: string, _v: string | null, destinatario = "alumno") => {
-    doble.enviados.push({ email, destinatario });
+  enviarEnlaceAcceso: async (email: string, _t: string, volver: string | null, destinatario = "alumno") => {
+    doble.enviados.push({ email, destinatario, volver });
     return true;
   },
 }));
@@ -62,9 +62,10 @@ import { abrirSesion, abrirSesionProfesor, crearTokenEnlace, NOMBRE_COOKIE, NOMB
 const EMAIL = "ana@drcacademy.com";
 const PROFESOR = { email: EMAIL, teacherId: "tA" };
 
-function formulario(email: string) {
+function formulario(email: string, volver?: string) {
   const f = new FormData();
   f.set("email", email);
+  if (volver) f.set("volver", volver);
   return f;
 }
 
@@ -115,7 +116,7 @@ describe("pedir el enlace", () => {
     doble.profesor = PROFESOR;
     doble.alumno = { alumnoId: "s_1" };
     await solicitarEnlace(formulario(EMAIL));
-    expect(doble.enviados).toEqual([{ email: EMAIL, destinatario: "profesor" }]);
+    expect(doble.enviados).toEqual([{ email: EMAIL, destinatario: "profesor", volver: "/profesor" }]);
     expect(doble.intentos[0]).toMatchObject({ resultado: "enlace_enviado", rol: "profesor", alumnoId: null });
   });
 
@@ -123,14 +124,42 @@ describe("pedir el enlace", () => {
     vi.stubEnv("EMAILS_ADMIN", EMAIL);
     doble.profesor = PROFESOR;
     await solicitarEnlace(formulario(EMAIL));
-    expect(doble.enviados).toEqual([{ email: EMAIL, destinatario: "alumno" }]);
+    expect(doble.enviados).toEqual([{ email: EMAIL, destinatario: "alumno", volver: null }]);
   });
 
   it("sin acceso de profesor y con ficha de alumno, entra el camino del alumno", async () => {
     doble.alumno = { alumnoId: "s_1" };
     await solicitarEnlace(formulario("alumna@ejemplo.com"));
-    expect(doble.enviados).toEqual([{ email: "alumna@ejemplo.com", destinatario: "alumno" }]);
+    expect(doble.enviados).toEqual([{ email: "alumna@ejemplo.com", destinatario: "alumno", volver: null }]);
     expect(doble.intentos[0]).toMatchObject({ rol: "alumno", alumnoId: "s_1" });
+  });
+});
+
+describe("entrar por /profes: la URL no concede nada", () => {
+  // `/profes` llama a esta misma acción, con el mismo formulario.
+  it("un alumno recibe su enlace normal, sin ninguna ruta del panel", async () => {
+    doble.alumno = { alumnoId: "s_1" };
+    await solicitarEnlace(formulario("alumna@ejemplo.com", "/profesor/alumno/a1"));
+    expect(doble.enviados).toEqual([{ email: "alumna@ejemplo.com", destinatario: "alumno", volver: null }]);
+  });
+
+  it("un profesor conserva a dónde iba, y si no iba a ningún sitio, su panel", async () => {
+    doble.profesor = PROFESOR;
+    await solicitarEnlace(formulario(EMAIL, "/profesor/alumno/a1"));
+    await solicitarEnlace(formulario(EMAIL, "/garantia"));
+    expect(doble.enviados.map((e) => e.volver)).toEqual(["/profesor/alumno/a1", "/profesor"]);
+  });
+
+  it("un admin en «Ver como» conserva su ruta", async () => {
+    vi.stubEnv("EMAILS_ADMIN", "equipo@drcacademy.com");
+    await solicitarEnlace(formulario("equipo@drcacademy.com", "/profesor?como=tA"));
+    expect(doble.enviados[0].volver).toBe("/profesor?como=tA");
+  });
+
+  it("alguien sin cuenta no recibe nada, venga de donde venga", async () => {
+    const r = await solicitarEnlace(formulario("nadie@ejemplo.com", "/profesor"));
+    expect(doble.enviados).toEqual([]);
+    expect(r.estado).toBe("enviado");
   });
 });
 
@@ -183,6 +212,13 @@ describe("/entrar: admin, profesor, alumno", () => {
     expect(destino.pathname).toBe("/acceso");
     expect(cookie(NOMBRE_COOKIE_PROFESOR)).toBeUndefined();
     expect(doble.sesiones).toEqual([]);
+  });
+
+  it("un enlace caducado de profesor vuelve a /profes; el de un alumno, a /acceso", async () => {
+    const pedir = (volver?: string) =>
+      entrar(new NextRequest(`http://localhost:3001/entrar?token=roto${volver ? `&volver=${encodeURIComponent(volver)}` : ""}`));
+    expect(new URL((await pedir("/profesor")).headers.get("location") ?? "").pathname).toBe("/profes");
+    expect(new URL((await pedir()).headers.get("location") ?? "").pathname).toBe("/acceso");
   });
 
   it("de `volver` solo acepta rutas de su panel", async () => {

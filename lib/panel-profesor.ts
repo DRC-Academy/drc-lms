@@ -108,7 +108,7 @@ async function sobreDeLaPeticion(): Promise<SesionProfesor | null> {
   return abrirSesionProfesor(cookies().get(NOMBRE_COOKIE_PROFESOR)?.value);
 }
 
-/** El profesor con sesión en regla, sin redirigir: para `/acceso`. */
+/** El profesor con sesión en regla, sin redirigir: para las pantallas de entrar. */
 export async function profesorConectado(): Promise<ProfesorAutorizado | null> {
   const sobre = await sobreDeLaPeticion();
   return sobre ? profesorVigente(sobre) : null;
@@ -125,11 +125,11 @@ export async function exigirProfesor(como?: string): Promise<ProfesorAutorizado>
     if (profesor) return profesor;
     // Un solo destino para revocado, desactivado, bloqueado o caído: la
     // pantalla de entrada no le cuenta a nadie cuál de ellos ha sido.
-    redirect("/acceso?motivo=sesion");
+    redirect("/profes?motivo=sesion");
   }
 
   const sesion = await sesionActual();
-  if (!sesion) redirect("/acceso");
+  if (!sesion) redirect("/profes");
   if (sesion.rol === "alumno") redirect(`/alumno/${sesion.alumnoId}`);
 
   // A partir de aquí, un admin: es la única forma de llegar sin el sobre.

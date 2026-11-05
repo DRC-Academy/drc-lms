@@ -44,7 +44,9 @@ export type MotivoRechazo = "caducado" | "sinficha" | "error";
  * pida otro.
  */
 export function volverAAcceso(urlPeticion: string, motivo: MotivoRechazo, volver: string | null = null) {
-  const destino = new URL(`/acceso?motivo=${motivo}`, urlPeticion);
+  // El enlace de un profesor lleva `volver` a su panel: si caduca, vuelve a su pantalla.
+  const pantalla = volver && esRutaDeProfesor(volver) ? "/profes" : "/acceso";
+  const destino = new URL(`${pantalla}?motivo=${motivo}`, urlPeticion);
   if (volver) destino.searchParams.set("volver", volver);
   return NextResponse.redirect(destino);
 }

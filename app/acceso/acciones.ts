@@ -18,7 +18,7 @@ import { enviarEnlaceAcceso } from "@/lib/correo";
 import { registrarIntento, type ResultadoIntento, type RolIntento } from "@/lib/accesos-servidor";
 import type { EstadoAcceso } from "@/app/acceso/estado";
 import { textosActuales } from "@/lib/idioma-servidor";
-import { destinoSeguro } from "@/lib/volver";
+import { destinoSeguro, esRutaDeProfesor } from "@/lib/volver";
 
 /** Lo que hay que dejar anotado, decidido dentro pero escrito fuera. */
 type Anotacion = { resultado: ResultadoIntento; rol: RolIntento; alumnoId: string | null };
@@ -63,10 +63,16 @@ async function atender(email: string, volver: string | null): Promise<Anotacion>
 
   if (alumno === null && !admin && !esProfesor) return { resultado: "sin_cuenta", rol, alumnoId: null };
 
+  // El enlace de un profesor siempre lleva su panel en `volver`: es lo que
+  // le devuelve a `/profes` si caduca. El de un alumno no lleva nunca esa
+  // ruta, entre por donde entre: recibe su enlace normal.
+  const conPanel = volver !== null && esRutaDeProfesor(volver);
+  const destino = esProfesor ? (conPanel ? volver : "/profesor") : conPanel && !admin ? null : volver;
+
   const enviado = await enviarEnlaceAcceso(
     email,
     await crearTokenEnlace(email),
-    volver,
+    destino,
     esProfesor ? "profesor" : "alumno"
   );
   if (!enviado) {

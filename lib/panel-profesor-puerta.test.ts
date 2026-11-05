@@ -98,21 +98,55 @@ describe("middleware con la cookie del profesor", () => {
 });
 
 describe("middleware en /profesor con otras cookies", () => {
-  it("sin ninguna, a entrar, recordando a dónde iba", async () => {
-    const r = await middleware(pedir("/profesor", {}));
+  it("sin ninguna, a /profes, recordando a dónde iba", async () => {
+    const r = await middleware(pedir("/profesor/alumno/a1", {}));
     const destino = new URL(r.headers.get("location") ?? "");
-    expect(destino.pathname).toBe("/acceso");
-    expect(destino.searchParams.get("volver")).toBe("/profesor");
+    expect(destino.pathname).toBe("/profes");
+    expect(destino.searchParams.get("volver")).toBe("/profesor/alumno/a1");
   });
 
   it("una cookie de profesor manipulada se retira", async () => {
     const r = await middleware(pedir("/profesor", { [NOMBRE_COOKIE_PROFESOR]: "cualquiera.cosa" }));
-    expect(new URL(r.headers.get("location") ?? "").pathname).toBe("/acceso");
+    expect(new URL(r.headers.get("location") ?? "").pathname).toBe("/profes");
     expect(r.headers.get("set-cookie") ?? "").toContain(`${NOMBRE_COOKIE_PROFESOR}=;`);
   });
 
   it("el admin pasa: «Ver como» lo decide el guard", async () => {
     const admin = await crearCookieSesion({ rol: "admin", email: "e@drc.com", alumnoId: null }, ID);
     expect(pasa(await middleware(pedir("/profesor?como=tA", { [NOMBRE_COOKIE]: admin })))).toBe(true);
+  });
+});
+
+describe("/profes, /profesor y /accesos-profesores no se pisan", () => {
+  it("/profes es pública, sin ninguna cookie", async () => {
+    expect(pasa(await middleware(pedir("/profes", {})))).toBe(true);
+    expect(pasa(await middleware(pedir("/profes?motivo=sesion", {})))).toBe(true);
+  });
+
+  it("/profesor y lo que cuelga de él NO se abren por parecerse a /profes", async () => {
+    for (const ruta of ["/profesor", "/profesor/", "/profesor/alumno/a1"]) {
+      const r = await middleware(pedir(ruta, {}));
+      expect(pasa(r)).toBe(false);
+      expect(new URL(r.headers.get("location") ?? "").pathname).toBe("/profes");
+    }
+  });
+
+  it("/accesos-profesores sigue detrás de la cookie, y sin ella va a /acceso", async () => {
+    const r = await middleware(pedir("/accesos-profesores", {}));
+    expect(pasa(r)).toBe(false);
+    expect(new URL(r.headers.get("location") ?? "").pathname).toBe("/acceso");
+  });
+
+  it("lo que solo empieza igual no es público: /profesorado, /profes-x", async () => {
+    for (const ruta of ["/profesorado", "/profes-x"]) {
+      const r = await middleware(pedir(ruta, {}));
+      expect(pasa(r)).toBe(false);
+      expect(new URL(r.headers.get("location") ?? "").pathname).toBe("/acceso");
+    }
+  });
+
+  it("con la cookie del profesor, /profes también pasa: la página decide", async () => {
+    const cookie = await crearCookieProfesor(profesor, ID);
+    expect(pasa(await middleware(pedir("/profes", { [NOMBRE_COOKIE_PROFESOR]: cookie })))).toBe(true);
   });
 });

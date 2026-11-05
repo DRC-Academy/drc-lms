@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { solicitarEnlace } from "@/app/acceso/acciones";
 import type { EstadoAcceso } from "@/app/acceso/estado";
 import { usarIdioma } from "@/components/ProveedorIdioma";
+import type { TextosEntrada } from "@/lib/textos/entrada";
 
 const INICIAL: EstadoAcceso = { estado: "inicial", mensaje: "" };
 
@@ -18,12 +19,20 @@ const INICIAL: EstadoAcceso = { estado: "inicial", mensaje: "" };
 export default function FormularioAcceso({
   aviso,
   volver = null,
+  textos,
 }: {
   aviso: string | null;
   /** La ruta a la que volver después de entrar, ya filtrada en la página. */
   volver?: string | null;
+  /**
+   * Textos fijos, sin seguir la cookie de idioma. Los pasa `/profes`, que
+   * va siempre en español. Solo cambia lo que se lee: la acción y su
+   * respuesta son las mismas.
+   */
+  textos?: TextosEntrada;
 }) {
-  const t = usarIdioma().t.entrada;
+  const delIdioma = usarIdioma().t.entrada;
+  const t = textos ?? delIdioma;
   const [resultado, setResultado] = useState<EstadoAcceso>(INICIAL);
   const [enviando, setEnviando] = useState(false);
   // El aviso de "enlace caducado" viene de la URL. Se retira en cuanto
@@ -58,7 +67,7 @@ export default function FormularioAcceso({
         <div className="rounded-[20px] border border-drc-borde bg-drc-superficie px-[26px] py-6">
           <p className="eyebrow text-drc-verde-texto">{t.revisaTuCorreo}</p>
           <p className="mt-3.5 text-pretty text-[16px] leading-[1.55] text-drc-texto">
-            {resultado.mensaje}
+            {textos ? textos.mensajeNeutro : resultado.mensaje}
           </p>
           <p className="mt-3 text-[14px] leading-[1.55] text-drc-cuerpo">
             {t.caducaEnQuince}
@@ -112,7 +121,7 @@ export default function FormularioAcceso({
       <p aria-live="polite" className="min-h-[22px]">
         {(resultado.estado === "invalido" || resultado.estado === "error") && (
           <span className="mt-4 inline-block text-[14px] leading-[1.55] text-drc-texto">
-            {resultado.mensaje}
+            {textos ? (resultado.estado === "invalido" ? textos.emailIncompleto : textos.noSePudoEnviar) : resultado.mensaje}
           </span>
         )}
       </p>

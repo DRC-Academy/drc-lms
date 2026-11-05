@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// LA INVITACIÓN: lleva a `/acceso` y no abre nada por sí misma.
+// LA INVITACIÓN: lleva a `/profes` y no abre nada por sí misma.
 
 const enviados = vi.hoisted(() => [] as Record<string, string>[]);
 
@@ -27,11 +27,11 @@ afterEach(() => {
 });
 
 describe("enviarInvitacionProfesor", () => {
-  it("enlaza a /acceso sin ningún token", async () => {
+  it("enlaza a /profes sin ningún token", async () => {
     await expect(enviarInvitacionProfesor("ana@drcacademy.com", "Ana")).resolves.toBe(true);
     const [correo] = enviados;
     expect(correo.to).toBe("ana@drcacademy.com");
-    expect(correo.html).toContain('href="https://practica.drcacademy.com/acceso"');
+    expect(correo.html).toContain('href="https://practica.drcacademy.com/profes"');
     expect(`${correo.html}${correo.text}`).not.toMatch(/token=|\/entrar/);
   });
 

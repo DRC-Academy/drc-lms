@@ -32,7 +32,7 @@ const LARGO_MAXIMO = 300;
  * Rutas a las que no tiene sentido volver: las de entrar y salir (se
  * acabaría en un bucle) y la API (devuelve JSON, no una pantalla).
  */
-const PROHIBIDAS = ["/acceso", "/entrar", "/salir", "/api"];
+const PROHIBIDAS = ["/acceso", "/profes", "/entrar", "/salir", "/api"];
 
 /**
  * La ruta interna a la que volver, o null si el valor no vale.

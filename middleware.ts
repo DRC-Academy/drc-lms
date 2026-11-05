@@ -64,6 +64,11 @@ import { destinoSeguro, esRutaDeProfesor } from "@/lib/volver";
  *     del cuerpo (DIPLOMA_HMAC_SECRET), que la ruta comprueba antes de
  *     buscar a nadie. Detrás de la cookie, cada llamada era un 401.
  *
+ *   · `/profes` — la pantalla de entrar de los profesores: otro texto
+ *     sobre el mismo flujo de `/acceso`. No concede nada: el rol lo decide
+ *     el email. Ojo: es `/profes`, y `/profesor` NO empieza por `/profes/`,
+ *     así que el panel sigue detrás de la cookie.
+ *
  *   · `/salir` — cerrar sesión. Con la cookie caducada o manipulada,
  *     esta puerta mandaba a `/acceso` antes de llegar a la ruta, y la
  *     sesión de WordPress (`SALIR_WP`) se quedaba abierta. La ruta lee
@@ -71,6 +76,7 @@ import { destinoSeguro, esRutaDeProfesor } from "@/lib/volver";
  */
 const PUBLICAS = [
   "/acceso",
+  "/profes",
   "/entrar",
   "/salir",
   "/avisos",
@@ -203,7 +209,12 @@ export async function middleware(peticion: NextRequest) {
   // recuperación, no en el inicio. `destinoSeguro` solo deja pasar rutas
   // de este sitio (ver `lib/volver.ts`); la raíz no se apunta, porque
   // volver al inicio es lo que ya pasa sin nada.
-  const acceso = new URL("/acceso", peticion.url);
+  //
+  // QUIEN VENÍA AL PANEL DEL PROFESOR, O TRAÍA SU COOKIE, A SU PANTALLA DE
+  // ENTRAR. Es solo qué texto ve: el login es el mismo.
+  const pantalla =
+    esRutaDeProfesor(pathname) || peticion.cookies.has(NOMBRE_COOKIE_PROFESOR) ? "/profes" : "/acceso";
+  const acceso = new URL(pantalla, peticion.url);
   const volver = destinoSeguro(`${pathname}${peticion.nextUrl.search}`);
   if (volver) acceso.searchParams.set("volver", volver);
 

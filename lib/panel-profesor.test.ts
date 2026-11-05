@@ -138,7 +138,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const DENEGADO = "REDIRECT:/acceso?motivo=sesion";
+const DENEGADO = "REDIRECT:/profes?motivo=sesion";
 
 describe("el profesor A y el alumno del profesor B", () => {
   it("A ve a su alumno", async () => {
@@ -240,7 +240,7 @@ describe("exigirProfesor: la duda es que no", () => {
 
   it("una cookie manipulada no vale", async () => {
     mundo.cookieProfesor = `${mundo.cookieProfesor}x`;
-    await expect(exigirProfesor()).rejects.toThrow("REDIRECT:/acceso");
+    await expect(exigirProfesor()).rejects.toThrow("REDIRECT:/profes");
   });
 
   it("si falla la lectura de alumnos, lanza: un error no parece una lista vacía", async () => {
@@ -256,8 +256,8 @@ describe("exigirProfesor sin cookie de profesor", () => {
     mundo.cookieProfesor = undefined;
   });
 
-  it("sin sesión: a entrar", async () => {
-    await expect(exigirProfesor()).rejects.toThrow("REDIRECT:/acceso");
+  it("sin sesión: a su pantalla de entrar", async () => {
+    await expect(exigirProfesor()).rejects.toThrow("REDIRECT:/profes");
   });
 
   it("un alumno vuelve a lo suyo, también con ?como=", async () => {

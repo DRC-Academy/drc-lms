@@ -79,11 +79,11 @@ export async function POST(peticion: NextRequest) {
     await revocarSesion(sesion.sesionId);
   }
 
-  // El profesor no tiene cuenta en WordPress: su salida acaba en `/acceso`.
+  // El profesor no tiene cuenta en WordPress: su salida acaba en `/profes`.
   const profesor = await abrirSesionProfesor(peticion.cookies.get(NOMBRE_COOKIE_PROFESOR)?.value);
   if (profesor) await revocarSesion(profesor.sesionId);
   if (profesor && !sesion) {
-    const salida = NextResponse.redirect(new URL("/acceso?motivo=salida", peticion.url), { status: 303 });
+    const salida = NextResponse.redirect(new URL("/profes?motivo=salida", peticion.url), { status: 303 });
     salida.cookies.delete(NOMBRE_COOKIE_PROFESOR);
     salida.cookies.delete(NOMBRE_COOKIE);
     return salida;

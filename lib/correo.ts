@@ -191,7 +191,7 @@ export async function enviarEnlaceAcceso(
 // ---------------------------------------------------------------
 // LA INVITACIÓN DEL PROFESOR
 //
-// Lleva a `/acceso`, SIN TOKEN: un enlace que entre directamente y dure
+// Lleva a `/profes`, SIN TOKEN: un enlace que entre directamente y dure
 // días no debe dormir en un buzón. Allí pide su enlace de 15 minutos.
 // ---------------------------------------------------------------
 
@@ -244,7 +244,7 @@ export async function enviarInvitacionProfesor(email: string, nombre: string): P
 
   let enlace: string;
   try {
-    enlace = `${urlPublica()}/acceso`;
+    enlace = `${urlPublica()}/profes`;
   } catch (error) {
     console.error(`[correo] No se ha enviado la invitación. ${(error as Error).message}`);
     return false;
