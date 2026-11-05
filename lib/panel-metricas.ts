@@ -39,7 +39,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { baseLms } from "@/lib/supabase-lms";
-import { alumnosDeProfesor, alumnosParaMetricas, partesDeClase } from "@/lib/gestion";
+import { asignacionesDeProfesorSinFiltrar, alumnosParaMetricas, partesDeClase } from "@/lib/gestion";
 import { entradasConClaseEntre } from "@/lib/entradas-clase-servidor";
 import { diaLocal, sumarDias } from "@/lib/fechas";
 import { rangoAnterior, rangoGrafico, type Rango } from "@/lib/panel-rango";
@@ -253,7 +253,7 @@ async function calcular(rango: Rango): Promise<MetricasPanel> {
     ia(tramoDeDias(grafico), "semana"),
     ia(tramoDeDias(deMeses), "mes"),
     Promise.all(fijos.map((t) => ia(t, "total"))),
-    alumnosDeProfesor(PROFESOR_DE_PRUEBA),
+    asignacionesDeProfesorSinFiltrar(PROFESOR_DE_PRUEBA),
     cuantasExcluidas(),
   ]);
 
@@ -428,7 +428,7 @@ export async function cargarExclusiones(): Promise<Exclusiones> {
       .order("creado_en", { ascending: true })
       .returns<{ alumno_id: string; motivo: string; creado_en: string | null }[]>(),
     alumnosParaMetricas(),
-    alumnosDeProfesor(PROFESOR_DE_PRUEBA),
+    asignacionesDeProfesorSinFiltrar(PROFESOR_DE_PRUEBA),
   ]);
   if (lista.error) console.error("[panel] metricas_excluidos:", lista.error.message);
   const nombre = new Map((fichas ?? []).map((f) => [f.alumnoId, f.nombre]));

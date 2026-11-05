@@ -1335,13 +1335,15 @@ export async function alumnosParaMetricas(): Promise<AlumnoMetricas[] | null> {
 }
 
 /**
- * Los alumnos cuya assignment es de un profesor, por su `teacher_id`.
- * Lo usa el aviso de cuentas de prueba sin excluir (el profesor de
- * prueba es `t1`). Necesita `profesor_id` en `vista_perfil_alumno`
- * (PARTE A de `supabase/panel-metricas.sql`): sin esa columna, o si
- * falla la lectura, null, y el panel dice que no lo ha podido comprobar.
+ * Quien tenga una assignment de este profesor, ACTIVA O NO: por eso no
+ * sirve para decidir qué alumnos ve un profesor (eso es
+ * `alumnosDelProfesor`, en `lib/panel-profesor.ts`). Lo usa solo el aviso
+ * de cuentas de prueba sin excluir (el profesor de prueba es `t1`).
+ * Necesita `profesor_id` en `vista_perfil_alumno` (PARTE A de
+ * `supabase/panel-metricas.sql`): sin esa columna, o si falla la lectura,
+ * null, y el panel dice que no lo ha podido comprobar.
  */
-export async function alumnosDeProfesor(teacherId: string): Promise<{ alumnoId: string; nombre: string }[] | null> {
+export async function asignacionesDeProfesorSinFiltrar(teacherId: string): Promise<{ alumnoId: string; nombre: string }[] | null> {
   const { data, error } = await soloLectura("vista_perfil_alumno")
     .select("alumno_id, nombre")
     .eq("profesor_id", teacherId)
@@ -1361,4 +1363,136 @@ export async function alumnosDeProfesor(teacherId: string): Promise<{ alumnoId: 
     salida.push({ alumnoId: id, nombre: comoTexto(fila.nombre) });
   }
   return salida;
+}
+
+// ---------------------------------------------------------------
+// EL PANEL DE PROFESORES
+//
+// SIN CACHÉ Y LANZANDO SI FALLAN, al revés que el resto del módulo. De
+// estas lecturas depende una autorización: un cambio de profesor tiene que
+// notarse en la petición siguiente, y un error no puede parecer «sin
+// alumnos» ni «sin cambios». Las llama solo `lib/panel-profesor*`: quien
+// necesite los alumnos de un profesor pasa por `alumnosDelProfesor` y
+// `exigirAlumnoDelProfesor`.
+//
+// Columnas nombradas. La demo no está en estas vistas y no entra.
+// ---------------------------------------------------------------
+
+export type ProfesorDeGestion = {
+  teacherId: string;
+  /** El usuario de Gestión («DanielaN»). */
+  profesor: string;
+  /** Normalizado por la vista. */
+  email: string;
+  archivado: boolean;
+  esPrueba: boolean;
+};
+
+const CAMPOS_PROFESOR_ACCESO = "teacher_id, profesor, email, archivado, es_prueba";
+
+function aProfesorDeGestion(fila: Fila): ProfesorDeGestion {
+  return {
+    teacherId: comoTexto(fila.teacher_id),
+    profesor: comoTexto(fila.profesor),
+    email: comoTexto(fila.email),
+    archivado: fila.archivado === true,
+    esPrueba: fila.es_prueba === true,
+  };
+}
+
+/** Un profesor, o null si no existe. LANZA si la lectura falla. */
+export async function leerProfesorDeGestion(teacherId: string): Promise<ProfesorDeGestion | null> {
+  const { data, error } = await soloLectura("vista_profesores_acceso")
+    .select(CAMPOS_PROFESOR_ACCESO)
+    .eq("teacher_id", teacherId)
+    .limit(1)
+    .returns<Fila[]>();
+  if (error) throw new Error(`No se pudo leer vista_profesores_acceso: ${error.message}`);
+  const fila = (data ?? [])[0];
+  return fila ? aProfesorDeGestion(fila) : null;
+}
+
+/** Todos, archivados incluidos, para la pestaña de admin. LANZA si la lectura falla. */
+export async function leerProfesoresDeGestion(): Promise<ProfesorDeGestion[]> {
+  const { data, error } = await soloLectura("vista_profesores_acceso")
+    .select(CAMPOS_PROFESOR_ACCESO)
+    .order("profesor", { ascending: true })
+    .returns<Fila[]>();
+  if (error) throw new Error(`No se pudo leer vista_profesores_acceso: ${error.message}`);
+  return (data ?? []).map(aProfesorDeGestion);
+}
+
+export type FilaAlumnoAsignado = {
+  teacherId: string;
+  alumnoId: string;
+  nombre: string;
+  nivel: string;
+  nivelProfesor: string | null;
+  nivelFicha: string | null;
+  nivelPrueba: string | null;
+  focoRecomendado: string | null;
+  fechaInicio: string | null;
+  examen: string | null;
+};
+
+const CAMPOS_ALUMNO_ASIGNADO =
+  "teacher_id, alumno_id, nombre, nivel, nivel_profesor, nivel_ficha, nivel_prueba, foco_recomendado, fecha_inicio, examen";
+
+function aAlumnoAsignado(fila: Fila): FilaAlumnoAsignado {
+  return {
+    teacherId: comoTexto(fila.teacher_id),
+    alumnoId: comoTexto(fila.alumno_id),
+    nombre: comoTexto(fila.nombre),
+    nivel: comoTexto(fila.nivel),
+    nivelProfesor: comoTextoOpcional(fila.nivel_profesor),
+    nivelFicha: comoTextoOpcional(fila.nivel_ficha),
+    nivelPrueba: comoTextoOpcional(fila.nivel_prueba),
+    focoRecomendado: comoTextoOpcional(fila.foco_recomendado),
+    fechaInicio: comoTextoOpcional(fila.fecha_inicio),
+    examen: comoTextoOpcional(fila.examen),
+  };
+}
+
+/** Los alumnos con asignación activa de un profesor. LANZA si la lectura falla. */
+export async function leerAlumnosAsignados(teacherId: string): Promise<FilaAlumnoAsignado[]> {
+  const { data, error } = await soloLectura("vista_alumnos_profesor")
+    .select(CAMPOS_ALUMNO_ASIGNADO)
+    .eq("teacher_id", teacherId)
+    .order("nombre", { ascending: true })
+    .order("alumno_id", { ascending: true })
+    .returns<Fila[]>();
+  if (error) throw new Error(`No se pudo leer vista_alumnos_profesor: ${error.message}`);
+  return (data ?? []).map(aAlumnoAsignado);
+}
+
+/** Ese alumno, solo si la asignación con ESE profesor está activa. LANZA si la lectura falla. */
+export async function leerAlumnoAsignado(teacherId: string, alumnoId: string): Promise<FilaAlumnoAsignado | null> {
+  const { data, error } = await soloLectura("vista_alumnos_profesor")
+    .select(CAMPOS_ALUMNO_ASIGNADO)
+    .eq("teacher_id", teacherId)
+    .eq("alumno_id", alumnoId)
+    .limit(1)
+    .returns<Fila[]>();
+  if (error) throw new Error(`No se pudo leer vista_alumnos_profesor: ${error.message}`);
+  const fila = (data ?? [])[0];
+  return fila ? aAlumnoAsignado(fila) : null;
+}
+
+/** Cuántos alumnos activos tiene cada profesor, para la pestaña de admin. LANZA si falla. */
+export async function contarAlumnosPorProfesor(): Promise<Map<string, number>> {
+  const cuenta = new Map<string, number>();
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await soloLectura("vista_alumnos_profesor")
+      .select("teacher_id")
+      .order("teacher_id", { ascending: true })
+      .order("alumno_id", { ascending: true })
+      .range(desde, desde + PAGINA - 1)
+      .returns<Fila[]>();
+    if (error) throw new Error(`No se pudo leer vista_alumnos_profesor: ${error.message}`);
+    for (const fila of data ?? []) {
+      const id = comoTexto(fila.teacher_id);
+      cuenta.set(id, (cuenta.get(id) ?? 0) + 1);
+    }
+    if ((data ?? []).length < PAGINA) return cuenta;
+  }
 }

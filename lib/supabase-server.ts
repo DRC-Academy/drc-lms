@@ -72,6 +72,12 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // y el último día del plan. De `students` sale el id y esa fecha, nada
 // más. `supabase/gestion-vista-partes-clase.sql`.
 //
+// `vista_profesores_acceso` y `vista_alumnos_profesor` entraron con el
+// panel de profesores: quién puede ser profesor (id, nombre, email, si
+// está archivado y si es de prueba) y qué alumnos tiene con asignación
+// ACTIVA, sin plan, suscripción, garantía ni valoraciones. Las lee solo
+// `lib/panel-profesor*`. `supabase/gestion-vistas-profesor.sql`.
+//
 // Añadir algo a esta lista es ampliar lo que el LMS ve de una base con
 // datos de alumnos, profesores y nóminas. Solo con un motivo escrito,
 // como este.
@@ -86,6 +92,8 @@ export const VISTAS = [
   "vista_partes_clase",
   "vista_clases_programadas",
   "vista_fin_plan",
+  "vista_profesores_acceso",
+  "vista_alumnos_profesor",
 ] as const;
 export type Vista = (typeof VISTAS)[number];
 
