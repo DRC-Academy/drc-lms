@@ -582,7 +582,7 @@ export default function CambiarProfesor({
         {...marco}
         accion={
           sinRepetir ? (
-            <Link href="/clases" className={BOTON_VERDE}>
+            <Link prefetch={false} href="/clases" className={BOTON_VERDE}>
               {t.volverAMisClases}
             </Link>
           ) : (

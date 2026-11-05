@@ -7,6 +7,7 @@ import { obtenerAlumno } from "@/lib/gestion";
 import { buscarBloqueGenerado } from "@/lib/progreso-servidor";
 import { alumnoDeLaPagina } from "@/lib/sesion-servidor";
 import VistaBloque from "@/components/practica/VistaBloque";
+import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
 
 // Mismo motivo que la ficha: el alumno se resuelve contra Gestión.
 export const dynamic = "force-dynamic";
@@ -42,6 +43,7 @@ export default async function PaginaBloque({
   if (!bloque) {
     return (
       <>
+        <MarcoDeLaPagina alumno={alumno} />
         <div className="mx-auto max-w-md px-6 pt-16 text-center">
           <div className="tarjeta">
             <h1 className="font-display text-[24px] font-semibold leading-tight text-drc-titular">
@@ -71,17 +73,20 @@ export default async function PaginaBloque({
   }
 
   // EL MISMO MARCO QUE LA LECCIÓN: la barra de iconos, las pestañas de
-  // abajo y el cajón del panel de fases los ponen el layout común y su
-  // slot `@marco` (`app/(alumno)`). Aquí solo va la pantalla.
+  // abajo y el cajón del panel de fases los pone el layout común
+  // (`app/(alumno)`). Aquí solo van la pantalla y los datos de la barra.
   //
   // Sin profesor vigente, sin el nombre que quedó en su clase de origen.
   const profesor = (await profesorDelAlumno(alumnoId))?.nombre ?? "";
   return (
-    <VistaBloque
-      bloque={profesor ? bloque : sinProfesorDeOrigen(bloque)}
-      alumnoId={alumnoId}
-      profesor={profesor}
-      foco={foco}
-    />
+    <>
+      <MarcoDeLaPagina alumno={alumno} />
+      <VistaBloque
+        bloque={profesor ? bloque : sinProfesorDeOrigen(bloque)}
+        alumnoId={alumnoId}
+        profesor={profesor}
+        foco={foco}
+      />
+    </>
   );
 }

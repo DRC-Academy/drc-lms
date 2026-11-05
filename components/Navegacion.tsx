@@ -6,10 +6,10 @@
 // abajo (`NavegacionInferior`) con los mismos iconos. Sustituye a la
 // cabecera de arriba, que ya no existe.
 //
-// DÓNDE SE MONTA. La rejilla y lo que solo depende de la sesión (la
-// ayuda, el recorrido), en el layout de `(alumno)`; lo que depende del
-// alumno, en el slot `app/(alumno)/@marco`, que se renderiza con cada
-// URL. Ninguna pantalla se acuerda de ponerla y ninguna la pierde.
+// DÓNDE SE MONTA. La rejilla, la barra y lo que solo depende de la sesión
+// (la ayuda, el recorrido), en el layout de `(alumno)`. Los datos del
+// alumno llegan con cada página: ver `components/marco/` y `lib/marco.ts`.
+// Ninguna pantalla se acuerda de ponerla y ninguna la pierde.
 //
 // LO QUE ESTABA EN LA CABECERA, Y DÓNDE HA IDO:
 //
@@ -27,137 +27,16 @@
 // ---------------------------------------------------------------
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import ChatAyuda from "@/components/ChatAyuda";
 import CabeceraIdioma from "@/components/CabeceraIdioma";
 import ContenidoApp from "@/components/ContenidoApp";
-import { DESCUENTO_WOO } from "@/lib/cuenta-woo";
 import { conFoco } from "@/lib/foco";
-import { textosActuales } from "@/lib/idioma-servidor";
-import type { TextosNavegacion } from "@/lib/textos/navegacion";
-import type { EnlaceSeccion } from "@/components/IconoSeccion";
-import BarraLateral from "@/components/leccion/BarraLateral";
-import MenuPerfil from "@/components/leccion/MenuPerfil";
 import { ProveedorMarco } from "@/components/leccion/MarcoCurso";
-import NavegacionInferior from "@/components/NavegacionInferior";
+import { PiezasDelMarco, type DatosNavegacion } from "@/components/marco/PiezasDelMarco";
 import Tutorial from "@/components/tutorial/Tutorial";
-import type { EstadisticasAlumno } from "@/lib/estadisticas";
 
 export type { SeccionActiva, EnlaceSeccion } from "@/components/IconoSeccion";
-
-/**
- * Las secciones del alumno, como enlaces. Una sola lista para la barra,
- * para las pestañas y para la hoja del perfil en móvil, y así no pueden
- * decir cosas distintas.
- *
- * «MI CURSO» RECIBE SU DESTINO HECHO, no el slug: la lección por la que va
- * el alumno, o el temario si no hay ninguna. Esa decisión vive en
- * `rutaDeMiCurso` (`lib/cursos.ts`), la misma que usa el botón del inicio.
- *
- * Sin alumno —el equipo en su buscador— no hay secciones.
- */
-export function enlacesDeSecciones({
-  alumnoId,
-  miCurso,
-  foco,
-  t,
-}: {
-  alumnoId?: string | null;
-  /** La ruta de la pestaña, sin foco. Sin ella, la pestaña no se pinta. */
-  miCurso?: string | null;
-  foco?: string | null;
-  t: TextosNavegacion;
-}): EnlaceSeccion[] {
-  if (!alumnoId) return [];
-
-  return [
-    { clave: "inicio" as const, texto: t.inicio, corto: t.cortas.inicio, href: `/alumno/${alumnoId}` },
-    // CLASES VA LA SEGUNDA: tiene un botón que importa a una hora
-    // concreta, así que se pone donde se llega sin buscar. Se pinta
-    // siempre; el que no tenga horario encuentra la pantalla
-    // explicándoselo en vez de una pestaña que se esfumó.
-    { clave: "clases" as const, texto: t.clases, corto: t.cortas.clases, href: "/clases" },
-    ...(miCurso ? [{ clave: "curso" as const, texto: t.miCurso, corto: t.cortas.curso, href: miCurso }] : []),
-    { clave: "practica" as const, texto: t.paraTi, corto: t.cortas.practica, href: "/practica" },
-    { clave: "progreso" as const, texto: t.miProgreso, corto: t.cortas.progreso, href: "/progreso" },
-    // «MI DIPLOMA» NO VA EN LA BARRA DE MÓVIL: con siete celdas a 320px
-    // cada una baja a 45px. Sale en la hoja del perfil, que lee esta
-    // misma lista (`enBarraMovil`).
-    { clave: "diploma" as const, texto: t.miDiploma, corto: t.cortas.diploma, href: "/diploma", enBarraMovil: false },
-    // EL DESCUENTO NO ES DEL LMS: la página de referidos de la web, en la
-    // misma pestaña. En móvil, en la hoja del perfil como el diploma.
-    { clave: "descuento" as const, texto: t.descuento, corto: t.cortas.descuento, href: DESCUENTO_WOO, enBarraMovil: false, externo: true },
-  ].map((enlace) =>
-    // `conFoco` deja solo la ruta: a una URL de otra web le quitaría el dominio.
-    "externo" in enlace ? enlace : { ...enlace, href: conFoco(enlace.href, foco ?? null) },
-  );
-}
-
-/** Lo que el marco necesita saber de quién es la pantalla. */
-export type DatosNavegacion = {
-  /** El alumno del que habla la pantalla, o "" para el equipo sin ficha. */
-  alumnoId: string;
-  nombre: string;
-  /** Destino de «Mi curso», sin foco, o null si no tiene curso. */
-  miCurso: string | null;
-  /** El contexto de revisión que conservan los enlaces. Ver `lib/foco.ts`. */
-  foco: string | null;
-  revisando: boolean;
-  /**
-   * Las estadísticas de la barra lateral, ya calculadas en el servidor
-   * (`lib/estadisticas-servidor.ts`). Sin alumno no hay.
-   */
-  estadisticas?: EstadisticasAlumno | null;
-};
-
-/**
- * LO QUE DEPENDE DEL ALUMNO: la tira de revisión, la barra de la
- * izquierda (con «Cómo vas» y el anillo del curso) y las pestañas de
- * abajo con el perfil.
- *
- * Lo pinta el slot `app/(alumno)/@marco`, que Next vuelve a renderizar
- * con cada URL, y NUNCA el layout: un layout se reutiliza al navegar y
- * se quedaba con el alumno de la primera ficha (auditoría del
- * 30/09/2026). Cada pieza se coloca en la rejilla de `MarcoFijo` con su
- * propia área, así que puede llegar de otro sitio que el contenido.
- */
-export function PiezasDelMarco({ datos }: { datos: DatosNavegacion }) {
-  const t = textosActuales().navegacion;
-  const enlaces = enlacesDeSecciones({
-    alumnoId: datos.alumnoId,
-    miCurso: datos.miCurso,
-    foco: datos.foco,
-    t,
-  });
-  const nombre = datos.nombre.trim();
-  const inicioHref = datos.alumnoId ? conFoco(`/alumno/${datos.alumnoId}`, datos.foco) : "/";
-
-  return (
-    <>
-      {datos.revisando && (
-        <div className="col-span-2 row-start-1">
-          <TiraRevision nombre={nombre || undefined} t={t} />
-        </div>
-      )}
-      <div className="col-start-1 row-start-2">
-        <BarraLateral enlaces={enlaces} nombre={nombre} inicioHref={inicioHref} estadisticas={datos.estadisticas ?? null} />
-      </div>
-      <NavegacionInferior
-        enlaces={enlaces}
-        secciones={t.secciones}
-        extra={
-          <MenuPerfil
-            nombre={nombre}
-            variante="movil"
-            enlaces={enlaces}
-            estadisticas={datos.estadisticas ?? null}
-            hrefPractica={enlaces.find((e) => e.clave === "practica")?.href}
-          />
-        }
-      />
-    </>
-  );
-}
+export type { DatosNavegacion } from "@/components/marco/PiezasDelMarco";
 
 /**
  * La rejilla del marco: arriba la tira, a la izquierda la barra, y la
@@ -205,41 +84,5 @@ export default function MarcoApp({ datos, children }: { datos: DatosNavegacion; 
       <MarcoFijo piezas={<PiezasDelMarco datos={datos} />}>{children}</MarcoFijo>
       {datos.alumnoId && <PiezasDeLaSesion nombre={datos.nombre.trim()} inicioHref={datos.revisando ? null : inicioHref} />}
     </ProveedorMarco>
-  );
-}
-
-/**
- * De quién es la ficha, que es una revisión, y cómo salir de ella. Encima
- * de todo, en todas las pantallas del alumno.
- *
- * EN ÁMBAR Y NO EN VERDE. El verde es el color de las acciones del alumno;
- * esta tira dice justo lo contrario —que lo que se ve no es de quien
- * mira— y tiene que leerse como una advertencia suave.
- */
-export function TiraRevision({ nombre, t }: { nombre?: string; t: TextosNavegacion }) {
-  const quien = nombre?.trim();
-
-  return (
-    <div className="border-b border-marca-examenBorde bg-marca-examen">
-      <div className="flex items-center gap-x-3 gap-y-1 px-4 py-[7px] sm:px-9">
-        <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-marca-amarillo" />
-
-        <p className="min-w-0 flex-1 truncate text-[12.5px] leading-[1.35] text-marca-tinta sm:text-[13px]">
-          {/* Sin nombre se dice igual que es una revisión: perder el
-              nombre no puede hacer que el aviso desaparezca. */}
-          <strong className="font-semibold">
-            {quien ? t.revisandoLaFichaDe(quien) : t.revisandoUnaFicha}
-          </strong>
-          <span className="hidden sm:inline"> {t.nadaSeGuarda}</span>
-        </p>
-
-        <Link
-          href="/"
-          className="shrink-0 whitespace-nowrap rounded text-[12.5px] font-semibold text-marca-verdeOsc underline-offset-4 transition-colors hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc sm:text-[13px]"
-        >
-          {t.salirDeLaRevision}
-        </Link>
-      </div>
-    </div>
   );
 }

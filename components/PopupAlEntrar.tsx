@@ -15,7 +15,8 @@ import { conFoco } from "@/lib/foco";
  * misma visita.
  *
  * Lo monta el layout del alumno en su `<Suspense>`; al equipo revisando
- * una ficha, el marco (`app/(alumno)/@marco`), con `vistaPrevia`.
+ * una ficha, cada página (`components/marco/MarcoDeLaPagina.tsx`), con
+ * `vistaPrevia`.
  */
 export default async function PopupAlEntrar({ alumnoId, vistaPrevia = false }: { alumnoId: string; vistaPrevia?: boolean }) {
   const pendiente = await valoracionPendiente(alumnoId);

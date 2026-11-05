@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import "./globals.css";
+import BarraNavegando from "@/components/BarraNavegando";
 import ProveedorIdioma from "@/components/ProveedorIdioma";
 import CapaMascota from "@/components/mascota/CapaMascota";
 import { idiomaActual } from "@/lib/idioma-servidor";
@@ -24,6 +26,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang={idioma}>
       <body className="font-sans antialiased">
         <ProveedorIdioma idioma={idioma}>
+          {/* En `<Suspense>` porque lee `useSearchParams`, y hay rutas estáticas. */}
+          <Suspense fallback={null}>
+            <BarraNavegando />
+          </Suspense>
           {children}
           {/* La única mascota de la app: aquí para que sobreviva a la
               navegación y viaje entre las anclas de cada pantalla. */}

@@ -8,6 +8,7 @@ import RecuperacionesDeGestion from "@/components/clases/RecuperacionesDeGestion
 import AutoservicioDeGestion from "@/components/clases/autoservicio/AutoservicioDeGestion";
 import { autoservicioVisible } from "@/lib/autoservicio";
 import { Suspense } from "react";
+import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,8 @@ export default async function PaginaClases({
 }: {
   searchParams: { semana?: string; recuperacion?: string };
 }) {
-  const { sesion, alumnoId, paraEnlaces } = await exigirAlumnoDeLaPagina();
+  const alumno = await exigirAlumnoDeLaPagina();
+  const { sesion, alumnoId, paraEnlaces } = alumno;
   const resaltada = typeof searchParams.recuperacion === "string" ? searchParams.recuperacion : null;
 
   const [calendarioCrudo, excepciones, recorrido, profesores, profe] = await Promise.all([
@@ -66,6 +68,7 @@ export default async function PaginaClases({
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
+      <MarcoDeLaPagina alumno={alumno} />
       <PantallaClases
         calendario={calendario}
         excepciones={excepciones}

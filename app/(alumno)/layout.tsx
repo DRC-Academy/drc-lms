@@ -1,9 +1,12 @@
 import { Suspense } from "react";
 import type { Viewport } from "next";
-import { sesionActual } from "@/lib/sesion-servidor";
+import { alumnoDeLaUrl, sesionActual } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
+import { datosDelMarco } from "@/lib/navegacion-servidor";
 import { MarcoFijo, PiezasDeLaSesion } from "@/components/Navegacion";
 import { ProveedorMarco } from "@/components/leccion/MarcoCurso";
+import { ProveedorDatosMarco } from "@/components/marco/DatosDelMarco";
+import MarcoDelAlumno from "@/components/marco/MarcoDelAlumno";
 import PopupAlEntrar from "@/components/PopupAlEntrar";
 import AvisoImpago from "@/components/impago/AvisoImpago";
 import { estadoDeAcceso } from "@/lib/estado-acceso";
@@ -17,13 +20,11 @@ import { urlActualizarPago } from "@/lib/cuenta-woo";
  * el inicio y el bloque (`/alumno/…`), «Clases», el curso, «Para ti» y
  * «Mi progreso».
  *
- * AQUÍ NO VA NADA DEL ALUMNO. Next no vuelve a renderizar un layout al
- * navegar entre las páginas que cuelgan de él, así que todo lo que
- * dependa de qué ficha se está mirando —la tira de revisión, la barra con
- * «Cómo vas», el perfil— va en el slot `@marco`, que sí se renderiza con
- * cada URL. Aquí solo queda lo que depende de la cookie, que no cambia
- * sin una carga completa: la ayuda y el recorrido guiado, que tienen que
- * sobrevivir a la navegación.
+ * NEXT NO VUELVE A RENDERIZAR UN LAYOUT AL NAVEGAR entre las páginas que
+ * cuelgan de él. Por eso la barra puede vivir aquí sin parpadear, y por eso
+ * nada de lo de aquí puede fiarse de seguir valiendo en la pantalla
+ * siguiente. Los datos del alumno los trae cada página (`MarcoDeLaPagina`)
+ * y `MarcoDelAlumno` los compara con la URL de ahora: ver `lib/marco.ts`.
  *
  * `viewport-fit=cover` es lo que hace que `env(safe-area-inset-bottom)`
  * valga algo en un iPhone: sin él, la barra de pestañas se quedaría
@@ -54,15 +55,20 @@ const INERTE = { inert: "" } as Record<string, string>;
  * Gestión lo exponga, se lee aquí y se le pasa a `urlActualizarPago`, y
  * el aviso no cambia.
  */
-export default async function LayoutAlumno({ children, marco }: { children: React.ReactNode; marco: React.ReactNode }) {
-  if ((await estadoDeAcceso(await sesionActual())) === "impago") {
+export default async function LayoutAlumno({ children }: { children: React.ReactNode }) {
+  const sesion = await sesionActual();
+  const alumnoPropio = sesion?.rol === "alumno" ? sesion.alumnoId : null;
+
+  if ((await estadoDeAcceso(sesion)) === "impago") {
     const urlPago = urlActualizarPago(null);
 
     return (
       <>
         <div className="flex min-h-dvh flex-col" {...INERTE}>
           <ProveedorMarco>
-            <MarcoFijo piezas={marco}>{children}</MarcoFijo>
+            <ProveedorDatosMarco>
+              <MarcoFijo piezas={<PiezasConCarcasa alumnoPropio={alumnoPropio} />}>{children}</MarcoFijo>
+            </ProveedorDatosMarco>
           </ProveedorMarco>
         </div>
         <AvisoImpago urlPago={urlPago} />
@@ -73,13 +79,33 @@ export default async function LayoutAlumno({ children, marco }: { children: Reac
   return (
     <div className="flex min-h-dvh flex-col">
       <ProveedorMarco>
-        <MarcoFijo piezas={marco}>{children}</MarcoFijo>
+        <ProveedorDatosMarco>
+          <MarcoFijo piezas={<PiezasConCarcasa alumnoPropio={alumnoPropio} />}>{children}</MarcoFijo>
+        </ProveedorDatosMarco>
         <Suspense fallback={null}>
           <DeLaSesion />
         </Suspense>
       </ProveedorMarco>
     </div>
   );
+}
+
+/**
+ * La barra en la primera carga: su carcasa al instante y sus datos en
+ * cuanto estén, sin que nadie los espere. A partir de ahí el layout no
+ * vuelve a pintarse y los datos llegan con cada página.
+ */
+function PiezasConCarcasa({ alumnoPropio }: { alumnoPropio: string | null }) {
+  return (
+    <Suspense fallback={<MarcoDelAlumno inicial={null} alumnoPropio={alumnoPropio} />}>
+      <MarcoInicial alumnoPropio={alumnoPropio} />
+    </Suspense>
+  );
+}
+
+async function MarcoInicial({ alumnoPropio }: { alumnoPropio: string | null }) {
+  const alumno = await alumnoDeLaUrl();
+  return <MarcoDelAlumno inicial={alumno ? await datosDelMarco(alumno) : null} alumnoPropio={alumnoPropio} />;
 }
 
 /**

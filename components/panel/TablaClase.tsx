@@ -122,7 +122,7 @@ export default function TablaClase({ filas }: { filas: FilaClase[] }) {
           <li key={f.alumnoId} className="border-b border-marca-nieblaOscura py-2.5">
             <div className="flex items-baseline justify-between gap-3">
               {f.nombre ? (
-                <Link href={`/alumno/${f.alumnoId}`} className="min-w-0 truncate text-[14.5px] font-medium text-marca-tinta">
+                <Link prefetch={false} href={`/alumno/${f.alumnoId}`} className="min-w-0 truncate text-[14.5px] font-medium text-marca-tinta">
                   {f.nombre}
                 </Link>
               ) : (
@@ -183,7 +183,7 @@ export default function TablaClase({ filas }: { filas: FilaClase[] }) {
                 <tr key={f.alumnoId} className="hover:bg-[#FAFCFA]">
                   <td className="whitespace-nowrap border-b border-marca-nieblaOscura px-2.5 py-[9px]">
                     {f.nombre ? (
-                      <Link href={`/alumno/${f.alumnoId}`} className="font-medium text-marca-tinta hover:text-marca-verdeOsc hover:underline">
+                      <Link prefetch={false} href={`/alumno/${f.alumnoId}`} className="font-medium text-marca-tinta hover:text-marca-verdeOsc hover:underline">
                         {f.nombre}
                       </Link>
                     ) : (

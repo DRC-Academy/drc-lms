@@ -2,6 +2,7 @@ import { obtenerPerfil } from "@/lib/gestion";
 import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { progresoDiploma } from "@/lib/diploma";
 import PantallaDiploma from "@/components/diploma/PantallaDiploma";
+import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,13 @@ export const dynamic = "force-dynamic";
  * pantalla sale igual con su mensaje neutro.
  */
 export default async function PaginaDiploma() {
-  const { alumnoId } = await exigirAlumnoDeLaPagina();
-  const perfil = await obtenerPerfil(alumnoId);
+  const alumno = await exigirAlumnoDeLaPagina();
+  const perfil = await obtenerPerfil(alumno.alumnoId);
 
-  return <PantallaDiploma progreso={progresoDiploma(perfil, new Date())} />;
+  return (
+    <>
+      <MarcoDeLaPagina alumno={alumno} />
+      <PantallaDiploma progreso={progresoDiploma(perfil, new Date())} />
+    </>
+  );
 }

@@ -9,6 +9,7 @@ import { calcularDiploma, progresoDiploma } from "@/lib/diploma";
 import { conFoco } from "@/lib/foco";
 import Temario from "@/components/curso/Temario";
 import BannerDiploma from "@/components/BannerDiploma";
+import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
 
 export const dynamic = "force-dynamic";
 
@@ -32,10 +33,11 @@ export const dynamic = "force-dynamic";
  * en el servidor. Al cliente solo le llega qué pintar y qué abrir.
  */
 export default async function IndiceCurso({ params }: { params: { slug: string } }) {
-  // La tira de "estás revisando" la pone la cabecera, que vive en el
+  // La tira de "estás revisando" la pone la barra, que vive en el
   // layout: aquí solo hace falta de quién es el curso y qué colgar de
   // los enlaces para no perderlo al entrar en una lección.
-  const { alumnoId, paraEnlaces } = await alumnoDeLaPagina();
+  const alumno = await alumnoDeLaPagina();
+  const { alumnoId, paraEnlaces } = alumno;
 
   const curso = await cursoPorSlug(params.slug);
   if (!curso) notFound();
@@ -79,11 +81,12 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
   const temario = construirTemario(arbol, textosActuales().curso);
 
   return (
-    // La cabecera entera —navegación incluida— la pone el layout del
-    // curso, y es la misma que en el resto de las pantallas del alumno.
+    // La navegación la pone el layout común, y es la misma que en el
+    // resto de las pantallas del alumno.
     // Aquí ya no se pinta ninguna: la segunda que había era justo lo que
     // hacía desaparecer Inicio, Mi curso y Práctica al entrar.
     <div className="flex-1 bg-temario-fondo text-temario-tinta">
+      <MarcoDeLaPagina alumno={alumno} />
       <main className="mx-auto w-full max-w-[1240px] px-4 pb-14 pt-6 min-[900px]:px-11 min-[900px]:pb-16 min-[900px]:pt-10">
         {/* SIN CABECERA DE PÁGINA. Aquí había un bloque entero antes de
             llegar al contenido: «← Volver a la lección», el epígrafe

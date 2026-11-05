@@ -93,6 +93,7 @@ export default function SemanaClases({
           <FlechaSemana href={indice > 0 ? hrefSemana(indice - 1) : null} etiqueta={t.semanaAnterior} direccion="atras" />
           {indice > 0 ? (
             <Link
+              prefetch={false}
               href={hrefSemana(0)}
               scroll={false}
               className="inline-flex min-h-[48px] items-center rounded-full px-3 text-[14px] font-semibold text-marca-verdeOsc hover:text-marca-tinta"
@@ -381,8 +382,14 @@ export function FlechaSemana({ href, etiqueta, direccion }: { href: string | nul
       </span>
     );
   }
+  // SIN PREFETCH, como todo enlace que solo cambia la consulta. Queda por
+  // debajo del `loading.tsx` de su pantalla, y ahí Next no corta: pintaría la
+  // página y el marco enteros, con todas sus consultas, por el mero hecho de
+  // que la flecha esté a la vista. Con el clic basta: la semana de ahora
+  // sigue a la vista hasta que llega la otra.
   return (
     <Link
+      prefetch={false}
       href={href}
       aria-label={etiqueta}
       scroll={false}

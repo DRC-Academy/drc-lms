@@ -12,6 +12,7 @@ import { conFoco } from "@/lib/foco";
 import { comoFecha } from "@/lib/fechas";
 import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
 import Ficha from "@/components/progreso/Ficha";
+import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +75,8 @@ export default async function PaginaProgreso() {
   // Igual que "Para ti": el alumno de la sesión, o el que el equipo está
   // revisando. Esta pantalla es de solo lectura —no hay nada que
   // guardar— así que la revisión no necesita ninguna precaución extra.
-  const { alumnoId, paraEnlaces } = await exigirAlumnoDeLaPagina();
+  const alumno = await exigirAlumnoDeLaPagina();
+  const { alumnoId, paraEnlaces } = alumno;
 
   const [perfil, recorrido] = await Promise.all([
     obtenerPerfil(alumnoId),
@@ -149,6 +151,7 @@ export default async function PaginaProgreso() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <MarcoDeLaPagina alumno={alumno} />
 
       <Ficha
         nombre={perfil?.nombre ?? ""}

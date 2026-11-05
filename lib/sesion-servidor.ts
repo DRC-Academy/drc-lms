@@ -27,7 +27,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { NOMBRE_COOKIE, abrirSesion, type SesionAbierta } from "@/lib/sesion";
 import { sesionViva } from "@/lib/sesiones-lms";
-import { CABECERA_URL, PARAM_FOCO, leerFoco } from "@/lib/foco";
+import { CABECERA_URL, PARAM_FOCO, focoDeLaUrl, leerFoco } from "@/lib/foco";
 
 /**
  * Quién está pidiendo esta página, o null si no hay sesión válida.
@@ -122,8 +122,8 @@ export type Foco = {
  * ninguno. Interna: las pantallas llaman a `alumnoDeLaPagina`.
  *
  * Va en `cache()` por lo mismo que `sesionActual`: dentro de una misma
- * petición lo preguntan la página y el marco (`app/(alumno)/@marco`), y
- * sin esto se leerían las cabeceras y la cookie dos veces.
+ * petición puede preguntarlo más de una pieza, y sin esto se leerían las
+ * cabeceras y la cookie otra vez.
  */
 const focoActual = cache(async (): Promise<Foco> => {
   const sesion = await exigirSesion();
@@ -161,9 +161,9 @@ const focoActual = cache(async (): Promise<Foco> => {
 // POR QUÉ HACÍA FALTA (auditoría del 30/09/2026). El layout de
 // `(alumno)` resolvía el alumno por su cuenta, y Next reutiliza un layout
 // al navegar entre páginas que cuelgan de él: la barra de una ficha se
-// quedaba pegada a la página de otra. Ahora el marco es un slot
-// (`app/(alumno)/@marco`), que se renderiza con cada URL, y pregunta
-// aquí lo mismo que la página, en la misma petición.
+// quedaba pegada a la página de otra. Ahora la barra recibe los datos de
+// la propia página (`MarcoDeLaPagina`) con el alumno que responde aquí, y
+// no pinta nada que no sea del alumno de la URL actual (`lib/marco.ts`).
 // ---------------------------------------------------------------
 
 /**
@@ -179,6 +179,31 @@ export async function alumnoDeLaPagina(idDeLaRuta?: string): Promise<Foco> {
     return { sesion, alumnoId: sesion.alumnoId, revisando: false, paraEnlaces: null };
   }
   return { sesion, alumnoId: idDeLaRuta, revisando: true, paraEnlaces: idDeLaRuta };
+}
+
+/**
+ * La misma respuesta, para el layout, que no recibe parámetros: la saca de
+ * la URL que le pasa el middleware. Sin sesión, null, Y NUNCA REDIRIGE:
+ * eso lo hace la página, que es la que puede. Por lo mismo, a un alumno se
+ * le devuelve siempre el suyo sin mirar la URL.
+ *
+ * Es solo para pintar la barra en la primera carga. Next puede reutilizar
+ * lo que devuelva con otra URL más tarde: lo que se pinta de verdad lo
+ * decide `lib/marco.ts` comparando el alumno de los datos con la URL de ahora.
+ */
+export async function alumnoDeLaUrl(): Promise<Foco | null> {
+  const sesion = await sesionActual();
+  if (!sesion) return null;
+
+  if (sesion.rol === "alumno") {
+    return { sesion, alumnoId: sesion.alumnoId, revisando: false, paraEnlaces: null };
+  }
+
+  const url = headers().get(CABECERA_URL);
+  const direccion = url ? new URL(url) : null;
+  const pedido = direccion ? focoDeLaUrl(direccion.pathname, direccion.searchParams) : null;
+  if (!pedido) return { sesion, alumnoId: "", revisando: false, paraEnlaces: null };
+  return { sesion, alumnoId: pedido, revisando: true, paraEnlaces: pedido };
 }
 
 /**

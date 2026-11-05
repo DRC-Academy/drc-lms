@@ -4,6 +4,7 @@ import { conFoco } from "@/lib/foco";
 import { idiomaActual, textosActuales } from "@/lib/idioma-servidor";
 import { enlaceWhatsAppSala } from "@/lib/soporte";
 import { BotonWhatsApp } from "@/components/clases/autoservicio/Piezas";
+import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,13 @@ export const dynamic = "force-dynamic";
  * en pie. Lo que necesita es el enlace, y eso se pide por WhatsApp.
  */
 export default async function SinEnlace() {
-  const { paraEnlaces } = await alumnoDeLaPagina();
+  const alumno = await alumnoDeLaPagina();
+  const { paraEnlaces } = alumno;
   const t = textosActuales().clases;
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">
+      <MarcoDeLaPagina alumno={alumno} />
       <main className="mx-auto w-full max-w-contenido flex-1 px-4 pb-8 pt-[18px] min-[900px]:px-9 min-[900px]:pb-11 min-[900px]:pt-8">
         <section className="entra flex flex-col items-start gap-3 rounded-[16px] border border-marca-borde bg-white p-5 shadow-[0_10px_24px_rgba(18,33,26,0.07)] min-[900px]:rounded-[20px] min-[900px]:p-8">
           <h1 className="font-display text-[22px] font-bold leading-tight text-marca-tinta min-[900px]:text-[28px]">{t.sinSalaTitulo}</h1>

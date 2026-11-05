@@ -3,9 +3,9 @@
 //
 // Lo que necesitan la barra, «Cómo vas», la tira de revisión y el
 // perfil, calculado para el alumno que ya ha resuelto
-// `alumnoDeLaPagina`. Vivía dentro del layout de `(alumno)`, que lo
-// resolvía por su cuenta; ahora lo llama el slot `@marco`, en la misma
-// petición que la página, así que los dos hablan del mismo alumno.
+// `alumnoDeLaPagina`. Lo llama cada página (`MarcoDeLaPagina`), en su
+// misma petición, así que las dos hablan del mismo alumno; y el layout en
+// la primera carga, para que el HTML ya traiga la barra.
 //
 // No duplica consultas: `obtenerPerfil`, las estadísticas y el profesor
 // van por `cache()` y la página las comparte.
@@ -19,7 +19,7 @@ import { nivelDelAlumno } from "@/lib/estimacion";
 import { comoFecha } from "@/lib/fechas";
 import { estadisticasDelAlumno } from "@/lib/estadisticas-servidor";
 import type { Foco } from "@/lib/sesion-servidor";
-import type { DatosNavegacion } from "@/components/Navegacion";
+import type { DatosNavegacion } from "@/components/marco/PiezasDelMarco";
 
 export async function datosDelMarco(alumno: Foco): Promise<DatosNavegacion> {
   const { alumnoId, revisando } = alumno;
@@ -30,9 +30,10 @@ export async function datosDelMarco(alumno: Foco): Promise<DatosNavegacion> {
       )[0]
     : undefined;
 
-  // Se quedarían viejas si nada volviera a pedirlas, pero el slot se
-  // renderiza con cada navegación y con cada `router.refresh()` —cada
-  // intento de ejercicio pide uno (`FlujoEjercicios`)—.
+  // Se quedarían viejas si nada volviera a pedirlas, pero viajan con cada
+  // página y con cada `router.refresh()`. Los ejercicios que se responden
+  // sin salir de la pantalla los suma el navegador
+  // (`components/estadisticas/ejercicios-en-vivo.ts`).
   const estadisticas = alumnoId ? await estadisticasDelAlumno(alumnoId, perfil, principal) : null;
 
   return {
