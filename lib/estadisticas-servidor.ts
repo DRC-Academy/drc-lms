@@ -31,17 +31,26 @@ import { nivelMostrado } from "@/lib/estimacion";
 import type { PerfilAlumno } from "@/lib/data";
 import type { EstadisticasAlumno } from "@/lib/estadisticas";
 
-export async function estadisticasDelAlumno(
-  alumnoId: string,
-  perfil: PerfilAlumno | null,
-  principal: EstadoCurso | undefined
-): Promise<EstadisticasAlumno> {
-  const [clases, ejercicios, bloques, profe] = await Promise.all([
+/**
+ * Las cuatro lecturas de las estadísticas, que no dependen ni del perfil ni
+ * del curso: quien las lanza junto a su primera ola no las espera después.
+ * Todas van por `cache()`, así que no se repiten dentro del mismo render.
+ */
+export function lecturasDeEstadisticas(alumnoId: string) {
+  return Promise.all([
     obtenerClasesContadas(alumnoId),
     ejerciciosHechos(alumnoId),
     bloquesTerminados(alumnoId),
     profesorDelAlumno(alumnoId),
   ]);
+}
+
+export async function estadisticasDelAlumno(
+  alumnoId: string,
+  perfil: PerfilAlumno | null,
+  principal: EstadoCurso | undefined
+): Promise<EstadisticasAlumno> {
+  const [clases, ejercicios, bloques, profe] = await lecturasDeEstadisticas(alumnoId);
 
   const diploma = calcularDiploma(principal?.completadas ?? 0, principal?.total ?? 0);
   const curso =

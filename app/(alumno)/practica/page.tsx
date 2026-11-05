@@ -17,7 +17,7 @@ import {
   leerProgresoAlumno,
   leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
-import { cursosDelInicio } from "@/lib/cursos-servidor";
+import { cursosDelInicio, precargarCursosDelAlumno } from "@/lib/cursos-servidor";
 import { comoFecha } from "@/lib/fechas";
 import PanelPractica from "@/components/PanelPractica";
 import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
@@ -63,15 +63,18 @@ export default async function PaginaPractica() {
   const alumno = await exigirAlumnoDeLaPagina();
   const { sesion, alumnoId } = alumno;
 
-  const [datos, progreso, generadosCrudos, ultimaGeneracion] = await Promise.all([
+  // Lo que más abajo necesitan el profesor y la mascota sale ya en esta ola:
+  // no depende de nada de lo que hay aquí, y en fila eran dos esperas más.
+  const [datos, progreso, generadosCrudos, ultimaGeneracion, profesorActual] = await Promise.all([
     obtenerAlumno(alumnoId),
     leerProgresoAlumno(alumnoId),
     // Con el rol, igual que en la ficha: los bloques que el equipo
     // genera para revisar solo salen en la lista de quien los generó.
     leerBloquesGenerados(alumnoId, sesion.rol === "admin"),
     leerUltimaGeneracion(alumnoId),
+    profesorDelAlumno(alumnoId),
+    precargarCursosDelAlumno(alumnoId),
   ]);
-
 
   // LOS BLOQUES, EN EL IDIOMA EN EL QUE SE ESTÁ LEYENDO.
   //
@@ -83,19 +86,9 @@ export default async function PaginaPractica() {
   //
   // Esto no encarga ninguna: lee de una sola vez las que ya están
   // hechas. Lo que falte se queda en su idioma, igual que antes.
-  const traducidos = await bloquesEnIdioma(generadosCrudos, idiomaActual());
-
   // Sin ficha en Gestión no hay perfil del que generar nada. No es un
   // 404: el alumno existe, es su ficha la que falta.
   const perfil = datos?.perfil ?? null;
-  // El profesor que se nombra en la pantalla: el de la ficha, con su nombre visible.
-  // Sin profesor vigente, tampoco el que quedó estampado en los bloques.
-  const profesor = (await profesorDelAlumno(alumnoId))?.nombre ?? "";
-  const generados = profesor ? traducidos : traducidos.map(sinProfesorDeOrigen);
-  const ultimaClase = datos?.ultimaClase ?? null;
-
-  const t = textosActuales().practica;
-  const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion, t);
 
   // Solo para que la cabecera pueda pintar "Mi curso" sin cambiar de
   // forma entre pantallas. EL MISMO CURSO Y LA MISMA LECCIÓN QUE EN EL
@@ -103,16 +96,22 @@ export default async function PaginaPractica() {
   // mientras el inicio ponía primero el de actividad más reciente, y un
   // alumno con dos cursos veía la pestaña apuntar a uno u otro según la
   // pantalla. `cursosDelInicio` es lo que decide allí, y decide aquí.
-  const principal = perfil
-    ? (
-        await cursosDelInicio(
-          alumnoId,
-          perfil.plan,
-          nivelDelAlumno(alumnoId, perfil),
-          comoFecha(perfil.fechaInicio)
-        )
-      )[0]
-    : undefined;
+  const [traducidos, estadosCurso] = await Promise.all([
+    bloquesEnIdioma(generadosCrudos, idiomaActual()),
+    perfil
+      ? cursosDelInicio(alumnoId, perfil.plan, nivelDelAlumno(alumnoId, perfil), comoFecha(perfil.fechaInicio))
+      : Promise.resolve([]),
+  ]);
+  const principal = estadosCurso[0];
+
+  // El profesor que se nombra en la pantalla: el de la ficha, con su nombre visible.
+  // Sin profesor vigente, tampoco el que quedó estampado en los bloques.
+  const profesor = profesorActual?.nombre ?? "";
+  const generados = profesor ? traducidos : traducidos.map(sinProfesorDeOrigen);
+  const ultimaClase = datos?.ultimaClase ?? null;
+
+  const t = textosActuales().practica;
+  const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion, t);
 
   return (
     <div className="flex min-h-screen flex-col bg-marca-niebla">

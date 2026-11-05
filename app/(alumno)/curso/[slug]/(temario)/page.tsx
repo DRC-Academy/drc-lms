@@ -2,7 +2,7 @@ import { nivelDelAlumno } from "@/lib/estimacion";
 import { notFound, redirect } from "next/navigation";
 import { alumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { obtenerPerfil } from "@/lib/gestion";
-import { arbolDelCurso, cursoPorSlug, cursosAsignados, fechaDelDrip } from "@/lib/cursos-servidor";
+import { arbolDelCurso, cursoPorSlug, cursosAsignados, fechaDelDrip, precargarCursosDelAlumno } from "@/lib/cursos-servidor";
 import { construirTemario } from "@/lib/temario";
 import { textosActuales } from "@/lib/idioma-servidor";
 import { calcularDiploma, progresoDiploma } from "@/lib/diploma";
@@ -39,7 +39,13 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
   const alumno = await alumnoDeLaPagina();
   const { alumnoId, paraEnlaces } = alumno;
 
-  const curso = await cursoPorSlug(params.slug);
+  // Sin alumno no hay nada suyo que leer. Con alumno, sus cursos, su drip y
+  // su árbol solo necesitan esto de la base: el resto es catálogo, en caché.
+  const [curso, perfil] = await Promise.all([
+    cursoPorSlug(params.slug),
+    alumnoId ? obtenerPerfil(alumnoId) : Promise.resolve(null),
+    alumnoId ? precargarCursosDelAlumno(alumnoId) : Promise.resolve(),
+  ]);
   if (!curso) notFound();
 
   // ---------------------------------------------------------------
@@ -61,7 +67,6 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
   // qué vale `alumnoId`, y multiplicar ramas es cómo se consigue que el
   // equipo acabe viendo algo distinto de lo que ve el alumno.
   // ---------------------------------------------------------------
-  const perfil = alumnoId ? await obtenerPerfil(alumnoId) : null;
 
   // Solo los cursos de su plan. Sin esto el slug sería decorativo y
   // cualquiera se leería el temario de los otros niveles. Se aplica

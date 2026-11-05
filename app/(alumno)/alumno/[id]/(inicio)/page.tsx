@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { obtenerAlumno, obtenerCalendario, obtenerExcepciones } from "@/lib/gestion";
 import { proximaDelAlumno, semanasDelAlumno, ventanaAbierta } from "@/lib/clases";
 import { conFoco } from "@/lib/foco";
-import { estadisticasDelAlumno } from "@/lib/estadisticas-servidor";
+import { estadisticasDelAlumno, lecturasDeEstadisticas } from "@/lib/estadisticas-servidor";
 import { formatearFecha } from "@/lib/perfil";
 import { calcularTarjeta } from "@/lib/modos";
 import { idiomaActual, textosActuales } from "@/lib/idioma-servidor";
@@ -18,7 +18,7 @@ import {
   leerProgresoAlumno,
   leerUltimaGeneracion,
 } from "@/lib/progreso-servidor";
-import { cursosDelInicio } from "@/lib/cursos-servidor";
+import { cursosDelInicio, precargarCursosDelAlumno } from "@/lib/cursos-servidor";
 import { comoFecha } from "@/lib/fechas";
 import AvatarProfesor from "@/components/AvatarProfesor";
 import BannerCurso, { cursoTerminado } from "@/components/BannerCurso";
@@ -90,6 +90,10 @@ export default async function PerfilAlumno({
     obtenerExcepciones(alumnoId),
     // El profesor que se nombra en toda la pantalla: el de la ficha.
     profesorDelAlumno(alumnoId),
+    // Lo que más abajo piden sus cursos y las estadísticas no depende del
+    // plan ni del nivel: sale ya en esta ola y luego lo encuentran hecho.
+    precargarCursosDelAlumno(alumnoId),
+    lecturasDeEstadisticas(alumnoId),
   ]);
   const calendario = conProfesorDeLaFicha(calendarioCrudo, profe);
   const onboarding = await pendienteTutorial;
