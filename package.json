@@ -21,6 +21,7 @@
     "mascota:parches": "node mascota/scripts/py.js parches.py",
     "mascota:optimizar": "node mascota/scripts/optimizar.js",
     "mascota:rehacer": "npm run mascota:variantes && npm run mascota:base && npm run mascota:parches && npm run mascota:optimizar",
+    "profesores:examen": "npx --yes tsx --require ./scripts/sin-server-only.cjs --require ./scripts/sin-cache-react.cjs scripts/comprobar-examen-profesores.ts",
     "demo:crear": "npx --yes tsx --require ./scripts/sin-server-only.cjs --require ./scripts/sin-cache-react.cjs scripts/demo.ts crear",
     "demo:rejuvenecer": "npx --yes tsx --require ./scripts/sin-server-only.cjs --require ./scripts/sin-cache-react.cjs scripts/demo.ts rejuvenecer",
     "demo:borrar": "npx --yes tsx --require ./scripts/sin-server-only.cjs --require ./scripts/sin-cache-react.cjs scripts/demo.ts borrar",
