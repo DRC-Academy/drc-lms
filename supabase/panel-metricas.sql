@@ -242,7 +242,9 @@ insert into public.metricas_exclusiones (alumno_id, motivo) values
   ('s_1784076440609',                      'Cuenta de prueba del equipo, profesor t1 (sin producto, Meet «aaa»)'),
   ('s_1785241971018',                      'Cuenta de prueba del equipo, profesor t1'),
   ('e7cc5da1-d446-4c17-9238-79b868d9bb6f', 'Cuenta de prueba del equipo, profesor t1'),
-  ('s_1784924446226',                      'Cuenta de prueba del equipo, profesor t1')
+  ('s_1784924446226',                      'Cuenta de prueba del equipo, profesor t1'),
+  -- Insertada a mano el 05/11/2026: el mismo alumno de t1 que faltaba.
+  ('s_1793044631420',                      'Cuenta de pruebas de Facundo, profesor t1')
 on conflict (alumno_id) do nothing;
 
 -- La lista entera, con la fecha de alta, para la página /exclusiones.
