@@ -27,6 +27,7 @@ const DEL_PANEL = [
   ...archivos(join(RAIZ, "components", "profesor")),
   join(RAIZ, "lib", "panel-profesor.ts"),
   join(RAIZ, "lib", "panel-profesor-ficha.ts"),
+  join(RAIZ, "lib", "panel-profesor-cursos.ts"),
   join(RAIZ, "lib", "panel-profesor-reglas.ts"),
 ].filter(esCodigo);
 
@@ -102,6 +103,11 @@ describe("el panel del profesor", () => {
     expect(rutas).toContain("app/profesor/page.tsx");
     expect(rutas).toContain("app/profesor/alumno/[alumnoId]/page.tsx");
     expect(rutas).toContain("lib/panel-profesor.ts");
+    expect(rutas).toContain("app/profesor/cursos/page.tsx");
+    expect(rutas).toContain("app/profesor/cursos/[slug]/page.tsx");
+    expect(rutas).toContain("app/profesor/cursos/[slug]/[leccion]/page.tsx");
+    expect(rutas).toContain("lib/panel-profesor-cursos.ts");
+    expect(rutas).toContain("components/profesor/LeccionProfesor.tsx");
   });
 
   it("todas sus páginas, rutas y acciones pasan por el guard", () => {
@@ -238,6 +244,50 @@ describe("la ficha", () => {
     const pagina = leer(join(RAIZ, "app", "profesor", "alumno", "[alumnoId]", "page.tsx"));
     expect(pagina.indexOf("exigirAlumnoDelProfesor(params")).toBeGreaterThan(-1);
     expect(pagina.indexOf("exigirAlumnoDelProfesor(params")).toBeLessThan(pagina.indexOf("cargarFichaDelAlumno(profesor"));
+  });
+});
+
+describe("los cursos del panel", () => {
+  const LIB = sinComentarios(leer(join(RAIZ, "lib", "panel-profesor-cursos.ts")));
+  const PANTALLAS = archivos(join(RAIZ, "components", "profesor")).concat(archivos(join(RAIZ, "app", "profesor", "cursos")));
+
+  it("no miran el plan, el drip ni el progreso de nadie, y no escriben", () => {
+    expect(LIB).not.toMatch(/cursosAsignados|cursosDelInicio|fechaDelDrip|precargarCursosDelAlumno|estadoDelCurso|ejerciciosPorLeccion|completarLeccion|guardarIntento|progreso_lecciones|intentos_ejercicio/);
+    expect(LIB).not.toMatch(/baseLms|\.insert\(|\.upsert\(|\.update\(|\.delete\(/);
+    expect(LIB).toMatch(/const SIN_ALUMNO = "";/);
+    expect(LIB).toMatch(/const SIN_ESPERA = null;/);
+  });
+
+  it("cada página pasa por el guard antes de leer el curso", () => {
+    const paginas: [string[], string][] = [
+      [["app", "profesor", "cursos", "page.tsx"], "cursosParaRevisar(profesor"],
+      [["app", "profesor", "cursos", "[slug]", "page.tsx"], "indiceParaRevisar(profesor"],
+      [["app", "profesor", "cursos", "[slug]", "[leccion]", "page.tsx"], "leccionParaRevisar(profesor"],
+    ];
+    for (const [ruta, lectura] of paginas) {
+      const codigo = leer(join(RAIZ, ...ruta));
+      expect(codigo.indexOf("exigirProfesor(")).toBeGreaterThan(-1);
+      expect(codigo.indexOf("exigirProfesor(")).toBeLessThan(codigo.indexOf(lectura));
+    }
+  });
+
+  it("las lecturas solo piden los tipos que crea el guard", () => {
+    for (const nombre of ["cursosParaRevisar", "indiceParaRevisar", "leccionParaRevisar"]) {
+      expect(LIB).toMatch(new RegExp(`${nombre}\\(\\s*_profesor: ProfesorAutorizado`));
+    }
+  });
+
+  it("ninguna pantalla manda nada a la API ni lleva a las pantallas del alumno", () => {
+    const malos = PANTALLAS.filter(esCodigo)
+      .filter((f) => /\/api\/|fetch\(|["'`]\/curso\/|BotonCompletar|FlujoEjercicios|registrarIntento|alSuceso=/.test(sinComentarios(leer(f))))
+      .map(rel);
+    expect(malos).toEqual([]);
+  });
+
+  it("la lección usa el visor de siempre, sin mascota", () => {
+    const leccion = leer(join(RAIZ, "components", "profesor", "LeccionProfesor.tsx"));
+    expect(leccion).toMatch(/<VisorEjercicios[^>]*\bsinMascota\b/);
+    expect(leccion).toMatch(/<ProveedorIdioma idioma="es">/);
   });
 });
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import MarcoProfesor from "@/components/profesor/MarcoProfesor";
 import ListaAlumnos from "@/components/profesor/ListaAlumnos";
 import { nivelMostrado } from "@/lib/estimacion";
-import { alumnosDelProfesor, exigirProfesor, rutaDelPanel, ultimosAccesos } from "@/lib/panel-profesor";
+import { alumnosDelProfesor, exigirProfesor, pestanasDelPanel, rutaDelPanel, ultimosAccesos } from "@/lib/panel-profesor";
 import { resumenesDeLaLista } from "@/lib/panel-profesor-ficha";
 import { ordenarPorProximaClase, textoUltimoAcceso } from "@/lib/panel-profesor-reglas";
 
@@ -44,7 +44,7 @@ export default async function MisAlumnos({ searchParams }: { searchParams: { com
   );
 
   return (
-    <MarcoProfesor nombre={profesor.nombre} comoAdmin={profesor.comoAdmin}>
+    <MarcoProfesor nombre={profesor.nombre} comoAdmin={profesor.comoAdmin} pestanas={pestanasDelPanel(profesor, "alumnos")}>
       <h1 className="font-display text-[28px] font-bold leading-[1.1] tracking-[-0.01em] text-marca-tinta lg:text-[34px]">Mis alumnos</h1>
       <p className="mt-2 text-[14.5px] leading-[1.5] text-marca-tintaMedia">
         {filas.length === 1 ? "Tienes 1 alumno asignado." : `Tienes ${filas.length} alumnos asignados.`}

@@ -79,11 +79,23 @@ describe("middleware con la cookie del profesor", () => {
     cookies = { [NOMBRE_COOKIE_PROFESOR]: await crearCookieProfesor(profesor, ID) };
   });
 
-  it.each(["/profesor", "/profesor/alumno/a1", "/profesor/alumno/a1?como=tB"])("deja pasar %s", async (ruta) => {
+  it.each([
+    "/profesor",
+    "/profesor/alumno/a1",
+    "/profesor/alumno/a1?como=tB",
+    "/profesor/cursos",
+    "/profesor/cursos/fce",
+    "/profesor/cursos/fce/l1",
+    "/lecciones/foto.png",
+  ])("deja pasar %s", async (ruta) => {
     expect(pasa(await middleware(pedir(ruta, cookies)))).toBe(true);
   });
 
-  it.each(["/", "/accesos-profesores", "/garantia", "/valoraciones", "/entradas", "/exclusiones", "/alumno/a1", "/clases", "/progreso", "/practica", "/curso/x", "/profesorado"])(
+  it("sin cookie, las imágenes de las lecciones siguen detrás de la puerta", async () => {
+    expect(pasa(await middleware(pedir("/lecciones/foto.png", {})))).toBe(false);
+  });
+
+  it.each(["/", "/accesos-profesores", "/garantia", "/valoraciones", "/entradas", "/exclusiones", "/alumno/a1", "/clases", "/progreso", "/practica", "/curso/x", "/curso/x/l1", "/profesorado", "/lecciones", "/lecciones-x/a.png", "/lecciones/../garantia"])(
     "%s le devuelve a su panel",
     async (ruta) => {
       const r = await middleware(pedir(ruta, cookies));

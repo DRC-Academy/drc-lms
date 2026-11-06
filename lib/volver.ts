@@ -70,6 +70,15 @@ export function esRutaDeProfesor(ruta: string): boolean {
   return ruta === "/profesor" || ruta.startsWith("/profesor/") || ruta.startsWith("/profesor?");
 }
 
+/**
+ * Las imágenes de las lecciones (`public/lecciones/`). Van detrás de la
+ * puerta, y el profesor las necesita para revisar los cursos. No hay más
+ * rutas bajo este prefijo: son ficheros, sin datos de nadie.
+ */
+export function esMaterialDelCurso(ruta: string): boolean {
+  return ruta.startsWith("/lecciones/");
+}
+
 /** Lo que ve un profesor: su panel y su pantalla de entrar. Sin la mascota del alumno. */
 export function esPantallaDeProfesor(ruta: string): boolean {
   return ruta === "/profes" || esRutaDeProfesor(ruta);

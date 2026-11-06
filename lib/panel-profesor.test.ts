@@ -280,6 +280,7 @@ describe("exigirProfesor sin cookie de profesor", () => {
       const profesor = await exigirProfesor("tA");
       expect(profesor).toMatchObject({ teacherId: "tA", comoAdmin: true });
       expect(rutaDelPanel(profesor, "/profesor")).toBe("/profesor?como=tA");
+      expect(rutaDelPanel(profesor, "/profesor/cursos/fce?modulo=m1")).toBe("/profesor/cursos/fce?modulo=m1&como=tA");
     });
 
     it("tiene las mismas fronteras: solo los alumnos de ese profesor", async () => {

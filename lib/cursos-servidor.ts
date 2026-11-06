@@ -139,7 +139,7 @@ async function leerCatalogo<T, R>(
 }
 
 /** Los cursos activos, que son 7. Null si la lectura falló. */
-const cursosActivos = cache(
+export const cursosActivos = cache(
   (): Promise<CursoFila[] | null> =>
     leerCatalogo(
       ["cursos"],

@@ -28,7 +28,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { NOMBRE_COOKIE, NOMBRE_COOKIE_PROFESOR, abrirSesion, abrirSesionProfesor } from "@/lib/sesion";
 import { CABECERA_URL } from "@/lib/foco";
-import { destinoSeguro, esRutaDeProfesor } from "@/lib/volver";
+import { destinoSeguro, esMaterialDelCurso, esRutaDeProfesor } from "@/lib/volver";
 
 /**
  * Lo único a lo que se llega sin haber entrado.
@@ -159,11 +159,12 @@ export async function middleware(peticion: NextRequest) {
   const sesion = await abrirSesion(peticion.cookies.get(NOMBRE_COOKIE)?.value);
   if (sesion) return conUrl(peticion);
 
-  // LA COOKIE DEL PROFESOR SOLO ABRE SU PANEL. Con ella, cualquier otra
-  // pantalla le devuelve al suyo y cualquier `/api` sigue el camino de
-  // quien no tiene sesión. Dentro, la decisión la toma `exigirProfesor`.
+  // LA COOKIE DEL PROFESOR SOLO ABRE SU PANEL Y LAS IMÁGENES DE LAS LECCIONES
+  // QUE REVISA DESDE ÉL. Con ella, cualquier otra pantalla le devuelve al suyo
+  // y cualquier `/api` sigue el camino de quien no tiene sesión. Dentro, la
+  // decisión la toma `exigirProfesor`.
   const profesor = await abrirSesionProfesor(peticion.cookies.get(NOMBRE_COOKIE_PROFESOR)?.value);
-  if (profesor && esRutaDeProfesor(pathname)) return conUrl(peticion);
+  if (profesor && (esRutaDeProfesor(pathname) || esMaterialDelCurso(pathname))) return conUrl(peticion);
   if (profesor && !pathname.startsWith("/api/")) return NextResponse.redirect(new URL("/profesor", peticion.url));
 
   // A la API se le contesta con un 401, no con una redirección: quien

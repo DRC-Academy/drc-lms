@@ -217,6 +217,7 @@ export default function VisorEjercicios({
   notaAlPie,
   alSuceso,
   alEstado,
+  sinMascota = false,
 }: {
   ejercicios: EjercicioUnificado[];
   /**
@@ -241,6 +242,8 @@ export default function VisorEjercicios({
   alSuceso?: (suceso: SucesoVisor) => void;
   /** Por dónde va, en cada cambio. Ver `EstadoVisor`. */
   alEstado?: (estado: EstadoVisor) => void;
+  /** La corrección sin el hueco de la mascota: el panel del profesor no la lleva. */
+  sinMascota?: boolean;
 }) {
   const { t: todos } = usarIdioma();
   const t = todos.ejercicios;
@@ -1001,6 +1004,7 @@ export default function VisorEjercicios({
           cuerpo={dialogo.cuerpo}
           aria={tm.aria}
           alMedirDock={alMedirDock}
+          sinMascota={sinMascota}
           acciones={
             !yaRespondido && ejercicio.pista && estado.pista === null ? (
               <button

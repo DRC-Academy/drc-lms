@@ -134,6 +134,9 @@ const SIN_ALUMNO: Record<string, string> = {
   "app/profes/page.tsx": "Pantalla de entrar de los profesores, sin sesión. Pública como /acceso.",
   "app/profesor/page.tsx": "Panel del profesor: no es un alumno. Su guard es exigirProfesor.",
   "app/profesor/alumno/[alumnoId]/page.tsx": "Panel del profesor: no es un alumno. Su guard es exigirAlumnoDelProfesor.",
+  "app/profesor/cursos/page.tsx": "Panel del profesor: no es un alumno. Su guard es exigirProfesor.",
+  "app/profesor/cursos/[slug]/page.tsx": "Panel del profesor: no es un alumno. Su guard es exigirProfesor.",
+  "app/profesor/cursos/[slug]/[leccion]/page.tsx": "Panel del profesor: no es un alumno. Su guard es exigirProfesor.",
 };
 
 /** Páginas y acciones solo del equipo: el equipo nunca se bloquea. */

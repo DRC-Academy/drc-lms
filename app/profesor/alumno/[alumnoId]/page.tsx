@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import MarcoProfesor from "@/components/profesor/MarcoProfesor";
 import FichaAlumno from "@/components/profesor/FichaAlumno";
-import { exigirAlumnoDelProfesor, rutaDelPanel } from "@/lib/panel-profesor";
+import { exigirAlumnoDelProfesor, pestanasDelPanel, rutaDelPanel } from "@/lib/panel-profesor";
 import { cargarFichaDelAlumno } from "@/lib/panel-profesor-ficha";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export default async function PaginaAlumno({
   const ficha = await cargarFichaDelAlumno(profesor, alumno);
 
   return (
-    <MarcoProfesor nombre={profesor.nombre} comoAdmin={profesor.comoAdmin}>
+    <MarcoProfesor nombre={profesor.nombre} comoAdmin={profesor.comoAdmin} pestanas={pestanasDelPanel(profesor, "alumnos")}>
       <FichaAlumno ficha={ficha} volverHref={rutaDelPanel(profesor, "/profesor")} />
     </MarcoProfesor>
   );

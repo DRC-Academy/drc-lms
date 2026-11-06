@@ -181,7 +181,13 @@ export async function exigirAlumnoDelProfesor(
  * sin él, el admin volvería a su pestaña al primer clic.
  */
 export function rutaDelPanel(profesor: ProfesorAutorizado, ruta: string): string {
-  return profesor.comoAdmin ? `${ruta}?como=${encodeURIComponent(profesor.teacherId)}` : ruta;
+  if (!profesor.comoAdmin) return ruta;
+  return `${ruta}${ruta.includes("?") ? "&" : "?"}como=${encodeURIComponent(profesor.teacherId)}`;
+}
+
+/** Las dos pestañas del panel, con sus enlaces ya hechos. */
+export function pestanasDelPanel(profesor: ProfesorAutorizado, activa: "alumnos" | "cursos") {
+  return { alumnos: rutaDelPanel(profesor, "/profesor"), cursos: rutaDelPanel(profesor, "/profesor/cursos"), activa };
 }
 
 /**

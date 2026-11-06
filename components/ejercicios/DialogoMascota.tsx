@@ -83,6 +83,7 @@ export default function DialogoMascota({
   acciones,
   aria,
   alMedirDock,
+  sinMascota = false,
 }: {
   /** Cambia con cada cosa que dice: con ella vuelve a escribirse. */
   clave: string;
@@ -96,6 +97,8 @@ export default function DialogoMascota({
   aria: string;
   /** Cada vez que el dock de móvil cambia de alto (0 al cerrarse). */
   alMedirDock?: (alto: number) => void;
+  /** Solo el cuadro: sin el hueco de la mascota, sin su pico y sin apoyarse en la esquina. */
+  sinMascota?: boolean;
 }) {
   const reducido = useMovimientoReducido();
   const [escritas, setEscritas] = useState(0);
@@ -162,12 +165,14 @@ export default function DialogoMascota({
       className="relative min-w-0 flex-1 rounded-[16px] border border-marca-borde bg-marca-niebla font-sans"
     >
       {/* El pico, hacia la mascota. */}
-      <span
-        aria-hidden
-        className={`absolute -left-[7px] h-3 w-3 rotate-45 border-b border-l border-marca-borde bg-marca-niebla ${
-          enDock ? "bottom-5" : "bottom-7"
-        }`}
-      />
+      {!sinMascota && (
+        <span
+          aria-hidden
+          className={`absolute -left-[7px] h-3 w-3 rotate-45 border-b border-l border-marca-borde bg-marca-niebla ${
+            enDock ? "bottom-5" : "bottom-7"
+          }`}
+        />
+      )}
       <div
         className={
           enDock
@@ -198,13 +203,15 @@ export default function DialogoMascota({
           habla, se pliega: ella está en el dock y aquí quedaría un hueco
           en blanco. */}
       <div
-        className={`-mb-6 -ml-3 mt-6 flex items-end gap-3 min-[900px]:-mb-8 min-[900px]:-ml-7 min-[900px]:mt-8 min-[900px]:gap-4 ${
-          frase !== null ? "max-[899px]:hidden" : ""
-        }`}
+        className={`${
+          sinMascota
+            ? "mt-6 flex items-end gap-3 min-[900px]:mt-8 min-[900px]:gap-4"
+            : "-mb-6 -ml-3 mt-6 flex items-end gap-3 min-[900px]:-mb-8 min-[900px]:-ml-7 min-[900px]:mt-8 min-[900px]:gap-4"
+        } ${frase !== null ? "max-[899px]:hidden" : ""}`}
       >
-        <AnclaMascota id={ANCLA_EJERCICIO} prioridad={PRIORIDAD} tamaño={TAMAÑO} lado="izq" />
+        {!sinMascota && <AnclaMascota id={ANCLA_EJERCICIO} prioridad={PRIORIDAD} tamaño={TAMAÑO} lado="izq" />}
         {frase !== null ? (
-          <div className="mb-8 hidden min-w-0 flex-1 min-[900px]:flex">{cuadro(false)}</div>
+          <div className={`${sinMascota ? "" : "mb-8 "}hidden min-w-0 flex-1 min-[900px]:flex`}>{cuadro(false)}</div>
         ) : (
           acciones && <div className="mb-6 flex min-w-0 flex-1 items-center min-[900px]:mb-8">{acciones}</div>
         )}
@@ -228,7 +235,7 @@ export default function DialogoMascota({
             style={{ bottom: "max(var(--nav-inferior, 0px), env(safe-area-inset-bottom))" }}
           >
             <div className="mx-auto flex max-w-[760px] items-end gap-3">
-              <AnclaMascota id={ANCLA_DOCK} prioridad={PRIORIDAD + 1} tamaño={TAMAÑO} lado="izq" />
+              {!sinMascota && <AnclaMascota id={ANCLA_DOCK} prioridad={PRIORIDAD + 1} tamaño={TAMAÑO} lado="izq" />}
               {cuadro(true)}
             </div>
           </div>,
