@@ -21,15 +21,28 @@
 /**
  * Solo se dejan pasar iframes de estos anfitriones.
  *
- * Podbean está aquí porque es donde vive TODO el audio del curso: los
- * 104 iframes del export son suyos, y son los ejercicios de listening.
- * Sin esta línea, el alumno lee "escucha el audio y responde" y no hay
- * nada que escuchar.
+ * Podbean sigue aquí SOLO mientras dura el cambio de noviembre de 2026:
+ * los 98 audios del curso pasan de sus iframes a un `<audio>` propio que
+ * sirve Supabase Storage (ver `docs/audios-curso.md` y
+ * `scripts/audios-podbean.ts`). Cuando ninguna lección lleve ya un
+ * iframe de Podbean y se cancele el plan, esta línea se quita.
  */
 const ANFITRIONES = [
   /^https?:\/\/(www\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\//i,
   /^https?:\/\/(www\.)?podbean\.com\//i,
 ];
+
+/**
+ * Y solo se dejan pasar `<audio>` que salgan del bucket público del
+ * curso en Supabase Storage. Es donde viven los audios de los ejercicios
+ * de listening desde noviembre de 2026. Cualquier otro `<audio>` se va
+ * entero: no hay más audio legítimo en el contenido.
+ */
+export const BUCKET_AUDIOS = "audios-curso";
+const AUDIO_PERMITIDO = new RegExp(
+  `^https://[a-z0-9]+\\.supabase\\.co/storage/v1/object/public/${BUCKET_AUDIOS}/[^"'<>\\s]+$`,
+  "i"
+);
 
 const permitido = (src: string): boolean => ANFITRIONES.some((a) => a.test(src));
 
@@ -95,6 +108,18 @@ export function sanearHtml(html: string): string {
   salida = salida.replace(/<iframe\b[^>]*\/?>/gi, (etiqueta) =>
     permitido(srcDe(etiqueta)) ? etiqueta : ""
   );
+
+  // Los `<audio>`: el reproductor propio de los ejercicios de listening.
+  // Los `<source>` sueltos se quitan siempre: el que pone el script de
+  // los audios lleva el `src` en la propia etiqueta y no los usa.
+  salida = salida.replace(/<source\b[^>]*>/gi, "");
+  salida = salida.replace(/<audio\b[^>]*>[\s\S]*?<\/audio\s*>/gi, (trozo) => {
+    const apertura = trozo.match(/<audio\b[^>]*>/i);
+    if (!apertura) return "";
+    return AUDIO_PERMITIDO.test(srcDe(apertura[0])) ? trozo : "";
+  });
+  // Uno sin cerrar no se intenta arreglar: fuera.
+  salida = salida.replace(/<audio\b[^>]*>(?![\s\S]*?<\/audio\s*>)/gi, "");
 
   salida = salida.replace(MANEJADORES, "");
   salida = salida.replace(PROTOCOLO_PELIGROSO, "");
