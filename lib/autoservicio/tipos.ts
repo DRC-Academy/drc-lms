@@ -138,12 +138,23 @@ export type EstadoGestion = {
 /** En `puntual`, `fecha` es el día del hueco; en `fijo`, la primera clase con el horario nuevo. */
 export type HuecoGestion = { dia: string; hora: string; duracion: number; fecha: string };
 
+/** Una hora del calendario del profesor: «YYYY-MM-DDTHH:MM» de España, sin desfase. */
+export type FranjaAgendaGestion = { inicio: string; fin: string; estado: "libre" | "ocupado" };
+
+/**
+ * Solo en `puntual` (desde noviembre de 2026): el calendario del profesor
+ * en la ventana, para pintarlo. Sin nombres ni tipo de clase. Lo que se
+ * puede elegir sigue siendo `huecos`.
+ */
+export type AgendaGestion = { desde: string; hasta: string; franjas: FranjaAgendaGestion[] };
+
 export type HuecosGestion = {
   ok: true;
   modo: ModoCambio;
   sesion: { id: string; dia: string; hora: string; duracion: number };
   fecha_origen: string | null;
   huecos: HuecoGestion[];
+  agenda?: AgendaGestion;
 };
 
 /** La sesión que se mueve, por lo que es y no por su id. */
@@ -264,6 +275,23 @@ export type HuecoLibre = { dia: DiaSemana; hora: string; duracion: number; fecha
 /** La sesión que se mueve, como la pide el POST. */
 export type SesionOrigen = { dia: DiaSemana; hora: string; duracion: number };
 
+/**
+ * Una hora del calendario de su profesor, para PINTAR «Solo esta clase».
+ * Lo que se puede elegir sale solo de los huecos: la agenda no hace
+ * pinchable nada. Las horas fuera del horario del profesor no vienen.
+ */
+export type FranjaAgenda = { fecha: string; hora: string; estado: "libre" | "ocupado" };
+
+/** La agenda de la ventana: del lunes de esta semana (`desde`) al último día con huecos (`hasta`). */
+export type Agenda = { desde: string; hasta: string; franjas: FranjaAgenda[] };
+
+/**
+ * Lo que da GET huecos: la lista de siempre y, en puntual con una Gestión
+ * que ya la manda, la agenda. Null si no llega: entonces se pinta solo
+ * lo libre, como antes.
+ */
+export type HuecosConAgenda = { huecos: HuecoLibre[]; agenda: Agenda | null };
+
 /** Lo que pide el alumno al confirmar. */
 export type PeticionCambio = {
   modo: ModoCambio;
@@ -327,7 +355,7 @@ export type ResultadoCambioProfesor =
 export type ProveedorAutoservicio = {
   estado(alumnoId: string): Promise<LecturaAutoservicio<EstadoAutoservicio>>;
   /** `fecha`: en puntual, la clase que se quiere mover (así Gestión no ofrece la propia clase). */
-  huecos(alumnoId: string, modo: ModoCambio, sesionId: string, fecha: string | null): Promise<LecturaAutoservicio<HuecoLibre[]>>;
+  huecos(alumnoId: string, modo: ModoCambio, sesionId: string, fecha: string | null): Promise<LecturaAutoservicio<HuecosConAgenda>>;
   cambiarHorario(alumnoId: string, peticion: PeticionCambio): Promise<ResultadoCambio>;
   /**
    * v3: los horarios para la siguiente de sus sesiones, que un mismo

@@ -46,7 +46,7 @@ import "server-only";
 import { DIAS } from "@/lib/clases";
 import { diaLocal, sumarDias } from "@/lib/fechas";
 import { horaFin } from "@/lib/autoservicio/franjas";
-import { leerError, leerEstado, leerHorariosProfesor, leerHuecos, leerResultadoCambio, leerResultadoCambioProfesor } from "@/lib/autoservicio/leer";
+import { leerAgenda, leerError, leerEstado, leerHorariosProfesor, leerHuecos, leerResultadoCambio, leerResultadoCambioProfesor } from "@/lib/autoservicio/leer";
 import { chocan } from "@/lib/autoservicio/profesor";
 import type {
   ClaseProximaGestion,
@@ -217,7 +217,32 @@ export function huecosSimulados(modo: ModoCambio, sesionId: string, ahora: Date 
       if (diaDeLaSemana(fecha) === l.dia) huecos.push({ ...l, duracion: sesion.duracion, fecha });
     }
   }
-  return { ok: true, modo, sesion, fecha_origen: null, huecos };
+  return { ok: true, modo, sesion, fecha_origen: null, huecos, ...(modo === "puntual" ? { agenda: agendaSimulada(hoy) } : {}) };
+}
+
+/**
+ * La agenda de Laura, como la mandaría Gestión: de 9 a 21, sin trabajar
+ * los sábados por la tarde; libres las horas de LIBRES y la siguiente (así caben las
+ * clases de dos horas, y en las de una sale alguna libre que no se
+ * ofrece); sus clases y el resto, ocupadas.
+ */
+export function agendaSimulada(hoy: string): unknown {
+  const d = new Date(`${hoy}T12:00:00Z`).getUTCDay();
+  const desde = sumarDias(hoy, d === 0 ? -6 : 1 - d);
+  const hasta = sumarDias(hoy, SEMANAS * 7);
+  const franjas: { inicio: string; fin: string; estado: string }[] = [];
+  for (let fecha = desde; fecha <= hasta; fecha = sumarDias(fecha, 1)) {
+    const dia = diaDeLaSemana(fecha);
+    if (dia === "Domingo") continue;
+    for (let h = 9; h <= 21; h++) {
+      if (dia === "Sábado" && h >= 14) continue;
+      const hora = `${String(h).padStart(2, "0")}:00`;
+      const antes = `${String(h - 1).padStart(2, "0")}:00`;
+      const libre = LIBRES.some((l) => l.dia === dia && (l.hora === hora || l.hora === antes));
+      franjas.push({ inicio: `${fecha}T${hora}`, fin: `${fecha}T${String(h + 1).padStart(2, "0")}:00`, estado: libre ? "libre" : "ocupado" });
+    }
+  }
+  return { desde, hasta, franjas };
 }
 
 /** La respuesta del POST simulado, en la forma del contrato. */
@@ -282,7 +307,7 @@ export function autoservicioSimulado(escenario: EscenarioSimulado): ProveedorAut
       if (!conHorario(escenario)) return bloqueo;
       const cuerpo = huecosSimulados(modo, sesionId);
       const huecos = leerHuecos(cuerpo, modo);
-      return huecos ? { ok: true, datos: huecos } : { ok: false, codigo: leerError(cuerpo).codigo };
+      return huecos ? { ok: true, datos: { huecos, agenda: leerAgenda(cuerpo) } } : { ok: false, codigo: leerError(cuerpo).codigo };
     },
     async cambiarHorario(_alumnoId, p) {
       await esperar();

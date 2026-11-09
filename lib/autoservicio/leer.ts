@@ -12,10 +12,12 @@
 import { DIAS, type DiaSemana } from "@/lib/clases";
 import {
   CODIGOS_AUTOSERVICIO,
+  type Agenda,
   type CambioProfesorPosible,
   type ClaseProxima,
   type CodigoAutoservicio,
   type EstadoAutoservicio,
+  type FranjaAgenda,
   type HuecoGestion,
   type HorarioNuevo,
   type HorariosProfesor,
@@ -160,6 +162,33 @@ export function leerHuecos(v: unknown, modo: ModoCambio): HuecoLibre[] | null {
   const o = obj(v);
   if (!o || o.ok === false || !Array.isArray(o.huecos)) return null;
   return o.huecos.map((x) => hueco(x, modo)).filter((x): x is HuecoLibre => x !== null);
+}
+
+const INICIO_AGENDA = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/;
+
+/**
+ * La agenda de GET huecos (solo en puntual), o null si no viene o no se
+ * puede leer: entonces se pinta solo lo libre, como antes.
+ *
+ * DE CADA FRANJA SE COPIAN SOLO LA FECHA, LA HORA Y EL ESTADO, campo a
+ * campo. Cualquier otra cosa que mandara Gestión se queda en el
+ * servidor: esto es lo que viaja al navegador.
+ */
+export function leerAgenda(v: unknown): Agenda | null {
+  const a = obj(obj(v)?.agenda);
+  if (!a || !esFecha(a.desde) || !esFecha(a.hasta) || !Array.isArray(a.franjas)) return null;
+  const vistas = new Set<string>();
+  const franjas: FranjaAgenda[] = [];
+  for (const x of a.franjas) {
+    const f = obj(x);
+    const m = typeof f?.inicio === "string" ? INICIO_AGENDA.exec(f.inicio) : null;
+    if (!f || !m || (f.estado !== "libre" && f.estado !== "ocupado")) continue;
+    const [, fecha, hora] = m;
+    if (fecha < a.desde || fecha > a.hasta || vistas.has(`${fecha}T${hora}`)) continue;
+    vistas.add(`${fecha}T${hora}`);
+    franjas.push({ fecha, hora, estado: f.estado });
+  }
+  return { desde: a.desde, hasta: a.hasta, franjas };
 }
 
 /**

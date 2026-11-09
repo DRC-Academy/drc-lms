@@ -26,6 +26,7 @@ import {
   aHuecoGestion,
   leerError,
   leerEstado,
+  leerAgenda,
   leerHorariosProfesor,
   leerHuecos,
   leerResultadoCambio,
@@ -88,7 +89,9 @@ export const autoservicioDeGestion: ProveedorAutoservicio = {
       console.error(`[${PREFIJO}] Gestión devolvió huecos sin la lista \`huecos\`.`);
       return { ok: false, codigo: "GENERICO" };
     }
-    return { ok: true, datos: huecos };
+    // La agenda, solo en puntual. Si no viene (Gestión anterior) o no se
+    // lee, null: la pantalla pinta solo lo libre.
+    return { ok: true, datos: { huecos, agenda: modo === "puntual" ? leerAgenda(r.cuerpo) : null } };
   },
 
   async cambiarHorario(alumnoId, p) {

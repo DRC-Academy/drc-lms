@@ -21,6 +21,7 @@ import type {
 import type { TextosAutoservicio } from "@/lib/textos/autoservicio";
 import { TARJETA } from "@/components/base/Seccion";
 import MarcoFlujo from "@/components/clases/autoservicio/MarcoFlujo";
+import CalendarioHuecos from "@/components/clases/autoservicio/CalendarioHuecos";
 import { pasoPosible, usarPasoDeLaUrl } from "@/components/clases/autoservicio/pasos";
 import {
   AntesDespues,
@@ -37,7 +38,6 @@ import {
   PanelAMedias,
   PanelNoSePudo,
   PieWhatsApp,
-  RejillaHuecos,
   Rotulo,
   TituloPaso,
   nuevaClave,
@@ -559,7 +559,7 @@ export default function CambiarProfesor({
                 {visibles.length === 0 ? (
                   <Aviso>{t.sinResultados}</Aviso>
                 ) : (
-                  <RejillaHuecos huecos={visibles} t={t} alElegir={(h) => cambiarEleccion(elegir(elegidos, h))} />
+                  <CalendarioHuecos modo="semanaTipo" huecos={visibles} t={t} alElegir={(h) => cambiarEleccion(elegir(elegidos, h))} />
                 )}
               </>
             )}

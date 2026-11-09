@@ -1,14 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { DIAS_LABORABLES, FRANJAS, agruparHuecos, horaFin, type Franja } from "@/lib/autoservicio/franjas";
+import { DIAS_LABORABLES, FRANJAS, type Franja } from "@/lib/autoservicio/franjas";
 import type { DiaSemana } from "@/lib/clases";
-import type { HuecoLibre } from "@/lib/autoservicio/tipos";
 import type { TextosAutoservicio } from "@/lib/textos/autoservicio";
 import { TARJETA } from "@/components/base/Seccion";
 
 // ---------------------------------------------------------------
 // LAS PIEZAS DE LOS DOS FLUJOS DE «MIS CLASES»
+//
+// (Los huecos se eligen en `CalendarioHuecos`, en su propio archivo.)
 //
 // Las páginas /clases/cambiar-horario y /clases/cambiar-profesor, y la
 // tarjeta «Tu horario». Lo que decide cada pieza:
@@ -273,62 +274,6 @@ export function Filtros({
           ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-/**
- * Los huecos por día (o por fecha, en «solo una clase»), en orden, como
- * chips grandes «10:00–11:00». Dos columnas en móvil, cuatro en
- * escritorio. `elegido` marca el que está puesto con `aria-pressed`.
- */
-export function RejillaHuecos<H extends HuecoLibre>({
-  huecos,
-  t,
-  alElegir,
-  elegido,
-}: {
-  huecos: H[];
-  t: TextosAutoservicio;
-  alElegir: (h: H) => void;
-  elegido?: (h: H) => boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-5">
-      {agruparHuecos(huecos).map((g) => {
-        const cabecera = g.fecha ? t.diaConFecha(g.fecha) : t.diaSemanal(g.dia);
-        const id = `huecos-${g.clave}`;
-        return (
-          <section key={g.clave} aria-labelledby={id}>
-            <h3 id={id} className="mb-2 text-[17px] font-bold text-marca-tinta">
-              {cabecera}
-            </h3>
-            <ul className="grid grid-cols-2 gap-2 min-[900px]:grid-cols-4 min-[900px]:gap-2.5">
-              {g.franjas
-                .flatMap((f) => f.huecos)
-                .map((h) => {
-                  const puesto = elegido?.(h) ?? false;
-                  return (
-                    <li key={`${h.fecha ?? h.dia}-${h.hora}-${h.duracion}`}>
-                      <button
-                        type="button"
-                        onClick={() => alElegir(h)}
-                        aria-pressed={elegido ? puesto : undefined}
-                        className={`flex min-h-[56px] w-full items-center justify-center rounded-[14px] border-[1.5px] px-2 text-[18px] font-bold transition-colors ${FOCO} ${
-                          puesto
-                            ? "border-marca-verdeOsc bg-marca-verdeOsc text-white"
-                            : "border-marca-borde bg-white text-marca-verdeOsc hover:border-marca-verde hover:bg-marca-verdeFondo"
-                        }`}
-                      >
-                        {h.hora}–{horaFin(h.hora, h.duracion)}
-                      </button>
-                    </li>
-                  );
-                })}
-            </ul>
-          </section>
-        );
-      })}
     </div>
   );
 }

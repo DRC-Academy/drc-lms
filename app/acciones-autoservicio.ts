@@ -24,7 +24,7 @@ import { idSesionValido, leerElegidos, peticionProfesorValida, peticionValida } 
 import { olvidarLecturasDe } from "@/lib/cache-gestion";
 import type {
   HorariosProfesor,
-  HuecoLibre,
+  HuecosConAgenda,
   LecturaAutoservicio,
   ModoCambio,
   PeticionCambio,
@@ -47,9 +47,11 @@ const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * Los huecos libres de su profesor para una de sus clases. En puntual,
  * `fecha` es la clase que quiere mover: con ella Gestión comprueba que se
- * puede mover y no ofrece la propia clase.
+ * puede mover y no ofrece la propia clase. En puntual llega además la
+ * agenda de su profesor (solo fecha, hora y libre u ocupado: ver
+ * `leerAgenda`), para pintar el calendario.
  */
-export async function huecosAutoservicio(modo: unknown, sesionId: unknown, fecha: unknown = null): Promise<LecturaAutoservicio<HuecoLibre[]>> {
+export async function huecosAutoservicio(modo: unknown, sesionId: unknown, fecha: unknown = null): Promise<LecturaAutoservicio<HuecosConAgenda>> {
   const alumnoId = await alumnoDeLaSesion();
   const fechaValida = modo === "puntual" && typeof fecha === "string" && FECHA.test(fecha) ? fecha : null;
   if (!alumnoId || (modo !== "fijo" && modo !== "puntual") || !idSesionValido(sesionId)) {

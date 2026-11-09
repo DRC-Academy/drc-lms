@@ -120,6 +120,34 @@ export type TextosAutoservicio = {
   hechoPuntual: (cuando: string) => string;
   ocupado: string;
 
+  // --- el calendario de los huecos (`CalendarioHuecos`) ---
+  /** La cabecera: «Semana del 10 al 15 de noviembre». */
+  calSemana: (desde: string, hasta: string) => string;
+  calSemanaAnterior: string;
+  calSemanaSiguiente: string;
+  /** Junto a la semana. */
+  calHoraEspana: string;
+  calLibre: string;
+  /** La casilla libre que ha elegido. */
+  calElegido: string;
+  calOcupado: string;
+  calTuClase: string;
+  /** Las casillas sin texto, para lectores de pantalla. */
+  calFuera: string;
+  calNoDisponible: string;
+  calPasada: string;
+  /** La cabecera de la columna de horas, para lectores de pantalla. */
+  calHora: string;
+  calLeyenda: string;
+  /** El selector de días del móvil. */
+  calDias: string;
+  /** «3 huecos libres», en cada día del selector. */
+  calLibres: (n: number) => string;
+  /** El botón de una casilla libre: «Elegir martes 18 de noviembre, 10:00–11:00». */
+  calElegir: (que: string) => string;
+  /** Una semana sin huecos: va con el botón de WhatsApp. */
+  calSemanaSinHuecos: string;
+
   // --- cambiar de profesor (v3: elige horarios; el profesor lo asigna Gestión) ---
   // NINGÚN TEXTO DE ANTES DE CONFIRMAR LLEVA NOMBRE DE PROFESOR.
   profesorIntro: string;
@@ -346,6 +374,30 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     hechoPuntual: (cuando) => `Tu clase pasa al ${cuando.charAt(0).toLowerCase() + cuando.slice(1)}.`,
     ocupado: "Ese hueco se acaba de ocupar, aquí tienes los que siguen libres.",
 
+    calSemana: (desde, hasta) => {
+      const a = partesFecha(desde);
+      const b = partesFecha(hasta);
+      return a.mes === b.mes
+        ? `Semana del ${a.numero} al ${b.numero} de ${MESES_ES[b.mes]}`
+        : `Semana del ${a.numero} de ${MESES_ES[a.mes]} al ${b.numero} de ${MESES_ES[b.mes]}`;
+    },
+    calSemanaAnterior: "Semana anterior",
+    calSemanaSiguiente: "Semana siguiente",
+    calHoraEspana: "Hora de España",
+    calLibre: "Libre",
+    calElegido: "Elegido",
+    calOcupado: "Ocupado",
+    calTuClase: "Tu clase",
+    calFuera: "Fuera del horario de tu profe",
+    calNoDisponible: "No disponible para esta clase",
+    calPasada: "Ya ha pasado",
+    calHora: "Hora",
+    calLeyenda: "Qué significa cada casilla",
+    calDias: "Días de la semana",
+    calLibres: (n) => (n === 0 ? "sin huecos libres" : n === 1 ? "1 hueco libre" : `${n} huecos libres`),
+    calElegir: (que) => `Elegir ${que.charAt(0).toLowerCase()}${que.slice(1)}`,
+    calSemanaSinHuecos: "Esta semana tu profe no tiene huecos libres. Prueba la siguiente o escríbenos por WhatsApp.",
+
     profesorIntro: "Elige los horarios que te vienen bien y te asignamos el profesor que mejor encaje.",
     loQueNoCambia: "Lo que no cambia",
     nivelEHistorial: "Tu nivel y tu historial de clases se mantienen.",
@@ -540,6 +592,30 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     hechoFijo: (cuando) => `From now on your classes are on ${cuando}.`,
     hechoPuntual: (cuando) => `Your class moves to ${cuando}.`,
     ocupado: "That slot has just been taken, here are the ones still free.",
+
+    calSemana: (desde, hasta) => {
+      const a = partesFecha(desde);
+      const b = partesFecha(hasta);
+      return a.mes === b.mes
+        ? `Week of ${a.numero}–${b.numero} ${MESES_EN[b.mes]}`
+        : `Week of ${a.numero} ${MESES_EN[a.mes]} – ${b.numero} ${MESES_EN[b.mes]}`;
+    },
+    calSemanaAnterior: "Previous week",
+    calSemanaSiguiente: "Next week",
+    calHoraEspana: "Spain time",
+    calLibre: "Free",
+    calElegido: "Chosen",
+    calOcupado: "Busy",
+    calTuClase: "Your class",
+    calFuera: "Outside your teacher's hours",
+    calNoDisponible: "Not available for this class",
+    calPasada: "Already passed",
+    calHora: "Time",
+    calLeyenda: "What each slot means",
+    calDias: "Days of the week",
+    calLibres: (n) => (n === 0 ? "no free slots" : n === 1 ? "1 free slot" : `${n} free slots`),
+    calElegir: (que) => `Choose ${que}`,
+    calSemanaSinHuecos: "Your teacher has no free slots this week. Try next week or message us on WhatsApp.",
 
     profesorIntro: "Choose the times that suit you and we'll assign the teacher who fits best.",
     loQueNoCambia: "What stays the same",

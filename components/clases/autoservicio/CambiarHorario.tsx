@@ -10,12 +10,14 @@ import type {
   CodigoAutoservicio,
   EstadoAutoservicio,
   HuecoLibre,
+  HuecosConAgenda,
   LecturaAutoservicio,
   ModoCambio,
   PeticionCambio,
   ResultadoCambio,
 } from "@/lib/autoservicio/tipos";
 import MarcoFlujo from "@/components/clases/autoservicio/MarcoFlujo";
+import CalendarioHuecos from "@/components/clases/autoservicio/CalendarioHuecos";
 import { pasoPosible, usarPasoDeLaUrl } from "@/components/clases/autoservicio/pasos";
 import {
   AntesDespues,
@@ -31,7 +33,6 @@ import {
   PanelAMedias,
   PanelNoSePudo,
   PieWhatsApp,
-  RejillaHuecos,
   Rotulo,
   TituloPaso,
   nuevaClave,
@@ -75,7 +76,7 @@ import {
  */
 
 export type AccionesHorario = {
-  huecos: (modo: ModoCambio, sesionId: string, fecha: string | null) => Promise<LecturaAutoservicio<HuecoLibre[]>>;
+  huecos: (modo: ModoCambio, sesionId: string, fecha: string | null) => Promise<LecturaAutoservicio<HuecosConAgenda>>;
   cambiar: (peticion: PeticionCambio) => Promise<ResultadoCambio>;
 };
 
@@ -84,7 +85,10 @@ const DE_SERVIDOR: AccionesHorario = { huecos: huecosAutoservicio, cambiar: camb
 const ORDEN = ["clase", "cambio", "hueco", "confirmar", "hecho"] as const;
 type Paso = (typeof ORDEN)[number];
 
-type Huecos = { clave: string; carga: { estado: "cargando" } | { estado: "listo"; lista: HuecoLibre[] } | { estado: "error"; codigo: CodigoAutoservicio } };
+type Huecos = {
+  clave: string;
+  carga: { estado: "cargando" } | ({ estado: "listo"; lista: HuecoLibre[] } & Pick<HuecosConAgenda, "agenda">) | { estado: "error"; codigo: CodigoAutoservicio };
+};
 /** Cómo acabó: hecho (con lo que se cambió, porque el estado de la página cambia debajo) o a medias. */
 type Fin = { tipo: "hecho"; modo: ModoCambio; destino: HuecoLibre; fechaNueva: string | null } | { tipo: "aMedias" };
 
@@ -165,7 +169,7 @@ export default function CambiarHorario({
     setDia(null);
     setFranja(null);
     void (async () => {
-      let r: LecturaAutoservicio<HuecoLibre[]>;
+      let r: LecturaAutoservicio<HuecosConAgenda>;
       try {
         r = await acciones.huecos(modo, sesion.id, modo === "puntual" ? fecha : null);
       } catch {
@@ -173,7 +177,10 @@ export default function CambiarHorario({
       }
       if (n !== pedidoHuecos.current) return;
       if (!r.ok && r.codigo === "SESION_NO_ENCONTRADA") router.refresh();
-      setHuecos({ clave: claveHuecos, carga: r.ok ? { estado: "listo", lista: r.datos } : { estado: "error", codigo: r.codigo } });
+      setHuecos({
+        clave: claveHuecos,
+        carga: r.ok ? { estado: "listo", lista: r.datos.huecos, agenda: r.datos.agenda } : { estado: "error", codigo: r.codigo },
+      });
     })();
   }, [paso, sesion, modo, fecha, claveHuecos, huecos, acciones, router]);
 
@@ -417,6 +424,16 @@ export default function CambiarHorario({
   if (paso === "hueco" && sesion && modo) {
     const carga = huecos?.clave === claveHuecos ? huecos.carga : ({ estado: "cargando" } as const);
     const visibles = carga.estado === "listo" ? filtrarHuecos(carga.lista, dia, franja) : [];
+    // «Solo esta clase»: el calendario con fechas. Con la agenda de su
+    // profe sale completo aunque ninguna semana tenga huecos (cada semana lo
+    // dice); sin ella (Gestión anterior), solo con los huecos. Sin agenda ni
+    // huecos, el aviso de siempre.
+    const calendarioCompleto =
+      modo === "puntual" && carga.estado === "listo" && (carga.agenda !== null || carga.lista.length > 0);
+    const elegirHueco = (h: HuecoLibre) => {
+      setDestino(h);
+      setAviso(null);
+    };
     const resumen = destino ? describeDestino(destino) : null;
     const continuar = (
       <button type="button" onClick={aConfirmar} disabled={!destino} className={destino ? BOTON_VERDE : BOTON_APAGADO}>
@@ -481,7 +498,25 @@ export default function CambiarHorario({
           ) : (
             <PanelNoSePudo t={t} whatsapp={whatsapp} texto={t.motivoAlLeer(carga.codigo)} />
           ))}
+        {carga.estado === "listo" && calendarioCompleto && (
+          <>
+            <CalendarioHuecos
+              modo="fechas"
+              t={t}
+              huecos={carga.lista}
+              agenda={carga.agenda}
+              tuClase={claseActual}
+              whatsapp={whatsapp}
+              elegido={(h) => destino !== null && mismoHueco(h, destino)}
+              alElegir={elegirHueco}
+            />
+            <div className="min-[900px]:hidden">
+              <PieWhatsApp href={whatsapp} pregunta={t.noEncuentras} texto={t.escribenos} />
+            </div>
+          </>
+        )}
         {carga.estado === "listo" &&
+          !calendarioCompleto &&
           (carga.lista.length === 0 ? (
             <div className="flex flex-col gap-3">
               <Aviso>{t.sinHuecos}</Aviso>
@@ -494,14 +529,12 @@ export default function CambiarHorario({
               {visibles.length === 0 ? (
                 <Aviso>{t.sinResultados}</Aviso>
               ) : (
-                <RejillaHuecos
-                  huecos={visibles}
+                <CalendarioHuecos
+                  modo="semanaTipo"
                   t={t}
+                  huecos={visibles}
                   elegido={(h) => destino !== null && mismoHueco(h, destino)}
-                  alElegir={(h) => {
-                    setDestino(h);
-                    setAviso(null);
-                  }}
+                  alElegir={elegirHueco}
                 />
               )}
               <div className="min-[900px]:hidden">
