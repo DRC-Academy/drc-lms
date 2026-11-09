@@ -357,7 +357,7 @@ en la sección 6.
 #### El audio no suena — A → B
 > Prueba a recargar la página y mira el volumen del reproductor (y el del móvil o el ordenador). Si sigue sin sonar, dime en qué curso y lección estás.
 
-*Nota interna:* los audios son reproductores de Podbean dentro de la lección (`lib/sanear-html.ts:30-33`). Si se bloquean, se ve un recuadro vacío, sin mensaje.
+*Nota interna:* desde noviembre de 2026 los audios son un reproductor `<audio>` nativo que sirve Supabase Storage (bucket `audios-curso`, ver `docs/audios-curso.md`); antes eran iframes de Podbean. Si el `src` no sale de ese bucket, el saneador lo quita y no se ve reproductor.
 
 #### Completé una lección y no aparece marcada — A → B
 > Recarga la página. Si sigue sin marcarse, ábrela otra vez y pulsa el botón del final («Marcar como completada y continuar», o «Completar y seguir» si tenía ejercicios).

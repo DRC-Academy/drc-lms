@@ -123,8 +123,9 @@ export default async function PaginaLeccion({
     hermanas.map((h) => h.id)
   );
 
-  // El orden importa: primero el saneado —que quita scripts, manejadores
-  // e iframes que no sean de YouTube o Podbean— y después la preparación,
+  // El orden importa: primero el saneado —que quita scripts, manejadores,
+  // iframes que no sean de YouTube o Podbean y audios que no salgan del
+  // bucket del curso— y después la preparación,
   // que quita emojis y pone las anclas de los títulos. Al revés, las
   // anclas podrían acabar dentro de algo que el saneador se lleva.
   // Y al final, el corte en partes por esos mismos títulos.

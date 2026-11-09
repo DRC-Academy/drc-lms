@@ -444,13 +444,22 @@
   .leccion th { @apply bg-marca-niebla font-semibold text-marca-tinta; }
   .leccion img { @apply h-auto max-w-full rounded-xl; }
   /* El vídeo de la lección ya no viaja en este HTML: va en `video_url` y
-     lo pinta la vista, con su propio marco. Los iframes que llegan aquí
-     son los reproductores de audio de Podbean —los 98 ejercicios de
-     listening—, que miden 150 px de alto y no son un 16:9. La regla
-     general se deja igualmente por si algún día vuelve a entrar un
-     vídeo incrustado en el cuerpo. */
+     lo pinta la vista, con su propio marco. La regla general se deja por
+     si algún día vuelve a entrar un vídeo incrustado en el cuerpo. La de
+     Podbean (150 px de alto, no un 16:9) se queda solo mientras quede
+     algún iframe suyo: ver `docs/audios-curso.md`. */
   .leccion iframe { @apply aspect-video h-auto w-full rounded-xl; }
   .leccion iframe[src*="podbean.com"] { @apply aspect-auto h-[150px] rounded-xl; }
+  /* El audio de los 98 ejercicios de listening: un `<audio controls>`
+     nativo servido desde Supabase Storage. Los controles los dibuja el
+     navegador (en el móvil, los del sistema, que son los que el alumno
+     ya sabe usar); aquí solo se le da el ancho y el aire. Sin borde ni
+     fondo propios: el navegador ya pinta su cápsula y otra encima se ve
+     doble. */
+  .leccion audio {
+    @apply my-5 block w-full;
+    color-scheme: light;
+  }
 
   /* ---------------------------------------------------------------
      EL BANNER
