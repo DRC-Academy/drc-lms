@@ -9,12 +9,25 @@
 import type { Idioma } from "@/lib/idioma";
 
 export type TextosPases = {
-  // --- «Para ti» bloqueado ---
+  // --- «Para ti» bloqueado: la página que invita a las clases 1:1 ---
+  paraTiEtiqueta: string;
   paraTiTitulo: string;
+  /** También es el mensaje con el que las rutas de Para ti rechazan (403). */
   paraTiTexto: string;
-  /** Debajo del texto, antes del botón: dónde está incluido y que se puede preguntar. */
-  paraTiLinea: string;
   paraTiBoton: string;
+  paraTiNota: string;
+  paraTiSumanTitulo: string;
+  paraTiSuman: { titulo: string; texto: string }[];
+  paraTiEjemploTitulo: string;
+  paraTiEjemploEtiqueta: string;
+  paraTiEjemploContexto: string;
+  paraTiEjemploNombre: string;
+  paraTiEjemploFilas: string[];
+  paraTiEjemploPie: string;
+  paraTiCierreTitulo: string;
+  paraTiCierreTexto: string;
+  paraTiCierreBoton: string;
+  paraTiSigue: string;
   /** Tiene plan, pero la suscripción está en espera. Su título es el de siempre. */
   paraTiEnEspera: string;
   paraTiTituloEnEspera: string;
@@ -50,11 +63,32 @@ export type TextosPases = {
 
 export const PASES: Record<Idioma, TextosPases> = {
   es: {
-    paraTiTitulo: "Para ti: práctica hecha a tu medida",
+    paraTiEtiqueta: "Clases 1:1 con profesor nativo",
+    paraTiTitulo: "Habla inglés cada semana con tu profesor",
     paraTiTexto:
-      "Con las clases 1:1, después de cada clase Para ti te prepara ejercicios con lo que has trabajado con tu profesor nativo: tu vocabulario, tus temas y lo que más te cuesta.",
-    paraTiLinea: "Está incluido en los planes con clases. Escríbenos y te contamos cómo funcionan.",
-    paraTiBoton: "Escríbenos por WhatsApp",
+      "Tu curso te da la base. Con las clases 1:1 la pones en práctica hablando con un profesor nativo, y después de cada clase Para ti te prepara ejercicios con lo que has trabajado.",
+    paraTiBoton: "Quiero probar las clases",
+    paraTiNota: "Te atendemos por WhatsApp.",
+    paraTiSumanTitulo: "Lo que suman las clases 1:1",
+    paraTiSuman: [
+      { titulo: "Tu profesor nativo", texto: "Clases por videollamada solo para ti, para hablar inglés desde el primer día." },
+      { titulo: "Para ti, después de cada clase", texto: "Ejercicios con tu vocabulario, tus temas y lo que más te cuesta." },
+      { titulo: "Tu avance, a la vista", texto: "Tu profesor sigue tu nivel y en Mi progreso ves todo lo que llevas." },
+    ],
+    paraTiEjemploTitulo: "Así te llega Para ti después de una clase",
+    paraTiEjemploEtiqueta: "Ejemplo",
+    paraTiEjemploContexto: "Después de tu clase del martes",
+    paraTiEjemploNombre: "Planes de viaje",
+    paraTiEjemploFilas: [
+      "El vocabulario que salió en tu clase",
+      "Ejercicios con los temas de los que hablasteis",
+      "Un repaso de lo que más te cuesta",
+    ],
+    paraTiEjemploPie: "Se abre con las clases 1:1",
+    paraTiCierreTitulo: "¿Te contamos cómo funcionan?",
+    paraTiCierreTexto: "Escríbenos por WhatsApp y te explicamos los planes con clases. Sin compromiso: decides tú.",
+    paraTiCierreBoton: "Escríbenos por WhatsApp",
+    paraTiSigue: "Tu Black Pass sigue igual: mantienes todos los niveles de Mi curso.",
     paraTiTituloEnEspera: "Para ti",
     paraTiEnEspera: "Para ti y tus clases vuelven en cuanto actualices tu pago. Mientras tanto, tienes abiertos todos tus cursos.",
     hola: (nombre) => (nombre ? `Hola, ${nombre}` : "Hola"),
@@ -82,11 +116,32 @@ export const PASES: Record<Idioma, TextosPases> = {
     avisoPagoBoton: "Actualizar mi pago",
   },
   en: {
-    paraTiTitulo: "For you: practice made for you",
+    paraTiEtiqueta: "1:1 classes with a native teacher",
+    paraTiTitulo: "Speak English every week with your teacher",
     paraTiTexto:
-      "With 1:1 classes, after every class For you prepares exercises from what you've worked on with your native teacher: your vocabulary, your topics and what you find hardest.",
-    paraTiLinea: "It's included in the plans with classes. Write to us and we'll tell you how they work.",
-    paraTiBoton: "Write to us on WhatsApp",
+      "Your course gives you the foundation. With 1:1 classes you put it into practice by speaking with a native teacher, and after every class For you prepares exercises from what you've worked on.",
+    paraTiBoton: "I want to try the classes",
+    paraTiNota: "We'll help you on WhatsApp.",
+    paraTiSumanTitulo: "What 1:1 classes add",
+    paraTiSuman: [
+      { titulo: "Your native teacher", texto: "Video classes just for you, so you speak English from day one." },
+      { titulo: "For you, after every class", texto: "Exercises with your vocabulary, your topics and what you find hardest." },
+      { titulo: "Your progress, in sight", texto: "Your teacher follows your level and My progress shows everything you've done." },
+    ],
+    paraTiEjemploTitulo: "This is how For you arrives after a class",
+    paraTiEjemploEtiqueta: "Example",
+    paraTiEjemploContexto: "After your Tuesday class",
+    paraTiEjemploNombre: "Travel plans",
+    paraTiEjemploFilas: [
+      "The vocabulary that came up in your class",
+      "Exercises on the topics you talked about",
+      "A review of what you find hardest",
+    ],
+    paraTiEjemploPie: "Unlocks with 1:1 classes",
+    paraTiCierreTitulo: "Shall we tell you how they work?",
+    paraTiCierreTexto: "Write to us on WhatsApp and we'll explain the plans with classes. No commitment: it's your call.",
+    paraTiCierreBoton: "Write to us on WhatsApp",
+    paraTiSigue: "Your Black Pass stays the same: you keep every level of My course.",
     paraTiTituloEnEspera: "For you",
     paraTiEnEspera: "For you and your classes come back as soon as you update your payment. In the meantime, all your courses stay open.",
     hola: (nombre) => (nombre ? `Hi, ${nombre}` : "Hi"),

@@ -49,8 +49,9 @@ function ir(url: string): NextResponse {
 }
 
 /**
- * La sección desde la que se pulsó, por el Referer. Los dos botones que
- * hay viven en el Inicio (`/alumno/{id}`) y en Mi progreso (`/progreso`);
+ * La sección desde la que se pulsó, por el Referer. Los botones viven en el
+ * Inicio (`/alumno/{id}`), en Mi progreso (`/progreso`) y, para el Black
+ * Pass, en «Para ti» bloqueado (`/practica`);
  * sin Referer o desde otro sitio, «otra». El id del alumno no se guarda:
  * ya va en la fila.
  */
@@ -61,15 +62,27 @@ function pantallaDe(peticion: NextRequest): string {
     const ruta = new URL(referer).pathname;
     if (/^\/alumno\/[^/]+\/?$/.test(ruta)) return "inicio";
     if (/^\/progreso\/?$/.test(ruta)) return "progreso";
+    if (/^\/practica\/?$/.test(ruta)) return "practica";
   } catch {
     // Un Referer que no es una URL: «otra».
   }
   return "otra";
 }
 
+/**
+ * Qué botón fue, cuando la pantalla tiene más de uno: la de «Para ti»
+ * bloqueado lleva uno arriba y otro al final (`?desde=arriba|abajo`). Solo
+ * esos dos valores: lo que llega por la URL no se guarda tal cual.
+ */
+function botonDe(peticion: NextRequest): "arriba" | "abajo" | null {
+  const desde = peticion.nextUrl.searchParams.get("desde");
+  return desde === "arriba" || desde === "abajo" ? desde : null;
+}
+
 function apuntarClic(sesion: SesionAbierta, peticion: NextRequest, via: string) {
   if (sesion.rol !== "alumno") return;
-  const datos = { pantalla: pantallaDe(peticion), via };
+  const boton = botonDe(peticion);
+  const datos = { pantalla: pantallaDe(peticion), via, ...(boton ? { boton } : {}) };
   enSegundoPlano("ampliar-plan", () => apuntarEvento(sesion.alumnoId, "banner_ampliar_clic", datos));
 }
 

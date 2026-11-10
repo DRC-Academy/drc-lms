@@ -23,7 +23,7 @@ import PanelPractica from "@/components/PanelPractica";
 import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
 import ParaTiBloqueado from "@/components/pases/ParaTiBloqueado";
 import { accesoPorAlumno } from "@/lib/acceso-alumno";
-import { urlPlanesConClases } from "@/lib/ampliar-plan";
+import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +73,7 @@ export default async function PaginaPractica() {
     return (
       <div className="flex min-h-screen flex-col bg-marca-niebla">
         <MarcoDeLaPagina alumno={alumno} />
-        <ParaTiBloqueado url={urlPlanesConClases()} enEspera={acceso.avisoPago} />
+        <ParaTiBloqueado url={RUTA_AMPLIAR} enEspera={acceso.avisoPago} />
       </div>
     );
   }

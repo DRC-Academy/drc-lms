@@ -73,6 +73,24 @@ describe("GET /ampliar-plan", () => {
     expect(eventos.apuntados).toEqual([["pase-1", "banner_ampliar_clic", { pantalla: "inicio", via: "planes" }]]);
   });
 
+  it("los dos botones de «Para ti» bloqueado se distinguen, y un «desde» raro no se guarda", async () => {
+    acceso.blackPass = true;
+    process.env.URL_PLANES_CON_CLASES = "https://wa.me/34000000000";
+    sesion.actual = { rol: "alumno", email: "alumna@ejemplo.com", alumnoId: "pase-1", sesionId: "x" };
+    const { GET } = await import("@/app/ampliar-plan/route");
+    const desde = (valor: string) =>
+      new NextRequest(`http://localhost:3001/ampliar-plan?desde=${valor}`, { headers: { referer: "http://localhost:3001/practica" } });
+    await GET(desde("arriba"));
+    await GET(desde("abajo"));
+    await GET(desde("<script>"));
+    await Promise.all(eventos.pendientes);
+    expect(eventos.apuntados).toEqual([
+      ["pase-1", "banner_ampliar_clic", { pantalla: "practica", via: "planes", boton: "arriba" }],
+      ["pase-1", "banner_ampliar_clic", { pantalla: "practica", via: "planes", boton: "abajo" }],
+      ["pase-1", "banner_ampliar_clic", { pantalla: "practica", via: "planes" }],
+    ]);
+  });
+
   it("el equipo va al enlace de siempre, sin sobre", async () => {
     sesion.actual = { rol: "admin", email: "equipo@drcacademy.com", alumnoId: null, sesionId: "x" };
     const { GET } = await import("@/app/ampliar-plan/route");
