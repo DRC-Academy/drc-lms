@@ -43,7 +43,11 @@ tablas ni columnas, solo un bucket y el texto de las lecciones.
    saca el episodio de cada iframe y le pide a Podbean el mp3
    (`https://www.podbean.com/player/<episodio>` devuelve un JSON con
    `episodes[0].resource`). Deja `import/audios-podbean/manifiesto.json`.
-   Tienen que salir 98 lecciones y 0 errores; si no, se mira antes de seguir.
+   Lo que importa es 0 errores. El número de lecciones puede ser menor que
+   98: una lección normal junta los quizzes de su topic, así que dos audios
+   pueden caer en la misma lección, y los quizzes que estaban fuera de todo
+   curso no se importaron. Iframes y episodios deberían rondar los 98. Si hay
+   algún error, se mira antes de seguir.
 3. `node scripts/audios-podbean.ts subir`: crea el bucket si no existe,
    descarga cada mp3 a `import/audios-podbean/mp3/`, lo sube y comprueba que
    la URL pública responde. Se puede repetir: lo que ya está no se vuelve a
