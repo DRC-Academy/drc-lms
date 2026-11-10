@@ -31,6 +31,12 @@ export type TextosPruebaNivel = {
   /** Mientras no han pasado 24 h desde la última: cuándo puede repetirla. */
   repetirDesde: (dia: "hoy" | "manana", hora: string) => string;
   provisional: string;
+  // --- la barra lateral y la hoja del perfil en móvil ---
+  barraNuevaBoton: string;
+  barraNuevaTexto: string;
+  barraEnCursoBoton: string;
+  barraEnCursoTexto: (hechas: number, total: number) => string;
+  barraNivel: (nivel: string) => string;
   // --- la página de la prueba ---
   bienvenidaTitulo: string;
   repetirTitulo: string;
@@ -76,6 +82,11 @@ export const PRUEBA_NIVEL: Record<Idioma, TextosPruebaNivel> = {
       `Podrás repetirla ${dia === "hoy" ? "hoy" : "mañana"} a partir de ${/^1:/.test(hora) ? "la" : "las"} ${hora}.`,
     provisional:
       "Esta vez no hemos podido valorar tu redacción, así que este nivel sale de la parte de lectura. Si quieres, puedes repetir la prueba.",
+    barraNuevaBoton: "Haz tu prueba de nivel",
+    barraNuevaTexto: "Unos 30–40 min",
+    barraEnCursoBoton: "Continuar mi prueba",
+    barraEnCursoTexto: (hechas, total) => `Llevas ${hechas} de ${total}`,
+    barraNivel: (nivel) => `Tu nivel: ${nivel}`,
     bienvenidaTitulo: "Tu prueba de nivel",
     repetirTitulo: "Repite tu prueba de nivel",
     bienvenidaTexto:
@@ -134,6 +145,11 @@ export const PRUEBA_NIVEL: Record<Idioma, TextosPruebaNivel> = {
     repetirDesde: (dia, hora) => `You can take it again ${dia === "hoy" ? "today" : "tomorrow"} from ${hora}.`,
     provisional:
       "This time we couldn't assess your writing, so this level comes from the reading part. You can take the test again if you like.",
+    barraNuevaBoton: "Take your level test",
+    barraNuevaTexto: "About 30–40 min",
+    barraEnCursoBoton: "Continue my test",
+    barraEnCursoTexto: (hechas, total) => `${hechas} of ${total} done`,
+    barraNivel: (nivel) => `Your level: ${nivel}`,
     bienvenidaTitulo: "Your level test",
     repetirTitulo: "Take your level test again",
     bienvenidaTexto: "This tells us which course suits you best. It adapts to you as you go, and there's nothing to prepare.",

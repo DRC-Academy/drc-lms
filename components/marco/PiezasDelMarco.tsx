@@ -11,6 +11,7 @@ import type { EstadisticasAlumno } from "@/lib/estadisticas";
 import { conFoco } from "@/lib/foco";
 import type { TextosNavegacion } from "@/lib/textos/navegacion";
 import { esIdPase } from "@/lib/pase-id";
+import type { EstadoBloque } from "@/lib/prueba-nivel/servidor";
 
 /** Qué se ve de lo que depende del acceso (`accesoDelAlumno`). Sin dato: todo. */
 export type AccesoEnBarra = { paraTi: boolean; clases: boolean; diploma: boolean };
@@ -99,6 +100,11 @@ export type DatosNavegacion = {
   estadisticas?: EstadisticasAlumno | null;
   /** Sin él, todo a la vista: es lo que pasa fuera de las pantallas del alumno. */
   acceso?: AccesoEnBarra;
+  /**
+   * La prueba de nivel, si puede hacerla (`estadoParaLaBarra`): el mismo
+   * estado que el bloque del inicio. Null o ausente: la barra, como siempre.
+   */
+  pruebaNivel?: EstadoBloque | null;
 };
 
 /**
@@ -123,6 +129,7 @@ export function PiezasDelMarco({ datos, cargando = false }: { datos: DatosNavega
   });
   const nombre = datos.nombre.trim();
   const inicioHref = datos.alumnoId ? conFoco(`/alumno/${datos.alumnoId}`, datos.foco) : "/";
+  const prueba = datos.pruebaNivel ? { estado: datos.pruebaNivel, href: conFoco("/prueba-nivel", datos.foco) } : null;
 
   return (
     <>
@@ -132,7 +139,14 @@ export function PiezasDelMarco({ datos, cargando = false }: { datos: DatosNavega
         </div>
       )}
       <div className="col-start-1 row-start-2">
-        <BarraLateral enlaces={enlaces} nombre={nombre} inicioHref={inicioHref} estadisticas={datos.estadisticas ?? null} cargando={cargando} />
+        <BarraLateral
+          enlaces={enlaces}
+          nombre={nombre}
+          inicioHref={inicioHref}
+          estadisticas={datos.estadisticas ?? null}
+          cargando={cargando}
+          prueba={prueba}
+        />
       </div>
       <NavegacionInferior
         enlaces={enlaces}
@@ -144,6 +158,7 @@ export function PiezasDelMarco({ datos, cargando = false }: { datos: DatosNavega
             enlaces={enlaces}
             estadisticas={datos.estadisticas ?? null}
             hrefPractica={enlaces.find((e) => e.clave === "practica")?.href}
+            prueba={prueba}
           />
         }
       />

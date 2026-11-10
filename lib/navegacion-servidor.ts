@@ -19,6 +19,7 @@ import { nivelDelAlumno } from "@/lib/estimacion";
 import { comoFecha } from "@/lib/fechas";
 import { estadisticasDelAlumno, lecturasDeEstadisticas } from "@/lib/estadisticas-servidor";
 import { accesoPorAlumno } from "@/lib/acceso-alumno";
+import { estadoParaLaBarra } from "@/lib/prueba-nivel/servidor";
 import type { Foco } from "@/lib/sesion-servidor";
 import type { DatosNavegacion } from "@/components/marco/PiezasDelMarco";
 
@@ -46,9 +47,12 @@ export async function datosDelMarco(alumno: Foco): Promise<DatosNavegacion> {
   // página y con cada `router.refresh()`. Los ejercicios que se responden
   // sin salir de la pantalla los suma el navegador
   // (`components/estadisticas/ejercicios-en-vivo.ts`).
-  const [estadisticas, acceso] = await Promise.all([
+  // La prueba de nivel de la barra: el mismo estado que el bloque del inicio
+  // (en el inicio, la misma consulta, por `cache()`). Sin interruptor, nada.
+  const [estadisticas, acceso, pruebaNivel] = await Promise.all([
     alumnoId ? estadisticasDelAlumno(alumnoId, perfil, principal) : null,
     accesoPorAlumno(alumnoId),
+    accesoPorAlumno(alumnoId).then((a) => estadoParaLaBarra(alumnoId, a)),
   ]);
 
   return {
@@ -59,5 +63,6 @@ export async function datosDelMarco(alumno: Foco): Promise<DatosNavegacion> {
     revisando,
     estadisticas,
     acceso: { paraTi: acceso.paraTi, clases: acceso.clases, diploma: acceso.diploma },
+    pruebaNivel,
   };
 }

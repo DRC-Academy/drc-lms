@@ -9,6 +9,7 @@ import { usarIdioma } from "@/components/ProveedorIdioma";
 import { PERFIL_WOO } from "@/lib/cuenta-woo";
 import ComoVas from "@/components/estadisticas/ComoVas";
 import type { EstadisticasAlumno } from "@/lib/estadisticas";
+import PruebaEnLaBarra, { type PruebaDelMarco } from "@/components/prueba-nivel/PruebaEnLaBarra";
 
 /**
  * El perfil: quién es, su cuenta en la web y por dónde sale. El idioma
@@ -38,6 +39,7 @@ export default function MenuPerfil({
   estadisticas = null,
   hrefPractica,
   enlaces = [],
+  prueba = null,
 }: {
   nombre: string;
   /** `barra`: el avatar de la barra de iconos. `movil`: la pestaña de abajo. */
@@ -51,6 +53,8 @@ export default function MenuPerfil({
   hrefPractica?: string;
   /** La lista de secciones entera; la hoja pinta las que no van en la barra. */
   enlaces?: EnlaceSeccion[];
+  /** La prueba de nivel, arriba de la hoja de móvil (`PruebaEnLaBarra`). */
+  prueba?: PruebaDelMarco | null;
 }) {
   const { t } = usarIdioma();
   const seccion = seccionDeRuta(usePathname() ?? "/");
@@ -145,6 +149,7 @@ export default function MenuPerfil({
           id={idPanel}
           soloMovil
         >
+          <PruebaEnLaBarra prueba={prueba} variante="hoja" alPulsar={cerrar} />
           {estadisticas && (
             <div className="mb-5">
               <ComoVas

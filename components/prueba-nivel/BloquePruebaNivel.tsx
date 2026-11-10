@@ -3,6 +3,7 @@ import { textosActuales } from "@/lib/idioma-servidor";
 import { conFoco } from "@/lib/foco";
 import { elegirCurso } from "@/app/acciones-curso";
 import { TARJETA } from "@/components/base/Seccion";
+import IconoPrueba from "@/components/prueba-nivel/IconoPrueba";
 import type { EstadoBloque } from "@/lib/prueba-nivel/servidor";
 import { cuandoRepetir } from "@/lib/prueba-nivel/repetir";
 
@@ -31,11 +32,7 @@ const BOTON =
 function Icono() {
   return (
     <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-marca-verdeFondo text-marca-verdeOsc">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="8.5" />
-        <circle cx="12" cy="12" r="4.5" />
-        <circle cx="12" cy="12" r="0.8" fill="currentColor" />
-      </svg>
+      <IconoPrueba />
     </span>
   );
 }

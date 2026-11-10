@@ -8,7 +8,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------
 
 type Fila = Record<string, unknown>;
-const tabla = vi.hoisted(() => ({ filas: [] as Record<string, unknown>[], n: 0 }));
+const tabla = vi.hoisted(() => ({ filas: [] as Record<string, unknown>[], n: 0, consultas: 0 }));
+
+// `cache()` de React solo existe en el servidor de Next: aquí, sin memoria.
+vi.mock("react", async (original) => ({ ...(await original<object>()), cache: <T,>(fn: T) => fn }));
 
 vi.mock("@/lib/supabase-lms", () => {
   function consulta(op: "select" | "update" | "insert", datos?: Fila | null) {
@@ -52,7 +55,7 @@ vi.mock("@/lib/supabase-lms", () => {
   }
   return {
     baseLms: () => ({
-      from: () => ({
+      from: () => (tabla.consultas++, {
         select: () => consulta("select"),
         insert: (d: Fila) => consulta("insert", d),
         update: (d: Fila) => consulta("update", d),
@@ -85,7 +88,7 @@ vi.mock("@/lib/prueba-nivel/gestion/evaluateWriting", async () => {
   };
 });
 
-import { EsperaParaRepetir, empezar, estadoDelBloque, puedeHacerPrueba, responder, vistaInicial, HUELLA_BANCO } from "@/lib/prueba-nivel/servidor";
+import { EsperaParaRepetir, empezar, estadoDelBloque, estadoParaLaBarra, puedeHacerPrueba, responder, vistaInicial, HUELLA_BANCO } from "@/lib/prueba-nivel/servidor";
 import { buscarPregunta } from "@/lib/prueba-nivel/motor";
 
 const REDACCION =
@@ -113,6 +116,7 @@ async function hastaElFinal(alumnoId: string) {
 beforeEach(() => {
   tabla.filas.length = 0;
   tabla.n = 0;
+  tabla.consultas = 0;
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-11-19T10:00:00Z"));
   vi.unstubAllEnvs();
@@ -246,5 +250,36 @@ describe("repetir: una vez cada 24 horas", () => {
   it("la primera vez no espera nada, y cada alumno lleva su cuenta", async () => {
     await hastaElFinal("pase-1");
     await expect(empezar("pase-2", "b@b.c")).resolves.toMatchObject({ pruebaId: expect.any(String) });
+  });
+});
+
+describe("la barra lateral", () => {
+  const blackPass = { tienePase: true, origen: "pase" as const, avisoPago: false };
+
+  it("con el interruptor apagado: nada, y sin una sola consulta", async () => {
+    expect(await estadoParaLaBarra("pase-1", blackPass)).toBeNull();
+    expect(tabla.consultas).toBe(0);
+  });
+
+  it("con plan con profesor: nada, aunque el interruptor esté encendido", async () => {
+    vi.stubEnv("PRUEBA_NIVEL_ACTIVA", "1");
+    expect(await estadoParaLaBarra("s_1", { tienePase: true, origen: "plan+pase", avisoPago: false })).toBeNull();
+    expect(tabla.consultas).toBe(0);
+  });
+
+  it("encendido: los tres estados, los mismos que el bloque del inicio", async () => {
+    vi.stubEnv("PRUEBA_NIVEL_ACTIVA", "1");
+    expect(await estadoParaLaBarra("pase-1", blackPass)).toEqual({ tipo: "nueva" });
+
+    const a = await empezar("pase-1", "a@b.c");
+    vi.setSystemTime(Date.now() + 1_000);
+    await responder("pase-1", { pruebaId: a.pruebaId, preguntaId: a.pregunta.id, seleccion: 0 });
+    expect(await estadoParaLaBarra("pase-1", blackPass)).toEqual({ tipo: "en_curso", respondidas: 1, total: 17 });
+
+    tabla.filas.length = 0;
+    await hastaElFinal("pase-1");
+    const barra = await estadoParaLaBarra("pase-1", blackPass);
+    expect(barra).toMatchObject({ tipo: "terminada", resultado: { nivel: "C1" } });
+    expect(barra).toEqual(await estadoDelBloque("pase-1"));
   });
 });

@@ -25,6 +25,7 @@
 // ---------------------------------------------------------------
 
 import "server-only";
+import { cache } from "react";
 import { createHash } from "node:crypto";
 import bancoJson from "./banco.json";
 import { baseLms } from "@/lib/supabase-lms";
@@ -170,8 +171,14 @@ function preguntaDe(fila: Fila): Pregunta | null {
   };
 }
 
-/** El estado para el bloque del inicio. Ante un fallo de la base, como nueva: el botón lleva igual. */
-export async function estadoDelBloque(alumnoId: string): Promise<EstadoBloque> {
+/**
+ * El estado para el bloque del inicio y para la barra. Ante un fallo de la
+ * base, como nueva: el botón lleva igual.
+ *
+ * Con `cache()`: en el inicio lo piden el bloque y el marco (la barra) en la
+ * misma petición, y es una sola consulta.
+ */
+export const estadoDelBloque = cache(async (alumnoId: string): Promise<EstadoBloque> => {
   try {
     const filas = await ultimas(alumnoId);
     const enCurso = filas.find((f) => f.estado === "en_curso");
@@ -183,6 +190,19 @@ export async function estadoDelBloque(alumnoId: string): Promise<EstadoBloque> {
     console.error("[prueba-nivel]", (error as Error).message);
     return { tipo: "nueva" };
   }
+});
+
+/**
+ * Lo que lleva el marco para la barra: el estado del bloque si puede hacer
+ * la prueba, o null. Con el interruptor apagado (o con plan con profesor) no
+ * se consulta nada y la barra queda como siempre.
+ */
+export async function estadoParaLaBarra(
+  alumnoId: string,
+  acceso: Pick<AccesoAlumno, "tienePase" | "origen" | "avisoPago">
+): Promise<EstadoBloque | null> {
+  if (!alumnoId || !puedeHacerPrueba(acceso)) return null;
+  return estadoDelBloque(alumnoId);
 }
 
 export type Vista =

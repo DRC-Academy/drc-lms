@@ -11,6 +11,7 @@ import AnilloCurso from "@/components/estadisticas/AnilloCurso";
 import ComoVas, { ComoVasPlegado, lecturasComoVas } from "@/components/estadisticas/ComoVas";
 import type { EstadisticasAlumno } from "@/lib/estadisticas";
 import { useEstadisticasEnVivo } from "@/components/estadisticas/ejercicios-en-vivo";
+import PruebaEnLaBarra, { type PruebaDelMarco } from "@/components/prueba-nivel/PruebaEnLaBarra";
 
 /**
  * La barra de iconos: la navegación de toda la aplicación en escritorio.
@@ -54,6 +55,7 @@ export default function BarraLateral({
   inicioHref,
   estadisticas = null,
   cargando = false,
+  prueba = null,
 }: {
   enlaces: EnlaceSeccion[];
   nombre: string;
@@ -63,6 +65,8 @@ export default function BarraLateral({
   estadisticas?: EstadisticasAlumno | null;
   /** La carcasa: guarda el sitio de «Cómo vas» y del anillo para que nada salte al llegar. */
   cargando?: boolean;
+  /** La prueba de nivel, debajo del anillo del curso (`PruebaEnLaBarra`). Sin ella, nada. */
+  prueba?: PruebaDelMarco | null;
 }) {
   const { t } = usarIdioma();
   const { abrirPanel } = usarMarco();
@@ -105,6 +109,8 @@ export default function BarraLateral({
         )}
 
         {estadisticas?.curso && <AnilloDeLaBarra curso={estadisticas.curso} />}
+
+        <PruebaEnLaBarra prueba={prueba} variante="barra" />
 
         {cargando && (
           <div aria-hidden className="mb-[18px] flex flex-col gap-[18px] px-[18px]">
