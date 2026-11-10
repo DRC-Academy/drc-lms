@@ -34,7 +34,7 @@ vi.mock("@/lib/supabase-lms", () => {
           if (datos!.estado === "en_curso" && tabla.filas.some((f) => f.alumno_id === datos!.alumno_id && f.estado === "en_curso")) {
             return { data: null, error: { code: "23505", message: "duplicate key" } };
           }
-          const fila = { id: `p${++tabla.n}`, creada_en: new Date(Date.now() + tabla.n).toISOString(), respuestas: [], n_respuestas: 0, nivel: null, provisional: null, curso_recomendado: null, ...datos };
+          const fila = { id: `p${++tabla.n}`, creada_en: new Date(Date.now() + tabla.n).toISOString(), respuestas: [], n_respuestas: 0, nivel: null, provisional: null, curso_recomendado: null, terminada_en: null, ...datos };
           tabla.filas.push(fila);
           return { data: { ...fila }, error: null };
         }
@@ -85,7 +85,7 @@ vi.mock("@/lib/prueba-nivel/gestion/evaluateWriting", async () => {
   };
 });
 
-import { empezar, estadoDelBloque, puedeHacerPrueba, responder, vistaInicial, HUELLA_BANCO } from "@/lib/prueba-nivel/servidor";
+import { EsperaParaRepetir, empezar, estadoDelBloque, puedeHacerPrueba, responder, vistaInicial, HUELLA_BANCO } from "@/lib/prueba-nivel/servidor";
 import { buscarPregunta } from "@/lib/prueba-nivel/motor";
 
 const REDACCION =
@@ -193,16 +193,58 @@ describe("terminar", () => {
     // Lectura perfecta (C2 alto, 95,83) y redacción B2 (58,33): 60/40 da 80,83, que es C1,
     // y la redacción está a un nivel, así que la compuerta no lo toca.
     expect(resultado).toMatchObject({ nivel: "C1", provisional: false, curso: { id: "c-c1", slug: "general-c1" } });
+    // Acaba de terminar: podrá repetirla dentro de 24 horas.
+    expect(resultado.repetirDesde).toBe(new Date(Date.now() + 24 * 3_600_000).toISOString());
     expect(tabla.filas[0]).toMatchObject({ estado: "terminada", nivel: "C1", nivel_por_puntuacion: "C1", tope: null, curso_recomendado: "c-c1", n_respuestas: 17 });
     expect(await estadoDelBloque("pase-1")).toMatchObject({ tipo: "terminada", resultado: { nivel: "C1" } });
   });
 
-  it("después: la página enseña el resultado; con ?repetir=1, la bienvenida, y empezar crea otro intento", async () => {
+  it("después: la página enseña el resultado; pasadas 24 horas, ?repetir=1 abre la bienvenida y empezar crea otro intento", async () => {
     await hastaElFinal("pase-1");
-    expect(await vistaInicial("pase-1", false)).toMatchObject({ tipo: "resultado" });
+    vi.setSystemTime(Date.now() + 24 * 3_600_000);
+    expect(await vistaInicial("pase-1", false)).toMatchObject({ tipo: "resultado", resultado: { repetirDesde: null } });
     expect(await vistaInicial("pase-1", true)).toEqual({ tipo: "bienvenida", repitiendo: true });
     await empezar("pase-1", "a@b.c");
     expect(tabla.filas.map((f) => f.estado)).toEqual(["terminada", "en_curso"]);
     expect(await estadoDelBloque("pase-1")).toMatchObject({ tipo: "en_curso", respondidas: 0 });
+  });
+});
+
+describe("repetir: una vez cada 24 horas", () => {
+  it("antes de 24 horas desde que terminó, no se crea otro intento (ni se llama a la IA)", async () => {
+    await hastaElFinal("pase-1");
+    const fin = Date.now();
+    vi.setSystemTime(fin + 23 * 3_600_000);
+
+    const intento = empezar("pase-1", "a@b.c");
+    await expect(intento).rejects.toBeInstanceOf(EsperaParaRepetir);
+    await expect(intento).rejects.toMatchObject({ desde: new Date(fin + 24 * 3_600_000).toISOString() });
+    expect(tabla.filas).toHaveLength(1);
+
+    // El bloque y la página lo dicen; un ?repetir=1 viejo enseña el resultado, no la bienvenida.
+    expect(await estadoDelBloque("pase-1")).toMatchObject({ tipo: "terminada", resultado: { repetirDesde: new Date(fin + 24 * 3_600_000).toISOString() } });
+    expect(await vistaInicial("pase-1", true)).toMatchObject({ tipo: "resultado" });
+  });
+
+  it("cuenta desde que terminó la ÚLTIMA: repetida a las 24 h, la siguiente espera otras 24 h", async () => {
+    await hastaElFinal("pase-1");
+    vi.setSystemTime(Date.now() + 24 * 3_600_000);
+    await hastaElFinal("pase-1");
+    expect(tabla.filas.map((f) => f.estado)).toEqual(["terminada", "terminada"]);
+    vi.setSystemTime(Date.now() + 60_000);
+    await expect(empezar("pase-1", "a@b.c")).rejects.toBeInstanceOf(EsperaParaRepetir);
+  });
+
+  it("retomar la que está a medias no espera: no es otro intento", async () => {
+    await hastaElFinal("pase-1");
+    vi.setSystemTime(Date.now() + 24 * 3_600_000);
+    const a = await empezar("pase-1", "a@b.c");
+    vi.setSystemTime(Date.now() + 1_000);
+    expect((await empezar("pase-1", "a@b.c")).pruebaId).toBe(a.pruebaId);
+  });
+
+  it("la primera vez no espera nada, y cada alumno lleva su cuenta", async () => {
+    await hastaElFinal("pase-1");
+    await expect(empezar("pase-2", "b@b.c")).resolves.toMatchObject({ pruebaId: expect.any(String) });
   });
 });

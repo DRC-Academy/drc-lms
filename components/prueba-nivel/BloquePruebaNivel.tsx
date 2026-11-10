@@ -4,6 +4,7 @@ import { conFoco } from "@/lib/foco";
 import { elegirCurso } from "@/app/acciones-curso";
 import { TARJETA } from "@/components/base/Seccion";
 import type { EstadoBloque } from "@/lib/prueba-nivel/servidor";
+import { cuandoRepetir } from "@/lib/prueba-nivel/repetir";
 
 // ---------------------------------------------------------------
 // LA PRUEBA DE NIVEL, ARRIBA DEL INICIO DEL BLACK PASS (Y DE ELEGIR CURSO)
@@ -13,7 +14,8 @@ import type { EstadoBloque } from "@/lib/prueba-nivel/servidor";
 //   · a medias    «Continuar mi prueba de nivel», cuántas lleva y la barra;
 //   · terminada   su nivel, el curso que se le recomienda y «Empezar mi
 //                 curso» (que lo elige: si ya tenía otro, no se le cambia
-//                 hasta que pulse), y «Repetir la prueba».
+//                 hasta que pulse), y «Repetir la prueba» (o, si la
+//                 terminó hace menos de 24 horas, desde cuándo podrá).
 //
 // Tarjeta blanca y no franja oscura: justo debajo va la de «Tu curso», y dos
 // franjas seguidas no se distinguen. Todo en tinta (nada de gris de apoyo).
@@ -97,6 +99,7 @@ export default function BloquePruebaNivel({
   const nivel = t.niveles[resultado.nivel];
   const curso = resultado.curso;
   const esElSuyo = curso !== null && curso.id === cursoActualId;
+  const espera = resultado.repetirDesde ? cuandoRepetir(resultado.repetirDesde, new Date()) : null;
 
   return (
     <section aria-labelledby="prueba-nivel-titulo" className={`${TARJETA} px-5 py-5 min-[900px]:px-7 min-[900px]:py-6`}>
@@ -140,12 +143,16 @@ export default function BloquePruebaNivel({
               </button>
             </form>
           ))}
-        <Link
-          href={conFoco("/prueba-nivel?repetir=1", foco)}
-          className="text-center text-[15px] font-semibold text-marca-verdeOsc underline underline-offset-2 hover:text-marca-tinta min-[520px]:text-left"
-        >
-          {t.repetir}
-        </Link>
+        {espera ? (
+          <p className="text-balance text-center text-[14.5px] leading-[1.45] text-marca-tinta min-[520px]:text-left">{t.repetirDesde(espera.dia, espera.hora)}</p>
+        ) : (
+          <Link
+            href={conFoco("/prueba-nivel?repetir=1", foco)}
+            className="text-center text-[15px] font-semibold text-marca-verdeOsc underline underline-offset-2 hover:text-marca-tinta min-[520px]:text-left"
+          >
+            {t.repetir}
+          </Link>
+        )}
       </div>
     </section>
   );

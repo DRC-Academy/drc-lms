@@ -15,7 +15,9 @@
 // después a los alumnos con plan es cambiar esa función y nada más.
 //
 // UNA EN CURSO POR ALUMNO (índice único en la base). Retomar es seguir con
-// esa; repetir, una fila nueva cuando no hay ninguna abierta.
+// esa; repetir, una fila nueva cuando no hay ninguna abierta, y como mucho
+// una cada 24 horas desde que terminó la última (`repetir.ts`): cada intento
+// cuesta una corrección con IA.
 //
 // EL CERROJO: cada respuesta se guarda con `n_respuestas = lo que se leyó`.
 // Si otra petición ha guardado antes (doble clic, dos pestañas), esta no
@@ -31,6 +33,7 @@ import { conInicioBlackPass } from "@/lib/inicio-black-pass";
 import type { AccesoAlumno } from "@/lib/acceso-alumno";
 import { evaluateWriting } from "./gestion/evaluateWriting";
 import { GRAND_TOTAL } from "./gestion/constants";
+import { repetirDesde } from "./repetir";
 import type { Cefr, LTProgress, LTQuestionPublic } from "./gestion/types";
 import {
   ESTADO_INICIAL,
@@ -78,10 +81,11 @@ type Fila = {
   provisional: boolean | null;
   curso_recomendado: string | null;
   creada_en: string;
+  terminada_en: string | null;
 };
 
 const COLUMNAS =
-  "id, alumno_id, estado, dificultad_actual, pregunta_actual, respuestas, n_respuestas, nivel, provisional, curso_recomendado, creada_en";
+  "id, alumno_id, estado, dificultad_actual, pregunta_actual, respuestas, n_respuestas, nivel, provisional, curso_recomendado, creada_en, terminada_en";
 
 /** Las últimas del alumno, de la más nueva a la más vieja. Lanza si la base falla. */
 async function ultimas(alumnoId: string): Promise<Fila[]> {
@@ -124,6 +128,8 @@ export type Resultado = {
   nivel: Cefr;
   provisional: boolean;
   curso: CursoDeLaPrueba | null;
+  /** Mientras no puede repetirla (ISO): desde cuándo podrá. Null si ya puede. */
+  repetirDesde: string | null;
 };
 
 export type Pregunta = {
@@ -150,6 +156,7 @@ async function resultadoDe(fila: Fila): Promise<Resultado | null> {
     nivel: fila.nivel,
     provisional: fila.provisional === true,
     curso: await cursoPorId(fila.curso_recomendado),
+    repetirDesde: repetirDesde(fila.terminada_en, new Date()),
   };
 }
 
@@ -192,9 +199,10 @@ export async function vistaInicial(alumnoId: string, repetir: boolean): Promise<
     if (datos) return { tipo: "pregunta", datos };
   }
   const terminada = filas.find((f) => f.estado === "terminada");
-  if (terminada && !repetir) {
+  if (terminada) {
+    // `?repetir=1` antes de tiempo (un enlace viejo): el resultado, que dice desde cuándo.
     const resultado = await resultadoDe(terminada);
-    if (resultado) return { tipo: "resultado", resultado };
+    if (resultado && (!repetir || resultado.repetirDesde)) return { tipo: "resultado", resultado };
   }
   return { tipo: "bienvenida", repitiendo: Boolean(terminada) };
 }
@@ -203,13 +211,29 @@ export async function vistaInicial(alumnoId: string, repetir: boolean): Promise<
 // EMPEZAR Y RESPONDER
 // ---------------------------------------------------------------
 
-/** Empieza (o retoma, si ya hay una abierta) y devuelve la pregunta que toca. */
+/** Repetir antes de tiempo: no se crea la fila. `desde` (ISO) es cuándo podrá. */
+export class EsperaParaRepetir extends Error {
+  constructor(readonly desde: string) {
+    super(`No puede repetir la prueba hasta ${desde}.`);
+    this.name = "EsperaParaRepetir";
+  }
+}
+
+/**
+ * Empieza (o retoma, si ya hay una abierta) y devuelve la pregunta que toca.
+ * Lanza `EsperaParaRepetir` si terminó la última hace menos de 24 horas.
+ */
 export async function empezar(alumnoId: string, email: string): Promise<Pregunta> {
-  const abierta = (await ultimas(alumnoId)).find((f) => f.estado === "en_curso");
+  const filas = await ultimas(alumnoId);
+  const abierta = filas.find((f) => f.estado === "en_curso");
   if (abierta) {
     const datos = preguntaDe(abierta);
     if (datos) return datos;
   }
+
+  const anterior = filas.find((f) => f.estado === "terminada");
+  const espera = anterior ? repetirDesde(anterior.terminada_en, new Date()) : null;
+  if (espera) throw new EsperaParaRepetir(espera);
 
   const primera = preguntaQueToca(ESTADO_INICIAL);
   const { data, error } = await baseLms()

@@ -28,6 +28,8 @@ export type TextosPruebaNivel = {
   esTuCurso: string;
   seguirConMiCurso: string;
   repetir: string;
+  /** Mientras no han pasado 24 h desde la última: cuándo puede repetirla. */
+  repetirDesde: (dia: "hoy" | "manana", hora: string) => string;
   provisional: string;
   // --- la página de la prueba ---
   bienvenidaTitulo: string;
@@ -69,6 +71,9 @@ export const PRUEBA_NIVEL: Record<Idioma, TextosPruebaNivel> = {
     esTuCurso: "Es el curso que ya tienes.",
     seguirConMiCurso: "Seguir con mi curso",
     repetir: "Repetir la prueba",
+    // «a partir de la 1:05», «a partir de las 10:40».
+    repetirDesde: (dia, hora) =>
+      `Podrás repetirla ${dia === "hoy" ? "hoy" : "mañana"} a partir de ${/^1:/.test(hora) ? "la" : "las"} ${hora}.`,
     provisional:
       "Esta vez no hemos podido valorar tu redacción, así que este nivel sale de la parte de lectura. Si quieres, puedes repetir la prueba.",
     bienvenidaTitulo: "Tu prueba de nivel",
@@ -126,6 +131,7 @@ export const PRUEBA_NIVEL: Record<Idioma, TextosPruebaNivel> = {
     esTuCurso: "It's the course you already have.",
     seguirConMiCurso: "Continue my course",
     repetir: "Take the test again",
+    repetirDesde: (dia, hora) => `You can take it again ${dia === "hoy" ? "today" : "tomorrow"} from ${hora}.`,
     provisional:
       "This time we couldn't assess your writing, so this level comes from the reading part. You can take the test again if you like.",
     bienvenidaTitulo: "Your level test",

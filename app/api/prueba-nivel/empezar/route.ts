@@ -5,7 +5,9 @@ import { NextResponse } from "next/server";
 import { alumnoDeLaPrueba, json } from "@/lib/prueba-nivel/rutas";
 import { sesionActual } from "@/lib/sesion-servidor";
 import { estadoDeAcceso, respuestaImpago } from "@/lib/estado-acceso";
-import { empezar } from "@/lib/prueba-nivel/servidor";
+import { EsperaParaRepetir, empezar } from "@/lib/prueba-nivel/servidor";
+import { cuandoRepetir } from "@/lib/prueba-nivel/repetir";
+import { textosActuales } from "@/lib/idioma-servidor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +23,11 @@ export async function POST(): Promise<NextResponse> {
   try {
     return json({ tipo: "pregunta", datos: await empezar(alumno.alumnoId, alumno.email) });
   } catch (error) {
+    // Repetir antes de las 24 horas (una pestaña vieja: la pantalla ya no ofrece el botón).
+    if (error instanceof EsperaParaRepetir) {
+      const { dia, hora } = cuandoRepetir(error.desde, new Date());
+      return json({ error: textosActuales().pruebaNivel.repetirDesde(dia, hora), repetirDesde: error.desde }, 429);
+    }
     console.error("[prueba-nivel/empezar]", (error as Error).message);
     return json({ error: "No hemos podido abrir tu prueba. Vuelve a intentarlo en un momento." }, 500);
   }
