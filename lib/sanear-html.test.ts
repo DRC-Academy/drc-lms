@@ -30,9 +30,9 @@ describe("sanearHtml y los audios del curso", () => {
     expect(sanearHtml(html)).toBe(`<audio controls src="${BUENO}"></audio>`);
   });
 
-  it("mientras dura el cambio, el iframe de Podbean sigue pasando", () => {
-    const html = `<iframe src="https://www.podbean.com/player-v2/?i=abc12-3def45-pb" height="150"></iframe>`;
-    expect(sanearHtml(html)).toBe(html);
+  it("con Podbean cancelado, su iframe se quita como cualquier otro", () => {
+    const html = `<p>a</p><iframe src="https://www.podbean.com/player-v2/?i=abc12-3def45-pb" height="150"></iframe><p>b</p>`;
+    expect(sanearHtml(html)).toBe("<p>a</p><p>b</p>");
   });
 
   it("una lección que solo tiene el audio tiene contenido", () => {

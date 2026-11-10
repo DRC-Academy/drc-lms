@@ -21,16 +21,13 @@
 /**
  * Solo se dejan pasar iframes de estos anfitriones.
  *
- * Podbean sigue aquí SOLO mientras dura el cambio de noviembre de 2026:
- * los 98 audios del curso pasan de sus iframes a un `<audio>` propio que
- * sirve Supabase Storage (ver `docs/audios-curso.md` y
- * `scripts/audios-podbean.ts`). Cuando ninguna lección lleve ya un
- * iframe de Podbean y se cancele el plan, esta línea se quita.
+ * Podbean estuvo aquí hasta noviembre de 2026: los audios del curso son
+ * ahora un `<audio>` propio servido desde Supabase Storage y el plan se
+ * canceló el 10/11/2026 (ver `docs/audios-curso.md`). Un iframe suyo que
+ * apareciera hoy sería un reproductor mudo, así que se quita como
+ * cualquier otro.
  */
-const ANFITRIONES = [
-  /^https?:\/\/(www\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\//i,
-  /^https?:\/\/(www\.)?podbean\.com\//i,
-];
+const ANFITRIONES = [/^https?:\/\/(www\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\//i];
 
 /**
  * Y solo se dejan pasar `<audio>` que salgan del bucket público del

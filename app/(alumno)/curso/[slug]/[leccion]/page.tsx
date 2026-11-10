@@ -124,7 +124,7 @@ export default async function PaginaLeccion({
   );
 
   // El orden importa: primero el saneado —que quita scripts, manejadores,
-  // iframes que no sean de YouTube o Podbean y audios que no salgan del
+  // iframes que no sean de YouTube y audios que no salgan del
   // bucket del curso— y después la preparación,
   // que quita emojis y pone las anclas de los títulos. Al revés, las
   // anclas podrían acabar dentro de algo que el saneador se lleva.
