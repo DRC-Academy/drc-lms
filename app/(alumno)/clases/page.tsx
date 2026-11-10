@@ -9,6 +9,8 @@ import AutoservicioDeGestion from "@/components/clases/autoservicio/Autoservicio
 import { autoservicioVisible } from "@/lib/autoservicio";
 import { Suspense } from "react";
 import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
+import { redirect } from "next/navigation";
+import { accesoPorAlumno } from "@/lib/acceso-alumno";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,10 @@ export default async function PaginaClases({
 }) {
   const alumno = await exigirAlumnoDeLaPagina();
   const { sesion, alumnoId, paraEnlaces } = alumno;
+
+  // Sin clases no hay pantalla de clases, tampoco por URL.
+  if (!(await accesoPorAlumno(alumnoId)).clases) redirect(conFoco(`/alumno/${alumnoId}`, paraEnlaces));
+
   const resaltada = typeof searchParams.recuperacion === "string" ? searchParams.recuperacion : null;
 
   const [calendarioCrudo, excepciones, recorrido, profesores, profe] = await Promise.all([

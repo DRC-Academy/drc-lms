@@ -48,6 +48,7 @@ export type TextosEntrada = {
   avisoSinFicha: string;
   avisoError: string;
   avisoSalida: string;
+  avisoFinPase: string;
   avisoSesion: string;
 
   // --- cuando algo se rompe ---
@@ -95,6 +96,7 @@ const ES: TextosEntrada = {
     "Ese enlace es correcto, pero no encontramos tu ficha. Escribe a tu profesor y lo miramos.",
   avisoError: "No hemos podido abrir tu sesión. Vuelve a intentarlo en un momento.",
   avisoSalida: "Has cerrado sesión. Pide un enlace cuando quieras volver.",
+  avisoFinPase: "Tu Black Pass ha terminado. Si quieres seguir, escríbenos y te contamos las opciones.",
   avisoSesion: "Tu sesión ha caducado. Pide un enlace y sigues donde lo dejaste.",
 
   algoSeHaRoto: "Algo se ha roto por aquí",
@@ -145,6 +147,7 @@ const EN: TextosEntrada = {
     "That link is fine, but we can't find your profile. Write to your teacher and we'll look into it.",
   avisoError: "We couldn't open your session. Try again in a moment.",
   avisoSalida: "You've logged out. Ask for a link whenever you want to come back.",
+  avisoFinPase: "Your Black Pass has ended. If you'd like to continue, write to us and we'll tell you the options.",
   avisoSesion: "Your session has expired. Ask for a link and carry on where you left off.",
 
   algoSeHaRoto: "Something broke here",

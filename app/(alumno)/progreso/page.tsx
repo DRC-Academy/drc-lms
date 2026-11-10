@@ -5,6 +5,7 @@ import { construirEstimacion } from "@/lib/estimacion-ficha";
 import { textoParaElAlumno } from "@/lib/texto-alumno";
 import { objetivoDelAlumno } from "@/lib/objetivo-servidor";
 import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
+import { esIdPase } from "@/lib/pase-id";
 import { cursosDelInicio, precargarCursosDelAlumno } from "@/lib/cursos-servidor";
 import { rutaDeMiCurso } from "@/lib/cursos";
 import { calcularDiploma, progresoDiploma } from "@/lib/diploma";
@@ -166,6 +167,7 @@ export default async function PaginaProgreso() {
         puntosDebiles={perfil?.puntosDebiles ?? null}
         focoRecomendado={perfil?.focoRecomendado ?? null}
         clases={recorrido.clases}
+        conRecorrido={!esIdPase(alumnoId)}
         urlAmpliar={URL_AMPLIAR}
         // EL DIPLOMA ES DE TIEMPO: seis meses desde `fechaInicio`, con
         // `progresoDiploma`, el mismo cálculo que «Mi diploma». Las

@@ -73,6 +73,13 @@ export default async function Home({ searchParams }: { searchParams: { desde?: s
                 <Chevron />
               </Link>
               <Link
+                href="/black-pass"
+                className="inline-flex min-h-[44px] items-center gap-1 text-[14px] font-semibold text-marca-verdeOsc hover:text-marca-tinta lg:min-h-0 lg:pt-2"
+              >
+                Black Pass
+                <Chevron />
+              </Link>
+              <Link
                 href="/accesos-profesores"
                 className="inline-flex min-h-[44px] items-center gap-1 text-[14px] font-semibold text-marca-verdeOsc hover:text-marca-tinta lg:min-h-0 lg:pt-2"
               >

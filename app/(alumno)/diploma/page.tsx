@@ -3,6 +3,9 @@ import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
 import { progresoDiploma } from "@/lib/diploma";
 import PantallaDiploma from "@/components/diploma/PantallaDiploma";
 import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
+import { redirect } from "next/navigation";
+import { accesoPorAlumno } from "@/lib/acceso-alumno";
+import { conFoco } from "@/lib/foco";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +23,12 @@ export const dynamic = "force-dynamic";
  */
 export default async function PaginaDiploma() {
   const alumno = await exigirAlumnoDeLaPagina();
+
+  // Quien solo tiene pase no tiene diploma, tampoco por URL.
+  if (!(await accesoPorAlumno(alumno.alumnoId)).diploma) {
+    redirect(conFoco(`/alumno/${alumno.alumnoId}`, alumno.paraEnlaces));
+  }
+
   const perfil = await obtenerPerfil(alumno.alumnoId);
 
   return (

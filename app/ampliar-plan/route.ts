@@ -31,10 +31,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
 import { crearTokenPuenteWp, type SesionAbierta } from "@/lib/sesion";
-import { puenteWpActivo, urlAmpliarPlan, viaDeAmpliar } from "@/lib/ampliar-plan";
+import { puenteWpActivo, urlAmpliarPlan, urlPlanesConClases, viaDeAmpliar } from "@/lib/ampliar-plan";
 import { PUENTE_WP } from "@/lib/cuenta-woo";
 import { apuntarEvento } from "@/lib/eventos";
 import { enSegundoPlano } from "@/lib/segundo-plano";
+import { accesoDelAlumno } from "@/lib/acceso-alumno";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,6 +78,9 @@ function apuntarClic(sesion: SesionAbierta, peticion: NextRequest, via: string) 
 export async function GET(peticion: NextRequest) {
   const sesion = await sesionActual();
   if (!sesion) return ir(new URL("/acceso", peticion.url).toString());
+
+  // Quien solo tiene pase no tiene suscripción que cambiar: a los planes.
+  if ((await accesoDelAlumno(sesion)).soloPase) return ir(urlPlanesConClases());
 
   const via = viaDeAmpliar(sesion, puenteWpActivo());
   apuntarClic(sesion, peticion, via);

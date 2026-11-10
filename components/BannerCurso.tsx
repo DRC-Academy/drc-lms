@@ -56,6 +56,7 @@ export function cursoTerminado(estados: EstadoCurso[]): boolean {
 export default function BannerCurso({
   estados,
   foco = null,
+  cambiarCursoHref = null,
 }: {
   estados: EstadoCurso[];
   /**
@@ -63,6 +64,8 @@ export default function BannerCurso({
    * cuando es el alumno en su ficha. Ver `lib/foco.ts`.
    */
   foco?: string | null;
+  /** Con todos los cursos abiertos: a elegir, en vez de la lista de «también». */
+  cambiarCursoHref?: string | null;
 }) {
   const t = textosActuales().banners;
   // Sin curso asignado no hay banner. En su lugar, una línea sobria: el
@@ -195,7 +198,18 @@ export default function BannerCurso({
       {/* El segundo curso del alumno de examen. Discreto a propósito y
           FUERA del banner: el banner ya ha dicho cuál toca hoy, y una
           segunda acción dentro competiría con el botón. */}
-      {otros.map((otro) => (
+      {cambiarCursoHref && (
+        <p className="mt-3 px-1 text-[14px] leading-[1.5]">
+          <Link
+            href={cambiarCursoHref}
+            className="font-medium text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta"
+          >
+            {textosActuales().pases.cambiarDeCurso}
+          </Link>
+        </p>
+      )}
+
+      {!cambiarCursoHref && otros.map((otro) => (
         <p key={otro.curso.id} className="mt-3 px-1 text-[14px] leading-[1.5] text-marca-gris">
           {t.tambienTienesAccesoA}{" "}
           <Link

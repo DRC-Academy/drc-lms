@@ -13,6 +13,10 @@ import "server-only";
 import { Resend } from "resend";
 import { MINUTOS_ENLACE } from "@/lib/sesion";
 import { urlPublica } from "@/lib/url-publica";
+import { pasesActivos } from "@/lib/pase-id";
+import { esperarTurnoResend } from "@/lib/resend-ritmo";
+
+const INTENTOS_ANTE_LIMITE = 3;
 
 /**
  * Sale del dominio propio, ya verificado en Resend.
@@ -165,23 +169,33 @@ export async function enviarEnlaceAcceso(
   const enlace =
     `${base}/entrar?token=${encodeURIComponent(token)}` + (volver ? `&volver=${encodeURIComponent(volver)}` : "");
 
-  try {
-    const { error } = await new Resend(clave).emails.send({
-      from: REMITENTE,
-      to: email,
-      subject: COPY[destinatario].asunto,
-      html: html(enlace, destinatario),
-      text: texto(enlace, destinatario),
-    });
+  // EN EL PICO DE UNA VENTA ESTE ENVÍO COMPITE CON LA COLA DEL BLACK PASS por
+  // la misma clave de Resend, y un 429 aquí dejaba al alumno con el mensaje
+  // neutro y sin correo. Con los pases encendidos se respeta el ritmo común y
+  // se reintenta. Apagados, es exactamente lo de siempre.
+  const conRitmo = pasesActivos();
 
-    if (error) {
+  try {
+    for (let intento = 1; ; intento++) {
+      if (conRitmo) await esperarTurnoResend();
+
+      const { error } = await new Resend(clave).emails.send({
+        from: REMITENTE,
+        to: email,
+        subject: COPY[destinatario].asunto,
+        html: html(enlace, destinatario),
+        text: texto(enlace, destinatario),
+      });
+
+      if (!error) return true;
+
+      if (conRitmo && error.name === "rate_limit_exceeded" && intento < INTENTOS_ANTE_LIMITE) continue;
+
       // Sin el email en el mensaje: los logs de Vercel no son sitio
       // para una lista de direcciones de alumnos.
       console.error(`[correo] Resend rechazó el envío: ${error.message}`);
       return false;
     }
-
-    return true;
   } catch (error) {
     console.error("[correo] No se pudo hablar con Resend:", error);
     return false;

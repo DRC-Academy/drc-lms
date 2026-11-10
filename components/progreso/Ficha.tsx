@@ -63,6 +63,7 @@ export default function Ficha({
   urlAmpliar,
   diploma,
   progresoDiploma,
+  conRecorrido = true,
   hrefCurso,
 }: {
   nombre: string;
@@ -80,6 +81,8 @@ export default function Ficha({
   diploma: EstadoDiploma;
   /** De `progresoDiploma`. Null sin fecha de inicio: entonces no hay tarjeta. */
   progresoDiploma: ProgresoDiploma | null;
+  /** Sin clases contratadas no hay recorrido clase a clase que prometer. */
+  conRecorrido?: boolean;
   /** A dónde lleva la tarjeta del diploma: la misma ruta que la pestaña «Mi curso». */
   hrefCurso: string;
 }) {
@@ -167,7 +170,7 @@ export default function Ficha({
             </section>
           )}
 
-          <Recorrido
+          {conRecorrido && <Recorrido
             clases={clases}
             textos={{
               titulo: t.tuRecorrido,
@@ -180,7 +183,7 @@ export default function Ficha({
               fechaLarga: t.fechaLarga,
               resumen: t.recorridoResumen,
             }}
-          />
+          />}
 
           <p className="p2-pie">{t.informePrivado}</p>
         </div>

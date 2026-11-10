@@ -190,6 +190,7 @@ export async function GET(peticion: NextRequest) {
 
   for (const alumno of alumnos) {
     if (soloAlumno !== "" && alumno.alumnoId !== soloAlumno) continue;
+    if (estado.conPase.has(alumno.alumnoId)) continue;
 
     const hechas = estado.progreso.get(alumno.alumnoId) ?? new Set<string>();
     const manuales = estado.manuales.get(alumno.alumnoId) ?? new Set<string>();

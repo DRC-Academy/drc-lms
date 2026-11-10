@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Icono, panelDeRuta, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSeccion";
+import { Candado, Icono, panelDeRuta, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSeccion";
 import { usarIdioma } from "@/components/ProveedorIdioma";
 import MenuPerfil from "@/components/leccion/MenuPerfil";
 import { usarMarco } from "@/components/leccion/MarcoCurso";
@@ -133,14 +133,17 @@ export default function BarraLateral({
                 // consulta: ver `FlechaSemana`.
                 {...(enlace.externo || !activo ? {} : { prefetch: false })}
                 aria-current={activo ? "page" : undefined}
-                aria-label={enlace.texto}
+                aria-label={enlace.etiquetaAria ?? enlace.texto}
                 // El recorrido guiado busca aquí el botón de cada sección.
                 data-tour-nav={enlace.clave}
                 className={`flex h-11 w-full items-center gap-3 overflow-hidden rounded-[12px] pl-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-verdeOsc ${
                   activo ? "bg-drc-chip-verde" : "hover:bg-marca-niebla"
                 }`}
               >
-                <Icono seccion={enlace.clave} activo={activo} className="h-[22px] w-[22px] shrink-0" />
+                <span className="relative inline-flex shrink-0">
+                  <Icono seccion={enlace.clave} activo={activo} className="h-[22px] w-[22px] shrink-0" />
+                  {enlace.bloqueado && <Candado />}
+                </span>
                 <span
                   aria-hidden
                   className={`barra-rotulo whitespace-nowrap text-[15px] ${activo ? "font-semibold text-marca-tinta" : "font-medium text-marca-gris"}`}

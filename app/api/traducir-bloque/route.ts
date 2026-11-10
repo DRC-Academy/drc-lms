@@ -44,6 +44,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
 import { estadoDeAcceso, respuestaImpago } from "@/lib/estado-acceso";
+import { paraTiCerrado, respuestaParaTiCerrado } from "@/lib/acceso-alumno";
 import { buscarBloqueGenerado } from "@/lib/progreso-servidor";
 import { guardarTraduccion, leerTraduccion } from "@/lib/traducciones-servidor";
 import { idiomaDe, type IdiomaBloque } from "@/lib/traduccion-bloque";
@@ -65,6 +66,7 @@ export async function POST(peticion: NextRequest) {
   const sesion = await sesionActual();
   if (!sesion) return NextResponse.json({ error: "Sin sesión" }, { status: 401 });
   if ((await estadoDeAcceso(sesion)) === "impago") return respuestaImpago();
+  if (await paraTiCerrado(sesion)) return respuestaParaTiCerrado();
 
   let cuerpo: unknown;
   try {

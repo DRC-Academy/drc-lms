@@ -28,6 +28,7 @@ import { ejerciciosHechos, type EstadoCurso } from "@/lib/cursos-servidor";
 import { bloquesTerminados } from "@/lib/progreso-servidor";
 import { calcularDiploma, progresoDiploma } from "@/lib/diploma";
 import { nivelMostrado } from "@/lib/estimacion";
+import { esIdPase } from "@/lib/pase-id";
 import type { PerfilAlumno } from "@/lib/data";
 import type { EstadisticasAlumno } from "@/lib/estadisticas";
 
@@ -73,5 +74,15 @@ export async function estadisticasDelAlumno(
     ? { nombre: profe.nombre, conActual: profe.clasesConActual, soloConActual: profe.soloConActual }
     : null;
 
-  return { curso, nivel, clases, ejercicios, bloques, diploma: progresoDiploma(perfil, new Date()), profesor };
+  // Quien solo tiene pase no tiene Para ti: sin esto, «Cómo vas» le invitaría
+  // a empezar su primera práctica.
+  return {
+    curso,
+    nivel,
+    clases,
+    ejercicios,
+    bloques: esIdPase(alumnoId) ? null : bloques,
+    diploma: progresoDiploma(perfil, new Date()),
+    profesor,
+  };
 }

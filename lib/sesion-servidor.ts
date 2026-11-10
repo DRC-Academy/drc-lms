@@ -27,6 +27,8 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { NOMBRE_COOKIE, abrirSesion, type SesionAbierta } from "@/lib/sesion";
 import { sesionViva } from "@/lib/sesiones-lms";
+import { leerPases } from "@/lib/pases";
+import { esIdPase } from "@/lib/pase-id";
 import { CABECERA_URL, PARAM_FOCO, focoDeLaUrl, leerFoco } from "@/lib/foco";
 
 /**
@@ -42,13 +44,30 @@ export const sesionActual = cache(async (): Promise<SesionAbierta | null> => {
 
   // La firma cuadra y no ha caducado, pero pudo revocarse: al cerrar
   // sesión, o a mano desde la tabla.
-  return (await sesionViva(sesion.sesionId)) ? sesion : null;
+  if (!(await sesionViva(sesion.sesionId))) return null;
+
+  // QUIEN SOLO TIENE PASE ENTRA MIENTRAS EL PASE VIVA, y se mira en cada
+  // petición: una cookie de 30 días no se puede saltar la caducidad ni un
+  // reembolso. Todas las páginas, rutas y acciones pasan por aquí. Si la base
+  // no contesta no se echa a nadie, igual que `consultarViva`.
+  if (sesion.rol === "alumno" && esIdPase(sesion.alumnoId)) {
+    const { vivo, fallo } = await leerPases(sesion.alumnoId);
+    if (!vivo && !fallo) return null;
+  }
+
+  return sesion;
 });
 
 /** Igual, pero sin sesión no se sigue: a pedir un enlace. */
 export async function exigirSesion(): Promise<SesionAbierta> {
   const sesion = await sesionActual();
-  if (!sesion) redirect("/acceso");
+  if (!sesion) {
+    // La cookie sigue siendo buena y lo que se acabó es el pase: se le dice,
+    // en vez de pedirle un enlace que no le va a servir.
+    const cookie = await abrirSesion(cookies().get(NOMBRE_COOKIE)?.value);
+    if (cookie?.rol === "alumno" && esIdPase(cookie.alumnoId)) redirect("/acceso?motivo=pase_fin");
+    redirect("/acceso");
+  }
   return sesion;
 }
 

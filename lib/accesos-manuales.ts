@@ -21,7 +21,11 @@ import "server-only";
 import { cache } from "react";
 import { baseLms } from "@/lib/supabase-lms";
 import { cursosDelPlan } from "@/lib/cursos";
+import { leerPases } from "@/lib/pases";
 import type { CursoFila } from "@/lib/cursos-servidor";
+
+/** Lo que dice `concedidaPor` en un curso abierto por un pase, sin fila en la tabla. */
+const CONCEDIDA_POR_PASE = "Black Pass";
 
 export type ExcepcionAcceso = {
   cursoId: string;
@@ -63,12 +67,18 @@ export const excepcionesDelAlumno = cache(
     // recibir siempre cero filas.
     if (alumnoId === "") return vacio;
 
-    const { data, error } = await baseLms()
-      .from("accesos_manuales")
-      .select("curso_id, sin_drip, concedida_por, creada_en, motivo")
-      .eq("alumno_id", alumnoId)
-      .is("revocada_en", null)
-      .returns<FilaExcepcion[]>();
+    const [manuales, pases] = await Promise.all([
+      baseLms()
+        .from("accesos_manuales")
+        .select("curso_id, sin_drip, concedida_por, creada_en, motivo")
+        .eq("alumno_id", alumnoId)
+        .is("revocada_en", null)
+        .returns<FilaExcepcion[]>(),
+      leerPases(alumnoId),
+    ]);
+    const { data, error } = manuales;
+
+    const salida = new Map<string, ExcepcionAcceso>();
 
     if (error) {
       // PGRST205 = la tabla no existe todavía. Es el caso esperado antes
@@ -77,18 +87,41 @@ export const excepcionesDelAlumno = cache(
       if (!error.message.includes("accesos_manuales")) {
         console.error("[accesos] No se pudieron leer las excepciones:", error.message);
       }
-      return vacio;
+    } else {
+      for (const fila of data ?? []) {
+        salida.set(fila.curso_id, {
+          cursoId: fila.curso_id,
+          sinDrip: fila.sin_drip === true,
+          concedidaPor: fila.concedida_por,
+          creadaEn: fila.creada_en,
+          motivo: fila.motivo,
+        });
+      }
     }
 
-    const salida = new Map<string, ExcepcionAcceso>();
-    for (const fila of data ?? []) {
-      salida.set(fila.curso_id, {
-        cursoId: fila.curso_id,
-        sinDrip: fila.sin_drip === true,
-        concedidaPor: fila.concedida_por,
-        creadaEn: fila.creada_en,
-        motivo: fila.motivo,
-      });
+    // UN PASE VIVO ABRE TODOS LOS CURSOS, ENTEROS. Es el mismo mapa que ya
+    // leen el inicio, el temario, la lección y el drip, así que ninguno de
+    // ellos sabe que existe el pase. No se escriben filas en la tabla: al
+    // reembolsar se llevarían por delante una excepción dada a mano.
+    if (pases.vivo) {
+      const { data: cursos, error: alLeerCursos } = await baseLms()
+        .from("cursos")
+        .select("id")
+        .eq("activo", true)
+        .returns<{ id: string }[]>();
+
+      if (alLeerCursos) console.error("[accesos] No se pudieron leer los cursos del pase:", alLeerCursos.message);
+
+      for (const curso of cursos ?? []) {
+        const previa = salida.get(curso.id);
+        salida.set(curso.id, {
+          cursoId: curso.id,
+          sinDrip: true,
+          concedidaPor: previa?.concedidaPor ?? CONCEDIDA_POR_PASE,
+          creadaEn: previa?.creadaEn ?? pases.vivo.inicio,
+          motivo: previa?.motivo ?? null,
+        });
+      }
     }
 
     return salida;

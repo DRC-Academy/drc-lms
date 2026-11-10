@@ -24,6 +24,7 @@ import { cursosDelPlan } from "@/lib/cursos";
 import type { CursoFila } from "@/lib/cursos-servidor";
 import { partirModulo } from "@/lib/modulo";
 import type { ModuloDelCurso } from "@/lib/avisos";
+import { pasesActivos } from "@/lib/pases";
 
 /** `${alumnoId}|${moduloId}`, que es la clave de deduplicación. */
 export type ClaveAviso = string;
@@ -157,6 +158,8 @@ export type EstadoAlumnos = {
   manuales: Map<string, Set<string>>;
   /** Quién ha pedido no recibir avisos. */
   bajas: Set<string>;
+  /** Con un pase vivo: tiene todo abierto, no hay aperturas que anunciarle. */
+  conPase: Set<string>;
   /** De qué módulos ya se ha avisado, sea cual sea el estado de la fila. */
   avisados: Set<ClaveAviso>;
 };
@@ -208,6 +211,19 @@ export async function leerEstado(): Promise<EstadoAlumnos> {
       .returns<FilaAvisada[]>()
   );
 
+  const filasPase = pasesActivos()
+    ? await leerPaginado<{ alumno_id: string }>("los pases vivos", (desde, hasta) =>
+        cliente
+          .from("pases_curso")
+          .select("alumno_id")
+          .eq("estado", "activo")
+          .gt("acceso_hasta", new Date().toISOString())
+          .order("alumno_id")
+          .range(desde, hasta)
+          .returns<{ alumno_id: string }[]>()
+      )
+    : [];
+
   const progreso = new Map<string, Set<string>>();
   for (const fila of filasProgreso) {
     const suyas = progreso.get(fila.alumno_id);
@@ -233,6 +249,7 @@ export async function leerEstado(): Promise<EstadoAlumnos> {
     sinDrip,
     manuales,
     bajas: new Set(filasBaja.map((f) => f.alumno_id)),
+    conPase: new Set(filasPase.map((f) => f.alumno_id)),
     avisados: new Set(filasAvisadas.map((f) => claveAviso(f.alumno_id, f.modulo_id))),
   };
 }

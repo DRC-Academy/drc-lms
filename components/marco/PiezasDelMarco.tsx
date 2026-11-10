@@ -10,6 +10,10 @@ import { DESCUENTO_WOO } from "@/lib/cuenta-woo";
 import type { EstadisticasAlumno } from "@/lib/estadisticas";
 import { conFoco } from "@/lib/foco";
 import type { TextosNavegacion } from "@/lib/textos/navegacion";
+import { esIdPase } from "@/lib/pase-id";
+
+/** Qué se ve de lo que depende del acceso (`accesoDelAlumno`). Sin dato: todo. */
+export type AccesoEnBarra = { paraTi: boolean; clases: boolean; diploma: boolean };
 
 /**
  * Las secciones del alumno, como enlaces. Una sola lista para la barra,
@@ -30,6 +34,7 @@ export function enlacesDeSecciones({
   foco,
   t,
   cargando = false,
+  acceso,
 }: {
   alumnoId?: string | null;
   /** La ruta de la pestaña, sin foco. Sin ella, la pestaña no se pinta. */
@@ -37,8 +42,13 @@ export function enlacesDeSecciones({
   foco?: string | null;
   t: TextosNavegacion;
   cargando?: boolean;
+  acceso?: AccesoEnBarra;
 }): EnlaceSeccion[] {
   if (!alumnoId) return [];
+
+  // Mientras llegan los datos, el prefijo ya dice que solo tiene pase: que no
+  // se le enseñe «Clases» ni un instante.
+  const ve = acceso ?? (esIdPase(alumnoId) ? { paraTi: false, clases: false, diploma: false } : { paraTi: true, clases: true, diploma: true });
 
   const curso = { clave: "curso" as const, texto: t.miCurso, corto: t.cortas.curso };
 
@@ -48,14 +58,21 @@ export function enlacesDeSecciones({
     // concreta, así que se pone donde se llega sin buscar. Se pinta
     // siempre; el que no tenga horario encuentra la pantalla
     // explicándoselo en vez de una pestaña que se esfumó.
-    { clave: "clases" as const, texto: t.clases, corto: t.cortas.clases, href: "/clases" },
+    ...(ve.clases ? [{ clave: "clases" as const, texto: t.clases, corto: t.cortas.clases, href: "/clases" }] : []),
     ...(miCurso ? [{ ...curso, href: miCurso }] : cargando ? [{ ...curso, href: "", pendiente: true }] : []),
-    { clave: "practica" as const, texto: t.paraTi, corto: t.cortas.practica, href: "/practica" },
+    // BLOQUEADO SE VE: lleva a la pantalla que cuenta de qué depende.
+    {
+      clave: "practica" as const,
+      texto: t.paraTi,
+      corto: t.cortas.practica,
+      href: "/practica",
+      ...(ve.paraTi ? {} : { bloqueado: true, etiquetaAria: t.conCandado(t.paraTi) }),
+    },
     { clave: "progreso" as const, texto: t.miProgreso, corto: t.cortas.progreso, href: "/progreso" },
     // «MI DIPLOMA» NO VA EN LA BARRA DE MÓVIL: con siete celdas a 320px
     // cada una baja a 45px. Sale en la hoja del perfil, que lee esta
     // misma lista (`enBarraMovil`).
-    { clave: "diploma" as const, texto: t.miDiploma, corto: t.cortas.diploma, href: "/diploma", enBarraMovil: false },
+    ...(ve.diploma ? [{ clave: "diploma" as const, texto: t.miDiploma, corto: t.cortas.diploma, href: "/diploma", enBarraMovil: false }] : []),
     // EL DESCUENTO NO ES DEL LMS: la página de referidos de la web, en la
     // misma pestaña. En móvil, en la hoja del perfil como el diploma.
     { clave: "descuento" as const, texto: t.descuento, corto: t.cortas.descuento, href: DESCUENTO_WOO, enBarraMovil: false, externo: true },
@@ -80,6 +97,8 @@ export type DatosNavegacion = {
    * (`lib/estadisticas-servidor.ts`). Sin alumno no hay.
    */
   estadisticas?: EstadisticasAlumno | null;
+  /** Sin él, todo a la vista: es lo que pasa fuera de las pantallas del alumno. */
+  acceso?: AccesoEnBarra;
 };
 
 /**
@@ -100,6 +119,7 @@ export function PiezasDelMarco({ datos, cargando = false }: { datos: DatosNavega
     foco: datos.foco,
     t,
     cargando,
+    acceso: datos.acceso,
   });
   const nombre = datos.nombre.trim();
   const inicioHref = datos.alumnoId ? conFoco(`/alumno/${datos.alumnoId}`, datos.foco) : "/";
