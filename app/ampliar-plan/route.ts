@@ -36,6 +36,7 @@ import { PUENTE_WP } from "@/lib/cuenta-woo";
 import { apuntarEvento } from "@/lib/eventos";
 import { enSegundoPlano } from "@/lib/segundo-plano";
 import { accesoDelAlumno } from "@/lib/acceso-alumno";
+import { conInicioBlackPass } from "@/lib/inicio-black-pass";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,8 +80,14 @@ export async function GET(peticion: NextRequest) {
   const sesion = await sesionActual();
   if (!sesion) return ir(new URL("/acceso", peticion.url).toString());
 
-  // Quien solo tiene pase no tiene suscripción que cambiar: a los planes.
-  if ((await accesoDelAlumno(sesion)).soloPase) return ir(urlPlanesConClases());
+  // BLACK PASS SIN PLAN (con ficha o sin ella): no hay suscripción que
+  // cambiar. Va a los planes con clases (`URL_PLANES_CON_CLASES`, WhatsApp) y
+  // el clic se apunta como los demás, con la vía «planes»: es el botón de
+  // «Practica con un profesor nativo» del inicio del Black Pass.
+  if (conInicioBlackPass(await accesoDelAlumno(sesion))) {
+    apuntarClic(sesion, peticion, "planes");
+    return ir(urlPlanesConClases());
+  }
 
   const via = viaDeAmpliar(sesion, puenteWpActivo());
   apuntarClic(sesion, peticion, via);

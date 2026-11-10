@@ -7,6 +7,11 @@ import { urlActualizarPago } from "@/lib/cuenta-woo";
 // Dice de qué depende, sin lenguaje de error: esta persona no ha hecho nada
 // mal. El cierre de verdad está en el servidor (`paraTiCerrado`).
 //
+// A QUIEN NO TIENE CLASES (Black Pass) LE INVITA: qué es Para ti, que va con
+// las clases 1:1 y un botón a WhatsApp (`URL_PLANES_CON_CLASES`), todo en
+// tinta. A quien tiene el plan en espera de pago le sale lo de siempre: su
+// título, su texto y el botón de actualizar el pago.
+//
 // EL BOTÓN VA EN `drc-verde-solido` (#037A36): con el blanco da 5,5:1, que
 // pasa AA. El verde de marca de los rellenos no llega con texto de este tamaño.
 // ---------------------------------------------------------------
@@ -26,11 +31,18 @@ export default function ParaTiBloqueado({ url, enEspera }: { url: string; enEspe
         </svg>
       </span>
 
-      <h1 className="mt-5 font-display text-[28px] font-bold leading-[1.15] text-marca-tinta">{t.paraTiTitulo}</h1>
+      <h1 className="mt-5 text-balance font-display text-[28px] font-bold leading-[1.15] text-marca-tinta">
+        {enEspera ? t.paraTiTituloEnEspera : t.paraTiTitulo}
+      </h1>
 
-      <p className="mt-3 text-pretty text-[16px] leading-[1.55] text-marca-tintaMedia">
-        {enEspera ? t.paraTiEnEspera : t.paraTiTexto}
-      </p>
+      {enEspera ? (
+        <p className="mt-3 text-pretty text-[16px] leading-[1.55] text-marca-tintaMedia">{t.paraTiEnEspera}</p>
+      ) : (
+        <>
+          <p className="mt-3 text-pretty text-[16px] leading-[1.55] text-marca-tinta">{t.paraTiTexto}</p>
+          <p className="mt-3 text-pretty text-[16px] leading-[1.55] text-marca-tinta">{t.paraTiLinea}</p>
+        </>
+      )}
 
       <div className="mt-7">
         {enEspera ? (
@@ -38,7 +50,7 @@ export default function ParaTiBloqueado({ url, enEspera }: { url: string; enEspe
             {t.avisoPagoBoton}
           </a>
         ) : (
-          <a href={url} className={BOTON}>
+          <a href={url} target="_blank" rel="noopener noreferrer" className={BOTON}>
             {t.paraTiBoton}
           </a>
         )}

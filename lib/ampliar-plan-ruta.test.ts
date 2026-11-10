@@ -22,8 +22,12 @@ vi.mock("@/lib/segundo-plano", () => ({
   },
 }));
 
-const acceso = vi.hoisted(() => ({ soloPase: false }));
-vi.mock("@/lib/acceso-alumno", () => ({ accesoDelAlumno: async () => ({ soloPase: acceso.soloPase }) }));
+// `conInicioBlackPass` (lib/inicio-black-pass) es la de verdad: la regla de
+// quién va a los planes con clases no se reescribe en el test.
+const acceso = vi.hoisted(() => ({ blackPass: false }));
+vi.mock("@/lib/acceso-alumno", () => ({
+  accesoDelAlumno: async () => ({ tienePase: acceso.blackPass, origen: acceso.blackPass ? "pase" : "plan", avisoPago: false }),
+}));
 
 const SECRETO_PUENTE = "q".repeat(40);
 const peticion = () => new NextRequest("http://localhost:3001/ampliar-plan");
@@ -36,7 +40,7 @@ beforeEach(() => {
   delete process.env.URL_AMPLIAR_PLAN;
   eventos.apuntados.length = 0;
   eventos.pendientes.length = 0;
-  acceso.soloPase = false;
+  acceso.blackPass = false;
   delete process.env.URL_PLANES_CON_CLASES;
 });
 
@@ -56,13 +60,17 @@ describe("GET /ampliar-plan", () => {
     expect(JSON.parse(Buffer.from(cuerpo, "base64url").toString()).e).toBe("alumna@ejemplo.com");
   });
 
-  it("quien solo tiene pase no tiene suscripción que cambiar: a los planes, sin sobre", async () => {
-    acceso.soloPase = true;
-    process.env.URL_PLANES_CON_CLASES = "https://drcacademy.com/planes/";
+  it("Black Pass sin plan: no tiene suscripción que cambiar; a los planes, sin sobre, y el clic se apunta", async () => {
+    acceso.blackPass = true;
+    process.env.URL_PLANES_CON_CLASES = "https://wa.me/34000000000";
     sesion.actual = { rol: "alumno", email: "alumna@ejemplo.com", alumnoId: "pase-1", sesionId: "x" };
     const { GET } = await import("@/app/ampliar-plan/route");
-    const r = await GET(peticion());
-    expect(r.headers.get("location")).toBe("https://drcacademy.com/planes/");
+    const r = await GET(
+      new NextRequest("http://localhost:3001/ampliar-plan", { headers: { referer: "http://localhost:3001/alumno/pase-1" } })
+    );
+    expect(r.headers.get("location")).toBe("https://wa.me/34000000000");
+    await Promise.all(eventos.pendientes);
+    expect(eventos.apuntados).toEqual([["pase-1", "banner_ampliar_clic", { pantalla: "inicio", via: "planes" }]]);
   });
 
   it("el equipo va al enlace de siempre, sin sobre", async () => {

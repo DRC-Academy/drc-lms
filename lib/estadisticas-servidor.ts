@@ -75,14 +75,18 @@ export async function estadisticasDelAlumno(
     : null;
 
   // Quien solo tiene pase no tiene Para ti: sin esto, «Cómo vas» le invitaría
-  // a empezar su primera práctica.
+  // a empezar su primera práctica. Tampoco diploma (decisión del 06/11): sin
+  // esto, el anillo le contaría los meses que le faltan para uno que no va a
+  // recibir. Es el mismo dato en el inicio, la barra lateral y la hoja del
+  // perfil, porque las tres beben de aquí.
+  const soloPase = esIdPase(alumnoId);
   return {
     curso,
     nivel,
     clases,
     ejercicios,
-    bloques: esIdPase(alumnoId) ? null : bloques,
-    diploma: progresoDiploma(perfil, new Date()),
+    bloques: soloPase ? null : bloques,
+    diploma: soloPase ? null : progresoDiploma(perfil, new Date()),
     profesor,
   };
 }

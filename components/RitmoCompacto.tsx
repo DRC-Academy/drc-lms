@@ -59,7 +59,18 @@ export type DatosRitmo =
     }
   | { variante: "maximo"; horas: number; meta: string | null; meses: Meses | null }
   | { variante: "generica" | "sin-ahorro"; horas: number | null; meta: string | null }
-  | { variante: "perfeccionar-c2"; horas: number | null };
+  | { variante: "perfeccionar-c2"; horas: number | null }
+  /**
+   * BLACK PASS (10/11/2026): quien no tiene clases. No hay ritmo que
+   * comparar, así que sin barras ni meses: la misma tarjeta, el mismo
+   * titular y el mismo botón, invitando a probar las clases 1:1. El botón
+   * pasa por `RUTA_AMPLIAR`, que a quien tiene pase lo lleva a
+   * `URL_PLANES_CON_CLASES` (WhatsApp) y apunta el clic.
+   */
+  | { variante: "clases" };
+
+/** Las variantes que comparan ritmos: todas menos la del Black Pass. */
+type DatosComparables = Exclude<DatosRitmo, { variante: "clases" }>;
 
 type TextosBanners = ReturnType<typeof textosActuales>["banners"];
 
@@ -115,12 +126,12 @@ export function datosDeRitmo(
 }
 
 /** El titular de las variantes sin cifras, que es también todo su texto. */
-export function tituloSinCifras(datos: DatosRitmo, t: TextosBanners): string {
+export function tituloSinCifras(datos: DatosComparables, t: TextosBanners): string {
   return datos.variante === "perfeccionar-c2" ? t.conMasHorasAvanzasMas : t.conMasHorasLlegasAntes;
 }
 
 /** La etiqueta de la meta: "Nivel B2", "Perfeccionar tu C2" o "Tu meta". */
-export function etiquetaMeta(datos: DatosRitmo, t: TextosBanners): string {
+export function etiquetaMeta(datos: DatosComparables, t: TextosBanners): string {
   if (datos.variante === "perfeccionar-c2") return t.perfeccionarTuC2;
   return datos.meta ? t.nivelMeta(datos.meta) : t.tuMeta;
 }
@@ -140,6 +151,8 @@ export function textosMaximo(
 
 export default function RitmoCompacto({ datos, href, id }: { datos: DatosRitmo; href: string; id: string }) {
   const t = textosActuales().banners;
+
+  if (datos.variante === "clases") return <InvitacionClases href={href} id={id} />;
 
   if (datos.variante === "normal") {
     const { meta, actual, recomendado } = datos;
@@ -217,6 +230,47 @@ export default function RitmoCompacto({ datos, href, id }: { datos: DatosRitmo; 
       </div>
 
       <Boton href={href} texto={t.quieroIrMasRapido} />
+    </section>
+  );
+}
+
+/**
+ * LA VARIANTE DEL BLACK PASS: titular, texto, botón y una nota de a dónde
+ * lleva. Todo en tinta (regla de marca: nada de gris en los textos de
+ * apoyo). La usa también `ComparativaRitmo` en escritorio, para que las dos
+ * anchuras digan lo mismo con la misma pieza.
+ */
+export function InvitacionClases({ href, id, ancho = "movil" }: { href: string; id: string; ancho?: "movil" | "escritorio" }) {
+  const t = textosActuales().pases;
+  const escritorio = ancho === "escritorio";
+
+  return (
+    <section aria-labelledby={id} className={`${TARJETA} ${escritorio ? "px-8 py-[30px]" : "px-5 py-5"}`}>
+      <h2
+        id={id}
+        className={`text-balance font-display font-bold tracking-[-0.01em] text-marca-tinta ${
+          escritorio ? "text-[26px] leading-[1.12]" : "text-[24px] leading-[1.15]"
+        }`}
+      >
+        {t.clasesTitulo}
+      </h2>
+      <p className={`mt-2 text-pretty leading-[1.5] text-marca-tinta ${escritorio ? "max-w-[620px] text-[15.5px]" : "text-[15px]"}`}>
+        {t.clasesTexto}
+      </p>
+
+      <div className={escritorio ? "mt-5 flex flex-wrap items-center gap-x-4 gap-y-2" : ""}>
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`btn-verde flex min-h-[48px] items-center justify-center rounded-full px-7 text-[15.5px] font-bold ${
+            escritorio ? "w-fit" : "mt-5 w-full"
+          }`}
+        >
+          {t.clasesBoton}
+        </a>
+        <p className={`text-[14px] leading-[1.4] text-marca-tinta ${escritorio ? "" : "mt-2.5 text-center"}`}>{t.clasesNota}</p>
+      </div>
     </section>
   );
 }

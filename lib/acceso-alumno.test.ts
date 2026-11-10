@@ -35,7 +35,14 @@ vi.mock("@/lib/idioma-servidor", () => ({
   textosActuales: () => ({ pases: { paraTiTexto: "Para ti está disponible" }, impago: { api: "en espera" } }),
 }));
 
-import { accesoDelAlumno, accesoPorAlumno, clasesCerradas, paraTiCerrado, respuestaParaTiCerrado } from "@/lib/acceso-alumno";
+import {
+  accesoDelAlumno,
+  accesoPorAlumno,
+  clasesCerradas,
+  conInicioBlackPass,
+  paraTiCerrado,
+  respuestaParaTiCerrado,
+} from "@/lib/acceso-alumno";
 import { estadoDeAcceso } from "@/lib/estado-acceso";
 
 const manana = () => new Date(Date.now() + 86_400_000).toISOString();
@@ -174,6 +181,36 @@ describe("el acceso es la suma", () => {
     const lejos = manana();
     filasPase.mockReturnValue({ data: [fila("pase-1", lejos), fila("pase-1", ayer())], error: null });
     expect((await accesoPorAlumno("pase-1")).hasta?.toISOString()).toBe(new Date(lejos).toISOString());
+  });
+});
+
+describe("quién ve el inicio del Black Pass", () => {
+  it("solo pase: sí", async () => {
+    filasPase.mockReturnValue({ data: [fila("pase-1", manana())], error: null });
+    expect(conInicioBlackPass(await accesoPorAlumno("pase-1"))).toBe(true);
+  });
+
+  it("ex-alumno con ficha que compra el pase: sí", async () => {
+    filasPase.mockReturnValue({ data: [fila("s_1", manana())], error: null });
+    perfil.mockResolvedValue({ asignacionActiva: false });
+    expect(conInicioBlackPass(await accesoPorAlumno("s_1"))).toBe(true);
+  });
+
+  it("plan activo + pase: no, el de siempre", async () => {
+    filasPase.mockReturnValue({ data: [fila("s_1", manana())], error: null });
+    expect(conInicioBlackPass(await accesoPorAlumno("s_1"))).toBe(false);
+  });
+
+  it("plan en espera de pago + pase: no, el de siempre con el aviso", async () => {
+    filasPase.mockReturnValue({ data: [fila("s_1", manana())], error: null });
+    enEspera.mockResolvedValue(true);
+    expect(conInicioBlackPass(await accesoPorAlumno("s_1"))).toBe(false);
+  });
+
+  it("sin pase, con o sin plan: no", async () => {
+    expect(conInicioBlackPass(await accesoPorAlumno("s_1"))).toBe(false);
+    perfil.mockResolvedValue({ asignacionActiva: false });
+    expect(conInicioBlackPass(await accesoPorAlumno("s_2"))).toBe(false);
   });
 });
 

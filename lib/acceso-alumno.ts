@@ -53,6 +53,10 @@ export type AccesoAlumno = {
   avisoPago: boolean;
 };
 
+// Quién ve el inicio del Black Pass: regla pura, en su propio módulo para que
+// la puedan usar los tests sin cargar este (que es solo de servidor).
+export { conInicioBlackPass } from "@/lib/inicio-black-pass";
+
 const COMO_SIEMPRE: AccesoAlumno = {
   puedeEntrar: true,
   origen: "plan",

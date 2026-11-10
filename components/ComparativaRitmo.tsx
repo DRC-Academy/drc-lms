@@ -1,7 +1,7 @@
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { Estimacion } from "@/lib/estimacion";
 import MascotaRitmo from "@/components/MascotaRitmo";
-import RitmoCompacto, { textosMaximo, tituloSinCifras, type DatosRitmo } from "@/components/RitmoCompacto";
+import RitmoCompacto, { InvitacionClases, textosMaximo, tituloSinCifras, type DatosRitmo } from "@/components/RitmoCompacto";
 import { TARJETA, TITULO_SECCION } from "@/components/base/Seccion";
 
 /**
@@ -41,6 +41,21 @@ const ID_RECOMENDADO = "ritmo-recomendado";
 
 export default function ComparativaRitmo({ datos, href }: { datos: DatosRitmo; href: string }) {
   const t = textosActuales().banners;
+
+  // BLACK PASS: no hay ritmo que comparar. La misma tarjeta en las dos
+  // anchuras, sin senderos ni mascota (no hay fila que señalar).
+  if (datos.variante === "clases") {
+    return (
+      <>
+        <div className="min-[900px]:hidden">
+          <InvitacionClases href={href} id="titulo-clases-movil" />
+        </div>
+        <div className="hidden min-[900px]:block">
+          <InvitacionClases href={href} id="titulo-clases" ancho="escritorio" />
+        </div>
+      </>
+    );
+  }
 
   // Lo que dice la columna de texto, por variante. Los meses solo en
   // `normal` y en `maximo` con estimación; en el resto, ninguna cifra.

@@ -5,6 +5,9 @@ import { nivelMcer } from "@/lib/recorrido";
 import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
 import { notFound, redirect } from "next/navigation";
 import { accesoPorAlumno } from "@/lib/acceso-alumno";
+import { conInicioBlackPass } from "@/lib/inicio-black-pass";
+import OtrosNiveles from "@/components/pases/OtrosNiveles";
+import { TITULO_SECCION } from "@/components/base/Seccion";
 import { cursoElegido } from "@/lib/pases";
 import AvisoPagoPase from "@/components/pases/AvisoPagoPase";
 import { fechaDePase } from "@/lib/pases-texto";
@@ -75,6 +78,21 @@ export default async function PerfilAlumno({
 
   // Qué tiene: sin pase, nada de lo de abajo cambia.
   const acceso = await accesoPorAlumno(alumnoId);
+
+  // ---------------------------------------------------------------
+  // EL INICIO DEL BLACK PASS (10/11/2026)
+  //
+  // Para quien tiene pase y no tiene plan con profesor activo (ver
+  // `conInicioBlackPass`). En este orden: el saludo sin género, la prueba de
+  // nivel, «Tu curso», «Otros niveles» y la invitación a las clases 1:1, que
+  // es la variante del mismo banner de ritmo que ven los alumnos con plan.
+  // Sin comparativa de ritmo, sin calendario y sin anillo del diploma (este,
+  // a quien no tiene ficha: `estadisticasDelAlumno`). «Cómo vas» pasa al
+  // final.
+  //
+  // A los alumnos con plan no les cambia nada: todo cuelga de esta variable.
+  // ---------------------------------------------------------------
+  const inicioBlackPass = conInicioBlackPass(acceso);
 
   // Si toca el recorrido guiado. Se pide a la vez que lo demás; ante
   // cualquier fallo dice que no (ver lib/tutorial/estado.ts).
@@ -194,7 +212,11 @@ export default async function PerfilAlumno({
   // ---------------------------------------------------------------
   const primerNombre = nombre.split(" ")[0] ?? "";
   const tp = textosActuales().practica;
-  const saludo = ultimaClase ? tp.saludoConClase(primerNombre) : tp.saludoSinClase(primerNombre);
+  const saludo = inicioBlackPass
+    ? textosActuales().pases.hola(primerNombre)
+    : ultimaClase
+      ? tp.saludoConClase(primerNombre)
+      : tp.saludoSinClase(primerNombre);
 
   const quien = profesor || tp.tuProfesor;
   const subtituloDeSiempre = ultimaClase
@@ -218,7 +240,7 @@ export default async function PerfilAlumno({
   const ahora = new Date();
   const proxima = proximaDelAlumno(calendario, excepciones, ahora);
   const enVentana = proxima !== null && ventanaAbierta(proxima, ahora);
-  const subtitulo = acceso.soloPase
+  const subtitulo = inicioBlackPass
     ? acceso.hasta
       ? textosActuales().pases.activoHasta(fechaDePase(acceso.hasta, idiomaActual()))
       : null
@@ -262,6 +284,14 @@ export default async function PerfilAlumno({
   // allí, que es donde está el botón de entrar.
   // ---------------------------------------------------------------
   const estadisticas = await estadisticasDelAlumno(alumnoId, perfil, principal);
+  const comoVas = (
+    <ComoVas
+      estadisticas={estadisticas}
+      variante="movil"
+      hrefPractica={conFoco("/practica", foco)}
+      hrefDiploma={conFoco("/diploma", foco)}
+    />
+  );
 
   // «AHORA PUEDES LLEGAR MÁS RÁPIDO»: la misma estimación que el banner
   // de «Mi progreso», con los mismos datos (ver `app/(alumno)/progreso`).
@@ -370,9 +400,17 @@ export default async function PerfilAlumno({
               {saludo}
             </h1>
 
-            <p className="mt-[5px] text-pretty text-[14px] leading-[1.4] text-marca-gris min-[900px]:mt-1.5 min-[900px]:text-[16px]">
-              {subtitulo}
-            </p>
+            {/* En el Black Pass, en tinta: es lo único que le dice hasta
+                cuándo tiene el curso (regla de marca, sin gris de apoyo). */}
+            {subtitulo && (
+              <p
+                className={`mt-[5px] text-pretty text-[14px] leading-[1.4] min-[900px]:mt-1.5 min-[900px]:text-[16px] ${
+                  inicioBlackPass ? "text-marca-tinta" : "text-marca-gris"
+                }`}
+              >
+                {subtitulo}
+              </p>
+            )}
           </div>
         </div>
 
@@ -391,14 +429,10 @@ export default async function PerfilAlumno({
         {/* «CÓMO VAS», EN MÓVIL, JUSTO DEBAJO DEL SALUDO: lo primero después
             de la cara del profesor. En escritorio vive arriba de la barra
             lateral, y por eso aquí va con `min-[900px]:hidden`. */}
-        <div className="entra mb-4 min-[900px]:hidden">
-          <ComoVas
-            estadisticas={estadisticas}
-            variante="movil"
-            hrefPractica={conFoco("/practica", foco)}
-            hrefDiploma={conFoco("/diploma", foco)}
-          />
-        </div>
+        {!inicioBlackPass && <div className="entra mb-4 min-[900px]:hidden">{comoVas}</div>}
+
+        {/* EL BLOQUE DE LA PRUEBA DE NIVEL va aquí, arriba de todo en el
+            inicio del Black Pass (punto 2, con su propio interruptor). */}
 
         {/* La franja entra como pieza ya renderizada: la pinta el
             servidor y la coloca «PanelAlumno», que es quien monta la
@@ -409,9 +443,22 @@ export default async function PerfilAlumno({
           generadosIniciales={generados}
           idsTerminados={idsTerminados}
           esAdministrador={sesion.rol === "admin"}
-          ritmo={conRitmo ? <ComparativaRitmo datos={ritmo} href={RUTA_AMPLIAR} /> : null}
+          ritmo={
+            inicioBlackPass ? (
+              <ComparativaRitmo datos={{ variante: "clases" }} href={RUTA_AMPLIAR} />
+            ) : conRitmo ? (
+              <ComparativaRitmo datos={ritmo} href={RUTA_AMPLIAR} />
+            ) : null
+          }
           entreMedias={
-            !acceso.clases ? null : <>
+            inicioBlackPass ? (
+              <div
+                className="entra mt-[26px] min-[900px]:mt-9"
+                style={{ animationDelay: "calc(var(--paso-escalonado) * 3)" }}
+              >
+                <OtrosNiveles estados={estadosCurso.slice(1)} foco={foco} />
+              </div>
+            ) : !acceso.clases ? null : <>
               <div
                 className="entra mt-[26px] min-[900px]:mt-9"
                 style={{ animationDelay: "calc(var(--paso-escalonado) * 3)" }}
@@ -452,6 +499,11 @@ export default async function PerfilAlumno({
                   }
                 />
               </div>
+            ) : inicioBlackPass ? (
+              <div className="min-w-0">
+                <h2 className={`mb-3 ${TITULO_SECCION}`}>{textosActuales().pases.tuCurso}</h2>
+                <BannerCurso estados={estadosCurso} foco={foco} cambiarCursoHref={conFoco("/elegir-curso", foco)} />
+              </div>
             ) : (
               <BannerCurso
                 estados={estadosCurso}
@@ -461,6 +513,9 @@ export default async function PerfilAlumno({
             )
           }
         />
+
+        {/* En el Black Pass, «Cómo vas» va al final: arriba manda la prueba. */}
+        {inicioBlackPass && <div className="entra mt-[26px] min-[900px]:hidden">{comoVas}</div>}
 
         {proxima && <RefrescoEnCortes cortes={[proxima.abreEn.getTime(), proxima.terminaEn.getTime()]} />}
 
