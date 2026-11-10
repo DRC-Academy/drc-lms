@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { elegirCurso } from "@/app/acciones-curso";
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { CursoFila } from "@/lib/cursos-servidor";
@@ -21,10 +22,13 @@ export default function ListaCursos({
   estados,
   elegido,
   hrefRevision,
+  arriba = null,
 }: {
   estados: CursoParaElegir[];
   elegido: string | null;
   hrefRevision: ((slug: string) => string) | null;
+  /** Lo que va antes del título: el bloque de la prueba de nivel, si toca. */
+  arriba?: ReactNode;
 }) {
   const t = textosActuales().pases;
   const grupos = [
@@ -34,6 +38,7 @@ export default function ListaCursos({
 
   return (
     <main className="mx-auto w-full max-w-[720px] flex-1 px-5 pb-[120px] pt-6 min-[900px]:pt-10">
+      {arriba && <div className="mb-7">{arriba}</div>}
       <h1 className="text-balance font-display text-[26px] font-bold leading-[1.15] text-marca-tinta min-[900px]:text-[32px]">
         {t.elegirTitulo}
       </h1>

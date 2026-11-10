@@ -60,6 +60,7 @@ import { VALORACIONES, type TextosValoraciones } from "@/lib/textos/valoraciones
 import { IMPAGO, type TextosImpago } from "@/lib/textos/impago";
 import { AVISO_PARA_TI, type TextosAvisoParaTi } from "@/lib/textos/aviso-para-ti";
 import { PASES, type TextosPases } from "@/lib/textos/pases";
+import { PRUEBA_NIVEL, type TextosPruebaNivel } from "@/lib/textos/prueba-nivel";
 
 export type Textos = {
   ejercicios: TextosEjercicios;
@@ -81,6 +82,7 @@ export type Textos = {
   impago: TextosImpago;
   avisoParaTi: TextosAvisoParaTi;
   pases: TextosPases;
+  pruebaNivel: TextosPruebaNivel;
 };
 
 export const TEXTOS: Record<Idioma, Textos> = {
@@ -104,6 +106,7 @@ export const TEXTOS: Record<Idioma, Textos> = {
     impago: IMPAGO.en,
     avisoParaTi: AVISO_PARA_TI.en,
     pases: PASES.en,
+    pruebaNivel: PRUEBA_NIVEL.en,
   },
   es: {
     ejercicios: EJERCICIOS.es,
@@ -125,5 +128,6 @@ export const TEXTOS: Record<Idioma, Textos> = {
     impago: IMPAGO.es,
     avisoParaTi: AVISO_PARA_TI.es,
     pases: PASES.es,
+    pruebaNivel: PRUEBA_NIVEL.es,
   },
 };

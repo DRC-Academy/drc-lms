@@ -7,14 +7,18 @@ import { conFoco } from "@/lib/foco";
 import { cursoElegido } from "@/lib/pases";
 import { exigirAlumnoDeLaPagina } from "@/lib/sesion-servidor";
 import ListaCursos from "@/components/pases/ListaCursos";
+import BloquePruebaNivel from "@/components/prueba-nivel/BloquePruebaNivel";
+import { estadoDelBloque, puedeHacerPrueba } from "@/lib/prueba-nivel/servidor";
 import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
 
 export const dynamic = "force-dynamic";
 
 /**
  * ELEGIR CURSO: la primera entrada de quien solo tiene pase, y el «Cambiar de
- * curso» de quien tiene todos abiertos. Sin prueba de nivel: que elija, y que
- * pueda cambiar cuando quiera. Su progreso en cada curso se queda guardado.
+ * curso» de quien tiene todos abiertos. Que elija, y que pueda cambiar cuando
+ * quiera; su progreso en cada curso se queda guardado. Arriba, si toca, el
+ * bloque de la prueba de nivel (`puedeHacerPrueba`): la primera entrada viene
+ * aquí y no al inicio, así que es donde la ve primero.
  */
 export default async function ElegirCurso() {
   const alumno = await exigirAlumnoDeLaPagina();
@@ -22,7 +26,12 @@ export default async function ElegirCurso() {
   const acceso = await accesoPorAlumno(alumnoId);
   if (acceso.cursos !== "todos") redirect(conFoco(`/alumno/${alumnoId}`, paraEnlaces));
 
-  const [perfil, elegido] = await Promise.all([obtenerPerfil(alumnoId), cursoElegido(alumnoId)]);
+  const conPrueba = puedeHacerPrueba(acceso);
+  const [perfil, elegido, estadoPrueba] = await Promise.all([
+    obtenerPerfil(alumnoId),
+    cursoElegido(alumnoId),
+    conPrueba ? estadoDelBloque(alumnoId) : Promise.resolve(null),
+  ]);
   const estados = perfil ? await cursosDelInicio(alumnoId, perfil.plan, nivelDelAlumno(alumnoId, perfil), null) : [];
 
   return (
@@ -32,6 +41,11 @@ export default async function ElegirCurso() {
         estados={estados}
         elegido={elegido}
         hrefRevision={sesion.rol === "alumno" ? null : (slug) => conFoco(`/curso/${slug}`, paraEnlaces)}
+        arriba={
+          estadoPrueba && (
+            <BloquePruebaNivel estado={estadoPrueba} cursoActualId={elegido} foco={paraEnlaces} revisando={sesion.rol !== "alumno"} />
+          )
+        }
       />
     </div>
   );

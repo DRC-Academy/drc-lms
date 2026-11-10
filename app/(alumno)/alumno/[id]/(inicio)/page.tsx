@@ -6,6 +6,8 @@ import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
 import { notFound, redirect } from "next/navigation";
 import { accesoPorAlumno } from "@/lib/acceso-alumno";
 import { conInicioBlackPass } from "@/lib/inicio-black-pass";
+import { estadoDelBloque, puedeHacerPrueba } from "@/lib/prueba-nivel/servidor";
+import BloquePruebaNivel from "@/components/prueba-nivel/BloquePruebaNivel";
 import OtrosNiveles from "@/components/pases/OtrosNiveles";
 import { TITULO_SECCION } from "@/components/base/Seccion";
 import { cursoElegido } from "@/lib/pases";
@@ -284,6 +286,13 @@ export default async function PerfilAlumno({
   // allí, que es donde está el botón de entrar.
   // ---------------------------------------------------------------
   const estadisticas = await estadisticasDelAlumno(alumnoId, perfil, principal);
+
+  // LA PRUEBA DE NIVEL, arriba del inicio del Black Pass. Solo con su
+  // interruptor encendido (`puedeHacerPrueba`); sin él, el bloque no está.
+  const [estadoPrueba, cursoActual] =
+    inicioBlackPass && puedeHacerPrueba(acceso)
+      ? await Promise.all([estadoDelBloque(alumnoId), cursoElegido(alumnoId)])
+      : [null, null];
   const comoVas = (
     <ComoVas
       estadisticas={estadisticas}
@@ -431,8 +440,18 @@ export default async function PerfilAlumno({
             lateral, y por eso aquí va con `min-[900px]:hidden`. */}
         {!inicioBlackPass && <div className="entra mb-4 min-[900px]:hidden">{comoVas}</div>}
 
-        {/* EL BLOQUE DE LA PRUEBA DE NIVEL va aquí, arriba de todo en el
-            inicio del Black Pass (punto 2, con su propio interruptor). */}
+        {/* LA PRUEBA DE NIVEL: lo primero después del saludo, en el inicio
+            del Black Pass. */}
+        {estadoPrueba && (
+          <div className="entra mb-[26px] min-[900px]:mb-9" style={{ animationDelay: "var(--paso-escalonado)" }}>
+            <BloquePruebaNivel
+              estado={estadoPrueba}
+              cursoActualId={cursoActual}
+              foco={foco}
+              revisando={sesion.rol !== "alumno"}
+            />
+          </div>
+        )}
 
         {/* La franja entra como pieza ya renderizada: la pinta el
             servidor y la coloca «PanelAlumno», que es quien monta la
