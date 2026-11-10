@@ -91,8 +91,7 @@ export type TextosAutoservicio = {
   diaSemanal: (dia: DiaSemana) => string;
   /** Cabecera de un día con fecha: «Lunes 12 de octubre». */
   diaConFecha: (fecha: string) => string;
-  /** Abajo, con un hueco elegido: «Has elegido lunes, 10:00–11:00». */
-  hasElegido: (que: string) => string;
+  /** Abajo, antes de elegir hueco (luego va `calElegidoCorto`). */
   eligeUnHueco: string;
   /** El panel de escritorio con el resumen de lo elegido. */
   tuCambio: string;
@@ -121,7 +120,7 @@ export type TextosAutoservicio = {
   ocupado: string;
 
   // --- el calendario de los huecos (`CalendarioHuecos`) ---
-  /** La cabecera: «Semana del 10 al 15 de noviembre». */
+  /** La cabecera: «16 – 21 de noviembre». */
   calSemana: (desde: string, hasta: string) => string;
   calSemanaAnterior: string;
   calSemanaSiguiente: string;
@@ -147,6 +146,18 @@ export type TextosAutoservicio = {
   calElegir: (que: string) => string;
   /** Una semana sin huecos: va con el botón de WhatsApp. */
   calSemanaSinHuecos: string;
+  /** La chapa amarilla sobre la clase que se mueve. */
+  calTuClaseAhora: string;
+  /** Sobre el bloque que ocuparía la clase al elegir un hueco. */
+  calIraAqui: string;
+  /** Salta al primer día con huecos, aunque esté en otra semana. */
+  calSiguienteHueco: string;
+  /** El día de hoy, en la cabecera y en el selector. */
+  calHoy: string;
+  /** En el móvil, un día sin huecos en una semana que sí los tiene. */
+  calDiaSinHuecos: string;
+  /** La barra de abajo con el hueco elegido: «Martes 18 · 10:00–12:00», o «Los martes · 10:00–12:00». */
+  calElegidoCorto: (fecha: string | null, dia: DiaSemana, desde: string, hasta: string) => string;
 
   // --- cambiar de profesor (v3: elige horarios; el profesor lo asigna Gestión) ---
   // NINGÚN TEXTO DE ANTES DE CONFIRMAR LLEVA NOMBRE DE PROFESOR.
@@ -352,7 +363,6 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     franja: { manana: "Mañana", mediodia: "Mediodía", tarde: "Tarde", noche: "Noche" },
     diaSemanal: (dia) => dia,
     diaConFecha: (fecha) => mayuscula(fechaEs(fecha)),
-    hasElegido: (que) => `Has elegido ${que.charAt(0).toLowerCase()}${que.slice(1)}`,
     eligeUnHueco: "Elige un hueco para continuar",
     tuCambio: "Tu cambio",
     confirmaTitulo: "Revisa el cambio",
@@ -378,8 +388,8 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
       const a = partesFecha(desde);
       const b = partesFecha(hasta);
       return a.mes === b.mes
-        ? `Semana del ${a.numero} al ${b.numero} de ${MESES_ES[b.mes]}`
-        : `Semana del ${a.numero} de ${MESES_ES[a.mes]} al ${b.numero} de ${MESES_ES[b.mes]}`;
+        ? `${a.numero} – ${b.numero} de ${MESES_ES[b.mes]}`
+        : `${a.numero} de ${MESES_ES[a.mes]} – ${b.numero} de ${MESES_ES[b.mes]}`;
     },
     calSemanaAnterior: "Semana anterior",
     calSemanaSiguiente: "Semana siguiente",
@@ -397,6 +407,13 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     calLibres: (n) => (n === 0 ? "sin huecos libres" : n === 1 ? "1 hueco libre" : `${n} huecos libres`),
     calElegir: (que) => `Elegir ${que.charAt(0).toLowerCase()}${que.slice(1)}`,
     calSemanaSinHuecos: "Esta semana tu profe no tiene huecos libres. Prueba la siguiente o escríbenos por WhatsApp.",
+    calTuClaseAhora: "Tu clase ahora",
+    calIraAqui: "Tu clase irá aquí",
+    calSiguienteHueco: "Siguiente hueco libre",
+    calHoy: "Hoy",
+    calDiaSinHuecos: "Este día tu profe no tiene huecos libres.",
+    calElegidoCorto: (fecha, dia, desde, hasta) =>
+      fecha ? `${DIAS[partesFecha(fecha).diaSemana]} ${partesFecha(fecha).numero} · ${desde}–${hasta}` : `Los ${diaPluralEs(dia)} · ${desde}–${hasta}`,
 
     profesorIntro: "Elige los horarios que te vienen bien y te asignamos el profesor que mejor encaje.",
     loQueNoCambia: "Lo que no cambia",
@@ -571,7 +588,6 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     franja: { manana: "Morning", mediodia: "Midday", tarde: "Afternoon", noche: "Evening" },
     diaSemanal: (dia) => DIAS_EN[dia],
     diaConFecha: (fecha) => fechaEn(fecha),
-    hasElegido: (que) => `You've chosen ${que}`,
     eligeUnHueco: "Choose a slot to continue",
     tuCambio: "Your change",
     confirmaTitulo: "Check the change",
@@ -597,8 +613,8 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
       const a = partesFecha(desde);
       const b = partesFecha(hasta);
       return a.mes === b.mes
-        ? `Week of ${a.numero}–${b.numero} ${MESES_EN[b.mes]}`
-        : `Week of ${a.numero} ${MESES_EN[a.mes]} – ${b.numero} ${MESES_EN[b.mes]}`;
+        ? `${a.numero} – ${b.numero} ${MESES_EN[b.mes]}`
+        : `${a.numero} ${MESES_EN[a.mes]} – ${b.numero} ${MESES_EN[b.mes]}`;
     },
     calSemanaAnterior: "Previous week",
     calSemanaSiguiente: "Next week",
@@ -616,6 +632,13 @@ export const AUTOSERVICIO: Record<Idioma, TextosAutoservicio> = {
     calLibres: (n) => (n === 0 ? "no free slots" : n === 1 ? "1 free slot" : `${n} free slots`),
     calElegir: (que) => `Choose ${que}`,
     calSemanaSinHuecos: "Your teacher has no free slots this week. Try next week or message us on WhatsApp.",
+    calTuClaseAhora: "Your class now",
+    calIraAqui: "Your class will go here",
+    calSiguienteHueco: "Next free slot",
+    calHoy: "Today",
+    calDiaSinHuecos: "Your teacher has no free slots on this day.",
+    calElegidoCorto: (fecha, dia, desde, hasta) =>
+      fecha ? `${DIAS_EN[DIAS[partesFecha(fecha).diaSemana]]} ${partesFecha(fecha).numero} · ${desde}–${hasta}` : `${DIAS_EN[dia]}s · ${desde}–${hasta}`,
 
     profesorIntro: "Choose the times that suit you and we'll assign the teacher who fits best.",
     loQueNoCambia: "What stays the same",

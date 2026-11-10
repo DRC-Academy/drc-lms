@@ -26,6 +26,7 @@ import { conTraduccion } from "@/lib/traduccion-bloque";
 import { formatearFecha } from "@/lib/perfil";
 import type { Bloque } from "@/lib/data";
 import AvanceGeneracion from "@/components/AvanceGeneracion";
+import Chapa from "@/components/Chapa";
 import MascotaRuta, { type PuntoRuta } from "@/components/practica/MascotaRuta";
 
 /**
@@ -579,13 +580,7 @@ export default function Ruta({
                           retraso === null ? undefined : { animationDelay: `${retraso + 320}ms` }
                         }
                       >
-                        <span className="relative inline-flex items-center whitespace-nowrap rounded-full bg-marca-amarillo px-[15px] py-[7px] text-[12.5px] font-bold text-marca-tinta shadow-[0_4px_0_#E0A800,0_8px_16px_rgba(18,33,26,0.16)]">
-                          {t.estasAqui}
-                          <span
-                            aria-hidden
-                            className="absolute -bottom-[4px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 bg-marca-amarillo"
-                          />
-                        </span>
+                        <Chapa>{t.estasAqui}</Chapa>
                       </span>
                     )}
 

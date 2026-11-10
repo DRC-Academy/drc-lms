@@ -442,8 +442,11 @@ export default function CambiarHorario({
     );
     const pie = (
       <>
-        <p aria-live="polite" className="text-center text-[15.5px] text-marca-tintaMedia">
-          {resumen ? t.hasElegido(resumen) : t.eligeUnHueco}
+        <p
+          aria-live="polite"
+          className={`text-center ${destino ? "font-display text-[19px] font-bold text-marca-tinta" : "text-[15.5px] text-marca-tintaMedia"}`}
+        >
+          {destino ? t.calElegidoCorto(destino.fecha, destino.dia, ...tramo(destino)) : t.eligeUnHueco}
         </p>
         {continuar}
       </>

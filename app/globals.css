@@ -1507,4 +1507,50 @@
       transition: none;
     }
   }
+
+  /* ---------------------------------------------------------------
+     EL CALENDARIO DE LOS HUECOS (`CalendarioHuecos`)
+
+     Dos movimientos cortos y nada más: la semana o el día nuevos
+     entran con un fundido, y el bloque de «Tu clase irá aquí» aparece
+     al elegir un hueco. Con prefers-reduced-motion, ninguno.
+     --------------------------------------------------------------- */
+  @keyframes cal-fundir {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+
+  @keyframes cal-aparecer {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+
+  .cal-fundido {
+    animation: cal-fundir 220ms ease-out both;
+  }
+
+  .cal-aparece {
+    animation: cal-aparecer 200ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  /* Ocupado: el gris de los bordes con un rayado diagonal apenas visible. */
+  .cal-ocupado {
+    background-color: theme("colors.marca.borde");
+    background-image: repeating-linear-gradient(
+      135deg,
+      rgba(18, 33, 26, 0.05) 0 2px,
+      transparent 2px 9px
+    );
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cal-fundido,
+    .cal-aparece {
+      animation: none;
+    }
+  }
 }
