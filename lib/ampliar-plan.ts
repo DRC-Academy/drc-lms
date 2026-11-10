@@ -13,6 +13,11 @@ export function urlAmpliarPlan(): string {
   return process.env.URL_AMPLIAR_PLAN || AMPLIAR_PLAN_WOO;
 }
 
+/** A dónde lleva quien no tiene clases: el botón de «Para ti» bloqueado y ampliar el plan sin plan. */
+export function urlPlanesConClases(): string {
+  return process.env.URL_PLANES_CON_CLASES?.trim() || "https://drcacademy.com/";
+}
+
 /**
  * EL HREF DE LOS BOTONES: «Quiero ir más rápido» (inicio) y «Amplía tu
  * plan» (Mi progreso).

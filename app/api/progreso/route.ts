@@ -22,6 +22,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { sesionActual } from "@/lib/sesion-servidor";
 import { estadoDeAcceso, respuestaImpago } from "@/lib/estado-acceso";
+import { paraTiCerrado, respuestaParaTiCerrado } from "@/lib/acceso-alumno";
 import {
   borrarAvance,
   guardarAvance,
@@ -57,6 +58,7 @@ export async function POST(peticion: NextRequest) {
     return NextResponse.json({ guardado: false, motivo: "administrador" });
   }
   if ((await estadoDeAcceso(sesion)) === "impago") return respuestaImpago();
+  if (await paraTiCerrado(sesion)) return respuestaParaTiCerrado();
 
   const alumnoId = sesion.alumnoId;
 

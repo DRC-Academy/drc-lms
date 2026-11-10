@@ -35,6 +35,8 @@ export const metadata: Metadata = {
  *              borrar —el caso y `avisoSalida`— cuando se haya probado el
  *              cierre con WordPress en producción.
  *   sesion   — `app/api/progreso-leccion`.
+ *   pase_fin — `exigirSesion` y `lib/entrada.ts`: quien solo tenía el Black
+ *              Pass y se le ha acabado.
  *
  * Es un `switch` y no un objeto indexado a propósito: el motivo lo
  * escribe quien quiera en la barra de direcciones, y buscarlo en un
@@ -67,6 +69,8 @@ function avisoDe(motivo: unknown, t: TextosEntrada): string | null {
       // haber estado dentro. Por eso el motivo lo pone ella y no la
       // puerta de la calle.
       return t.avisoSesion;
+    case "pase_fin":
+      return t.avisoFinPase;
     default:
       return null;
   }

@@ -64,6 +64,11 @@ import { destinoSeguro, esMaterialDelCurso, esRutaDeProfesor } from "@/lib/volve
  *     del cuerpo (DIPLOMA_HMAC_SECRET), que la ruta comprueba antes de
  *     buscar a nadie. Detrás de la cookie, cada llamada era un 401.
  *
+ *   · `/api/woo` — lo que llega de la tienda y del reloj para el Black Pass:
+ *     el webhook de WooCommerce, autorizado por su firma HMAC, y la
+ *     conciliación y la cola, con `CRON_SECRET`. Cada ruta lo comprueba
+ *     antes de hacer nada.
+ *
  *   · `/profes` — la pantalla de entrar de los profesores: otro texto
  *     sobre el mismo flujo de `/acceso`. No concede nada: el rol lo decide
  *     el email. Ojo: es `/profes`, y `/profesor` NO empieza por `/profes/`,
@@ -85,6 +90,7 @@ const PUBLICAS = [
   "/api/garantia",
   "/api/externo",
   "/api/wp",
+  "/api/woo",
 ];
 
 function esPublica(ruta: string): boolean {

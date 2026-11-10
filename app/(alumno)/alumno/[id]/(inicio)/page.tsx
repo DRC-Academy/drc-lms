@@ -3,7 +3,11 @@ import { conProfesorDeLaFicha, profesorDelAlumno } from "@/lib/profesor-servidor
 import { sinProfesorDeOrigen } from "@/lib/profesor";
 import { nivelMcer } from "@/lib/recorrido";
 import { RUTA_AMPLIAR } from "@/lib/ampliar-plan";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { accesoPorAlumno } from "@/lib/acceso-alumno";
+import { cursoElegido } from "@/lib/pases";
+import AvisoPagoPase from "@/components/pases/AvisoPagoPase";
+import { fechaDePase } from "@/lib/pases-texto";
 import { obtenerAlumno, obtenerCalendario, obtenerExcepciones } from "@/lib/gestion";
 import { proximaDelAlumno, semanasDelAlumno, ventanaAbierta } from "@/lib/clases";
 import { conFoco } from "@/lib/foco";
@@ -69,6 +73,9 @@ export default async function PerfilAlumno({
   const revisando = alumno.revisando;
   const foco = alumno.paraEnlaces;
 
+  // Qué tiene: sin pase, nada de lo de abajo cambia.
+  const acceso = await accesoPorAlumno(alumnoId);
+
   // Si toca el recorrido guiado. Se pide a la vez que lo demás; ante
   // cualquier fallo dice que no (ver lib/tutorial/estado.ts).
   const pendienteTutorial = sesion.rol === "alumno" ? tutorialPendiente(alumnoId) : Promise.resolve(false);
@@ -112,14 +119,14 @@ export default async function PerfilAlumno({
   // Sin profesor vigente, sin su nombre en la clase de origen de cada
   // bloque (`sinProfesorDeOrigen`).
   const traducidos = await bloquesEnIdioma(generadosCrudos, idiomaActual());
-  const generados = profe ? traducidos : traducidos.map(sinProfesorDeOrigen);
+  const generados = !acceso.paraTi ? [] : profe ? traducidos : traducidos.map(sinProfesorDeOrigen);
 
   // Solo es 404 cuando el id no corresponde a nadie. Un alumno con clase
   // pero sin perfil ve su ficha con lo que haya.
   if (!datos) notFound();
 
   const { perfil, ultimaClase } = datos;
-  const tarjeta = calcularTarjeta(perfil, ultimaClase, ultimaGeneracion, textosActuales().practica);
+  const tarjeta = acceso.paraTi ? calcularTarjeta(perfil, ultimaClase, ultimaGeneracion, textosActuales().practica) : null;
 
   // Sin perfil no hay plan ni nivel, así que tampoco curso: el banner
   // enseña el estado sobrio y la práctica sigue funcionando.
@@ -136,6 +143,17 @@ export default async function PerfilAlumno({
         comoFecha(perfil.fechaInicio)
       )
     : [];
+
+  // LA PRIMERA ENTRADA DE QUIEN SOLO TIENE PASE: con siete cursos abiertos y sin
+  // nivel, elige por cuál empezar. Si ya lleva algo hecho, no se le pregunta.
+  if (
+    acceso.soloPase &&
+    sesion.rol === "alumno" &&
+    estadosCurso.every((estado) => estado.completadas === 0) &&
+    !(await cursoElegido(alumnoId))
+  ) {
+    redirect("/elegir-curso");
+  }
 
   // EL DIPLOMA YA NO TIENE TARJETA AQUÍ (12/10/2026). Vive en su
   // pantalla, «Mi diploma» (`/diploma`), y se llega desde la barra, la
@@ -200,7 +218,11 @@ export default async function PerfilAlumno({
   const ahora = new Date();
   const proxima = proximaDelAlumno(calendario, excepciones, ahora);
   const enVentana = proxima !== null && ventanaAbierta(proxima, ahora);
-  const subtitulo = enVentana
+  const subtitulo = acceso.soloPase
+    ? acceso.hasta
+      ? textosActuales().pases.activoHasta(fechaDePase(acceso.hasta, idiomaActual()))
+      : null
+    : enVentana
     ? subtituloDeSiempre
     : proxima
       ? <LineaClase proxima={proxima} t={tc} ahora={ahora} />
@@ -249,7 +271,7 @@ export default async function PerfilAlumno({
   // Menos fuera de calendario: sus horas son las de un horario que ya no
   // da, y la comparativa le prometería llegar antes con unas clases que
   // no tiene. Ahí no se pinta.
-  const conRitmo = !perfil || perfil.asignacionActiva;
+  const conRitmo = (!perfil || perfil.asignacionActiva) && !acceso.avisoPago;
   const nivelRitmo = perfil ? nivelMcer(nivelDelAlumno(alumnoId, perfil)) : null;
   const ritmo = datosDeRitmo(
     perfil
@@ -354,13 +376,17 @@ export default async function PerfilAlumno({
           </div>
         </div>
 
+        {acceso.avisoPago && <AvisoPagoPase />}
+
         {/* UNA CLASE CANCELADA ESPERANDO A QUE ELIJA FECHA, antes que nada
             más: es lo único del inicio con plazo. Se pide a Gestión aparte
             y en `<Suspense>`, así que si tarda o falla el inicio sale igual
             y el aviso, sencillamente, no aparece. */}
-        <Suspense fallback={null}>
-          <AvisoRecuperacion alumnoId={alumnoId} href={conFoco("/clases", foco)} />
-        </Suspense>
+        {acceso.clases && (
+          <Suspense fallback={null}>
+            <AvisoRecuperacion alumnoId={alumnoId} href={conFoco("/clases", foco)} />
+          </Suspense>
+        )}
 
         {/* «CÓMO VAS», EN MÓVIL, JUSTO DEBAJO DEL SALUDO: lo primero después
             de la cara del profesor. En escritorio vive arriba de la barra
@@ -385,7 +411,7 @@ export default async function PerfilAlumno({
           esAdministrador={sesion.rol === "admin"}
           ritmo={conRitmo ? <ComparativaRitmo datos={ritmo} href={RUTA_AMPLIAR} /> : null}
           entreMedias={
-            <>
+            !acceso.clases ? null : <>
               <div
                 className="entra mt-[26px] min-[900px]:mt-9"
                 style={{ animationDelay: "calc(var(--paso-escalonado) * 3)" }}
@@ -427,7 +453,11 @@ export default async function PerfilAlumno({
                 />
               </div>
             ) : (
-              <BannerCurso estados={estadosCurso} foco={foco} />
+              <BannerCurso
+                estados={estadosCurso}
+                foco={foco}
+                cambiarCursoHref={acceso.cursos === "todos" ? conFoco("/elegir-curso", foco) : null}
+              />
             )
           }
         />

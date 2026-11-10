@@ -84,9 +84,10 @@ export type Rol = "alumno" | "admin";
 
 /**
  * Quién está dentro. Es una unión discriminada a propósito: un alumno
- * SIEMPRE tiene ficha (si no la tiene, no se le crea sesión) y un
- * administrador nunca entra por una ficha concreta. Así el tipo impide
- * escribir un guard que se olvide de uno de los dos casos.
+ * SIEMPRE tiene id —el de su ficha, o el `pase-…` de quien solo compró el
+ * Black Pass (`lib/pase-id.ts`)— y un administrador nunca entra por una
+ * ficha concreta. Así el tipo impide escribir un guard que se olvide de uno
+ * de los dos casos.
  */
 export type Sesion =
   | { rol: "alumno"; email: string; alumnoId: string }

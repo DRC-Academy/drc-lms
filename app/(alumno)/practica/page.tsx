@@ -21,6 +21,9 @@ import { cursosDelInicio, precargarCursosDelAlumno } from "@/lib/cursos-servidor
 import { comoFecha } from "@/lib/fechas";
 import PanelPractica from "@/components/PanelPractica";
 import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
+import ParaTiBloqueado from "@/components/pases/ParaTiBloqueado";
+import { accesoPorAlumno } from "@/lib/acceso-alumno";
+import { urlPlanesConClases } from "@/lib/ampliar-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +65,18 @@ export default async function PaginaPractica() {
   // su espera entre generaciones y del panel.
   const alumno = await exigirAlumnoDeLaPagina();
   const { sesion, alumnoId } = alumno;
+
+  // BLOQUEADO SE VE: quien no lo tiene llega aquí por la pestaña del candado o
+  // por la URL, y se le cuenta de qué depende. Generar lo cierra el servidor.
+  const acceso = await accesoPorAlumno(alumnoId);
+  if (!acceso.paraTi) {
+    return (
+      <div className="flex min-h-screen flex-col bg-marca-niebla">
+        <MarcoDeLaPagina alumno={alumno} />
+        <ParaTiBloqueado url={urlPlanesConClases()} enEspera={acceso.avisoPago} />
+      </div>
+    );
+  }
 
   // Lo que más abajo necesitan el profesor y la mascota sale ya en esta ola:
   // no depende de nada de lo que hay aquí, y en fila eran dos esperas más.

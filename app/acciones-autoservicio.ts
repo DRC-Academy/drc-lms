@@ -19,6 +19,7 @@
 
 import { sesionActual } from "@/lib/sesion-servidor";
 import { estadoDeAcceso } from "@/lib/estado-acceso";
+import { clasesCerradas } from "@/lib/acceso-alumno";
 import { autoservicioActivo, autoservicioProfesorActivo, proveedorAutoservicio } from "@/lib/autoservicio";
 import { idSesionValido, leerElegidos, peticionProfesorValida, peticionValida } from "@/lib/autoservicio/leer";
 import { olvidarLecturasDe } from "@/lib/cache-gestion";
@@ -38,7 +39,7 @@ async function alumnoDeLaSesion(activo: () => boolean = autoservicioActivo): Pro
   const sesion = await sesionActual();
   if (!sesion || sesion.rol !== "alumno" || !sesion.alumnoId) return null;
   // Pago pendiente (`lib/estado-acceso.ts`): como si no hubiera alumno.
-  if ((await estadoDeAcceso(sesion)) === "impago") return null;
+  if ((await estadoDeAcceso(sesion)) === "impago" || (await clasesCerradas(sesion))) return null;
   return sesion.alumnoId;
 }
 

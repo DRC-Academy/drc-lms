@@ -9,6 +9,10 @@
     {
       "path": "/api/garantia",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/woo/conciliar",
+      "schedule": "0 5 * * *"
     }
   ]
 }

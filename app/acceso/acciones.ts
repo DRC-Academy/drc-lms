@@ -12,6 +12,7 @@
 // ---------------------------------------------------------------
 
 import { buscarAlumnoPorEmail } from "@/lib/gestion";
+import { entradaPorPase } from "@/lib/pases-entrada";
 import { profesorParaEntrar } from "@/lib/panel-profesor";
 import { crearTokenEnlace, esAdministrador, esEmailPlausible, normalizarEmail } from "@/lib/sesion";
 import { enviarEnlaceAcceso } from "@/lib/correo";
@@ -56,12 +57,18 @@ async function atender(email: string, volver: string | null): Promise<Anotacion>
   // consulta haría que esos emails respondieran antes, y eso también
   // es información que se filtra.
   // Lo mismo con el profesor, a la vez: se pregunta por todos los emails.
-  const [alumno, profesor] = await Promise.all([buscarAlumnoPorEmail(email), profesorParaEntrar(email)]);
+  // Quien solo tiene el Black Pass entra igual. Se pregunta a la vez, a todos
+  // los emails, por lo mismo: que no tarde distinto.
+  const [alumno, profesor, conPase] = await Promise.all([
+    buscarAlumnoPorEmail(email),
+    profesorParaEntrar(email),
+    entradaPorPase(email),
+  ]);
   const admin = esAdministrador(email);
   const esProfesor = profesor !== null && !admin;
-  const rol: RolIntento = esProfesor ? "profesor" : alumno !== null ? "alumno" : admin ? "admin" : "desconocido";
+  const rol: RolIntento = esProfesor ? "profesor" : alumno !== null || conPase !== null ? "alumno" : admin ? "admin" : "desconocido";
 
-  if (alumno === null && !admin && !esProfesor) return { resultado: "sin_cuenta", rol, alumnoId: null };
+  if (alumno === null && conPase === null && !admin && !esProfesor) return { resultado: "sin_cuenta", rol, alumnoId: null };
 
   // El enlace de un profesor siempre lleva su panel en `volver`: es lo que
   // le devuelve a `/profes` si caduca. El de un alumno no lleva nunca esa
@@ -84,7 +91,7 @@ async function atender(email: string, volver: string | null): Promise<Anotacion>
   return {
     resultado: enviado ? "enlace_enviado" : "envio_fallido",
     rol,
-    alumnoId: esProfesor ? null : (alumno?.alumnoId ?? null),
+    alumnoId: esProfesor ? null : (alumno?.alumnoId ?? (conPase?.tipo === "pase" ? conPase.alumnoId : null)),
   };
 }
 

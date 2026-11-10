@@ -11,6 +11,11 @@
 //
 // Solo SELECT: `soloLectura()` no expone ninguna otra operación.
 //
+// QUIEN SOLO TIENE PASE (`pase-…`) TAMPOCO VA A GESTIÓN, y es lo que deja el
+// pico de la venta del Black Pass fuera de esa base: su perfil sale de
+// `pases_curso` y sus clases son listas vacías, sin una sola consulta.
+// Ninguna pantalla necesita saberlo para no romperse.
+//
 // LAS CUENTAS DE DEMOSTRACIÓN SE RESUELVEN AQUÍ, y solo aquí. Cada
 // lectura de un alumno pregunta primero `escenarioDe`: si es una cuenta
 // de `cuentas_demo`, las filas salen de `lib/demo/escenario.ts` en vez
@@ -43,6 +48,8 @@ import {
   comoTextoOpcional,
 } from "@/lib/perfil";
 import { nombreVisibleProfesor } from "@/lib/profesor";
+import { esIdPase } from "@/lib/pase-id";
+import { leerPases } from "@/lib/pases";
 import type { PerfilAlumno, ResumenAlumno, UltimaClase } from "@/lib/data";
 import type { FilaCalendario } from "@/lib/calendario-gestion";
 
@@ -177,6 +184,19 @@ const ORDEN_ESTADO = ["estado_asignacion", { ascending: true }] as const;
  * lo mismo. Sin esto serían dos viajes a Gestión por página.
  */
 export const obtenerPerfil = cache(async (alumnoId: string): Promise<PerfilAlumno | null> => {
+  if (esIdPase(alumnoId)) {
+    const { ultimo } = await leerPases(alumnoId);
+    if (!ultimo) return null;
+    // Sin fecha de inicio no hay drip ni plazo de diploma; sin asignación
+    // activa no hay ritmo ni estimación.
+    return aPerfil({
+      alumno_id: alumnoId,
+      nombre: ultimo.nombre ?? "",
+      email: ultimo.email,
+      estado_asignacion: "inactive",
+    });
+  }
+
   const demo = await escenarioDe(alumnoId);
   if (demo) return aPerfil(demo.perfil);
 
@@ -216,6 +236,8 @@ export const obtenerPerfil = cache(async (alumnoId: string): Promise<PerfilAlumn
  * por `escenarioDe`.
  */
 export async function leerEnEspera(alumnoId: string): Promise<boolean> {
+  if (esIdPase(alumnoId)) return false;
+
   const { data, error } = await soloLectura("vista_perfil_alumno")
     .select("estado_suscripcion")
     .eq("alumno_id", alumnoId)
@@ -312,6 +334,8 @@ const CALENDARIO =
 
 /** Las celdas del calendario de Gestión que nombran al alumno. */
 export const obtenerCalendario = cache(async (alumnoId: string): Promise<FilaCalendario[]> => {
+  if (esIdPase(alumnoId)) return [];
+
   const demo = await escenarioDe(alumnoId);
   if (demo) return demo.calendario;
 
@@ -344,6 +368,8 @@ export const obtenerCalendario = cache(async (alumnoId: string): Promise<FilaCal
  * `normalizarQuitas` y `normalizarReprogramaciones`.
  */
 export const obtenerExcepciones = cache(async (alumnoId: string): Promise<unknown[]> => {
+  if (esIdPase(alumnoId)) return [];
+
   const demo = await escenarioDe(alumnoId);
   if (demo) return demo.excepciones;
 
@@ -432,6 +458,8 @@ export const obtenerClasesPorProfesor = cache(async (alumnoId: string): Promise<
     if (id) cuenta.set(id, (cuenta.get(id) ?? 0) + 1);
   };
 
+  if (esIdPase(alumnoId)) return cuenta;
+
   const demo = await escenarioDe(alumnoId);
   if (demo) {
     for (const f of demo.clases) sumar(comoTexto((f as Fila).teacher_id));
@@ -470,6 +498,9 @@ export const obtenerClasesPorProfesor = cache(async (alumnoId: string): Promise<
  * un cero que no es verdad.
  */
 export const obtenerClasesContadas = cache(async (alumnoId: string): Promise<number | null> => {
+  // Null y no 0: sin clases contratadas, «0 clases» no es un dato que enseñar.
+  if (esIdPase(alumnoId)) return null;
+
   // La regla de la vista es `max(mayor class_number, filas)`; la demo no
   // numera sus clases, así que son las filas.
   const demo = await escenarioDe(alumnoId);
@@ -495,6 +526,8 @@ export const obtenerClasesContadas = cache(async (alumnoId: string): Promise<num
 });
 
 export async function obtenerUltimaClase(alumnoId: string): Promise<UltimaClase | null> {
+  if (esIdPase(alumnoId)) return null;
+
   // Las filas de la demo ya vienen de la más reciente a la más antigua;
   // se les aplica el mismo filtro que a la consulta.
   const demo = await escenarioDe(alumnoId);
@@ -864,6 +897,8 @@ export type ClaseAnalizada = {
  * menos: es material que lo mejora, no material sin el que no haya nada.
  */
 export async function historialDeClases(alumnoId: string): Promise<ClaseAnalizada[]> {
+  if (esIdPase(alumnoId)) return [];
+
   const demo = await escenarioDe(alumnoId);
   if (demo) {
     return aHistorial(
@@ -1046,6 +1081,8 @@ const MAXIMO_CLASES = 200;
  * enseña su estado vacío, que es una frase, no un error.
  */
 export async function obtenerRecorrido(alumnoId: string): Promise<Recorrido> {
+  if (esIdPase(alumnoId)) return aRecorrido([]);
+
   const demo = await escenarioDe(alumnoId);
   if (demo) return aRecorrido(demo.clases.slice(0, MAXIMO_CLASES));
 
@@ -1185,6 +1222,8 @@ async function todasLasFilas(
   alumnoId?: string,
   fechas?: { desde: string; hasta: string }
 ): Promise<Fila[] | null> {
+  if (esIdPase(alumnoId)) return [];
+
   const filas: Fila[] = [];
   for (let desde = 0; ; desde += PAGINA) {
     let consulta = soloLectura(vista).select(columnas);

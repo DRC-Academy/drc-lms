@@ -18,6 +18,7 @@ import { rutaDeMiCurso } from "@/lib/cursos";
 import { nivelDelAlumno } from "@/lib/estimacion";
 import { comoFecha } from "@/lib/fechas";
 import { estadisticasDelAlumno, lecturasDeEstadisticas } from "@/lib/estadisticas-servidor";
+import { accesoPorAlumno } from "@/lib/acceso-alumno";
 import type { Foco } from "@/lib/sesion-servidor";
 import type { DatosNavegacion } from "@/components/marco/PiezasDelMarco";
 
@@ -45,7 +46,10 @@ export async function datosDelMarco(alumno: Foco): Promise<DatosNavegacion> {
   // página y con cada `router.refresh()`. Los ejercicios que se responden
   // sin salir de la pantalla los suma el navegador
   // (`components/estadisticas/ejercicios-en-vivo.ts`).
-  const estadisticas = alumnoId ? await estadisticasDelAlumno(alumnoId, perfil, principal) : null;
+  const [estadisticas, acceso] = await Promise.all([
+    alumnoId ? estadisticasDelAlumno(alumnoId, perfil, principal) : null,
+    accesoPorAlumno(alumnoId),
+  ]);
 
   return {
     alumnoId,
@@ -54,5 +58,6 @@ export async function datosDelMarco(alumno: Foco): Promise<DatosNavegacion> {
     foco: revisando ? alumnoId : null,
     revisando,
     estadisticas,
+    acceso: { paraTi: acceso.paraTi, clases: acceso.clases, diploma: acceso.diploma },
   };
 }

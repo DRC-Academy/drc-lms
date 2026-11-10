@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Icono, enBarraMovil, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSeccion";
+import { Candado, Icono, enBarraMovil, seccionDeRuta, type EnlaceSeccion } from "@/components/IconoSeccion";
 
 /**
  * La barra de pestañas de abajo: la navegación de toda la aplicación por
@@ -90,7 +90,7 @@ export default function NavegacionInferior({
             href={enlace.href}
             aria-current={activo ? "page" : undefined}
             // El nombre entero aunque la etiqueta se recorte.
-            aria-label={enlace.texto}
+            aria-label={enlace.etiquetaAria ?? enlace.texto}
             // El recorrido guiado busca aquí el botón de cada sección.
             data-tour-nav={enlace.clave}
             className={`flex min-h-[44px] flex-col items-center justify-center gap-[5px] rounded-[10px] text-[12px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-marca-verdeOsc ${
@@ -99,7 +99,10 @@ export default function NavegacionInferior({
               activo ? "font-semibold text-marca-tinta" : "font-medium text-marca-gris"
             }`}
           >
-            <Icono seccion={enlace.clave} activo={activo} />
+            <span className="relative inline-flex">
+              <Icono seccion={enlace.clave} activo={activo} />
+              {enlace.bloqueado && <Candado />}
+            </span>
             {/* Guardarraíl: la rejilla es `minmax(0,1fr)` y una etiqueta
                 larga se recorta en vez de pisar la de al lado. */}
             <span aria-hidden className="max-w-full truncate">{enlace.corto}</span>

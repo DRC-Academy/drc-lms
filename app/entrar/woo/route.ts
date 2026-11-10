@@ -44,9 +44,10 @@
 // ---------------------------------------------------------------
 
 import { type NextRequest } from "next/server";
-import { buscarAlumnoPorEmail, obtenerPerfil } from "@/lib/gestion";
+import { obtenerPerfil } from "@/lib/gestion";
 import { entrarComo, volverAAcceso } from "@/lib/entrada";
 import { guardarVinculo, resolverPorWooUserId } from "@/lib/vinculos";
+import { concederPedidosPendientes, fundirPasesEnFicha, resolverEntrada } from "@/lib/pases-entrada";
 import { abrirTokenWoo } from "@/lib/sesion";
 
 export const runtime = "nodejs";
@@ -68,6 +69,7 @@ export async function GET(peticion: NextRequest) {
     // corta aquí: se cae al camino del email, que puede encontrarle si
     // el id de Gestión cambió en algún momento.
     if (vinculado && (await obtenerPerfil(vinculado))) {
+      await fundirPasesEnFicha(vinculado, email, wooUserId);
       return entrarComo(
         peticion.url,
         { rol: "alumno", email, alumnoId: vinculado },
@@ -81,17 +83,31 @@ export async function GET(peticion: NextRequest) {
   // ficha en Gestión, que es de donde sale todo lo que enseña el LMS.
   // Si alguien compró con un email y está dado de alta con otro, cae
   // aquí y el aviso le dice que escriba a su profesor.
-  const alumno = await buscarAlumnoPorEmail(email);
-  if (!alumno) return volverAAcceso(peticion.url, "sinficha");
+  //
+  // LA EXCEPCIÓN ES EL BLACK PASS, que da acceso sin ficha. Y si no aparece
+  // ninguno se le pregunta a la tienda: el botón de la página de gracias
+  // llega aquí en segundos, antes que el webhook.
+  let entrada = await resolverEntrada(email, wooUserId);
+  if (!entrada && wooUserId !== null) {
+    await concederPedidosPendientes(wooUserId);
+    entrada = await resolverEntrada(email, wooUserId);
+  }
 
-  // Y se fija el vínculo para la próxima. Si falla —un email duplicado
-  // en Gestión, un woo_user_id que ya apuntaba a otro alumno— queda en
-  // el log y se entra igual: el vínculo es un atajo, no un requisito.
-  await guardarVinculo(alumno.alumnoId, email, wooUserId);
+  if (!entrada) return volverAAcceso(peticion.url, "sinficha");
+  if (entrada.tipo === "pase_fin") return volverAAcceso(peticion.url, "pase_fin");
+
+  if (entrada.tipo === "ficha") {
+    await fundirPasesEnFicha(entrada.alumnoId, email, wooUserId);
+
+    // Y se fija el vínculo para la próxima. Si falla —un email duplicado
+    // en Gestión, un woo_user_id que ya apuntaba a otro alumno— queda en
+    // el log y se entra igual: el vínculo es un atajo, no un requisito.
+    await guardarVinculo(entrada.alumnoId, email, wooUserId);
+  }
 
   return entrarComo(
     peticion.url,
-    { rol: "alumno", email, alumnoId: alumno.alumnoId },
+    { rol: "alumno", email, alumnoId: entrada.alumnoId },
     "woocommerce"
   );
 }

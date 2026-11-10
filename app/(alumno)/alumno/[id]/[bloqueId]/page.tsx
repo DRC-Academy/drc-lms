@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { profesorDelAlumno } from "@/lib/profesor-servidor";
 import { sinProfesorDeOrigen } from "@/lib/profesor";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { accesoPorAlumno } from "@/lib/acceso-alumno";
+import { conFoco } from "@/lib/foco";
 import { textosActuales } from "@/lib/idioma-servidor";
 import { obtenerAlumno } from "@/lib/gestion";
 import { buscarBloqueGenerado } from "@/lib/progreso-servidor";
@@ -28,6 +30,9 @@ export default async function PaginaBloque({
   // para que los enlaces que salen de aquí no pierdan al alumno.
   const revisando = alumno.revisando;
   const foco = alumno.paraEnlaces;
+
+  // Un bloque es «Para ti»: quien no lo tiene ve su pantalla, también por URL.
+  if (!(await accesoPorAlumno(alumnoId)).paraTi) redirect(conFoco("/practica", foco));
 
   const datos = await obtenerAlumno(alumnoId);
   if (!datos) notFound();

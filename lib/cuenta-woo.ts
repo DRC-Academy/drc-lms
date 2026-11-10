@@ -27,6 +27,13 @@ export const PERFIL_WOO = "https://drcacademy.com/mi-cuenta/perfil/";
 export const DESCUENTO_WOO = "https://drcacademy.com/mi-cuenta/consigue-un-descuento/";
 
 /**
+ * La pestaña «Mis Cursos»: lleva al LMS con la sesión de la web, sin pedir
+ * enlace. La usa el correo del Black Pass. A diferencia del resto, esta sí
+ * quiere acabar en el LMS.
+ */
+export const MIS_CURSOS_WOO = "https://drcacademy.com/mi-cuenta/mis-cursos/";
+
+/**
  * El cambio de plan. El snippet `wordpress/drc-ampliar-plan.php` convierte
  * el parámetro en el switch de la suscripción del alumno logueado. Sin
  * el snippet activo, el alumno se queda en Mi cuenta —con el parámetro,

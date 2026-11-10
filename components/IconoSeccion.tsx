@@ -39,6 +39,10 @@ export type EnlaceSeccion = {
    * sitio, sin enlace, hasta que llegan los datos del alumno.
    */
   pendiente?: boolean;
+  /** Se ve con candado: lleva a la pantalla que explica de qué depende. */
+  bloqueado?: boolean;
+  /** El nombre para el lector de pantalla, si no es `texto`. */
+  etiquetaAria?: string;
 };
 
 /** Las secciones de la barra de móvil, y las que van en la hoja del perfil. */
@@ -124,6 +128,18 @@ export function Icono({
   );
 }
 
+/** El candado de una sección, encima de su icono. El icono va dentro de un `relative`. */
+export function Candado() {
+  return (
+    <span aria-hidden className="absolute -bottom-1 -right-1.5 grid h-[13px] w-[13px] place-items-center rounded-full bg-marca-tinta">
+      <svg viewBox="0 0 12 12" className="h-[9px] w-[9px]" fill="none" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round">
+        <rect x="2.5" y="5.3" width="7" height="4.7" rx="1" fill="#FFFFFF" />
+        <path d="M4 5.3V3.8a2 2 0 0 1 4 0v1.5" />
+      </svg>
+    </span>
+  );
+}
+
 /**
  * La sección en la que está una ruta, para marcarla en la navegación.
  * Solo devuelve secciones del LMS (`SeccionActiva`): un enlace externo
@@ -139,7 +155,7 @@ export function Icono({
  */
 export function seccionDeRuta(ruta: string): SeccionActiva | undefined {
   if (ruta.startsWith("/clases")) return "clases";
-  if (ruta.startsWith("/curso/")) return "curso";
+  if (ruta.startsWith("/curso/") || ruta === "/elegir-curso") return "curso";
   if (ruta.startsWith("/practica")) return "practica";
   if (ruta.startsWith("/progreso")) return "progreso";
   if (ruta.startsWith("/diploma")) return "diploma";

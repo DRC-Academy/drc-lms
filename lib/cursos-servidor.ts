@@ -23,6 +23,7 @@ import { comoFecha } from "@/lib/fechas";
 import { cursosDelPlan } from "@/lib/cursos";
 import { excepcionesDelAlumno, sinDripEn, type ExcepcionAcceso } from "@/lib/accesos-manuales";
 import { conCache, LecturaFallida } from "@/lib/cache-gestion";
+import { cursoElegido, leerPases } from "@/lib/pases";
 
 export type CursoFila = {
   id: string;
@@ -1076,10 +1077,18 @@ export async function cursosDelInicio(
     )
   );
 
-  return estados.slice().sort((a, b) => {
+  const ordenados = estados.slice().sort((a, b) => {
     if (a.ultimaActividad === b.ultimaActividad) return 0;
     if (a.ultimaActividad === null) return 1;
     if (b.ultimaActividad === null) return -1;
     return a.ultimaActividad > b.ultimaActividad ? -1 : 1;
   });
+
+  // CON SIETE CURSOS, MANDA EL QUE HA ELEGIDO. Solo quien tiene pase puede
+  // elegir: para el resto no hay ni consulta. Es lo que hace que la franja
+  // del inicio y la pestaña «Mi curso» apunten al suyo.
+  if (!(await leerPases(alumnoId)).vivo) return ordenados;
+  const elegido = await cursoElegido(alumnoId);
+  const suyo = ordenados.find((estado) => estado.curso.id === elegido);
+  return suyo ? [suyo, ...ordenados.filter((estado) => estado !== suyo)] : ordenados;
 }

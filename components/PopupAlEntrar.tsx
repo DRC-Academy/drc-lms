@@ -3,6 +3,7 @@ import { avisoParaTiPendiente } from "@/lib/aviso-para-ti-servidor";
 import PopupValoracion from "@/components/valoraciones/PopupValoracion";
 import AvisoParaTi from "@/components/aviso-para-ti/AvisoParaTi";
 import { conFoco } from "@/lib/foco";
+import { accesoPorAlumno } from "@/lib/acceso-alumno";
 
 /**
  * EL POP-UP AL ENTRAR: como mucho uno.
@@ -19,12 +20,14 @@ import { conFoco } from "@/lib/foco";
  * `vistaPrevia`.
  */
 export default async function PopupAlEntrar({ alumnoId, vistaPrevia = false }: { alumnoId: string; vistaPrevia?: boolean }) {
-  const pendiente = await valoracionPendiente(alumnoId);
+  const acceso = await accesoPorAlumno(alumnoId);
+
+  const pendiente = acceso.clases ? await valoracionPendiente(alumnoId) : null;
   if (pendiente) {
     return <PopupValoracion key={pendiente.claseId} claseId={pendiente.claseId} profesor={pendiente.profesor} vistaPrevia={vistaPrevia} />;
   }
 
-  if (await avisoParaTiPendiente(alumnoId)) {
+  if (acceso.paraTi && (await avisoParaTiPendiente(alumnoId))) {
     const href = conFoco("/practica?empezar=1", vistaPrevia ? alumnoId : null);
     return <AvisoParaTi href={href} vistaPrevia={vistaPrevia} />;
   }

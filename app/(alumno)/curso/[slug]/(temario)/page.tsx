@@ -10,6 +10,8 @@ import { conFoco } from "@/lib/foco";
 import Temario from "@/components/curso/Temario";
 import BannerDiploma from "@/components/BannerDiploma";
 import MarcoDeLaPagina from "@/components/marco/MarcoDeLaPagina";
+import Link from "next/link";
+import { accesoPorAlumno } from "@/lib/acceso-alumno";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +86,7 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
 
   const arbol = await arbolDelCurso(alumnoId, curso, fechaDrip);
   const temario = construirTemario(arbol, textosActuales().curso);
+  const acceso = await accesoPorAlumno(alumnoId);
 
   return (
     // La navegación la pone el layout común, y es la misma que en el
@@ -118,16 +121,29 @@ export default async function IndiceCurso({ params }: { params: { slug: string }
             como todo lo demás de esta pantalla: no es alumno de nada.
             Revisando una ficha lo ve con el progreso real de ese alumno,
             que es de lo que va el espejo. */}
+        {alumnoId && acceso.cursos === "todos" && (
+          <p className="mb-3 text-[14px] leading-[1.5]">
+            <Link
+              href={conFoco("/elegir-curso", paraEnlaces)}
+              className="inline-flex min-h-[44px] items-center font-medium text-marca-verdeOsc underline underline-offset-2 transition-colors hover:text-marca-tinta min-[900px]:min-h-0"
+            >
+              {textosActuales().pases.cambiarDeCurso}
+            </Link>
+          </p>
+        )}
+
         <Temario
           temario={temario}
           slug={curso.slug}
           foco={paraEnlaces}
           diploma={
-            <BannerDiploma
-              progreso={progresoDiploma(perfil, new Date())}
-              lecciones={calcularDiploma(temario.completadas, temario.totalLecciones)}
-              hrefDiploma={conFoco("/diploma", paraEnlaces)}
-            />
+            acceso.diploma ? (
+              <BannerDiploma
+                progreso={progresoDiploma(perfil, new Date())}
+                lecciones={calcularDiploma(temario.completadas, temario.totalLecciones)}
+                hrefDiploma={conFoco("/diploma", paraEnlaces)}
+              />
+            ) : null
           }
         />
       </main>

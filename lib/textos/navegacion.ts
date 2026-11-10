@@ -48,6 +48,8 @@ export type TextosNavegacion = {
    * (`enBarraMovil: false`). En escritorio, en la barra como las demás.
    */
   miDiploma: string;
+  /** Una sección con candado, para el lector de pantalla. */
+  conCandado: (seccion: string) => string;
   /**
    * El enlace a la página de referidos de la web (WooCommerce): no es una
    * sección del LMS. Como «Mi diploma», en móvil va en la hoja del perfil.
@@ -99,6 +101,7 @@ const ES: TextosNavegacion = {
   miProgreso: "Mi progreso",
   clases: "Clases",
   miDiploma: "Mi diploma",
+  conCandado: (seccion) => `${seccion}, disponible en los planes con clases`,
   descuento: "50\u00A0€ de descuento",
   cortas: { inicio: "Inicio", clases: "Clases", curso: "Curso", practica: "Para ti", progreso: "Progreso", diploma: "Diploma", descuento: "Descuento" },
   secciones: "Secciones",
@@ -131,6 +134,7 @@ const EN: TextosNavegacion = {
   miProgreso: "My progress",
   clases: "Classes",
   miDiploma: "My diploma",
+  conCandado: (seccion) => `${seccion}, available on the plans with classes`,
   descuento: "€50 off",
   cortas: { inicio: "Home", clases: "Classes", curso: "Course", practica: "For you", progreso: "Progress", diploma: "Diploma", descuento: "Discount" },
   secciones: "Sections",

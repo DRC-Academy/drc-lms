@@ -23,6 +23,7 @@ import { NextResponse } from "next/server";
 import { historialDeClases, obtenerAlumno } from "@/lib/gestion";
 import { sesionActual } from "@/lib/sesion-servidor";
 import { estadoDeAcceso, respuestaImpago } from "@/lib/estado-acceso";
+import { paraTiCerrado, respuestaParaTiCerrado } from "@/lib/acceso-alumno";
 import { MODO_ACTUAL } from "@/lib/modos";
 import {
   construirSistema,
@@ -302,6 +303,13 @@ export async function POST(peticion: Request) {
   if ((await estadoDeAcceso(sesion)) === "impago") {
     traza("acceso:impago");
     return respuestaImpago();
+  }
+
+  // Quien tiene el Black Pass sin plan activo no genera: antes de leer nada y
+  // de pagar nada. Es el cierre de verdad; el candado es lo que se ve.
+  if (await paraTiCerrado(sesion)) {
+    traza("acceso:para-ti-cerrado");
+    return respuestaParaTiCerrado();
   }
 
   let cuerpo: unknown;

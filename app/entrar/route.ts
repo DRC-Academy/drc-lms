@@ -15,10 +15,10 @@
 // ---------------------------------------------------------------
 
 import { type NextRequest } from "next/server";
-import { buscarAlumnoPorEmail } from "@/lib/gestion";
 import { entrarComo, entrarComoProfesor, volverAAcceso } from "@/lib/entrada";
 import { profesorParaEntrar } from "@/lib/panel-profesor";
 import { guardarVinculo } from "@/lib/vinculos";
+import { fundirPasesEnFicha, resolverEntrada } from "@/lib/pases-entrada";
 import { abrirTokenEnlace, esAdministrador, type Sesion } from "@/lib/sesion";
 import { registrarIntento } from "@/lib/accesos-servidor";
 import { destinoSeguro } from "@/lib/volver";
@@ -53,19 +53,29 @@ export async function GET(peticion: NextRequest) {
 
     // El email estaba en la vista cuando se pidió el enlace, pero
     // podría no estarlo ya: se vuelve a comprobar antes de dar sesión.
-    const alumno = await buscarAlumnoPorEmail(email);
-    if (!alumno) {
+    const entrada = await resolverEntrada(email);
+    if (!entrada) {
       await registrarIntento({ resultado: "sin_ficha", rol: "alumno" });
       return volverAAcceso(peticion.url, "sinficha", volver);
     }
-    sesion = { rol: "alumno", email, alumnoId: alumno.alumnoId };
+    if (entrada.tipo === "pase_fin") return volverAAcceso(peticion.url, "pase_fin");
 
-    // Deja anotada la correspondencia email ↔ alumno aunque este alumno
-    // no haya pulsado nunca el botón de WooCommerce. Así, el día que lo
-    // pulse, su fila ya existe y solo hay que añadirle el woo_user_id.
-    // Si falla no se hace nada: es un atajo, no un requisito para
-    // entrar.
-    await guardarVinculo(alumno.alumnoId, email, null);
+    sesion = { rol: "alumno", email, alumnoId: entrada.alumnoId };
+
+    if (entrada.tipo === "ficha") {
+      // Compró el Black Pass antes de tener ficha: lo que hizo se viene con él.
+      await fundirPasesEnFicha(entrada.alumnoId, email, null);
+
+      // Deja anotada la correspondencia email ↔ alumno aunque este alumno
+      // no haya pulsado nunca el botón de WooCommerce. Así, el día que lo
+      // pulse, su fila ya existe y solo hay que añadirle el woo_user_id.
+      // Si falla no se hace nada: es un atajo, no un requisito para
+      // entrar.
+      //
+      // Quien solo tiene pase no tiene fila aquí, a propósito: de ella
+      // cuelga el recorrido guiado, que enseña clases y Para ti.
+      await guardarVinculo(entrada.alumnoId, email, null);
+    }
   }
 
   return entrarComo(peticion.url, sesion, "magic_link", volver);

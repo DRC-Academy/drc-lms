@@ -42,6 +42,8 @@ import { cache } from "react";
 import { NextResponse } from "next/server";
 import { leerEnEspera } from "@/lib/gestion";
 import { baseLms } from "@/lib/supabase-lms";
+import { leerPases } from "@/lib/pases";
+import { esIdPase } from "@/lib/pase-id";
 import { textosActuales } from "@/lib/idioma-servidor";
 import type { SesionAbierta } from "@/lib/sesion";
 
@@ -69,23 +71,38 @@ export async function estadoDeAcceso(quien: Quien | null): Promise<EstadoAcceso>
   return estadoDelAlumno(quien.alumnoId);
 }
 
+/**
+ * EL PASE LEVANTA EL BLOQUEO. Quien tiene una suscripción en espera y un
+ * Black Pass ya pagó el curso: conserva el curso, sin Para ti ni clases, y
+ * se le avisa sin taparle la pantalla. Eso último lo decide `accesoDelAlumno`.
+ * Solo paga la consulta del pase quien está en espera.
+ */
 const estadoDelAlumno = cache(async (alumnoId: string): Promise<EstadoAcceso> => {
+  if (!(await impagoSinContarPase(alumnoId))) return "activo";
+  const { vivo } = await leerPases(alumnoId);
+  return vivo ? "activo" : "impago";
+});
+
+/** ¿Está en espera de pago, tenga o no pase? Fail-open, como todo esto. */
+export const impagoSinContarPase = cache(async (alumnoId: string): Promise<boolean> => {
+  // Quien solo tiene pase no tiene suscripción ni fila en Gestión.
+  if (esIdPase(alumnoId)) return false;
+
   const simulado = simulacionPara(alumnoId);
-  if (simulado === "impago") return "impago";
+  if (simulado === "impago") return true;
 
   try {
     if (simulado === "fallo") throw new Error("fallo simulado con ESTADO_ACCESO_SIMULADO");
-    if (!(await leerEnEspera(alumnoId))) return "activo";
+    if (!(await leerEnEspera(alumnoId))) return false;
     // Solo se pregunta por la exención de quien Gestión tiene en espera,
     // que son muy pocos: el resto no paga esta consulta.
-    if (await exento(alumnoId)) return "activo";
-    return "impago";
+    return !(await exento(alumnoId));
   } catch (error) {
     console.error(
       `[estado-acceso] No se pudo comprobar el estado de ${alumnoId}; se deja pasar:`,
       error instanceof Error ? error.message : error
     );
-    return "activo";
+    return false;
   }
 });
 

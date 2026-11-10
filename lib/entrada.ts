@@ -34,8 +34,9 @@ import { esRutaDeProfesor } from "@/lib/volver";
  *   error    — el sobre era bueno y la ficha existe, pero no se pudo
  *              abrir la sesión en la base. No es culpa de quien entra y
  *              el mensaje se lo dice: que vuelva a intentarlo.
+ *   pase_fin — solo tenía el Black Pass y se le ha acabado.
  */
-export type MotivoRechazo = "caducado" | "sinficha" | "error";
+export type MotivoRechazo = "caducado" | "sinficha" | "error" | "pase_fin";
 
 /**
  * `volver` es la ruta a la que iba quien entra (ver `lib/volver.ts`), y
