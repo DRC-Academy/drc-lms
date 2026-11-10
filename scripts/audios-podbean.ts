@@ -19,10 +19,12 @@
 //
 // Todo lo que genera va a `import/audios-podbean/`, que no se versiona.
 //
-// REVERSIBLE: `sustituir --escribir` guarda antes una copia con el
-// `contenido` original de cada lección que va a tocar, y `deshacer` lo
-// devuelve tal cual. No toca nada de Podbean: mientras el plan siga
-// pagado, deshacer vuelve a dejar los iframes funcionando.
+// `sustituir --escribir` guarda antes una copia con el `contenido`
+// original de cada lección que va a tocar, y `deshacer` lo devuelve tal
+// cual. PODBEAN SE CANCELÓ EL 10/11/2026: `deshacer` ya no sirve (dejaría
+// iframes que no suenan) y `listar`/`subir` ya no tienen de dónde leer.
+// Lo que sigue vivo es `comprobar` y `cambiarIframesPorAudio`, que usa
+// también `importar-learndash.ts`.
 //
 // Ver `docs/audios-curso.md`.
 // ---------------------------------------------------------------
@@ -36,13 +38,13 @@ import { BUCKET_AUDIOS, sanearHtml } from "../lib/sanear-html.ts";
 
 const RUTA_ENV = ".env.local";
 const CARPETA = "import/audios-podbean";
-const MANIFIESTO = join(CARPETA, "manifiesto.json");
+export const MANIFIESTO = join(CARPETA, "manifiesto.json");
 const CARPETA_MP3 = join(CARPETA, "mp3");
 
 /** El iframe entero, con su cierre o sin él. */
 const IFRAME_PODBEAN = /<iframe\b[^>]*podbean\.com[^>]*>(?:[\s\S]*?<\/iframe\s*>)?/gi;
 
-type Audio = {
+export type Audio = {
   /** El `i=` del reproductor de Podbean, p. ej. `abc12-3def45-pb`. */
   episodio: string;
   /** El mp3 original en el CDN de Podbean. */
@@ -57,7 +59,7 @@ type Entrada = {
   iframes: { html: string; episodio: string | null }[];
 };
 
-type Manifiesto = {
+export type Manifiesto = {
   generado: string;
   lecciones: Entrada[];
   audios: Record<string, Audio>;
@@ -75,7 +77,7 @@ function base(): { cliente: SupabaseClient; url: string } {
   return { cliente, url };
 }
 
-const urlPublica = (url: string, ruta: string): string =>
+export const urlPublica = (url: string, ruta: string): string =>
   `${url}/storage/v1/object/public/${BUCKET_AUDIOS}/${ruta}`;
 
 /** El `<audio>` que sustituye al iframe. Debe pasar `sanearHtml` intacto. */
@@ -95,6 +97,31 @@ export function episodioDe(iframe: string): string | null {
   if (i) return i;
   const ruta = src.match(/\/media\/player\/([a-z0-9-]+)/i)?.[1];
   return ruta ?? null;
+}
+
+/**
+ * Cambia cada iframe de Podbean por el `<audio>` de su episodio en el
+ * bucket. Un iframe cuyo episodio no esté en `audios` se deja tal cual y
+ * se devuelve en `sinAudio`: quien llama decide si eso basta para parar.
+ * Lo usan `sustituir` y `importar-learndash.ts`, para que el importador
+ * escriba exactamente lo mismo que dejó este script.
+ */
+export function cambiarIframesPorAudio(
+  html: string,
+  audios: Record<string, Pick<Audio, "ruta">>,
+  url: string
+): { html: string; sinAudio: string[] } {
+  const sinAudio: string[] = [];
+  const salida = html.replace(IFRAME_PODBEAN, (iframe) => {
+    const ep = episodioDe(iframe);
+    const a = ep ? audios[ep] : undefined;
+    if (!a) {
+      sinAudio.push(ep ?? `iframe sin episodio reconocible: ${iframe.slice(0, 120)}`);
+      return iframe;
+    }
+    return etiquetaAudio(urlPublica(url, a.ruta));
+  });
+  return { html: salida, sinAudio };
 }
 
 /**
@@ -121,7 +148,7 @@ async function mp3De(episodio: string): Promise<string> {
   throw new Error(`Podbean no devuelve el mp3 de ${episodio}`);
 }
 
-const leerManifiesto = (): Manifiesto => {
+export const leerManifiesto = (): Manifiesto => {
   if (!existsSync(MANIFIESTO)) throw new Error(`No existe ${MANIFIESTO}: corre antes "listar"`);
   return JSON.parse(readFileSync(MANIFIESTO, "utf8")) as Manifiesto;
 };
@@ -278,17 +305,8 @@ async function sustituir(escribir: boolean): Promise<void> {
   const sinAudio: string[] = [];
 
   for (const f of filas) {
-    let faltan = false;
-    const despues = f.contenido.replace(IFRAME_PODBEAN, (html) => {
-      const ep = episodioDe(html);
-      const a = ep ? manifiesto.audios[ep] : undefined;
-      if (!a) {
-        faltan = true;
-        return html;
-      }
-      return etiquetaAudio(urlPublica(url, a.ruta));
-    });
-    if (faltan) sinAudio.push(`${f.id} (${f.titulo})`);
+    const { html: despues, sinAudio: faltan } = cambiarIframesPorAudio(f.contenido, manifiesto.audios, url);
+    if (faltan.length > 0) sinAudio.push(`${f.id} (${f.titulo})`);
     if (despues === f.contenido) continue;
 
     // La red de seguridad: el `<audio>` tiene que sobrevivir al saneador

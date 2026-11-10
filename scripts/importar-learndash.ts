@@ -28,7 +28,13 @@
 //   vídeo → meta del topic, `sfwd-topic_lesson_video_url`  (ver `videoDe`)
 //   audio → `post_content` del QUIZ, iframe de Podbean     (ver `contenidoDeQuiz`)
 //
-// Buscarlos en el HTML de los topics da 7 y 0. Son 161 y 100.
+// Buscarlos en el HTML de los topics da 7 y 2. Son 161 y 100.
+//
+// PODBEAN YA NO EXISTE (cancelado el 10/11/2026). Los iframes del zip se
+// cambian al importar por el `<audio>` del bucket `audios-curso`, con
+// `import/audios-podbean/manifiesto.json` y `LMS_SUPABASE_URL`. Si falta
+// el manifiesto o algún episodio no está en él, `--escribir` para sin
+// escribir nada. Ver `docs/audios-curso.md`.
 //
 // NO IMPORTA PROGRESO. Solo contenido. El progreso de los alumnos es
 // otro paso y necesita resolver `user_id` de WordPress → `alumno_id` de
@@ -36,6 +42,9 @@
 // ---------------------------------------------------------------
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { existsSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+import { cambiarIframesPorAudio, leerManifiesto, MANIFIESTO, type Audio } from "./audios-podbean.ts";
 import {
   abrirZip,
   entero,
@@ -348,9 +357,13 @@ function reescribirImagenes(html: string, ids: number[]): Reescritura {
   return { html: salida.trim(), conservadas, quitadas };
 }
 
-/** Solo para el resumen: contar qué lecciones acaban con reproductor. */
+/**
+ * Solo para el resumen: contar qué lecciones acaban con reproductor. El
+ * iframe es el del zip (los quizzes sueltos no se convierten); el
+ * `<audio>`, el que queda tras `contenidoDeQuiz`.
+ */
 function tieneAudio(html: string): boolean {
-  return /<iframe[^>]*podbean/i.test(html);
+  return /<iframe[^>]*podbean|<audio\b/i.test(html);
 }
 
 function limpiarHtml(html: string): string {
@@ -645,6 +658,8 @@ type Resumen = {
   audios: number;
   /** Reproductores de audio en quizzes que no cuelgan de ningún curso. */
   audiosInalcanzables: number;
+  /** `lección <id>: <episodio>` de cada iframe de Podbean sin mp3 en el bucket. */
+  audiosSinManifiesto: string[];
   /** `<img>` reescritas a `/lecciones/`. */
   imagenesConservadas: number;
   /** `<img>` de decoración eliminadas. */
@@ -659,7 +674,14 @@ type Resumen = {
 // MONTAJE
 // ---------------------------------------------------------------
 
-function montar(zip: Zip) {
+/** De dónde salen los `<audio>`: el manifiesto y la URL del proyecto. */
+export type FuenteAudios = { audios: Record<string, Pick<Audio, "ruta">>; urlBase: string };
+
+/**
+ * `null` (sin fuente) no tira el montaje: deja los iframes como están y
+ * cada uno acaba en `audiosSinManifiesto`, que es lo que impide escribir.
+ */
+export function montar(zip: Zip, fuente: FuenteAudios | null) {
   const cursos = leerJsonl(zip, "post_type_course.ld");
   const modulos = leerJsonl(zip, "post_type_lesson.ld");
   const topics = leerJsonl(zip, "post_type_topic.ld");
@@ -708,6 +730,7 @@ function montar(zip: Zip) {
     videosDeModulo: 0,
     audios: 0,
     audiosInalcanzables: 0,
+    audiosSinManifiesto: [],
     imagenesConservadas: 0,
     imagenesQuitadas: 0,
     correcciones: [],
@@ -861,20 +884,33 @@ function montar(zip: Zip) {
    * ejercicios de listening del curso. Sin esto el alumno ve "escucha
    * el audio y responde" y no hay audio.
    *
-   * Vuelca tal cual, sin tocar el HTML: `lib/sanear-html.ts` decide
-   * después qué se pinta, y Podbean está en su lista de permitidos.
+   * Vuelca tal cual: el iframe se cambia por su `<audio>` después, en
+   * `contenidoFinal`, y `lib/sanear-html.ts` decide qué se pinta.
    */
   function contenidoDeQuiz(idQuiz: number): string {
     const quiz = quizPorId.get(idQuiz);
     return quiz ? texto(wpPost(quiz).post_content).trim() : "";
   }
 
-  /** Junta los trozos, reescribe las imágenes y lleva la cuenta. */
+  /**
+   * Junta los trozos, reescribe las imágenes, cambia los iframes de
+   * Podbean por su `<audio>` y lleva la cuenta.
+   *
+   * El audio se cambia aquí, sobre la lección entera, y no en
+   * `contenidoDeQuiz`: 2 de los 100 iframes (topics 19769 y 20239) están
+   * en el `post_content` del propio topic, no en el del quiz. Se usa la
+   * misma función que `audios-podbean.ts sustituir`, que también trabajó
+   * sobre el contenido entero: lo que se escribe es idéntico a lo que ya
+   * hay en la base. Un episodio que no esté en el manifiesto deja su
+   * iframe y se apunta en `audiosSinManifiesto`, que impide escribir.
+   */
   function contenidoFinal(trozos: string[], ids: number[]): string {
     const r = reescribirImagenes(juntar(trozos), ids);
     resumen.imagenesConservadas += r.conservadas;
     resumen.imagenesQuitadas += r.quitadas;
-    return r.html;
+    const a = cambiarIframesPorAudio(r.html, fuente?.audios ?? {}, fuente?.urlBase ?? "");
+    for (const ep of a.sinAudio) resumen.audiosSinManifiesto.push(`lección ${ids[0]}: ${ep}`);
+    return a.html;
   }
 
   function añadirEjercicios(idQuiz: number, idLeccion: number): void {
@@ -1059,6 +1095,60 @@ async function escribir(
 // PRINCIPAL
 // ---------------------------------------------------------------
 
+/**
+ * El manifiesto de los audios y la URL del proyecto, o por qué no están.
+ * Se leen también en el ensayo: sin ellos no se puede enseñar el
+ * contenido que entraría.
+ */
+function cargarFuenteAudios(): FuenteAudios | string {
+  if (!existsSync(MANIFIESTO)) return `Falta ${MANIFIESTO}: sin él los audios volverían a ser iframes de Podbean`;
+  const urlBase = existsSync(RUTA_ENV) ? leerEnv(RUTA_ENV).LMS_SUPABASE_URL?.replace(/\/+$/, "") : undefined;
+  if (!urlBase) return `Falta LMS_SUPABASE_URL en ${RUTA_ENV}: sin ella no se puede escribir la URL de los audios`;
+  return { audios: leerManifiesto().audios, urlBase };
+}
+
+/**
+ * NADA PUEDE SEGUIR COLGANDO DE WORDPRESS NI DE PODBEAN
+ *
+ * Se mira TODO lo que se va a escribir, no solo el HTML de las
+ * lecciones: la descripción de los cursos sale de `post_excerpt` y los
+ * enunciados salen de `proquiz`, y cualquiera de los dos podría traer
+ * una URL en mitad del texto.
+ *
+ * Podbean se busca como `podbean.com` y no como "podbean" a secas: los
+ * `<audio>` buenos llevan `audios-curso/podbean/<episodio>.mp3` en la
+ * URL, y la palabra sola daría las 98 lecciones con audio como resto.
+ */
+export function restosDeFuera(datos: ReturnType<typeof montar>): { wordpress: string[]; podbean: string[] } {
+  const salida = { wordpress: [] as string[], podbean: [] as string[] };
+  const mirar = (valor: string, donde: string) => {
+    if (/drcacademy\.com|wp-content/i.test(valor)) salida.wordpress.push(donde);
+    if (/podbean\.com/i.test(valor)) salida.podbean.push(donde);
+  };
+  for (const c of datos.filasCurso) mirar(c.descripcion ?? "", `curso ${c.learndash_id} (descripcion)`);
+  for (const l of datos.filasLeccion) {
+    mirar(l.contenido, `lección ${l.learndash_id} (contenido)`);
+    mirar(l.video_url ?? "", `lección ${l.learndash_id} (video_url)`);
+  }
+  for (const e of datos.filasEjercicio) {
+    mirar(e.enunciado + " " + e.opciones.join(" ") + " " + (e.explicacion ?? ""), `ejercicio ${e.learndash_id}`);
+  }
+  return salida;
+}
+
+/**
+ * Lo que impide `--escribir`. Vacío = se puede escribir. Escribir con
+ * cualquiera de estos motivos dejaría lecciones con un iframe de Podbean,
+ * que desde la cancelación es una lección sin audio.
+ */
+export function motivosParaNoEscribir(datos: ReturnType<typeof montar>, faltaFuente: string | null): string[] {
+  const motivos: string[] = [];
+  if (faltaFuente) motivos.push(faltaFuente);
+  for (const s of datos.resumen.audiosSinManifiesto) motivos.push(`episodio sin mp3 en el manifiesto: ${s}`);
+  for (const r of restosDeFuera(datos).podbean) motivos.push(`queda podbean.com en ${r}`);
+  return motivos;
+}
+
 async function principal(): Promise<void> {
   const escribirDeVerdad = process.argv.includes("--escribir");
 
@@ -1067,7 +1157,9 @@ async function principal(): Promise<void> {
   console.log("");
 
   const zip = abrirZip(RUTA_ZIP);
-  const datos = montar(zip);
+  const fuente = cargarFuenteAudios();
+  const faltaFuente = typeof fuente === "string" ? fuente : null;
+  const datos = montar(zip, typeof fuente === "string" ? null : fuente);
   const { filasCurso, filasModulo, filasLeccion, filasEjercicio, resumen } = datos;
 
   console.log("=== LO QUE ENTRA ===");
@@ -1093,43 +1185,37 @@ async function principal(): Promise<void> {
   console.log(`    vídeos (video_url)            : ${resumen.videos}`);
   console.log(`      de esos, lecciones que solo`);
   console.log(`      existen por su vídeo        : ${resumen.videosQueSalvanLaLeccion}`);
-  console.log(`    lecciones con audio Podbean   : ${resumen.audios}`);
+  console.log(`    lecciones con audio           : ${resumen.audios}   (<audio> del bucket ${faltaFuente ? "NO: falta la fuente" : "audios-curso"})`);
   console.log(`    imágenes servidas por la app  : ${resumen.imagenesConservadas}`);
   console.log(`    imágenes de decoración fuera  : ${resumen.imagenesQuitadas}`);
   console.log("");
 
-  // ---------------------------------------------------------------
-  // NADA PUEDE SEGUIR COLGANDO DE WORDPRESS
-  //
-  // Se mira TODO lo que se va a escribir, no solo el HTML de las
-  // lecciones: la descripción de los cursos sale de `post_excerpt` y los
-  // enunciados salen de `proquiz`, y cualquiera de los dos podría traer
-  // una URL en mitad del texto. Si esto no da cero, el LMS sigue atado a
-  // un servidor que ya devuelve 502.
-  // ---------------------------------------------------------------
-  const rastro = /drcacademy\.com|wp-content/i;
-  const restos: string[] = [];
-
-  for (const c of filasCurso) {
-    if (rastro.test(c.descripcion ?? "")) restos.push(`curso ${c.learndash_id} (descripcion)`);
-  }
-  for (const l of filasLeccion) {
-    if (rastro.test(l.contenido)) restos.push(`lección ${l.learndash_id} (contenido)`);
-    if (rastro.test(l.video_url ?? "")) restos.push(`lección ${l.learndash_id} (video_url)`);
-  }
-  for (const e of filasEjercicio) {
-    const texto = e.enunciado + " " + e.opciones.join(" ") + " " + (e.explicacion ?? "");
-    if (rastro.test(texto)) restos.push(`ejercicio ${e.learndash_id}`);
-  }
-
+  // Si esto no da cero, el LMS sigue atado a un servidor que ya devuelve
+  // 502 o a un Podbean cancelado. Ver `restosDeFuera`.
+  const restos = restosDeFuera(datos);
   console.log("  REFERENCIAS A drcacademy.com EN LO QUE ENTRA");
-  if (restos.length === 0) {
+  if (restos.wordpress.length === 0) {
     console.log("    ninguna. Nada de lo que se escribe depende de WordPress.");
   } else {
-    console.log(`    ⚠ ${restos.length}:`);
-    restos.slice(0, 20).forEach((r) => console.log(`      ${r}`));
+    console.log(`    ⚠ ${restos.wordpress.length}:`);
+    restos.wordpress.slice(0, 20).forEach((r) => console.log(`      ${r}`));
+  }
+  console.log("  REFERENCIAS A podbean.com EN LO QUE ENTRA");
+  if (restos.podbean.length === 0) {
+    console.log("    ninguna. Todos los audios salen del bucket.");
+  } else {
+    console.log(`    ⚠ ${restos.podbean.length}:`);
+    restos.podbean.slice(0, 20).forEach((r) => console.log(`      ${r}`));
   }
   console.log("");
+
+  const motivos = motivosParaNoEscribir(datos, faltaFuente);
+  if (motivos.length > 0) {
+    console.log(`  ⚠ NO SE PUEDE ESCRIBIR (${motivos.length} motivo(s)):`);
+    motivos.slice(0, 20).forEach((m) => console.log(`      ${m}`));
+    if (motivos.length > 20) console.log(`      … y ${motivos.length - 20} más`);
+    console.log("");
+  }
 
   const porTipo = new Map<string, number>();
   for (const e of filasEjercicio) porTipo.set(e.tipo, (porTipo.get(e.tipo) ?? 0) + 1);
@@ -1212,6 +1298,12 @@ async function principal(): Promise<void> {
     return;
   }
 
+  // Antes de abrir siquiera el cliente: o entra todo con su audio, o no
+  // entra nada.
+  if (motivos.length > 0) {
+    throw new Error(`no se escribe nada: ${motivos.length} motivo(s), arriba. Lo primero: ${motivos[0]}`);
+  }
+
   const env = leerEnv(RUTA_ENV);
   const url = env.LMS_SUPABASE_URL;
   const clave = env.LMS_SUPABASE_SERVICE_KEY;
@@ -1228,8 +1320,11 @@ async function principal(): Promise<void> {
   console.log("Import terminado.");
 }
 
-principal().catch((error: unknown) => {
-  console.error("");
-  console.error("FALLÓ: " + (error instanceof Error ? error.message : String(error)));
-  process.exitCode = 1;
-});
+// Solo se ejecuta como script, no al importarlo desde un test.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  principal().catch((error: unknown) => {
+    console.error("");
+    console.error("FALLÓ: " + (error instanceof Error ? error.message : String(error)));
+    process.exitCode = 1;
+  });
+}

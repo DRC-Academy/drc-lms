@@ -3,6 +3,9 @@
 Noviembre de 2026. Decisión de Diego del 08/11/2026: dejar de pagar Podbean
 (unos 14 $ al mes) y servir los audios desde el Supabase que ya se paga.
 
+**Podbean se canceló el 10/11/2026.** Desde ese día `deshacer` ya no sirve:
+devolvería las lecciones a iframes que no suenan. Ver «Volver atrás».
+
 ## Qué había
 
 - Todo el audio del curso son los ejercicios de listening: 98 de los 581
@@ -61,19 +64,45 @@ tablas ni columnas, solo un bucket y el texto de las lecciones.
 
 ## Volver atrás
 
-`node scripts/audios-podbean.ts deshacer import/audios-podbean/copia-<fecha>.json --escribir`
-devuelve cada lección a su contenido original si nadie la ha cambiado después.
-Solo funciona mientras Podbean siga pagado: por eso no se cancela hasta que
-`comprobar` salga limpio y se haya oído en el móvil. La copia se guarda también
-fuera del repo (no se versiona: está en `/import`).
+**Ya no hay vuelta atrás a Podbean.** `deshacer` devolvía cada lección a su
+contenido original (los iframes), y eso solo valía mientras Podbean siguiera
+pagado. Desde la cancelación del 10/11/2026, ejecutarlo dejaría 98 lecciones
+sin audio: no se usa. La copia `import/audios-podbean/copia-<fecha>.json` se
+conserva solo como registro de qué había.
 
-## Cuando todo esté comprobado
+Si un audio falla, el original está en `import/audios-podbean/mp3/` (los mismos
+bytes que el bucket: comprobado por MD5 el 10/11/2026) y se vuelve a subir a la
+misma ruta.
 
-- Diego cancela el plan de Podbean. No se borra nada allí.
-- Se quita Podbean de `ANFITRIONES` en `lib/sanear-html.ts`, la regla
-  `.leccion iframe[src*="podbean.com"]` de `app/globals.css`, el test
-  "mientras dura el cambio" de `lib/sanear-html.test.ts` y la nota de
-  `docs/agente-respond-lms.md`.
+## Cancelación (10/11/2026)
+
+Antes de cancelar se comprobó: `comprobar` limpio; «podbean» solo aparece en
+`lecciones.contenido` como la carpeta `podbean/` del bucket, en ninguna otra
+tabla; los 93 objetos del bucket idénticos a los mp3 locales; las 98 lecciones
+con 100 `<audio>` apuntan a archivos que existen; y con `*.podbean.com`
+bloqueado los audios suenan sin una sola petición a Podbean.
+
+Hecho después de cancelar:
+
+- Podbean fuera de `ANFITRIONES` en `lib/sanear-html.ts`: un iframe suyo se
+  quita como cualquier otro (test en `lib/sanear-html.test.ts`).
+- Fuera la regla `.leccion iframe[src*="podbean.com"]` de `app/globals.css`.
+- Nota actualizada en `docs/agente-respond-lms.md`.
+- `scripts/importar-learndash.ts` ya no reintroduce Podbean: al montar el
+  contenido de cada lección cambia cada iframe por el `<audio>` del bucket con
+  `import/audios-podbean/manifiesto.json` (`cambiarIframesPorAudio`, la misma
+  función que usó `sustituir`). Se hace sobre la lección entera y no solo
+  sobre el quiz porque 2 de los 100 iframes (topics 19769 y 20239) vienen en
+  el propio topic. Su ensayo da las 98 lecciones con audio idénticas a la base. Si falta el manifiesto, falta
+  `LMS_SUPABASE_URL` o un episodio no está en él, o queda `podbean.com` en
+  cualquier cosa que vaya a entrar, `--escribir` para sin escribir nada.
+
+Lo que queda fuera: el quiz 17882 («Identifying hesitation strategies and
+paraphrasing in native speech», 3 audios) está publicado en LearnDash pero fuera
+del árbol de cursos, así que nunca se importó. Sus tres mp3 se bajaron antes de
+cancelar a `import/audios-podbean/mp3-sueltos/`; no están en el bucket.
+
+`import/` no se versiona: esa carpeta tiene que tener copia fuera de este equipo.
 
 ## Coste
 
