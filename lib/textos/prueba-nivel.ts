@@ -125,7 +125,7 @@ export const PRUEBA_NIVEL: Record<Idioma, TextosPruebaNivel> = {
       B1: { nombre: "Intermedio", frase: "Te desenvuelves en la mayoría de situaciones del día a día." },
       B2: { nombre: "Intermedio alto", frase: "Fluidez y precisión en contextos variados, incluido el laboral." },
       C1: { nombre: "Avanzado", frase: "Uso flexible y eficaz del idioma en contextos complejos." },
-      C2: { nombre: "Maestría", frase: "Comprensión y expresión prácticamente como un nativo." },
+      C2: { nombre: "Maestría", frase: "Comprensión y expresión con total soltura y precisión." },
     },
   },
   en: {
@@ -187,7 +187,7 @@ export const PRUEBA_NIVEL: Record<Idioma, TextosPruebaNivel> = {
       B1: { nombre: "Intermediate", frase: "You get by in most everyday situations." },
       B2: { nombre: "Upper intermediate", frase: "Fluency and accuracy in varied contexts, work included." },
       C1: { nombre: "Advanced", frase: "Flexible, effective use of the language in complex contexts." },
-      C2: { nombre: "Proficiency", frase: "Understanding and expression practically like a native speaker." },
+      C2: { nombre: "Proficiency", frase: "Understanding and expression with complete ease and precision." },
     },
   },
 };

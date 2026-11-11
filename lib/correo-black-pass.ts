@@ -48,7 +48,7 @@ export function correoAccesoBlackPass({ nombre, hasta }: { nombre: string | null
                 <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:${VERDE};">DRC Academy</p>
                 <h1 style="margin:14px 0 0;font-size:26px;line-height:1.15;font-weight:600;color:${TITULAR};">${escapar(titular)}</h1>
                 <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:${CUERPO};">
-                  Gracias por tu compra. Tienes abiertos todos los niveles de Mi curso, con su teoría, sus ejercicios y los vídeos de profesores nativos, hasta el <strong style="color:${TITULAR};">${fecha}</strong>.
+                  Gracias por tu compra. Tienes abiertos todos los niveles de Mi curso, con su teoría, sus ejercicios y los vídeos de nuestros profesores, hasta el <strong style="color:${TITULAR};">${fecha}</strong>.
                 </p>
                 <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:${CUERPO};">
                   Para entrar no necesitas contraseña: escribe este mismo email en la plataforma y te enviaremos un enlace.
@@ -76,7 +76,7 @@ export function correoAccesoBlackPass({ nombre, hasta }: { nombre: string | null
   const text = [
     `DRC Academy · ${titular}`,
     "",
-    `Gracias por tu compra. Tienes abiertos todos los niveles de Mi curso, con su teoría, sus ejercicios y los vídeos de profesores nativos, hasta el ${fecha}.`,
+    `Gracias por tu compra. Tienes abiertos todos los niveles de Mi curso, con su teoría, sus ejercicios y los vídeos de nuestros profesores, hasta el ${fecha}.`,
     "",
     `Para entrar no necesitas contraseña: abre ${entrar}, escribe este mismo email y te enviaremos un enlace.`,
     "",

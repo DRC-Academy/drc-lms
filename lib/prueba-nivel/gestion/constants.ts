@@ -88,7 +88,7 @@ export const CEFR_WRITING_DESCRIPTORS: Record<Cefr, string> = {
   B1: 'Connected text on familiar topics. Reasonable control of common tenses; errors appear as soon as structures get complex. Vocabulary adequate but repetitive and high-frequency. Linkers such as however, although, so.',
   B2: 'Clear, detailed text. Good control of a range of structures: subordination, passives, conditionals, relative clauses. Errors do not cause misunderstanding. Varied vocabulary with occasional collocation slips. Clear cohesion and a structured argument.',
   C1: 'Well-structured, fluent text on complex subjects. Consistently high grammatical accuracy. Wide, precise vocabulary including less common and idiomatic items. Controlled register and sophisticated cohesive devices.',
-  C2: 'Near-native. Complex ideas expressed precisely and naturally. Virtually error-free, with subtle nuance and effortless idiomatic and stylistic control.',
+  C2: 'Complex ideas expressed precisely and naturally. Virtually error-free, with subtle nuance and effortless idiomatic and stylistic control.',
 };
 
 export const CEFR_DESC: Record<Cefr, string> = {
@@ -97,7 +97,7 @@ export const CEFR_DESC: Record<Cefr, string> = {
   B1: 'Intermedio: te desenvuelves en la mayoría de situaciones del día a día.',
   B2: 'Intermedio alto: fluidez y precisión en contextos variados, incluido el laboral.',
   C1: 'Avanzado: uso flexible y eficaz del idioma en contextos complejos.',
-  C2: 'Maestría: comprensión y expresión prácticamente como un nativo.',
+  C2: 'Maestría: comprensión y expresión con total soltura y precisión.',
 };
 
 export const CEFR_COLOR: Record<Cefr, string> = {

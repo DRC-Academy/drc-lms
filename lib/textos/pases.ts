@@ -63,15 +63,15 @@ export type TextosPases = {
 
 export const PASES: Record<Idioma, TextosPases> = {
   es: {
-    paraTiEtiqueta: "Clases 1:1 con profesor nativo",
+    paraTiEtiqueta: "Clases 1:1 con profesor bilingüe",
     paraTiTitulo: "Habla inglés cada semana con tu profesor",
     paraTiTexto:
-      "Tu curso te da la base. Con las clases 1:1 la pones en práctica hablando con un profesor nativo, y después de cada clase Para ti te prepara ejercicios con lo que has trabajado.",
+      "Tu curso te da la base. Con las clases 1:1 la pones en práctica hablando con un profesor bilingüe, y después de cada clase Para ti te prepara ejercicios con lo que has trabajado.",
     paraTiBoton: "Quiero probar las clases",
     paraTiNota: "Te atendemos por WhatsApp.",
     paraTiSumanTitulo: "Lo que suman las clases 1:1",
     paraTiSuman: [
-      { titulo: "Tu profesor nativo", texto: "Clases por videollamada solo para ti, para hablar inglés desde el primer día." },
+      { titulo: "Tu profesor bilingüe", texto: "Clases por videollamada solo para ti, para hablar inglés desde el primer día." },
       { titulo: "Para ti, después de cada clase", texto: "Ejercicios con tu vocabulario, tus temas y lo que más te cuesta." },
       { titulo: "Tu avance, a la vista", texto: "Tu profesor sigue tu nivel y en Mi progreso ves todo lo que llevas." },
     ],
@@ -96,7 +96,7 @@ export const PASES: Record<Idioma, TextosPases> = {
     tuCurso: "Tu curso",
     otrosNiveles: "Otros niveles",
     abrirCurso: (curso) => `Abrir ${curso}`,
-    clasesTitulo: "Practica con un profesor nativo",
+    clasesTitulo: "Practica con un profesor bilingüe",
     clasesTexto:
       "Con las clases 1:1 hablas inglés cada semana con tu profesor y, después de cada clase, Para ti te prepara ejercicios con lo que habéis trabajado. Tu curso sigue contigo.",
     clasesBoton: "Quiero probar las clases",
@@ -116,15 +116,15 @@ export const PASES: Record<Idioma, TextosPases> = {
     avisoPagoBoton: "Actualizar mi pago",
   },
   en: {
-    paraTiEtiqueta: "1:1 classes with a native teacher",
+    paraTiEtiqueta: "1:1 classes with a bilingual teacher",
     paraTiTitulo: "Speak English every week with your teacher",
     paraTiTexto:
-      "Your course gives you the foundation. With 1:1 classes you put it into practice by speaking with a native teacher, and after every class For you prepares exercises from what you've worked on.",
+      "Your course gives you the foundation. With 1:1 classes you put it into practice by speaking with a bilingual teacher, and after every class For you prepares exercises from what you've worked on.",
     paraTiBoton: "I want to try the classes",
     paraTiNota: "We'll help you on WhatsApp.",
     paraTiSumanTitulo: "What 1:1 classes add",
     paraTiSuman: [
-      { titulo: "Your native teacher", texto: "Video classes just for you, so you speak English from day one." },
+      { titulo: "Your bilingual teacher", texto: "Video classes just for you, so you speak English from day one." },
       { titulo: "For you, after every class", texto: "Exercises with your vocabulary, your topics and what you find hardest." },
       { titulo: "Your progress, in sight", texto: "Your teacher follows your level and My progress shows everything you've done." },
     ],
@@ -149,7 +149,7 @@ export const PASES: Record<Idioma, TextosPases> = {
     tuCurso: "Your course",
     otrosNiveles: "Other levels",
     abrirCurso: (curso) => `Open ${curso}`,
-    clasesTitulo: "Practise with a native teacher",
+    clasesTitulo: "Practise with a bilingual teacher",
     clasesTexto:
       "With 1:1 classes you speak English every week with your teacher and, after every class, For you prepares exercises from what you've worked on together. Your course stays with you.",
     clasesBoton: "I want to try the classes",
