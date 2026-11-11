@@ -39,8 +39,12 @@ const CARPETA = "import/audios-podbean";
 const MANIFIESTO = join(CARPETA, "manifiesto.json");
 const CARPETA_MP3 = join(CARPETA, "mp3");
 
-/** El iframe entero, con su cierre o sin él. */
-const IFRAME_PODBEAN = /<iframe\b[^>]*podbean\.com[^>]*>(?:[\s\S]*?<\/iframe\s*>)?/gi;
+/**
+ * El iframe entero, con su cierre o sin él. El cierre solo se come si
+ * llega antes de cualquier otra etiqueta: un iframe sin cerrar no puede
+ * arrastrar el texto de la lección hasta el cierre del siguiente.
+ */
+export const IFRAME_PODBEAN = /<iframe\b[^>]*podbean\.com[^>]*>(?:[^<]*<\/iframe\s*>)?/gi;
 
 type Audio = {
   /** El `i=` del reproductor de Podbean, p. ej. `abc12-3def45-pb`. */

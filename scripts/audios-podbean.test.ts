@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { episodioDe, etiquetaAudio } from "./audios-podbean.ts";
+import { episodioDe, etiquetaAudio, IFRAME_PODBEAN } from "./audios-podbean.ts";
 import { sanearHtml } from "../lib/sanear-html.ts";
 import { prepararLeccion, partesDeLeccion } from "../lib/leccion-html.ts";
 
@@ -31,5 +31,27 @@ describe("audios-podbean", () => {
   it("una lección que es solo el audio sigue teniendo su audio", () => {
     const { html } = prepararLeccion(sanearHtml(etiquetaAudio(SRC)));
     expect(html).toContain("<audio");
+  });
+});
+
+describe("IFRAME_PODBEAN", () => {
+  const cambiar = (html: string) => html.replace(IFRAME_PODBEAN, "[AUDIO]");
+
+  it("cambia el iframe con su cierre", () => {
+    expect(cambiar(`<p>a</p><iframe src="https://www.podbean.com/player-v2/?i=x-pb"></iframe><p>b</p>`)).toBe(
+      "<p>a</p>[AUDIO]<p>b</p>"
+    );
+  });
+
+  it("un iframe sin cerrar no se come el texto hasta el siguiente", () => {
+    const html =
+      `<iframe src="https://www.podbean.com/player-v2/?i=x-pb"><p>Pregunta 1</p>` +
+      `<iframe src="https://www.podbean.com/player-v2/?i=y-pb"></iframe><p>Pregunta 2</p>`;
+    expect(cambiar(html)).toBe("[AUDIO]<p>Pregunta 1</p>[AUDIO]<p>Pregunta 2</p>");
+  });
+
+  it("no toca los iframes de YouTube", () => {
+    const html = `<iframe src="https://www.youtube-nocookie.com/embed/x"></iframe>`;
+    expect(cambiar(html)).toBe(html);
   });
 });
